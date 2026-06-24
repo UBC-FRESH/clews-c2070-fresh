@@ -1,0 +1,4 @@
+[submodule "data"]
+	path = data
+	url = https://github.com/UBC-FRESH/clews-c2070-fresh-data.git
+	branch = main

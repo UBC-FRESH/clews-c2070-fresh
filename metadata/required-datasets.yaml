@@ -1,0 +1,149 @@
+schema_version: 1
+updated_utc: "2026-06-24T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+notes:
+  - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
+  - "Candidate discovery starts in metadata/source-inventory.csv."
+  - "Promote a source here only after publisher, license, access mode, coverage, and modelling use have been reviewed."
+  - "Large payloads belong in the DataLad-backed data submodule, not in the parent repository."
+
+datasets:
+  - id: scanfi_v2
+    category: forest_inventory
+    status: candidate_for_review
+    required_for:
+      - "national wall-to-wall forest attribute baseline"
+      - "forest composition, canopy height, and biomass screening layers"
+    canonical_data_path: "raw/nrcan/scanfi_v2/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada"
+      title: "SCANFI v2: the Spatialized Canadian National Forest Inventory"
+      url: "https://open.canada.ca/data/en/dataset/07653869-f303-46c2-a04e-9ab479b73cbf"
+      access_mode: "direct_download"
+      license: "verify_before_archive"
+      provenance_notes: "Candidate national raster baseline. Confirm package contents and update cadence before mirroring."
+    coverage:
+      spatial: "Canada"
+      temporal: "1985-2025"
+      resolution: "30m raster"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "review"
+      rationale: "Likely large national raster payload; mirror if stable public retrieval is insufficient for reproducible workflows."
+
+  - id: nfi_standard_reports
+    category: forest_inventory
+    status: candidate_for_review
+    required_for:
+      - "national summary statistics"
+      - "cross-checks for inventory-derived forest area, volume, biomass, age, ownership, and protection summaries"
+    canonical_data_path: "raw/nfi/standard_reports/"
+    preferred: true
+    source:
+      publisher: "National Forest Inventory Canada"
+      title: "National Forest Inventory standard reports"
+      url: "https://nfi.nfis.org/en/standardreports"
+      access_mode: "web_report_csv"
+      license: "verify_before_archive"
+      provenance_notes: "Reports are useful early because they are lightweight and summarized."
+    coverage:
+      spatial: "Canada, terrestrial ecozones, boreal zone, forest management regions"
+      temporal: "current published reports"
+      resolution: "summary tables"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "review"
+      rationale: "May be lightweight enough to regenerate from source; archive exact CSV snapshots once used in model calibration."
+
+  - id: canlad
+    category: disturbance
+    status: candidate_for_review
+    required_for:
+      - "national annual disturbance history"
+      - "harvest, fire, and insect disturbance calibration"
+    canonical_data_path: "raw/nrcan/canlad/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada"
+      title: "Canada Landsat Disturbance"
+      url: "https://open.canada.ca/data/en/dataset/902801fd-4d9d-4df4-9e95-319e429545cc"
+      access_mode: "direct_download"
+      license: "verify_before_archive"
+      provenance_notes: "Candidate source for annual forest disturbance maps."
+    coverage:
+      spatial: "Canada"
+      temporal: "1985-2024"
+      resolution: "raster"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "review"
+      rationale: "Large raster source; archive if used as canonical disturbance input."
+
+  - id: national_road_network
+    category: transport
+    status: candidate_for_review
+    required_for:
+      - "national haul-distance baseline"
+      - "accessibility and delivered feedstock cost screening"
+    canonical_data_path: "raw/geobase/nrn/"
+    preferred: true
+    source:
+      publisher: "Statistics Canada / GeoBase"
+      title: "National Road Network - NRN - GeoBase Series"
+      url: "https://open.canada.ca/data/en/dataset/3d282116-e556-400c-9306-ca1a3cada77f"
+      access_mode: "direct_download"
+      license: "verify_before_archive"
+      provenance_notes: "Need jurisdiction package inventory and assessment against forest-resource road layers."
+    coverage:
+      spatial: "Canada by province/territory"
+      temporal: "current published release"
+      resolution: "linear vector network"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "review"
+      rationale: "Public and structured, but exact release snapshots should be archived when used for model products."
+
+  - id: biomass_inventory_business_data
+    category: industry
+    status: candidate_for_review
+    required_for:
+      - "forest residue and biomass facility screening"
+      - "industrial feedstock demand and residue source characterization"
+    canonical_data_path: "raw/nrcan/biomass_inventory_business/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada"
+      title: "Biomass Inventory Mapping and Analysis - Business Data"
+      url: "https://open.canada.ca/data/en/dataset/1a759d95-3008-4078-87af-5bb1bdf657b3"
+      access_mode: "direct_download"
+      license: "verify_before_archive"
+      provenance_notes: "Inspect facility, residue quantity, and location fields before treating as canonical."
+    coverage:
+      spatial: "Canada"
+      temporal: "current published release"
+      resolution: "facility or source-level business data"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "review"
+      rationale: "Likely central to facility/residue inputs; archive exact release if accepted."

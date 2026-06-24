@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+_build/
+runtime/
+*.pyc
+
+# Local handoff/reference material copied into a fresh clone.
+tmp/
+
+# Local credential files must never be tracked.
+*.env
+*.env.*
+config/credentials/
