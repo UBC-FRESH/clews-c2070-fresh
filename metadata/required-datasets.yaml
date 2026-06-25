@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-06-24T00:00:00Z"
+updated_utc: "2026-06-25T00:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -10,7 +10,7 @@ notes:
 datasets:
   - id: scanfi_v2
     category: forest_inventory
-    status: candidate_for_review
+    status: triage_ready
     required_for:
       - "national wall-to-wall forest attribute baseline"
       - "forest composition, canopy height, and biomass screening layers"
@@ -21,8 +21,18 @@ datasets:
       title: "SCANFI v2: the Spatialized Canadian National Forest Inventory"
       url: "https://open.canada.ca/data/en/dataset/07653869-f303-46c2-a04e-9ab479b73cbf"
       access_mode: "direct_download"
-      license: "verify_before_archive"
-      provenance_notes: "Candidate national raster baseline. Confirm package contents and update cadence before mirroring."
+      license: "Open Government Licence - Canada"
+      provenance_notes: "Official metadata observed 2026-06-25. Candidate national raster baseline; confirm package contents and total storage before mirroring."
+      metadata_created: "2026-02-12T13:30:53.958929"
+      metadata_modified: "2026-06-19T21:24:42.213286"
+      date_published: "2026-01-01"
+      resources:
+        - format: "TIFF"
+          name: "SCANFI v2 dataset"
+          url: "https://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/SCANFI/v2/"
+        - format: "TXT"
+          name: "_SCANFI_v2_read_me.txt"
+          url: "https://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/SCANFI/v2/_SCANFI_v2_read_me.txt"
     coverage:
       spatial: "Canada"
       temporal: "1985-2025"
@@ -38,7 +48,7 @@ datasets:
 
   - id: nfi_standard_reports
     category: forest_inventory
-    status: candidate_for_review
+    status: triage_ready
     required_for:
       - "national summary statistics"
       - "cross-checks for inventory-derived forest area, volume, biomass, age, ownership, and protection summaries"
@@ -77,8 +87,19 @@ datasets:
       title: "Canada Landsat Disturbance"
       url: "https://open.canada.ca/data/en/dataset/902801fd-4d9d-4df4-9e95-319e429545cc"
       access_mode: "direct_download"
-      license: "verify_before_archive"
-      provenance_notes: "Candidate source for annual forest disturbance maps."
+      license: "Open Government Licence - Canada"
+      provenance_notes: "Official metadata observed 2026-06-25. Candidate source for annual forest disturbance maps."
+      metadata_created: "2025-06-25T19:10:22.632868"
+      metadata_modified: "2026-05-14T17:30:52.493939"
+      date_published: "2025-05-14"
+      date_modified: "2026-05-05"
+      resources:
+        - format: "GeoTIF"
+          name: "CanLaD including insect defoliation - FTP link"
+          url: "https://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/canlad_including_insect_defoliation/v1.1/"
+        - format: "TIFF"
+          name: "CanLaD including insect defoliation - HTTP link"
+          url: "https://download-telecharger.services.geo.ca/pub/nrcan_rncan/Forests_Foret/canlad_including_insect_defoliation/v1.1/"
     coverage:
       spatial: "Canada"
       temporal: "1985-2024"
@@ -94,7 +115,7 @@ datasets:
 
   - id: national_road_network
     category: transport
-    status: candidate_for_review
+    status: triage_ready
     required_for:
       - "national haul-distance baseline"
       - "accessibility and delivered feedstock cost screening"
@@ -105,8 +126,18 @@ datasets:
       title: "National Road Network - NRN - GeoBase Series"
       url: "https://open.canada.ca/data/en/dataset/3d282116-e556-400c-9306-ca1a3cada77f"
       access_mode: "direct_download"
-      license: "verify_before_archive"
-      provenance_notes: "Need jurisdiction package inventory and assessment against forest-resource road layers."
+      license: "Open Government Licence - Canada"
+      provenance_notes: "Official metadata observed 2026-06-25. Need jurisdiction package inventory and assessment against forest-resource road layers."
+      metadata_created: "2017-03-29T20:52:44.682526"
+      metadata_modified: "2024-12-18T13:20:17.877602"
+      date_published: "2015-01-01"
+      resources:
+        - format: "ZIP"
+          name: "Road Network, Reference Guide"
+          url: "https://geo.statcan.gc.ca/nrn_rrn/doc/nrn-rrn_documentation.zip"
+        - format: "ESRI REST"
+          name: "Road Network service"
+          url: "https://geo.statcan.gc.ca/geo_wa/rest/services/NRN-RRN/nrn_rrn/MapServer"
     coverage:
       spatial: "Canada by province/territory"
       temporal: "current published release"
@@ -122,19 +153,32 @@ datasets:
 
   - id: biomass_inventory_business_data
     category: industry
-    status: candidate_for_review
+    status: triage_ready
     required_for:
       - "forest residue and biomass facility screening"
       - "industrial feedstock demand and residue source characterization"
     canonical_data_path: "raw/nrcan/biomass_inventory_business/"
     preferred: true
     source:
-      publisher: "Natural Resources Canada"
+      publisher: "Agriculture and Agri-Food Canada"
       title: "Biomass Inventory Mapping and Analysis - Business Data"
       url: "https://open.canada.ca/data/en/dataset/1a759d95-3008-4078-87af-5bb1bdf657b3"
       access_mode: "direct_download"
-      license: "verify_before_archive"
-      provenance_notes: "Inspect facility, residue quantity, and location fields before treating as canonical."
+      license: "Open Government Licence - Canada"
+      provenance_notes: "Official metadata observed 2026-06-25. Inspect facility, residue quantity, and location fields before treating as canonical."
+      metadata_created: "2016-09-24T04:04:28.409079"
+      metadata_modified: "2025-10-15T12:20:43.793049"
+      date_published: "2013-04-16"
+      resources:
+        - format: "FGDB/GDB"
+          name: "Pre-packaged FGDB files"
+          url: "https://agriculture.canada.ca/atlas/data_donnees/bimat/data_donnees/fgdb/"
+        - format: "GEOJSON"
+          name: "Pre-packaged GeoJSON files"
+          url: "https://agriculture.canada.ca/atlas/data_donnees/bimat/data_donnees/geoJSON/"
+        - format: "CSV"
+          name: "Pre-packaged CSV files"
+          url: "https://agriculture.canada.ca/atlas/data_donnees/bimat/data_donnees/csv/"
     coverage:
       spatial: "Canada"
       temporal: "current published release"

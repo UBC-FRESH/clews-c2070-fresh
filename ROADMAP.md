@@ -20,6 +20,8 @@ forest-biomass supply modelling before model implementation work depends on it.
 
 ### P1.2 National Source Discovery
 
+- Governing issue: `#1`
+
 - [ ] Review candidate source families in `metadata/source-inventory.csv`.
 - [ ] For each source, record publisher, access URL, license, spatial coverage,
   temporal coverage, update cadence, data format, and acquisition status.
@@ -45,10 +47,13 @@ forest-biomass supply modelling before model implementation work depends on it.
 
 ## Detailed Next Steps Notes
 
-1. Tyler's first pass should update `metadata/source-inventory.csv`, not download
+1. Tyler should work through `planning/source-triage-queue.md`, beginning with
+   `scanfi_v2`, `nfi_standard_reports`, `canlad`, `nrn`, and
+   `biomass_inventory_business`.
+2. Tyler's first pass should update `metadata/source-inventory.csv`, not download
    large payloads directly into the parent repo.
-2. Once candidate sources are reviewed, promote only accepted datasets into
+3. Once candidate sources are reviewed, promote only accepted datasets into
    `metadata/required-datasets.yaml`.
-3. When the first real dataset is accepted, acquire it under `data/raw/`,
+4. When the first real dataset is accepted, acquire it under `data/raw/`,
    record the manifest under `data/manifests/`, copy annexed payloads to
    `arbutus-s3`, and update the parent repo's curated registry.
