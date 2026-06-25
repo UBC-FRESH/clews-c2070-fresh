@@ -1,5 +1,14 @@
 # Change Log
 
+## 2026-06-25
+
+- Completed first-pass National Road Network triage: inventoried all 13
+  province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
+  recorded HTTP package sizes and release validity/version notes, accepted NRN
+  as a coarse national haul-distance baseline, and flagged jurisdiction-specific
+  forest/resource road layers as mandatory follow-up before operational access
+  modelling.
+
 ## 2026-06-24
 
 - Bootstrapped the CLEWs-C2070 FRESH parent repository with operating notes,

@@ -49,10 +49,13 @@ canonical inputs and what work is needed before archiving them in `data/`.
      1985-2025 CanLaD raster payload links.
 
 4. `nrn`
-   - Confirm all province/territory GeoPackage packages.
-   - Record package size and schema.
-   - Assess whether NRN is sufficient for national haul-distance screening or
-     whether jurisdiction-specific forest/resource roads are mandatory.
+   - File list and package sizes have been inventoried in
+     `metadata/source-file-manifests/nrn_files.csv`.
+   - Read `metadata/source-reviews/nrn.md`.
+   - Use NRN as a coarse national haul-distance baseline when exact GPKG
+     release ZIPs are archived for model outputs.
+   - Continue jurisdiction-specific forest/resource road triage before
+     operational access or delivered-cost claims.
 
 5. `biomass_inventory_business`
    - Compare FGDB, GeoJSON, and CSV packages.
