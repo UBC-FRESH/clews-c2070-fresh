@@ -10,7 +10,7 @@ notes:
 datasets:
   - id: scanfi_v2
     category: forest_inventory
-    status: triage_ready
+    status: accepted_subset_recommended
     required_for:
       - "national wall-to-wall forest attribute baseline"
       - "forest composition, canopy height, and biomass screening layers"
@@ -22,7 +22,7 @@ datasets:
       url: "https://open.canada.ca/data/en/dataset/07653869-f303-46c2-a04e-9ab479b73cbf"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Candidate national raster baseline; confirm package contents and total storage before mirroring."
+      provenance_notes: "Official metadata observed 2026-06-25. Directory inventory observed 2026-06-25: 420 files and about 312 GB total. Accept as canonical national raster candidate, but do not mirror all payloads until subset policy is approved."
       metadata_created: "2026-02-12T13:30:53.958929"
       metadata_modified: "2026-06-19T21:24:42.213286"
       date_published: "2026-01-01"
@@ -37,14 +37,68 @@ datasets:
       spatial: "Canada"
       temporal: "1985-2025"
       resolution: "30m raster"
+    package_inventory:
+      observed_utc: "2026-06-25T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/scanfi_v2_files.csv"
+      file_count: 420
+      total_size_gb: 312.2
+      geotiff_count: 135
+      geotiff_size_gb: 307.897
+      overview_count: 135
+      overview_size_gb: 4.303
+      auxiliary_xml_count: 136
+      years:
+        - 1985
+        - 1990
+        - 1995
+        - 2000
+        - 2005
+        - 2010
+        - 2015
+        - 2020
+        - 2025
+    layer_families:
+      - id: "att_biomass"
+        description: "Aboveground biomass (ton/ha)"
+        approximate_size_gb: 59.168
+      - id: "age_median"
+        description: "Forest stand age (years)"
+        approximate_size_gb: 54.754
+      - id: "att_closure"
+        description: "Total crown closure (%)"
+        approximate_size_gb: 36.177
+      - id: "att_height"
+        description: "Forest height (m)"
+        approximate_size_gb: 25.933
+      - id: "att_nfiLandcover"
+        description: "NFI-compatible land-cover classification"
+        approximate_size_gb: 14.56
+      - id: "spsCC_*"
+        description: "Species crown closure layers"
+        approximate_size_gb: 123.305
+    recommended_first_pass_subset:
+      rationale: "Use the smallest defensible baseline for early national biomass-supply modelling; defer full time-series/species mirroring until preprocessing needs are explicit."
+      include_patterns:
+        - "SCANFI_att_biomass_2025_v2_20260119.tif"
+        - "SCANFI_att_height_2025_v2_20260119.tif"
+        - "SCANFI_att_closure_2025_v2_20260119.tif"
+        - "SCANFI_att_nfiLandcover_2025_v2_20260119.tif"
+        - "SCANFI_age_median_2025_v2_20260119.tif"
+        - "SCANFI_north_extrapol_area.tif"
+        - "_SCANFI_v2_read_me.txt"
+        - "___SCANFI v2 - EN - Update report.pdf"
+      defer_patterns:
+        - "Full 1985-2025 time series"
+        - "All species crown-closure rasters"
+        - "All .ovr overview files unless needed for desktop GIS review"
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "review"
-      rationale: "Likely large national raster payload; mirror if stable public retrieval is insufficient for reproducible workflows."
+      include: "subset_first"
+      rationale: "Full package is about 312 GB. Mirror reviewed baseline subset first; expand only when modelling workflows require additional years or species layers."
 
   - id: nfi_standard_reports
     category: forest_inventory

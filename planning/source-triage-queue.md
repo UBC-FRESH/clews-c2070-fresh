@@ -19,11 +19,13 @@ canonical inputs and what work is needed before archiving them in `data/`.
 ## First Five Sources
 
 1. `scanfi_v2`
-   - Confirm file list and total storage in the SCANFI v2 FTP directory.
-   - Read the English readme and update report.
-   - Identify which rasters are needed for first-pass forest inventory,
+   - File list and total storage have been inventoried in
+     `metadata/source-file-manifests/scanfi_v2_files.csv`.
+   - Read `metadata/source-reviews/scanfi_v2.md`.
+   - Confirm or revise which rasters are needed for first-pass forest inventory,
      biomass, age, canopy, and species-composition screening.
-   - Recommend whether to mirror all files or only a selected subset.
+   - Decide whether to approve the recommended first-pass subset before any
+     raster payloads are archived in `data/`.
 
 2. `nfi_standard_reports`
    - Inventory available CSV/export options.

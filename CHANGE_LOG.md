@@ -16,3 +16,7 @@
   flagged the recent CanLaD v2 release, and updated the CanLaD triage notes to
   distinguish the 1985-2024 `v1.1` package from the separate pre-1985 `v2`
   companion dataset.
+- Completed first-pass SCANFI v2 source triage: inventoried the 420-file
+  public directory, recorded the approximate 312 GB package size, generated a
+  lightweight file manifest, and recommended a subset-first DataLad mirroring
+  strategy.
