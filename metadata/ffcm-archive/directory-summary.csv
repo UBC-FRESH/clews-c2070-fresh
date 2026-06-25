@@ -1,0 +1,32 @@
+directory_group,file_count,total_bytes,top_extensions,primary_archive_zones,notes
+tmp,7,6785027976,pdf:5;xlsm:1;zip:1,archive-root:7,contains spreadsheet/tabular data
+tmp/BC Fibre Database Benchmark 2018 V3  August,24,24964735,xls:20;xlsx:4,bc-fibre-workbooks:24,contains spreadsheet/tabular data
+tmp/BC Fibre Database Benchmark 2018 V3  August/Maps,12,11240218,jpg:12,bc-fibre-maps:12,
+tmp/BC Fibre Database Benchmark 2018 V3  August/Pulp Mill Detail Module,6,26321408,xls:6,bc-fibre-workbooks:6,contains spreadsheet/tabular data
+tmp/BC Fibre Database Benchmark 2018 V3  August/Supporting Data,1,35840,xls:1,bc-fibre-workbooks:1,contains spreadsheet/tabular data
+tmp/BC Fibre Database Benchmark 2018 V3  August/Tenure to Capacity Module,3,2584064,xls:3,bc-fibre-workbooks:3,contains spreadsheet/tabular data
+tmp/BC Fibre Database Benchmark 2018 V3  August/User Guides,3,184598,pdf:3,bc-fibre-user-guides:3,
+tmp/External/CFS,2,3181,(none):1;txt:1,external-cfs-project-files:2,
+tmp/External/CFS/00 - resources,168,66171450,pdf:27;html:23;xlsx:10;java:10;cpg:8;dbf:8;h:8;(none):8,external-cfs-project-files:168,contains GIS payloads; keep out of parent repo; contains spreadsheet/tabular data; contains Java runtime/dependency jars
+tmp/External/CFS/01 - docs,83,199343187,xlsx:31;docx:20;pdf:13;pptx:9;xls:5;png:1;ppt:1;csv:1,external-cfs-project-files:83,contains spreadsheet/tabular data
+tmp/External/CFS/02 - analyses,623,1839171022,jar:89;png:68;stc:54;atx:37;cfg:31;jpg:27;inc:25;gdbtable:21,external-cfs-project-files:623,contains structured FCM input/configuration files; contains GIS payloads; keep out of parent repo; contains spreadsheet/tabular data; contains Java runtime/dependency jars
+tmp/External/CFS/03- Results,493,2912908509,png:82;mxd:41;csv:30;xlsx:30;xls:29;sankey:28;cpg:21;dbf:21,external-cfs-project-files:493,contains GIS payloads; keep out of parent repo; contains spreadsheet/tabular data
+tmp/External/CFS/Jean-Data,9,686968,xlsx:2;cpg:1;dbf:1;prj:1;sbn:1;sbx:1;shp:1;shx:1,external-cfs-project-files:9,contains GIS payloads; keep out of parent repo; contains spreadsheet/tabular data
+tmp/External/CFS/Olaf-Bioproduct carrying capacity,14,22145179,pdf:14,external-cfs-project-files:14,
+tmp/FCM/Carbon/01-Basecase,11,19748439,cfg:11,fcm-carbon-scenarios:11,contains structured FCM input/configuration files
+tmp/FCM/Carbon/02-Inc,3,110554,inc:3,fcm-carbon-scenarios:3,contains structured FCM input/configuration files
+tmp/FCM/Carbon/03-Scenarios,12,17330007,lp:2;cfg:1;log:1;dem:1;nfr:1;prd:1;prd2:1;san:1,fcm-carbon-scenarios:12,contains generated LP model artifacts; contains structured FCM input/configuration files
+tmp/FCM/Carbon/Archive,130,1163239238,cfg:36;xlsx:22;xlsm:17;lp:10;inc:9;san:6;dem:5;nfr:5,fcm-carbon-scenarios:130,contains generated LP model artifacts; contains structured FCM input/configuration files; contains spreadsheet/tabular data
+tmp/FCM/Carbon/No_TL,22,34624371,cfg:12;inc:3;lp:2;log:1;prd:1;dem:1;nfr:1;sup:1,fcm-carbon-scenarios:22,contains generated LP model artifacts; contains structured FCM input/configuration files
+tmp/FCM/Carbon/Test_runs,8,59448516,lp:2;nfr:1;prd:1;dem:1;san:1;sup:1;trp:1,fcm-carbon-scenarios:8,contains generated LP model artifacts
+tmp/FCM/FCM vision template.docx,1,17243,docx:1,fcm-root:1,
+tmp/FCM/FCM_Releases,32,265528414,jar:32,fcm-runtime-release:32,contains Java runtime/dependency jars
+tmp/FCM/Presentations,3,93981032,pptx:3,fcm-presentations:3,
+tmp/FCM/Report,6,7298,lp:3;nfr:3,fcm-generated-reports-models:6,contains generated LP model artifacts
+tmp/FCM/log_residue.cfg,1,9354,cfg:1,fcm-root:1,contains structured FCM input/configuration files
+tmp/FCM/test.gms,1,1398,gms:1,fcm-root:1,
+tmp/FCM/test.~gm,1,1399,~gm:1,fcm-root:1,
+tmp/FCM/testFCM2.cfg,1,5905,cfg:1,fcm-root:1,contains structured FCM input/configuration files
+tmp/FCM/testFCM2.log,1,0,log:1,fcm-root:1,
+tmp/FCM/testLogSupply1.cfg,1,3555,cfg:1,fcm-root:1,contains structured FCM input/configuration files
+tmp/FCM/testLogSupply1.log,1,0,log:1,fcm-root:1,

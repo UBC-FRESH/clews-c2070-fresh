@@ -1,0 +1,18 @@
+metric,value,note
+fmu_count,733,Unique FMU supply entities in FMUs.cfg.
+fmu_supply_rows,4398,"Long-form FMU InitialContent, SupplyCost, and MinimumSupply rows."
+facility_count,1371,"Entities declared in Facilities.cfg, including mills and network nodes."
+facility_classes,network_node:733;SAW:315;PAP:62;BIO:39;PEL:39;import_source:37;export_sink:36;water_node:29;PLY:28;transport_link_node:28;OSB:14;NSP:11,Facility.cfg class counts inferred from entity names.
+processing_line_count,957,Processing line definitions in Processinglines.cfg.
+processing_line_feedstocks,log:566;woodchips:176;sawdust_shavings:98;logging_residue:78;hogfuel:39,Feedstock classes accepted by processing lines.
+processing_output_commodities_top20,internally_used_woodfuel:574;hogfuel:397;woodchips:350;sawdust_shavings:316;pellet:177;lumber_softwood_west:157;lumber_softwood_east:150;other_pulping_byproducts:134;electricity_BC:74;electricity_QC:57;turpentine:54;refiner_softwood:52;kraft_softwood:50;tall_oil:48;electricity_AB:39;peeler_core:34;mdf:33;electricity_ON:25;kraft_hardwood:20;plywood:17,Most common outfeed/additional-infeed commodities across processing lines.
+commodity_count,74,Commodity entities in Commodities.inc.
+commodity_matter_states,SOLID_massbased:40;SOLID_volumetric:25;ENERGY:9,Matter-state classes used by commodities.
+route_count,38390,Unique route entities in Routes.cfg.
+route_segment_count,180004,Total route segment classes encoded across route definitions.
+route_modes,ROAD:32139;RAIL:5439;WATER:812,Route definitions by transport mode.
+transporter_count,22,Transporter definitions in Transporters.cfg.
+transporter_modes,ROAD:10;RAIL:10;WATER:2,Transporter definitions by mode.
+market_count,6,Explicit product markets in Markets.cfg.
+market_names,primary_log_market;woodchips_market;hogfuel_market;secondary_log_market;sawdust_shavings_market;logging_residue_market,Named market modules.
+import_source_count,37,Unique import sources in Imports.cfg.

@@ -1,0 +1,7 @@
+source_file,line_number,market,product,sellers,buyers
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,4,primary_log_market,log,All_FMUs;All_log_import,All_SAW;All_OSB;All_PLY;All_log_exports
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,5,woodchips_market,woodchips,All_PLY;All_SAW;All_chips_import,All_PAP;All_NSP;All_PEL;All_BIO;All_chips_export
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,6,hogfuel_market,hogfuel,All_PLY;All_SAW;All_OSB;All_NSP,All_BIO
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,7,secondary_log_market,log,All_FMUs;All_log_import,All_PAP;All_NSP
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,8,sawdust_shavings_market,sawdust_shavings,All_PLY;All_SAW;All_sawdust_shavings_import,All_NSP;All_PEL;All_BIO;All_sawdust_shavings_export
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,9,logging_residue_market,logging_residue,All_FMUs,All_BIO;All_PEL

@@ -2,6 +2,13 @@
 
 ## 2026-06-25
 
+- Added a dedicated FFCM archive reverse-engineering roadmap phase, planning
+  brief, and lightweight metadata indexes for the transferred local archive:
+  full file manifest, directory summary, curated document index, FCM evidence
+  queue, and architecture crosswalk.
+- Added a repeatable FCM configuration parser and generated normalized metadata
+  tables for FMU supply, facilities, processing lines/flows, routes,
+  transporters, commodities, markets, imports, and transload costs.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN
