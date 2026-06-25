@@ -1,0 +1,811 @@
+period,geography,format,kind,label,url,file_name
+t1,CA,html,html,Area (1000 ha) of land cover in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t1_lc_area_en.html,ca_t1_lc_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t1_lc_area_en.pdf,ca_t1_lc_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t1_lc_area_en.csv,ca_t1_lc_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t1_lc_area_sep_en.html,ca_t1_lc_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t1_lc_area_sep_en.pdf,ca_t1_lc_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t1_lc_area_sep_en.csv,ca_t1_lc_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t1_lc_area_intv_en.html,ca_t1_lc_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t1_lc_area_intv_en.pdf,ca_t1_lc_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t1_lc_area_intv_en.csv,ca_t1_lc_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of vegetated land by landscape position in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t2_ldpos_area_en.html,ca_t2_ldpos_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t2_ldpos_area_en.pdf,ca_t2_ldpos_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t2_ldpos_area_en.csv,ca_t2_ldpos_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t2_ldpos_area_sep_en.html,ca_t2_ldpos_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t2_ldpos_area_sep_en.pdf,ca_t2_ldpos_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t2_ldpos_area_sep_en.csv,ca_t2_ldpos_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t2_ldpos_area_intv_en.html,ca_t2_ldpos_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t2_ldpos_area_intv_en.pdf,ca_t2_ldpos_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t2_ldpos_area_intv_en.csv,ca_t2_ldpos_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of non-vegetated land by landscape position in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t3_lw_area_en.html,ca_t3_lw_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t3_lw_area_en.pdf,ca_t3_lw_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t3_lw_area_en.csv,ca_t3_lw_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t3_lw_area_sep_en.html,ca_t3_lw_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t3_lw_area_sep_en.pdf,ca_t3_lw_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t3_lw_area_sep_en.csv,ca_t3_lw_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t3_lw_area_intv_en.html,ca_t3_lw_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t3_lw_area_intv_en.pdf,ca_t3_lw_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t3_lw_area_intv_en.csv,ca_t3_lw_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of forest and non-forest land in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t4_for_area_en.html,ca_t4_for_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t4_for_area_en.pdf,ca_t4_for_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t4_for_area_en.csv,ca_t4_for_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t4_for_area_sep_en.html,ca_t4_for_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t4_for_area_sep_en.pdf,ca_t4_for_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t4_for_area_sep_en.csv,ca_t4_for_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t4_for_area_intv_en.html,ca_t4_for_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t4_for_area_intv_en.pdf,ca_t4_for_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t4_for_area_intv_en.csv,ca_t4_for_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of forest land by forest type and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t5_forage20_area_en.html,ca_t5_forage20_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t5_forage20_area_en.pdf,ca_t5_forage20_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t5_forage20_area_en.csv,ca_t5_forage20_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t5_forage20_area_sep_en.html,ca_t5_forage20_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t5_forage20_area_sep_en.pdf,ca_t5_forage20_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t5_forage20_area_sep_en.csv,ca_t5_forage20_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t5_forage20_area_intv_en.html,ca_t5_forage20_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t5_forage20_area_intv_en.pdf,ca_t5_forage20_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t5_forage20_area_intv_en.csv,ca_t5_forage20_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of forest land by IUCN category and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t9_psage20_area_en.html,ca_t9_psage20_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t9_psage20_area_en.pdf,ca_t9_psage20_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t9_psage20_area_en.csv,ca_t9_psage20_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t9_psage20_area_sep_en.html,ca_t9_psage20_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t9_psage20_area_sep_en.pdf,ca_t9_psage20_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t9_psage20_area_sep_en.csv,ca_t9_psage20_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t9_psage20_area_intv_en.html,ca_t9_psage20_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t9_psage20_area_intv_en.pdf,ca_t9_psage20_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t9_psage20_area_intv_en.csv,ca_t9_psage20_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of forest land by ownership in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t12_forown_area_en.html,ca_t12_forown_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t12_forown_area_en.pdf,ca_t12_forown_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t12_forown_area_en.csv,ca_t12_forown_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t12_forown_area_sep_en.html,ca_t12_forown_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t12_forown_area_sep_en.pdf,ca_t12_forown_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t12_forown_area_sep_en.csv,ca_t12_forown_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t12_forown_area_intv_en.html,ca_t12_forown_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t12_forown_area_intv_en.pdf,ca_t12_forown_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t12_forown_area_intv_en.csv,ca_t12_forown_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of forest land by species group and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t14_lsage20_area_en.html,ca_t14_lsage20_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t14_lsage20_area_en.pdf,ca_t14_lsage20_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t14_lsage20_area_en.csv,ca_t14_lsage20_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t14_lsage20_area_sep_en.html,ca_t14_lsage20_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t14_lsage20_area_sep_en.pdf,ca_t14_lsage20_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t14_lsage20_area_sep_en.csv,ca_t14_lsage20_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t14_lsage20_area_intv_en.html,ca_t14_lsage20_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t14_lsage20_area_intv_en.pdf,ca_t14_lsage20_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t14_lsage20_area_intv_en.csv,ca_t14_lsage20_area_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of forest land by IUCN category in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t22_psown_area_en.html,ca_t22_psown_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t22_psown_area_en.pdf,ca_t22_psown_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t22_psown_area_en.csv,ca_t22_psown_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t22_psown_area_sep_en.html,ca_t22_psown_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t22_psown_area_sep_en.pdf,ca_t22_psown_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t22_psown_area_sep_en.csv,ca_t22_psown_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t22_psown_area_intv_en.html,ca_t22_psown_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t22_psown_area_intv_en.pdf,ca_t22_psown_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t22_psown_area_intv_en.csv,ca_t22_psown_area_intv_en.csv
+t1,CA,html,html,Total tree volume (million m3) on forest land by forest type and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t15_forage20_vol_en.html,ca_t15_forage20_vol_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t15_forage20_vol_en.pdf,ca_t15_forage20_vol_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t15_forage20_vol_en.csv,ca_t15_forage20_vol_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t15_forage20_vol_sep_en.html,ca_t15_forage20_vol_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t15_forage20_vol_sep_en.pdf,ca_t15_forage20_vol_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t15_forage20_vol_sep_en.csv,ca_t15_forage20_vol_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t15_forage20_vol_intv_en.html,ca_t15_forage20_vol_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t15_forage20_vol_intv_en.pdf,ca_t15_forage20_vol_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t15_forage20_vol_intv_en.csv,ca_t15_forage20_vol_intv_en.csv
+t1,CA,html,html,Total tree volume (million m3) by species group and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t16_lsage20_vol_en.html,ca_t16_lsage20_vol_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t16_lsage20_vol_en.pdf,ca_t16_lsage20_vol_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t16_lsage20_vol_en.csv,ca_t16_lsage20_vol_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t16_lsage20_vol_sep_en.html,ca_t16_lsage20_vol_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t16_lsage20_vol_sep_en.pdf,ca_t16_lsage20_vol_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t16_lsage20_vol_sep_en.csv,ca_t16_lsage20_vol_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t16_lsage20_vol_intv_en.html,ca_t16_lsage20_vol_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t16_lsage20_vol_intv_en.pdf,ca_t16_lsage20_vol_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t16_lsage20_vol_intv_en.csv,ca_t16_lsage20_vol_intv_en.csv
+t1,CA,html,html,Total above-ground biomass (million tonnes) on forest land by forest type and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t17_forage20_biom_en.html,ca_t17_forage20_biom_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t17_forage20_biom_en.pdf,ca_t17_forage20_biom_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t17_forage20_biom_en.csv,ca_t17_forage20_biom_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t17_forage20_biom_sep_en.html,ca_t17_forage20_biom_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t17_forage20_biom_sep_en.pdf,ca_t17_forage20_biom_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t17_forage20_biom_sep_en.csv,ca_t17_forage20_biom_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t17_forage20_biom_intv_en.html,ca_t17_forage20_biom_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t17_forage20_biom_intv_en.pdf,ca_t17_forage20_biom_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t17_forage20_biom_intv_en.csv,ca_t17_forage20_biom_intv_en.csv
+t1,CA,html,html,Total above-ground biomass (million tonnes) on forest land by species group and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t18_lsage20_biom_en.html,ca_t18_lsage20_biom_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t18_lsage20_biom_en.pdf,ca_t18_lsage20_biom_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t18_lsage20_biom_en.csv,ca_t18_lsage20_biom_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t18_lsage20_biom_sep_en.html,ca_t18_lsage20_biom_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t18_lsage20_biom_sep_en.pdf,ca_t18_lsage20_biom_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t18_lsage20_biom_sep_en.csv,ca_t18_lsage20_biom_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t18_lsage20_biom_intv_en.html,ca_t18_lsage20_biom_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t18_lsage20_biom_intv_en.pdf,ca_t18_lsage20_biom_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t18_lsage20_biom_intv_en.csv,ca_t18_lsage20_biom_intv_en.csv
+t1,CA,html,html,Total above-ground carbon (million tonnes) in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t19_carbon_en.html,ca_t19_carbon_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t19_carbon_en.pdf,ca_t19_carbon_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t19_carbon_en.csv,ca_t19_carbon_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t19_carbon_sep_en.html,ca_t19_carbon_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t19_carbon_sep_en.pdf,ca_t19_carbon_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t19_carbon_sep_en.csv,ca_t19_carbon_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t19_carbon_intv_en.html,ca_t19_carbon_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t19_carbon_intv_en.pdf,ca_t19_carbon_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t19_carbon_intv_en.csv,ca_t19_carbon_intv_en.csv
+t1,CA,html,html,Area (1000 ha) of land by land use in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t21_lu_area_en.html,ca_t21_lu_area_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t21_lu_area_en.pdf,ca_t21_lu_area_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t21_lu_area_en.csv,ca_t21_lu_area_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t21_lu_area_sep_en.html,ca_t21_lu_area_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t21_lu_area_sep_en.pdf,ca_t21_lu_area_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t21_lu_area_sep_en.csv,ca_t21_lu_area_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t21_lu_area_intv_en.html,ca_t21_lu_area_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t21_lu_area_intv_en.pdf,ca_t21_lu_area_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t21_lu_area_intv_en.csv,ca_t21_lu_area_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of land cover in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t1_lc_area_change_en.html,ca_t1_lc_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t1_lc_area_change_en.pdf,ca_t1_lc_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t1_lc_area_change_en.csv,ca_t1_lc_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t1_lc_area_change_sep_en.html,ca_t1_lc_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t1_lc_area_change_sep_en.pdf,ca_t1_lc_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t1_lc_area_change_sep_en.csv,ca_t1_lc_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t1_lc_area_change_intv_en.html,ca_t1_lc_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t1_lc_area_change_intv_en.pdf,ca_t1_lc_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t1_lc_area_change_intv_en.csv,ca_t1_lc_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of vegetated land by landscape position in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t2_ldpos_area_change_en.html,ca_t2_ldpos_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t2_ldpos_area_change_en.pdf,ca_t2_ldpos_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t2_ldpos_area_change_en.csv,ca_t2_ldpos_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t2_ldpos_area_change_sep_en.html,ca_t2_ldpos_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t2_ldpos_area_change_sep_en.pdf,ca_t2_ldpos_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t2_ldpos_area_change_sep_en.csv,ca_t2_ldpos_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t2_ldpos_area_change_intv_en.html,ca_t2_ldpos_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t2_ldpos_area_change_intv_en.pdf,ca_t2_ldpos_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t2_ldpos_area_change_intv_en.csv,ca_t2_ldpos_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of non-vegetated land by landscape position in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t3_lw_area_change_en.html,ca_t3_lw_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t3_lw_area_change_en.pdf,ca_t3_lw_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t3_lw_area_change_en.csv,ca_t3_lw_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t3_lw_area_change_sep_en.html,ca_t3_lw_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t3_lw_area_change_sep_en.pdf,ca_t3_lw_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t3_lw_area_change_sep_en.csv,ca_t3_lw_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t3_lw_area_change_intv_en.html,ca_t3_lw_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t3_lw_area_change_intv_en.pdf,ca_t3_lw_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t3_lw_area_change_intv_en.csv,ca_t3_lw_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of forest and non-forest land in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t4_for_area_change_en.html,ca_t4_for_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t4_for_area_change_en.pdf,ca_t4_for_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t4_for_area_change_en.csv,ca_t4_for_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t4_for_area_change_sep_en.html,ca_t4_for_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t4_for_area_change_sep_en.pdf,ca_t4_for_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t4_for_area_change_sep_en.csv,ca_t4_for_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t4_for_area_change_intv_en.html,ca_t4_for_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t4_for_area_change_intv_en.pdf,ca_t4_for_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t4_for_area_change_intv_en.csv,ca_t4_for_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of forest land by forest type and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t5_forage20_area_change_en.html,ca_t5_forage20_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t5_forage20_area_change_en.pdf,ca_t5_forage20_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t5_forage20_area_change_en.csv,ca_t5_forage20_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t5_forage20_area_change_sep_en.html,ca_t5_forage20_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t5_forage20_area_change_sep_en.pdf,ca_t5_forage20_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t5_forage20_area_change_sep_en.csv,ca_t5_forage20_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t5_forage20_area_change_intv_en.html,ca_t5_forage20_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t5_forage20_area_change_intv_en.pdf,ca_t5_forage20_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t5_forage20_area_change_intv_en.csv,ca_t5_forage20_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of forest land by IUCN category and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t9_psage20_area_change_en.html,ca_t9_psage20_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t9_psage20_area_change_en.pdf,ca_t9_psage20_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t9_psage20_area_change_en.csv,ca_t9_psage20_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t9_psage20_area_change_sep_en.html,ca_t9_psage20_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t9_psage20_area_change_sep_en.pdf,ca_t9_psage20_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t9_psage20_area_change_sep_en.csv,ca_t9_psage20_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t9_psage20_area_change_intv_en.html,ca_t9_psage20_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t9_psage20_area_change_intv_en.pdf,ca_t9_psage20_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t9_psage20_area_change_intv_en.csv,ca_t9_psage20_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of forest land by ownership in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t12_forown_area_change_en.html,ca_t12_forown_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t12_forown_area_change_en.pdf,ca_t12_forown_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t12_forown_area_change_en.csv,ca_t12_forown_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t12_forown_area_change_sep_en.html,ca_t12_forown_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t12_forown_area_change_sep_en.pdf,ca_t12_forown_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t12_forown_area_change_sep_en.csv,ca_t12_forown_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t12_forown_area_change_intv_en.html,ca_t12_forown_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t12_forown_area_change_intv_en.pdf,ca_t12_forown_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t12_forown_area_change_intv_en.csv,ca_t12_forown_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of forest land by species group and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t14_lsage20_area_change_en.html,ca_t14_lsage20_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t14_lsage20_area_change_en.pdf,ca_t14_lsage20_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t14_lsage20_area_change_en.csv,ca_t14_lsage20_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t14_lsage20_area_change_sep_en.html,ca_t14_lsage20_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t14_lsage20_area_change_sep_en.pdf,ca_t14_lsage20_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t14_lsage20_area_change_sep_en.csv,ca_t14_lsage20_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t14_lsage20_area_change_intv_en.html,ca_t14_lsage20_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t14_lsage20_area_change_intv_en.pdf,ca_t14_lsage20_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t14_lsage20_area_change_intv_en.csv,ca_t14_lsage20_area_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of forest land by IUCN category in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t22_psown_area_change_en.html,ca_t22_psown_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t22_psown_area_change_en.pdf,ca_t22_psown_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t22_psown_area_change_en.csv,ca_t22_psown_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t22_psown_area_change_sep_en.html,ca_t22_psown_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t22_psown_area_change_sep_en.pdf,ca_t22_psown_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t22_psown_area_change_sep_en.csv,ca_t22_psown_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t22_psown_area_change_intv_en.html,ca_t22_psown_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t22_psown_area_change_intv_en.pdf,ca_t22_psown_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t22_psown_area_change_intv_en.csv,ca_t22_psown_area_change_intv_en.csv
+t1,CA,html,html,Annual change in total tree volume (million m3) on forest land by forest type and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t15_forage20_vol_change_en.html,ca_t15_forage20_vol_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t15_forage20_vol_change_en.pdf,ca_t15_forage20_vol_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t15_forage20_vol_change_en.csv,ca_t15_forage20_vol_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t15_forage20_vol_change_sep_en.html,ca_t15_forage20_vol_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t15_forage20_vol_change_sep_en.pdf,ca_t15_forage20_vol_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t15_forage20_vol_change_sep_en.csv,ca_t15_forage20_vol_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t15_forage20_vol_change_intv_en.html,ca_t15_forage20_vol_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t15_forage20_vol_change_intv_en.pdf,ca_t15_forage20_vol_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t15_forage20_vol_change_intv_en.csv,ca_t15_forage20_vol_change_intv_en.csv
+t1,CA,html,html,Annual change in total tree volume (million m3) by species group and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t16_lsage20_vol_change_en.html,ca_t16_lsage20_vol_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t16_lsage20_vol_change_en.pdf,ca_t16_lsage20_vol_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t16_lsage20_vol_change_en.csv,ca_t16_lsage20_vol_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t16_lsage20_vol_change_sep_en.html,ca_t16_lsage20_vol_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t16_lsage20_vol_change_sep_en.pdf,ca_t16_lsage20_vol_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t16_lsage20_vol_change_sep_en.csv,ca_t16_lsage20_vol_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t16_lsage20_vol_change_intv_en.html,ca_t16_lsage20_vol_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t16_lsage20_vol_change_intv_en.pdf,ca_t16_lsage20_vol_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t16_lsage20_vol_change_intv_en.csv,ca_t16_lsage20_vol_change_intv_en.csv
+t1,CA,html,html,Annual change in total above-ground biomass (million tonnes) on forest land by forest type and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t17_forage20_biom_change_en.html,ca_t17_forage20_biom_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t17_forage20_biom_change_en.pdf,ca_t17_forage20_biom_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t17_forage20_biom_change_en.csv,ca_t17_forage20_biom_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t17_forage20_biom_change_sep_en.html,ca_t17_forage20_biom_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t17_forage20_biom_change_sep_en.pdf,ca_t17_forage20_biom_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t17_forage20_biom_change_sep_en.csv,ca_t17_forage20_biom_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t17_forage20_biom_change_intv_en.html,ca_t17_forage20_biom_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t17_forage20_biom_change_intv_en.pdf,ca_t17_forage20_biom_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t17_forage20_biom_change_intv_en.csv,ca_t17_forage20_biom_change_intv_en.csv
+t1,CA,html,html,Annual change in total above-ground biomass (million tonnes) on forest land by species group and age class in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t18_lsage20_biom_change_en.html,ca_t18_lsage20_biom_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t18_lsage20_biom_change_en.pdf,ca_t18_lsage20_biom_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t18_lsage20_biom_change_en.csv,ca_t18_lsage20_biom_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t18_lsage20_biom_change_sep_en.html,ca_t18_lsage20_biom_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t18_lsage20_biom_change_sep_en.pdf,ca_t18_lsage20_biom_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t18_lsage20_biom_change_sep_en.csv,ca_t18_lsage20_biom_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t18_lsage20_biom_change_intv_en.html,ca_t18_lsage20_biom_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t18_lsage20_biom_change_intv_en.pdf,ca_t18_lsage20_biom_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t18_lsage20_biom_change_intv_en.csv,ca_t18_lsage20_biom_change_intv_en.csv
+t1,CA,html,html,Annual change in total above-ground carbon (million tonnes) in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t19_carbon_change_en.html,ca_t19_carbon_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t19_carbon_change_en.pdf,ca_t19_carbon_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t19_carbon_change_en.csv,ca_t19_carbon_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t19_carbon_change_sep_en.html,ca_t19_carbon_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t19_carbon_change_sep_en.pdf,ca_t19_carbon_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t19_carbon_change_sep_en.csv,ca_t19_carbon_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t19_carbon_change_intv_en.html,ca_t19_carbon_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t19_carbon_change_intv_en.pdf,ca_t19_carbon_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t19_carbon_change_intv_en.csv,ca_t19_carbon_change_intv_en.csv
+t1,CA,html,html,Annual change in area (1000 ha) of land by land use in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t21_lu_area_change_en.html,ca_t21_lu_area_change_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t21_lu_area_change_en.pdf,ca_t21_lu_area_change_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t21_lu_area_change_en.csv,ca_t21_lu_area_change_en.csv
+t1,CA,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t21_lu_area_change_sep_en.html,ca_t21_lu_area_change_sep_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t21_lu_area_change_sep_en.pdf,ca_t21_lu_area_change_sep_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t21_lu_area_change_sep_en.csv,ca_t21_lu_area_change_sep_en.csv
+t1,CA,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/html/ca_t21_lu_area_change_intv_en.html,ca_t21_lu_area_change_intv_en.html
+t1,CA,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/pdf/ca_t21_lu_area_change_intv_en.pdf,ca_t21_lu_area_change_intv_en.pdf
+t1,CA,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/CA/csv/ca_t21_lu_area_change_intv_en.csv,ca_t21_lu_area_change_intv_en.csv
+t1,NFI,html,html,Area (1000 ha) of land cover by terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t1_lc_area_en.html,nfi_t1_lc_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t1_lc_area_en.pdf,nfi_t1_lc_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t1_lc_area_en.csv,nfi_t1_lc_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t1_lc_area_sep_en.html,nfi_t1_lc_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t1_lc_area_sep_en.pdf,nfi_t1_lc_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t1_lc_area_sep_en.csv,nfi_t1_lc_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t1_lc_area_intv_en.html,nfi_t1_lc_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t1_lc_area_intv_en.pdf,nfi_t1_lc_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t1_lc_area_intv_en.csv,nfi_t1_lc_area_intv_en.csv
+t1,NFI,html,html,Area (1000 ha) of vegetated land by landscape position and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t2_ldpos_area_en.html,nfi_t2_ldpos_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t2_ldpos_area_en.pdf,nfi_t2_ldpos_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t2_ldpos_area_en.csv,nfi_t2_ldpos_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t2_ldpos_area_sep_en.html,nfi_t2_ldpos_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t2_ldpos_area_sep_en.pdf,nfi_t2_ldpos_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t2_ldpos_area_sep_en.csv,nfi_t2_ldpos_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t2_ldpos_area_intv_en.html,nfi_t2_ldpos_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t2_ldpos_area_intv_en.pdf,nfi_t2_ldpos_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t2_ldpos_area_intv_en.csv,nfi_t2_ldpos_area_intv_en.csv
+t1,NFI,html,html,Area (1000 ha) of non-vegetated land by landscape position and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t3_lw_area_en.html,nfi_t3_lw_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t3_lw_area_en.pdf,nfi_t3_lw_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t3_lw_area_en.csv,nfi_t3_lw_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t3_lw_area_sep_en.html,nfi_t3_lw_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t3_lw_area_sep_en.pdf,nfi_t3_lw_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t3_lw_area_sep_en.csv,nfi_t3_lw_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t3_lw_area_intv_en.html,nfi_t3_lw_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t3_lw_area_intv_en.pdf,nfi_t3_lw_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t3_lw_area_intv_en.csv,nfi_t3_lw_area_intv_en.csv
+t1,NFI,html,html,Area (1000 ha) of forest and non-forest land by terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t4_for_area_en.html,nfi_t4_for_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t4_for_area_en.pdf,nfi_t4_for_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t4_for_area_en.csv,nfi_t4_for_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t4_for_area_sep_en.html,nfi_t4_for_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t4_for_area_sep_en.pdf,nfi_t4_for_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t4_for_area_sep_en.csv,nfi_t4_for_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t4_for_area_intv_en.html,nfi_t4_for_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t4_for_area_intv_en.pdf,nfi_t4_for_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t4_for_area_intv_en.csv,nfi_t4_for_area_intv_en.csv
+t1,NFI,html,html,"Area (1000 ha) of forest land by forest type, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t5_forage20_area_en.html,nfi_t5_forage20_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t5_forage20_area_en.pdf,nfi_t5_forage20_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t5_forage20_area_en.csv,nfi_t5_forage20_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t5_forage20_area_sep_en.html,nfi_t5_forage20_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t5_forage20_area_sep_en.pdf,nfi_t5_forage20_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t5_forage20_area_sep_en.csv,nfi_t5_forage20_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t5_forage20_area_intv_en.html,nfi_t5_forage20_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t5_forage20_area_intv_en.pdf,nfi_t5_forage20_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t5_forage20_area_intv_en.csv,nfi_t5_forage20_area_intv_en.csv
+t1,NFI,html,html,"Area (1000 ha) of forest land by IUCN category, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t9_psage20_area_en.html,nfi_t9_psage20_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t9_psage20_area_en.pdf,nfi_t9_psage20_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t9_psage20_area_en.csv,nfi_t9_psage20_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t9_psage20_area_sep_en.html,nfi_t9_psage20_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t9_psage20_area_sep_en.pdf,nfi_t9_psage20_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t9_psage20_area_sep_en.csv,nfi_t9_psage20_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t9_psage20_area_intv_en.html,nfi_t9_psage20_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t9_psage20_area_intv_en.pdf,nfi_t9_psage20_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t9_psage20_area_intv_en.csv,nfi_t9_psage20_area_intv_en.csv
+t1,NFI,html,html,Area (1000 ha) of forest land by ownership and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t12_forown_area_en.html,nfi_t12_forown_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t12_forown_area_en.pdf,nfi_t12_forown_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t12_forown_area_en.csv,nfi_t12_forown_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t12_forown_area_sep_en.html,nfi_t12_forown_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t12_forown_area_sep_en.pdf,nfi_t12_forown_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t12_forown_area_sep_en.csv,nfi_t12_forown_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t12_forown_area_intv_en.html,nfi_t12_forown_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t12_forown_area_intv_en.pdf,nfi_t12_forown_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t12_forown_area_intv_en.csv,nfi_t12_forown_area_intv_en.csv
+t1,NFI,html,html,"Area (1000 ha) of forest land by species group, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t14_lsage20_area_en.html,nfi_t14_lsage20_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t14_lsage20_area_en.pdf,nfi_t14_lsage20_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t14_lsage20_area_en.csv,nfi_t14_lsage20_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t14_lsage20_area_sep_en.html,nfi_t14_lsage20_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t14_lsage20_area_sep_en.pdf,nfi_t14_lsage20_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t14_lsage20_area_sep_en.csv,nfi_t14_lsage20_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t14_lsage20_area_intv_en.html,nfi_t14_lsage20_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t14_lsage20_area_intv_en.pdf,nfi_t14_lsage20_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t14_lsage20_area_intv_en.csv,nfi_t14_lsage20_area_intv_en.csv
+t1,NFI,html,html,"Total tree volume (million m3) on forest land by forest type, age class, and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t15_forage20_vol_en.html,nfi_t15_forage20_vol_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t15_forage20_vol_en.pdf,nfi_t15_forage20_vol_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t15_forage20_vol_en.csv,nfi_t15_forage20_vol_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t15_forage20_vol_sep_en.html,nfi_t15_forage20_vol_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t15_forage20_vol_sep_en.pdf,nfi_t15_forage20_vol_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t15_forage20_vol_sep_en.csv,nfi_t15_forage20_vol_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t15_forage20_vol_intv_en.html,nfi_t15_forage20_vol_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t15_forage20_vol_intv_en.pdf,nfi_t15_forage20_vol_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t15_forage20_vol_intv_en.csv,nfi_t15_forage20_vol_intv_en.csv
+t1,NFI,html,html,"Total tree volume (million m3) by species group, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t16_lsage20_vol_en.html,nfi_t16_lsage20_vol_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t16_lsage20_vol_en.pdf,nfi_t16_lsage20_vol_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t16_lsage20_vol_en.csv,nfi_t16_lsage20_vol_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t16_lsage20_vol_sep_en.html,nfi_t16_lsage20_vol_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t16_lsage20_vol_sep_en.pdf,nfi_t16_lsage20_vol_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t16_lsage20_vol_sep_en.csv,nfi_t16_lsage20_vol_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t16_lsage20_vol_intv_en.html,nfi_t16_lsage20_vol_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t16_lsage20_vol_intv_en.pdf,nfi_t16_lsage20_vol_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t16_lsage20_vol_intv_en.csv,nfi_t16_lsage20_vol_intv_en.csv
+t1,NFI,html,html,"Total above-ground biomass (million tonnes) on forest land by forest type, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t17_forage20_biom_en.html,nfi_t17_forage20_biom_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t17_forage20_biom_en.pdf,nfi_t17_forage20_biom_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t17_forage20_biom_en.csv,nfi_t17_forage20_biom_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t17_forage20_biom_sep_en.html,nfi_t17_forage20_biom_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t17_forage20_biom_sep_en.pdf,nfi_t17_forage20_biom_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t17_forage20_biom_sep_en.csv,nfi_t17_forage20_biom_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t17_forage20_biom_intv_en.html,nfi_t17_forage20_biom_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t17_forage20_biom_intv_en.pdf,nfi_t17_forage20_biom_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t17_forage20_biom_intv_en.csv,nfi_t17_forage20_biom_intv_en.csv
+t1,NFI,html,html,"Total above-ground biomass (million tonnes) on forest land by species group, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t18_lsage20_biom_en.html,nfi_t18_lsage20_biom_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t18_lsage20_biom_en.pdf,nfi_t18_lsage20_biom_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t18_lsage20_biom_en.csv,nfi_t18_lsage20_biom_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t18_lsage20_biom_sep_en.html,nfi_t18_lsage20_biom_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t18_lsage20_biom_sep_en.pdf,nfi_t18_lsage20_biom_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t18_lsage20_biom_sep_en.csv,nfi_t18_lsage20_biom_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t18_lsage20_biom_intv_en.html,nfi_t18_lsage20_biom_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t18_lsage20_biom_intv_en.pdf,nfi_t18_lsage20_biom_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t18_lsage20_biom_intv_en.csv,nfi_t18_lsage20_biom_intv_en.csv
+t1,NFI,html,html,Total above-ground carbon (million tonnes) by terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t19_carbon_en.html,nfi_t19_carbon_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t19_carbon_en.pdf,nfi_t19_carbon_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t19_carbon_en.csv,nfi_t19_carbon_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t19_carbon_sep_en.html,nfi_t19_carbon_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t19_carbon_sep_en.pdf,nfi_t19_carbon_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t19_carbon_sep_en.csv,nfi_t19_carbon_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t19_carbon_intv_en.html,nfi_t19_carbon_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t19_carbon_intv_en.pdf,nfi_t19_carbon_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t19_carbon_intv_en.csv,nfi_t19_carbon_intv_en.csv
+t1,NFI,html,html,Area (1000 ha) of land by land use and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t21_lu_area_en.html,nfi_t21_lu_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t21_lu_area_en.pdf,nfi_t21_lu_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t21_lu_area_en.csv,nfi_t21_lu_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t21_lu_area_sep_en.html,nfi_t21_lu_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t21_lu_area_sep_en.pdf,nfi_t21_lu_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t21_lu_area_sep_en.csv,nfi_t21_lu_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t21_lu_area_intv_en.html,nfi_t21_lu_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t21_lu_area_intv_en.pdf,nfi_t21_lu_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t21_lu_area_intv_en.csv,nfi_t21_lu_area_intv_en.csv
+t1,NFI,html,html,"Area (1000 ha) of forest land by IUCN category, and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t22_psown_area_en.html,nfi_t22_psown_area_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t22_psown_area_en.pdf,nfi_t22_psown_area_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t22_psown_area_en.csv,nfi_t22_psown_area_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t22_psown_area_sep_en.html,nfi_t22_psown_area_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t22_psown_area_sep_en.pdf,nfi_t22_psown_area_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t22_psown_area_sep_en.csv,nfi_t22_psown_area_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t22_psown_area_intv_en.html,nfi_t22_psown_area_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t22_psown_area_intv_en.pdf,nfi_t22_psown_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t22_psown_area_intv_en.csv,nfi_t22_psown_area_intv_en.csv
+t1,NFI,html,html,Annual change in area (1000 ha) of land cover by terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t1_lc_area_change_en.html,nfi_t1_lc_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t1_lc_area_change_en.pdf,nfi_t1_lc_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t1_lc_area_change_en.csv,nfi_t1_lc_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t1_lc_area_change_sep_en.html,nfi_t1_lc_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t1_lc_area_change_sep_en.pdf,nfi_t1_lc_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t1_lc_area_change_sep_en.csv,nfi_t1_lc_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t1_lc_area_change_intv_en.html,nfi_t1_lc_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t1_lc_area_change_intv_en.pdf,nfi_t1_lc_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t1_lc_area_change_intv_en.csv,nfi_t1_lc_area_change_intv_en.csv
+t1,NFI,html,html,Annual change in area (1000 ha) of vegetated land by landscape position and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t2_ldpos_area_change_en.html,nfi_t2_ldpos_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t2_ldpos_area_change_en.pdf,nfi_t2_ldpos_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t2_ldpos_area_change_en.csv,nfi_t2_ldpos_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t2_ldpos_area_change_sep_en.html,nfi_t2_ldpos_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t2_ldpos_area_change_sep_en.pdf,nfi_t2_ldpos_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t2_ldpos_area_change_sep_en.csv,nfi_t2_ldpos_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t2_ldpos_area_change_intv_en.html,nfi_t2_ldpos_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t2_ldpos_area_change_intv_en.pdf,nfi_t2_ldpos_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t2_ldpos_area_change_intv_en.csv,nfi_t2_ldpos_area_change_intv_en.csv
+t1,NFI,html,html,Annual change in area (1000 ha) of non-vegetated land by landscape position and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t3_lw_area_change_en.html,nfi_t3_lw_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t3_lw_area_change_en.pdf,nfi_t3_lw_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t3_lw_area_change_en.csv,nfi_t3_lw_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t3_lw_area_change_sep_en.html,nfi_t3_lw_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t3_lw_area_change_sep_en.pdf,nfi_t3_lw_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t3_lw_area_change_sep_en.csv,nfi_t3_lw_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t3_lw_area_change_intv_en.html,nfi_t3_lw_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t3_lw_area_change_intv_en.pdf,nfi_t3_lw_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t3_lw_area_change_intv_en.csv,nfi_t3_lw_area_change_intv_en.csv
+t1,NFI,html,html,Annual change in area (1000 ha) of forest and non-forest land by terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t4_for_area_change_en.html,nfi_t4_for_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t4_for_area_change_en.pdf,nfi_t4_for_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t4_for_area_change_en.csv,nfi_t4_for_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t4_for_area_change_sep_en.html,nfi_t4_for_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t4_for_area_change_sep_en.pdf,nfi_t4_for_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t4_for_area_change_sep_en.csv,nfi_t4_for_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t4_for_area_change_intv_en.html,nfi_t4_for_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t4_for_area_change_intv_en.pdf,nfi_t4_for_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t4_for_area_change_intv_en.csv,nfi_t4_for_area_change_intv_en.csv
+t1,NFI,html,html,"Annual change in area (1000 ha) of forest land by forest type, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t5_forage20_area_change_en.html,nfi_t5_forage20_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t5_forage20_area_change_en.pdf,nfi_t5_forage20_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t5_forage20_area_change_en.csv,nfi_t5_forage20_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t5_forage20_area_change_sep_en.html,nfi_t5_forage20_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t5_forage20_area_change_sep_en.pdf,nfi_t5_forage20_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t5_forage20_area_change_sep_en.csv,nfi_t5_forage20_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t5_forage20_area_change_intv_en.html,nfi_t5_forage20_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t5_forage20_area_change_intv_en.pdf,nfi_t5_forage20_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t5_forage20_area_change_intv_en.csv,nfi_t5_forage20_area_change_intv_en.csv
+t1,NFI,html,html,"Annual change in area (1000 ha) of forest land by IUCN category, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t9_psage20_area_change_en.html,nfi_t9_psage20_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t9_psage20_area_change_en.pdf,nfi_t9_psage20_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t9_psage20_area_change_en.csv,nfi_t9_psage20_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t9_psage20_area_change_sep_en.html,nfi_t9_psage20_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t9_psage20_area_change_sep_en.pdf,nfi_t9_psage20_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t9_psage20_area_change_sep_en.csv,nfi_t9_psage20_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t9_psage20_area_change_intv_en.html,nfi_t9_psage20_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t9_psage20_area_change_intv_en.pdf,nfi_t9_psage20_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t9_psage20_area_change_intv_en.csv,nfi_t9_psage20_area_change_intv_en.csv
+t1,NFI,html,html,Annual change in area (1000 ha) of forest land by ownership and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t12_forown_area_change_en.html,nfi_t12_forown_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t12_forown_area_change_en.pdf,nfi_t12_forown_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t12_forown_area_change_en.csv,nfi_t12_forown_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t12_forown_area_change_sep_en.html,nfi_t12_forown_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t12_forown_area_change_sep_en.pdf,nfi_t12_forown_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t12_forown_area_change_sep_en.csv,nfi_t12_forown_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t12_forown_area_change_intv_en.html,nfi_t12_forown_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t12_forown_area_change_intv_en.pdf,nfi_t12_forown_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t12_forown_area_change_intv_en.csv,nfi_t12_forown_area_change_intv_en.csv
+t1,NFI,html,html,"Annual change in area (1000 ha) of forest land by species group, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t14_lsage20_area_change_en.html,nfi_t14_lsage20_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t14_lsage20_area_change_en.pdf,nfi_t14_lsage20_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t14_lsage20_area_change_en.csv,nfi_t14_lsage20_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t14_lsage20_area_change_sep_en.html,nfi_t14_lsage20_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t14_lsage20_area_change_sep_en.pdf,nfi_t14_lsage20_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t14_lsage20_area_change_sep_en.csv,nfi_t14_lsage20_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t14_lsage20_area_change_intv_en.html,nfi_t14_lsage20_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t14_lsage20_area_change_intv_en.pdf,nfi_t14_lsage20_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t14_lsage20_area_change_intv_en.csv,nfi_t14_lsage20_area_change_intv_en.csv
+t1,NFI,html,html,"Annual change in total tree volume (million m3) on forest land by forest type, age class, and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t15_forage20_vol_change_en.html,nfi_t15_forage20_vol_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t15_forage20_vol_change_en.pdf,nfi_t15_forage20_vol_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t15_forage20_vol_change_en.csv,nfi_t15_forage20_vol_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t15_forage20_vol_change_sep_en.html,nfi_t15_forage20_vol_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t15_forage20_vol_change_sep_en.pdf,nfi_t15_forage20_vol_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t15_forage20_vol_change_sep_en.csv,nfi_t15_forage20_vol_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t15_forage20_vol_change_intv_en.html,nfi_t15_forage20_vol_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t15_forage20_vol_change_intv_en.pdf,nfi_t15_forage20_vol_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t15_forage20_vol_change_intv_en.csv,nfi_t15_forage20_vol_change_intv_en.csv
+t1,NFI,html,html,"Annual change in total tree volume (million m3) by species group, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t16_lsage20_vol_change_en.html,nfi_t16_lsage20_vol_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t16_lsage20_vol_change_en.pdf,nfi_t16_lsage20_vol_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t16_lsage20_vol_change_en.csv,nfi_t16_lsage20_vol_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t16_lsage20_vol_change_sep_en.html,nfi_t16_lsage20_vol_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t16_lsage20_vol_change_sep_en.pdf,nfi_t16_lsage20_vol_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t16_lsage20_vol_change_sep_en.csv,nfi_t16_lsage20_vol_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t16_lsage20_vol_change_intv_en.html,nfi_t16_lsage20_vol_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t16_lsage20_vol_change_intv_en.pdf,nfi_t16_lsage20_vol_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t16_lsage20_vol_change_intv_en.csv,nfi_t16_lsage20_vol_change_intv_en.csv
+t1,NFI,html,html,"Annual change in total above-ground biomass (million tonnes) on forest land by forest type, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t17_forage20_biom_change_en.html,nfi_t17_forage20_biom_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t17_forage20_biom_change_en.pdf,nfi_t17_forage20_biom_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t17_forage20_biom_change_en.csv,nfi_t17_forage20_biom_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t17_forage20_biom_change_sep_en.html,nfi_t17_forage20_biom_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t17_forage20_biom_change_sep_en.pdf,nfi_t17_forage20_biom_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t17_forage20_biom_change_sep_en.csv,nfi_t17_forage20_biom_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t17_forage20_biom_change_intv_en.html,nfi_t17_forage20_biom_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t17_forage20_biom_change_intv_en.pdf,nfi_t17_forage20_biom_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t17_forage20_biom_change_intv_en.csv,nfi_t17_forage20_biom_change_intv_en.csv
+t1,NFI,html,html,"Annual change in total above-ground biomass (million tonnes) on forest land by species group, age class and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t18_lsage20_biom_change_en.html,nfi_t18_lsage20_biom_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t18_lsage20_biom_change_en.pdf,nfi_t18_lsage20_biom_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t18_lsage20_biom_change_en.csv,nfi_t18_lsage20_biom_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t18_lsage20_biom_change_sep_en.html,nfi_t18_lsage20_biom_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t18_lsage20_biom_change_sep_en.pdf,nfi_t18_lsage20_biom_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t18_lsage20_biom_change_sep_en.csv,nfi_t18_lsage20_biom_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t18_lsage20_biom_change_intv_en.html,nfi_t18_lsage20_biom_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t18_lsage20_biom_change_intv_en.pdf,nfi_t18_lsage20_biom_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t18_lsage20_biom_change_intv_en.csv,nfi_t18_lsage20_biom_change_intv_en.csv
+t1,NFI,html,html,Annual change in total above-ground carbon (million tonnes) by terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t19_carbon_change_en.html,nfi_t19_carbon_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t19_carbon_change_en.pdf,nfi_t19_carbon_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t19_carbon_change_en.csv,nfi_t19_carbon_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t19_carbon_change_sep_en.html,nfi_t19_carbon_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t19_carbon_change_sep_en.pdf,nfi_t19_carbon_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t19_carbon_change_sep_en.csv,nfi_t19_carbon_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t19_carbon_change_intv_en.html,nfi_t19_carbon_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t19_carbon_change_intv_en.pdf,nfi_t19_carbon_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t19_carbon_change_intv_en.csv,nfi_t19_carbon_change_intv_en.csv
+t1,NFI,html,html,Annual change in area (1000 ha) of land by land use and terrestrial ecozone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t21_lu_area_change_en.html,nfi_t21_lu_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t21_lu_area_change_en.pdf,nfi_t21_lu_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t21_lu_area_change_en.csv,nfi_t21_lu_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t21_lu_area_change_sep_en.html,nfi_t21_lu_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t21_lu_area_change_sep_en.pdf,nfi_t21_lu_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t21_lu_area_change_sep_en.csv,nfi_t21_lu_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t21_lu_area_change_intv_en.html,nfi_t21_lu_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t21_lu_area_change_intv_en.pdf,nfi_t21_lu_area_change_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t21_lu_area_change_intv_en.csv,nfi_t21_lu_area_change_intv_en.csv
+t1,NFI,html,html,"Annual change in area (1000 ha) of forest land by IUCN category, and terrestrial ecozone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t22_psown_area_change_en.html,nfi_t22_psown_area_change_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t22_psown_area_change_en.pdf,nfi_t22_psown_area_change_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t22_psown_area_change_en.csv,nfi_t22_psown_area_change_en.csv
+t1,NFI,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t22_psown_area_change_sep_en.html,nfi_t22_psown_area_change_sep_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t22_psown_area_change_sep_en.pdf,nfi_t22_psown_area_change_sep_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t22_psown_area_change_sep_en.csv,nfi_t22_psown_area_change_sep_en.csv
+t1,NFI,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/html/nfi_t22_psown_area_change_intv_en.html,nfi_t22_psown_area_change_intv_en.html
+t1,NFI,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/pdf/nfi_t22_psown_area_intv_en.pdf,nfi_t22_psown_area_intv_en.pdf
+t1,NFI,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/NFI/csv/nfi_t22_psown_area_change_intv_en.csv,nfi_t22_psown_area_change_intv_en.csv
+t1,BORE,html,html,Area (1000 ha) of land cover by boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t1_lc_area_en.html,bore_t1_lc_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t1_lc_area_en.pdf,bore_t1_lc_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t1_lc_area_en.csv,bore_t1_lc_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t1_lc_area_sep_en.html,bore_t1_lc_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t1_lc_area_sep_en.pdf,bore_t1_lc_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t1_lc_area_sep_en.csv,bore_t1_lc_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t1_lc_area_intv_en.html,bore_t1_lc_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t1_lc_area_intv_en.pdf,bore_t1_lc_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t1_lc_area_intv_en.csv,bore_t1_lc_area_intv_en.csv
+t1,BORE,html,html,Area (1000 ha) of vegetated land by landscape position and boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t2_ldpos_area_en.html,bore_t2_ldpos_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t2_ldpos_area_en.pdf,bore_t2_ldpos_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t2_ldpos_area_en.csv,bore_t2_ldpos_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t2_ldpos_area_sep_en.html,bore_t2_ldpos_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t2_ldpos_area_sep_en.pdf,bore_t2_ldpos_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t2_ldpos_area_sep_en.csv,bore_t2_ldpos_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t2_ldpos_area_intv_en.html,bore_t2_ldpos_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t2_ldpos_area_intv_en.pdf,bore_t2_ldpos_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t2_ldpos_area_intv_en.csv,bore_t2_ldpos_area_intv_en.csv
+t1,BORE,html,html,Area (1000 ha) of non-vegetated land by landscape position and boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t3_lw_area_en.html,bore_t3_lw_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t3_lw_area_en.pdf,bore_t3_lw_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t3_lw_area_en.csv,bore_t3_lw_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t3_lw_area_sep_en.html,bore_t3_lw_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t3_lw_area_sep_en.pdf,bore_t3_lw_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t3_lw_area_sep_en.csv,bore_t3_lw_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t3_lw_area_intv_en.html,bore_t3_lw_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t3_lw_area_intv_en.pdf,bore_t3_lw_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t3_lw_area_intv_en.csv,bore_t3_lw_area_intv_en.csv
+t1,BORE,html,html,Area (1000 ha) of forest and non-forest land by boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t4_for_area_en.html,bore_t4_for_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t4_for_area_en.pdf,bore_t4_for_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t4_for_area_en.csv,bore_t4_for_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t4_for_area_sep_en.html,bore_t4_for_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t4_for_area_sep_en.pdf,bore_t4_for_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t4_for_area_sep_en.csv,bore_t4_for_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t4_for_area_intv_en.html,bore_t4_for_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t4_for_area_intv_en.pdf,bore_t4_for_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t4_for_area_intv_en.csv,bore_t4_for_area_intv_en.csv
+t1,BORE,html,html,"Area (1000 ha) of forest land by forest type, age class and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t5_forage20_area_en.html,bore_t5_forage20_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t5_forage20_area_en.pdf,bore_t5_forage20_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t5_forage20_area_en.csv,bore_t5_forage20_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t5_forage20_area_sep_en.html,bore_t5_forage20_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t5_forage20_area_sep_en.pdf,bore_t5_forage20_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t5_forage20_area_sep_en.csv,bore_t5_forage20_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t5_forage20_area_intv_en.html,bore_t5_forage20_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t5_forage20_area_intv_en.pdf,bore_t5_forage20_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t5_forage20_area_intv_en.csv,bore_t5_forage20_area_intv_en.csv
+t1,BORE,html,html,"Area (1000 ha) of forest land by IUCN category, age class and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t9_psage20_area_en.html,bore_t9_psage20_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t9_psage20_area_en.pdf,bore_t9_psage20_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t9_psage20_area_en.csv,bore_t9_psage20_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t9_psage20_area_sep_en.html,bore_t9_psage20_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t9_psage20_area_sep_en.pdf,bore_t9_psage20_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t9_psage20_area_sep_en.csv,bore_t9_psage20_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t9_psage20_area_intv_en.html,bore_t9_psage20_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t9_psage20_area_intv_en.pdf,bore_t9_psage20_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t9_psage20_area_intv_en.csv,bore_t9_psage20_area_intv_en.csv
+t1,BORE,html,html,Area (1000 ha) of forest land by ownership and boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t12_forown_area_en.html,bore_t12_forown_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t12_forown_area_en.pdf,bore_t12_forown_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t12_forown_area_en.csv,bore_t12_forown_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t12_forown_area_sep_en.html,bore_t12_forown_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t12_forown_area_sep_en.pdf,bore_t12_forown_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t12_forown_area_sep_en.csv,bore_t12_forown_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t12_forown_area_intv_en.html,bore_t12_forown_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t12_forown_area_intv_en.pdf,bore_t12_forown_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t12_forown_area_intv_en.csv,bore_t12_forown_area_intv_en.csv
+t1,BORE,html,html,"Area (1000 ha) of forest land by species group, age class and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t14_lsage20_area_en.html,bore_t14_lsage20_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t14_lsage20_area_en.pdf,bore_t14_lsage20_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t14_lsage20_area_en.csv,bore_t14_lsage20_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t14_lsage20_area_sep_en.html,bore_t14_lsage20_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t14_lsage20_area_sep_en.pdf,bore_t14_lsage20_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t14_lsage20_area_sep_en.csv,bore_t14_lsage20_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t14_lsage20_area_intv_en.html,bore_t14_lsage20_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t14_lsage20_area_intv_en.pdf,bore_t14_lsage20_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t14_lsage20_area_intv_en.csv,bore_t14_lsage20_area_intv_en.csv
+t1,BORE,html,html,"Area (1000 ha) of forest land by IUCN category, and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t22_psown_area_en.html,bore_t22_psown_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t22_psown_area_en.pdf,bore_t22_psown_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t22_psown_area_en.csv,bore_t22_psown_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t22_psown_area_sep_en.html,bore_t22_psown_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t22_psown_area_sep_en.pdf,bore_t22_psown_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t22_psown_area_sep_en.csv,bore_t22_psown_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t22_psown_area_intv_en.html,bore_t22_psown_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t22_psown_area_intv_en.pdf,bore_t22_psown_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t22_psown_area_intv_en.csv,bore_t22_psown_area_intv_en.csv
+t1,BORE,html,html,"Total tree volume (million m3) on forest land by forest type, age class, and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t15_forage20_vol_en.html,bore_t15_forage20_vol_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t15_forage20_vol_en.pdf,bore_t15_forage20_vol_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t15_forage20_vol_en.csv,bore_t15_forage20_vol_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t15_forage20_vol_sep_en.html,bore_t15_forage20_vol_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t15_forage20_vol_sep_en.pdf,bore_t15_forage20_vol_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t15_forage20_vol_sep_en.csv,bore_t15_forage20_vol_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t15_forage20_vol_intv_en.html,bore_t15_forage20_vol_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t15_forage20_vol_intv_en.pdf,bore_t15_forage20_vol_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t15_forage20_vol_intv_en.csv,bore_t15_forage20_vol_intv_en.csv
+t1,BORE,html,html,"Total tree volume (million m3) by species group, age class and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t16_lsage20_vol_en.html,bore_t16_lsage20_vol_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t16_lsage20_vol_en.pdf,bore_t16_lsage20_vol_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t16_lsage20_vol_en.csv,bore_t16_lsage20_vol_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t16_lsage20_vol_sep_en.html,bore_t16_lsage20_vol_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t16_lsage20_vol_sep_en.pdf,bore_t16_lsage20_vol_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t16_lsage20_vol_sep_en.csv,bore_t16_lsage20_vol_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t16_lsage20_vol_intv_en.html,bore_t16_lsage20_vol_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t16_lsage20_vol_intv_en.pdf,bore_t16_lsage20_vol_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t16_lsage20_vol_intv_en.csv,bore_t16_lsage20_vol_intv_en.csv
+t1,BORE,html,html,"Total above-ground biomass (million tonnes) on forest land by forest type, age class and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t17_forage20_biom_en.html,bore_t17_forage20_biom_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t17_forage20_biom_en.pdf,bore_t17_forage20_biom_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t17_forage20_biom_en.csv,bore_t17_forage20_biom_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t17_forage20_biom_sep_en.html,bore_t17_forage20_biom_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t17_forage20_biom_sep_en.pdf,bore_t17_forage20_biom_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t17_forage20_biom_sep_en.csv,bore_t17_forage20_biom_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t17_forage20_biom_intv_en.html,bore_t17_forage20_biom_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t17_forage20_biom_intv_en.pdf,bore_t17_forage20_biom_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t17_forage20_biom_intv_en.csv,bore_t17_forage20_biom_intv_en.csv
+t1,BORE,html,html,"Total above-ground biomass (million tonnes) on forest land by species group, age class and boreal zone in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t18_lsage20_biom_en.html,bore_t18_lsage20_biom_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t18_lsage20_biom_en.pdf,bore_t18_lsage20_biom_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t18_lsage20_biom_en.csv,bore_t18_lsage20_biom_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t18_lsage20_biom_sep_en.html,bore_t18_lsage20_biom_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t18_lsage20_biom_sep_en.pdf,bore_t18_lsage20_biom_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t18_lsage20_biom_sep_en.csv,bore_t18_lsage20_biom_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t18_lsage20_biom_intv_en.html,bore_t18_lsage20_biom_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t18_lsage20_biom_intv_en.pdf,bore_t18_lsage20_biom_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t18_lsage20_biom_intv_en.csv,bore_t18_lsage20_biom_intv_en.csv
+t1,BORE,html,html,Total above-ground carbon (million tonnes) by boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t19_carbon_en.html,bore_t19_carbon_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t19_carbon_en.pdf,bore_t19_carbon_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t19_carbon_en.csv,bore_t19_carbon_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t19_carbon_sep_en.html,bore_t19_carbon_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t19_carbon_sep_en.pdf,bore_t19_carbon_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t19_carbon_sep_en.csv,bore_t19_carbon_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t19_carbon_intv_en.html,bore_t19_carbon_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t19_carbon_intv_en.pdf,bore_t19_carbon_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t19_carbon_intv_en.csv,bore_t19_carbon_intv_en.csv
+t1,BORE,html,html,Area (1000 ha) of land by land use and boreal zone in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t21_lu_area_en.html,bore_t21_lu_area_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t21_lu_area_en.pdf,bore_t21_lu_area_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t21_lu_area_en.csv,bore_t21_lu_area_en.csv
+t1,BORE,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t21_lu_area_sep_en.html,bore_t21_lu_area_sep_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t21_lu_area_sep_en.pdf,bore_t21_lu_area_sep_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t21_lu_area_sep_en.csv,bore_t21_lu_area_sep_en.csv
+t1,BORE,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/html/bore_t21_lu_area_intv_en.html,bore_t21_lu_area_intv_en.html
+t1,BORE,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/pdf/bore_t21_lu_area_intv_en.pdf,bore_t21_lu_area_intv_en.pdf
+t1,BORE,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/BORE/csv/bore_t21_lu_area_intv_en.csv,bore_t21_lu_area_intv_en.csv
+t1,MF2,html,html,Area (1000 ha) of land cover by managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t1_lc_area_en.html,mf2_t1_lc_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t1_lc_area_en.pdf,mf2_t1_lc_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t1_lc_area_en.csv,mf2_t1_lc_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t1_lc_area_sep_en.html,mf2_t1_lc_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t1_lc_area_sep_en.pdf,mf2_t1_lc_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t1_lc_area_sep_en.csv,mf2_t1_lc_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t1_lc_area_intv_en.html,mf2_t1_lc_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t1_lc_area_intv_en.pdf,mf2_t1_lc_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t1_lc_area_intv_en.csv,mf2_t1_lc_area_intv_en.csv
+t1,MF2,html,html,Area (1000 ha) of vegetated land by landscape position and managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t2_ldpos_area_en.html,mf2_t2_ldpos_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t2_ldpos_area_en.pdf,mf2_t2_ldpos_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t2_ldpos_area_en.csv,mf2_t2_ldpos_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t2_ldpos_area_sep_en.html,mf2_t2_ldpos_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t2_ldpos_area_sep_en.pdf,mf2_t2_ldpos_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t2_ldpos_area_sep_en.csv,mf2_t2_ldpos_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t2_ldpos_area_intv_en.html,mf2_t2_ldpos_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t2_ldpos_area_intv_en.pdf,mf2_t2_ldpos_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t2_ldpos_area_intv_en.csv,mf2_t2_ldpos_area_intv_en.csv
+t1,MF2,html,html,Area (1000 ha) of non-vegetated land by landscape position and managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t3_lw_area_en.html,mf2_t3_lw_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t3_lw_area_en.pdf,mf2_t3_lw_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t3_lw_area_en.csv,mf2_t3_lw_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t3_lw_area_sep_en.html,mf2_t3_lw_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t3_lw_area_sep_en.pdf,mf2_t3_lw_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t3_lw_area_sep_en.csv,mf2_t3_lw_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t3_lw_area_intv_en.html,mf2_t3_lw_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t3_lw_area_intv_en.pdf,mf2_t3_lw_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t3_lw_area_intv_en.csv,mf2_t3_lw_area_intv_en.csv
+t1,MF2,html,html,Area (1000 ha) of forest and non-forest land by managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t4_for_area_en.html,mf2_t4_for_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t4_for_area_en.pdf,mf2_t4_for_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t4_for_area_en.csv,mf2_t4_for_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t4_for_area_sep_en.html,mf2_t4_for_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t4_for_area_sep_en.pdf,mf2_t4_for_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t4_for_area_sep_en.csv,mf2_t4_for_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t4_for_area_intv_en.html,mf2_t4_for_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t4_for_area_intv_en.pdf,mf2_t4_for_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t4_for_area_intv_en.csv,mf2_t4_for_area_intv_en.csv
+t1,MF2,html,html,"Area (1000 ha) of forest land by forest type, age class and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t5_forage20_area_en.html,mf2_t5_forage20_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t5_forage20_area_en.pdf,mf2_t5_forage20_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t5_forage20_area_en.csv,mf2_t5_forage20_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t5_forage20_area_sep_en.html,mf2_t5_forage20_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t5_forage20_area_sep_en.pdf,mf2_t5_forage20_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t5_forage20_area_sep_en.csv,mf2_t5_forage20_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t5_forage20_area_intv_en.html,mf2_t5_forage20_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t5_forage20_area_intv_en.pdf,mf2_t5_forage20_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t5_forage20_area_intv_en.csv,mf2_t5_forage20_area_intv_en.csv
+t1,MF2,html,html,"Area (1000 ha) of forest land by IUCN category, age class and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t9_psage20_area_en.html,mf2_t9_psage20_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t9_psage20_area_en.pdf,mf2_t9_psage20_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t9_psage20_area_en.csv,mf2_t9_psage20_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t9_psage20_area_sep_en.html,mf2_t9_psage20_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t9_psage20_area_sep_en.pdf,mf2_t9_psage20_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t9_psage20_area_sep_en.csv,mf2_t9_psage20_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t9_psage20_area_intv_en.html,mf2_t9_psage20_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t9_psage20_area_intv_en.pdf,mf2_t9_psage20_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t9_psage20_area_intv_en.csv,mf2_t9_psage20_area_intv_en.csv
+t1,MF2,html,html,Area (1000 ha) of forest land by ownership and managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t12_forown_area_en.html,mf2_t12_forown_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t12_forown_area_en.pdf,mf2_t12_forown_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t12_forown_area_en.csv,mf2_t12_forown_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t12_forown_area_sep_en.html,mf2_t12_forown_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t12_forown_area_sep_en.pdf,mf2_t12_forown_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t12_forown_area_sep_en.csv,mf2_t12_forown_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t12_forown_area_intv_en.html,mf2_t12_forown_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t12_forown_area_intv_en.pdf,mf2_t12_forown_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t12_forown_area_intv_en.csv,mf2_t12_forown_area_intv_en.csv
+t1,MF2,html,html,"Area (1000 ha) of forest land by species group, age class and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t14_lsage20_area_en.html,mf2_t14_lsage20_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t14_lsage20_area_en.pdf,mf2_t14_lsage20_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t14_lsage20_area_en.csv,mf2_t14_lsage20_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t14_lsage20_area_sep_en.html,mf2_t14_lsage20_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t14_lsage20_area_sep_en.pdf,mf2_t14_lsage20_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t14_lsage20_area_sep_en.csv,mf2_t14_lsage20_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t14_lsage20_area_intv_en.html,mf2_t14_lsage20_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t14_lsage20_area_intv_en.pdf,mf2_t14_lsage20_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t14_lsage20_area_intv_en.csv,mf2_t14_lsage20_area_intv_en.csv
+t1,MF2,html,html,"Area (1000 ha) of forest land by IUCN category, and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t22_psown_area_en.html,mf2_t22_psown_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t22_psown_area_en.pdf,mf2_t22_psown_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t22_psown_area_en.csv,mf2_t22_psown_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t22_psown_area_sep_en.html,mf2_t22_psown_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t22_psown_area_sep_en.pdf,mf2_t22_psown_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t22_psown_area_sep_en.csv,mf2_t22_psown_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t22_psown_area_intv_en.html,mf2_t22_psown_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t22_psown_area_intv_en.pdf,mf2_t22_psown_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t22_psown_area_intv_en.csv,mf2_t22_psown_area_intv_en.csv
+t1,MF2,html,html,"Total tree volume (million m3) on forest land by forest type, age class, and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t15_forage20_vol_en.html,mf2_t15_forage20_vol_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t15_forage20_vol_en.pdf,mf2_t15_forage20_vol_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t15_forage20_vol_en.csv,mf2_t15_forage20_vol_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t15_forage20_vol_sep_en.html,mf2_t15_forage20_vol_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t15_forage20_vol_sep_en.pdf,mf2_t15_forage20_vol_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t15_forage20_vol_sep_en.csv,mf2_t15_forage20_vol_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t15_forage20_vol_intv_en.html,mf2_t15_forage20_vol_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t15_forage20_vol_intv_en.pdf,mf2_t15_forage20_vol_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t15_forage20_vol_intv_en.csv,mf2_t15_forage20_vol_intv_en.csv
+t1,MF2,html,html,"Total tree volume (million m3) by species group, age class and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t16_lsage20_vol_en.html,mf2_t16_lsage20_vol_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t16_lsage20_vol_en.pdf,mf2_t16_lsage20_vol_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t16_lsage20_vol_en.csv,mf2_t16_lsage20_vol_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t16_lsage20_vol_sep_en.html,mf2_t16_lsage20_vol_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t16_lsage20_vol_sep_en.pdf,mf2_t16_lsage20_vol_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t16_lsage20_vol_sep_en.csv,mf2_t16_lsage20_vol_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t16_lsage20_vol_intv_en.html,mf2_t16_lsage20_vol_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t16_lsage20_vol_intv_en.pdf,mf2_t16_lsage20_vol_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t16_lsage20_vol_intv_en.csv,mf2_t16_lsage20_vol_intv_en.csv
+t1,MF2,html,html,"Total above-ground biomass (million tonnes) on forest land by forest type, age class and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t17_forage20_biom_en.html,mf2_t17_forage20_biom_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t17_forage20_biom_en.pdf,mf2_t17_forage20_biom_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t17_forage20_biom_en.csv,mf2_t17_forage20_biom_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t17_forage20_biom_sep_en.html,mf2_t17_forage20_biom_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t17_forage20_biom_sep_en.pdf,mf2_t17_forage20_biom_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t17_forage20_biom_sep_en.csv,mf2_t17_forage20_biom_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t17_forage20_biom_intv_en.html,mf2_t17_forage20_biom_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t17_forage20_biom_intv_en.pdf,mf2_t17_forage20_biom_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t17_forage20_biom_intv_en.csv,mf2_t17_forage20_biom_intv_en.csv
+t1,MF2,html,html,"Total above-ground biomass (million tonnes) on forest land by species group, age class and managed forest regions in Canada.",https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t18_lsage20_biom_en.html,mf2_t18_lsage20_biom_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t18_lsage20_biom_en.pdf,mf2_t18_lsage20_biom_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t18_lsage20_biom_en.csv,mf2_t18_lsage20_biom_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t18_lsage20_biom_sep_en.html,mf2_t18_lsage20_biom_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t18_lsage20_biom_sep_en.pdf,mf2_t18_lsage20_biom_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t18_lsage20_biom_sep_en.csv,mf2_t18_lsage20_biom_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t18_lsage20_biom_intv_en.html,mf2_t18_lsage20_biom_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t18_lsage20_biom_intv_en.pdf,mf2_t18_lsage20_biom_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t18_lsage20_biom_intv_en.csv,mf2_t18_lsage20_biom_intv_en.csv
+t1,MF2,html,html,Total above-ground carbon (million tonnes) by managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t19_carbon_en.html,mf2_t19_carbon_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t19_carbon_en.pdf,mf2_t19_carbon_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t19_carbon_en.csv,mf2_t19_carbon_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t19_carbon_sep_en.html,mf2_t19_carbon_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t19_carbon_sep_en.pdf,mf2_t19_carbon_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t19_carbon_sep_en.csv,mf2_t19_carbon_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t19_carbon_intv_en.html,mf2_t19_carbon_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t19_carbon_intv_en.pdf,mf2_t19_carbon_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t19_carbon_intv_en.csv,mf2_t19_carbon_intv_en.csv
+t1,MF2,html,html,Area (1000 ha) of land by land use and managed forest regions in Canada.,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t21_lu_area_en.html,mf2_t21_lu_area_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t21_lu_area_en.pdf,mf2_t21_lu_area_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t21_lu_area_en.csv,mf2_t21_lu_area_en.csv
+t1,MF2,html,html,Relative standard errors,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t21_lu_area_sep_en.html,mf2_t21_lu_area_sep_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t21_lu_area_sep_en.pdf,mf2_t21_lu_area_sep_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t21_lu_area_sep_en.csv,mf2_t21_lu_area_sep_en.csv
+t1,MF2,html,html,Confidence intervals,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/html/mf2_t21_lu_area_intv_en.html,mf2_t21_lu_area_intv_en.html
+t1,MF2,pdf,pdf,pdf,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/pdf/mf2_t21_lu_area_intv_en.pdf,mf2_t21_lu_area_intv_en.pdf
+t1,MF2,csv,csv,csv,https://nfi.nfis.org/resources/general/summaries/t1/en/MF2/csv/mf2_t21_lu_area_intv_en.csv,mf2_t21_lu_area_intv_en.csv

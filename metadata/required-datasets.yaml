@@ -102,7 +102,7 @@ datasets:
 
   - id: nfi_standard_reports
     category: forest_inventory
-    status: triage_ready
+    status: needs_license_review
     required_for:
       - "national summary statistics"
       - "cross-checks for inventory-derived forest area, volume, biomass, age, ownership, and protection summaries"
@@ -113,20 +113,54 @@ datasets:
       title: "National Forest Inventory standard reports"
       url: "https://nfi.nfis.org/en/standardreports"
       access_mode: "web_report_csv"
-      license: "verify_before_archive"
-      provenance_notes: "Reports are useful early because they are lightweight and summarized."
+      license: "NFI non-commercial reproduction notice; needs license review before open re-hosting"
+      provenance_notes: "Public page inventory observed 2026-06-25. Reports are lightweight and useful for validation/calibration summaries, but redistribution terms are not Open Government Licence."
+      resources:
+        - format: "HTML"
+          name: "Standard Reports landing page"
+          url: "https://nfi.nfis.org/en/standardreports"
+        - format: "HTML"
+          name: "NFI notices"
+          url: "https://nfi.nfis.org/en/notices"
+        - format: "CSV manifest"
+          name: "Parsed public report links"
+          url: "metadata/source-file-manifests/nfi_standard_reports_links.csv"
     coverage:
-      spatial: "Canada, terrestrial ecozones, boreal zone, forest management regions"
-      temporal: "current published reports"
-      resolution: "summary tables"
+      spatial: "Canada, NFI reporting units, Boreal Zone, forest management regions"
+      temporal: "first remeasurement reports 2007-2017 plus forest change estimates"
+      resolution: "statistical summary tables"
+    package_inventory:
+      observed_utc: "2026-06-25T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/nfi_standard_reports_links.csv"
+      link_count: 810
+      csv_count: 270
+      pdf_count: 270
+      html_count: 270
+      geographies:
+        - code: "CA"
+          description: "Canada"
+          link_count: 270
+        - code: "NFI"
+          description: "NFI reporting units"
+          link_count: 270
+        - code: "BORE"
+          description: "Boreal Zone"
+          link_count: 135
+        - code: "MF2"
+          description: "Forest management regions"
+          link_count: 135
+    recommended_use:
+      - "Validation and calibration summaries for national biomass, volume, forest area, ownership, protection, age, species group, and carbon totals."
+      - "Do not rely on these summaries as the primary spatial modelling layer."
+      - "Do not re-host report snapshots as open inputs until license review confirms redistribution is compatible with CLEWs-C2070 open-data commitments."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "review"
-      rationale: "May be lightweight enough to regenerate from source; archive exact CSV snapshots once used in model calibration."
+      include: "license_review_first"
+      rationale: "CSV snapshots are small and reproducible, but NFI notice terms are not Open Government Licence; archive only after license/re-hosting decision."
 
   - id: canlad
     category: disturbance

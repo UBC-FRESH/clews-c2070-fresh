@@ -20,3 +20,7 @@
   public directory, recorded the approximate 312 GB package size, generated a
   lightweight file manifest, and recommended a subset-first DataLad mirroring
   strategy.
+- Completed first-pass NFI standard reports triage: parsed public report links,
+  recorded 270 CSV summary tables across four reporting geographies, and flagged
+  the source for license review because NFI notices do not use Open Government
+  Licence language.

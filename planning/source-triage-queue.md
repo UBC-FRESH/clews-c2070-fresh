@@ -28,10 +28,15 @@ canonical inputs and what work is needed before archiving them in `data/`.
      raster payloads are archived in `data/`.
 
 2. `nfi_standard_reports`
-   - Inventory available CSV/export options.
-   - Record reporting geographies and variables relevant to area, volume,
+   - Public report links have been inventoried in
+     `metadata/source-file-manifests/nfi_standard_reports_links.csv`.
+   - Read `metadata/source-reviews/nfi_standard_reports.md`.
+   - Resolve license/re-hosting status before treating archived CSV snapshots
+     as open model inputs.
+   - Record reporting variables relevant to area, volume,
      biomass, ownership, protection, age, and forest type.
-   - Decide whether exact report snapshots should be archived.
+   - Decide whether exact report snapshots should be archived in `data/` or
+     used only as source-referenced validation summaries.
 
 3. `canlad`
    - Inventory the CanLaD v1.1 raster products and documentation.
