@@ -33,6 +33,11 @@ canonical inputs and what work is needed before archiving them in `data/`.
 
 3. `canlad`
    - Inventory the CanLaD v1.1 raster products and documentation.
+   - Review `pre_canlad_v2` as the companion pre-1985 disturbance-history
+     source flagged by Greg.
+   - Confirm whether NRCan uses "CanLaD v2" informally for the pre-1985
+     companion product, or whether an updated 1985-2024 v2 package is expected
+     but not yet exposed in the Open Canada package resources.
    - Identify variables needed for fire, harvest, insect, and other disturbance
      calibration.
    - Compare scope against NFDB/NBAC products before selecting a canonical

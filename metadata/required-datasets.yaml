@@ -100,6 +100,10 @@ datasets:
         - format: "TIFF"
           name: "CanLaD including insect defoliation - HTTP link"
           url: "https://download-telecharger.services.geo.ca/pub/nrcan_rncan/Forests_Foret/canlad_including_insect_defoliation/v1.1/"
+      related_datasets:
+        - id: "pre_canlad_v2"
+          relationship: "companion_pre_1985_disturbance_history"
+          note: "User flagged recent CanLaD v2 release. Live metadata for the 1985-2024 package still advertises v1.1 resources; the separate pre-1985 companion dataset advertises v2 resources."
     coverage:
       spatial: "Canada"
       temporal: "1985-2024"
@@ -112,6 +116,49 @@ datasets:
     datalad_mirror:
       include: "review"
       rationale: "Large raster source; archive if used as canonical disturbance input."
+
+  - id: pre_canlad_v2
+    category: disturbance
+    status: triage_ready
+    required_for:
+      - "pre-1985 national disturbance history"
+      - "longer disturbance-history context for forest age, carbon, and baseline calibration"
+    canonical_data_path: "raw/nrcan/pre_canlad_v2/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada"
+      title: "Pre-CanLaD v2: Canada Landsat Disturbance (CanLaD) 30-m resolution disturbance detection prior to 1984"
+      url: "https://open.canada.ca/data/en/dataset/8d49698f-40f9-40da-b097-a3f4c90adf5a"
+      access_mode: "direct_download"
+      license: "Open Government Licence - Canada"
+      provenance_notes: "Official metadata observed 2026-06-25. Treat as companion source to the 1985-2024 CanLaD package."
+      metadata_modified: "2026-04-22T12:00:56.693373"
+      date_published: "2026-01-09"
+      resources:
+        - format: "GeoTIF"
+          name: "pre-CanLaD v2 - ftp - layers"
+          url: "https://ftp.maps.canada.ca/pub/nrcan_rncan/Forests_Foret/canada_disturbances_1965to1984/v2/"
+        - format: "GeoTIF"
+          name: "pre-CanLaD v2 - https - layers"
+          url: "https://download-telecharger.services.geo.ca/pub/nrcan_rncan/Forests_Foret/canada_disturbances_1965to1984/v2/"
+        - format: "PDF"
+          name: "pre-CanLaD v2 - update report EN"
+          url: "https://download-telecharger.services.geo.ca/pub/nrcan_rncan/Forests_Foret/canada_disturbances_1965to1984/v2/_preCanLaD_v2_Update_report_EN.pdf"
+        - format: "TXT"
+          name: "Readme file EN"
+          url: "https://download-telecharger.services.geo.ca/pub/nrcan_rncan/Forests_Foret/canada_disturbances_1965to1984/v2/_readme.txt"
+    coverage:
+      spatial: "Canada"
+      temporal: "1965-1984 disturbance detection with 1950-1964 summary context in documentation"
+      resolution: "30m raster"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "review"
+      rationale: "Large raster source; archive if used as canonical pre-1985 disturbance input."
 
   - id: national_road_network
     category: transport
