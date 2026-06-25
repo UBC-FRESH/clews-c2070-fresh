@@ -39,16 +39,14 @@ canonical inputs and what work is needed before archiving them in `data/`.
      used only as source-referenced validation summaries.
 
 3. `canlad`
-   - Inventory the CanLaD v1.1 raster products and documentation.
-   - Review `pre_canlad_v2` as the companion pre-1985 disturbance-history
-     source flagged by Greg.
-   - Confirm whether NRCan uses "CanLaD v2" informally for the pre-1985
-     companion product, or whether an updated 1985-2024 v2 package is expected
-     but not yet exposed in the Open Canada package resources.
-   - Identify variables needed for fire, harvest, insect, and other disturbance
-     calibration.
-   - Compare scope against NFDB/NBAC products before selecting a canonical
-     disturbance layer.
+   - Read `metadata/source-reviews/canlad_and_pre_canlad_v2.md`.
+   - `canlad` is flagged `needs_access_resolution`: the README names 45 raster
+     products, but the public directory currently exposes only support files and
+     exact raster URLs return 404.
+   - `pre_canlad_v2` is accepted as a manageable companion source, pending PI
+     approval to mirror the four core rasters.
+   - Follow up with NRCan or monitor the Open Canada package for corrected
+     1985-2025 CanLaD raster payload links.
 
 4. `nrn`
    - Confirm all province/territory GeoPackage packages.
@@ -69,5 +67,7 @@ canonical inputs and what work is needed before archiving them in `data/`.
   clear enough.
 - `needs_access_request`: source may require login, partner request, or manual
   acquisition.
+- `needs_access_resolution`: public metadata and payload access are
+  inconsistent enough that maintainer follow-up is required.
 - `deferred`: useful later, not needed for the first modelling baseline.
 - `rejected`: not suitable; record rationale in the inventory notes.

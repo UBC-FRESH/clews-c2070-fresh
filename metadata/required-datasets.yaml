@@ -164,7 +164,7 @@ datasets:
 
   - id: canlad
     category: disturbance
-    status: candidate_for_review
+    status: needs_access_resolution
     required_for:
       - "national annual disturbance history"
       - "harvest, fire, and insect disturbance calibration"
@@ -172,11 +172,11 @@ datasets:
     preferred: true
     source:
       publisher: "Natural Resources Canada"
-      title: "Canada Landsat Disturbance"
+      title: "Canada Landsat Disturbance (CanLaD) - Including Forest Insect Pest"
       url: "https://open.canada.ca/data/en/dataset/902801fd-4d9d-4df4-9e95-319e429545cc"
-      access_mode: "direct_download"
-      license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Candidate source for annual forest disturbance maps."
+      access_mode: "direct_download_with_payload_issue"
+      license: "Open Government Licence - Canada in Open Canada metadata; README also states Creative Commons Attribution 4.0 International"
+      provenance_notes: "Official metadata observed 2026-06-25. README describes 1985-2025 raster data and a May 08, 2026 update, but public directory listing exposed only documentation/legend files and exact README-named raster URLs returned 404. Resolve payload access before archiving."
       metadata_created: "2025-06-25T19:10:22.632868"
       metadata_modified: "2026-05-14T17:30:52.493939"
       date_published: "2025-05-14"
@@ -191,23 +191,34 @@ datasets:
       related_datasets:
         - id: "pre_canlad_v2"
           relationship: "companion_pre_1985_disturbance_history"
-          note: "User flagged recent CanLaD v2 release. Live metadata for the 1985-2024 package still advertises v1.1 resources; the separate pre-1985 companion dataset advertises v2 resources."
+          note: "User flagged recent CanLaD v2 release. Live Open Canada metadata advertises v1.1 resources for the 1985-2025 package; the separate pre-1985 companion dataset advertises v2 resources and has accessible rasters."
     coverage:
       spatial: "Canada"
-      temporal: "1985-2024"
+      temporal: "1985-2025 per README; Open Canada notes still say 1985-2024"
       resolution: "raster"
+    package_inventory:
+      observed_utc: "2026-06-25T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/canlad_files.csv"
+      listed_file_count: 4
+      listed_total_size_gb: 0.0
+      raster_payload_status: "missing_from_public_listing"
+      expected_from_readme:
+        - "3 latest disturbance rasters"
+        - "41 annual disturbance rasters, 1985-2025"
+        - "1 latest Julian day raster"
+      probe_result: "README-named raster URLs returned 404 on 2026-06-25."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "review"
-      rationale: "Large raster source; archive if used as canonical disturbance input."
+      include: "access_resolution_first"
+      rationale: "Do not archive until public raster payload paths are resolved or NRCan confirms corrected access."
 
   - id: pre_canlad_v2
     category: disturbance
-    status: triage_ready
+    status: accepted
     required_for:
       - "pre-1985 national disturbance history"
       - "longer disturbance-history context for forest age, carbon, and baseline calibration"
@@ -219,7 +230,7 @@ datasets:
       url: "https://open.canada.ca/data/en/dataset/8d49698f-40f9-40da-b097-a3f4c90adf5a"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Treat as companion source to the 1985-2024 CanLaD package."
+      provenance_notes: "Official metadata observed 2026-06-25. Treat as companion source to the 1985-2025 CanLaD package; public raster payloads are listed and directly accessible."
       metadata_modified: "2026-04-22T12:00:56.693373"
       date_published: "2026-01-09"
       resources:
@@ -239,14 +250,35 @@ datasets:
       spatial: "Canada"
       temporal: "1965-1984 disturbance detection with 1950-1964 summary context in documentation"
       resolution: "30m raster"
+    package_inventory:
+      observed_utc: "2026-06-25T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/pre_canlad_v2_files.csv"
+      file_count: 20
+      total_size_gb: 1.229
+      geotiff_count: 4
+      geotiff_size_gb: 1.153
+      overview_count: 4
+      overview_size_gb: 0.074
+      documentation_files:
+        - "_readme.txt"
+        - "_preCanLaD_v2_Update_report_EN.pdf"
+    recommended_first_pass_subset:
+      rationale: "The full useful raster payload is small enough to mirror after PI approval."
+      include_patterns:
+        - "preCanlad_disturbanceType_v2_20251126.tif"
+        - "preCanlad_disturbanceYear_v2_20251126.tif"
+        - "preCanlad_correctionMask_v2_20251126.tif"
+        - "preCanlad_updateMask_v2_20251126.tif"
+        - "_readme.txt"
+        - "_preCanLaD_v2_Update_report_EN.pdf"
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "review"
-      rationale: "Large raster source; archive if used as canonical pre-1985 disturbance input."
+      include: "mirror_after_pi_approval"
+      rationale: "Full core raster set is about 1.15 GB, manageable for DataLad/S3 once accepted."
 
   - id: national_road_network
     category: transport

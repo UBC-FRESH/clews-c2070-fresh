@@ -48,10 +48,10 @@ forest-biomass supply modelling before model implementation work depends on it.
 ## Detailed Next Steps Notes
 
 1. Tyler should work through `planning/source-triage-queue.md`. `scanfi_v2`
-   has first-pass review complete with a subset-first recommendation, and
+   has first-pass review complete with a subset-first recommendation,
    `nfi_standard_reports` has first-pass review complete with a license-review
-   flag. Next target is `canlad`, followed by `nrn` and
-   `biomass_inventory_business`.
+   flag, and `canlad` / `pre_canlad_v2` have first-pass disturbance review
+   complete. Next target is `nrn`, followed by `biomass_inventory_business`.
 2. Tyler's first pass should update `metadata/source-inventory.csv`, not download
    large payloads directly into the parent repo.
 3. Once candidate sources are reviewed, promote only accepted datasets into

@@ -24,3 +24,7 @@
   recorded 270 CSV summary tables across four reporting geographies, and flagged
   the source for license review because NFI notices do not use Open Government
   Licence language.
+- Completed first-pass CanLaD and Pre-CanLaD v2 triage: flagged CanLaD for
+  access resolution because README-named raster payloads were not publicly
+  reachable, and accepted Pre-CanLaD v2 as a manageable companion disturbance
+  dataset pending PI approval to mirror.
