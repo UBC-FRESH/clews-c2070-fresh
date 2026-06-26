@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 
 from fresh_fibre import graph
+from fresh_fibre.compare import compare_runs
 from fresh_fibre.contract import assert_contract_ok, validate_contract
 from fresh_fibre.lp import build_and_solve
 from fresh_fibre.units import UnitValidationError, load_unit_registry
@@ -242,6 +243,35 @@ class BcMiniPrototypeTest(unittest.TestCase):
         self.assertEqual(summary["graph_nodes"], "32")
         self.assertEqual(summary["graph_arcs"], "39")
         self.assertEqual(summary["smoke_supply_offer_rows"], "2")
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),
+        "ws3 editable install and example Woodstock files are required",
+    )
+    def test_variant_comparison_reports_summary_and_flow_deltas(self) -> None:
+        self.regenerate_graph()
+        build_and_solve(self.input_dir, self.input_dir / "generated")
+        variant_dir = Path(self.tmp.name) / "bc-mini-ws3-smoke"
+        run_ws3_smoke_variant(self.input_dir, variant_dir)
+        output_dir = Path(self.tmp.name) / "comparison"
+
+        result = compare_runs(self.input_dir, variant_dir, output_dir)
+
+        self.assertEqual(result["summary_rows"], 10)
+        self.assertEqual(result["flow_rows"], 24)
+        summary_rows = read_csv(output_dir / "solution_summary_comparison.csv")
+        flow_rows = read_csv(output_dir / "solution_flow_comparison.csv")
+        objective = next(row for row in summary_rows if row["metric_id"] == "objective_value")
+        self.assertAlmostEqual(float(objective["base_value"]), 6140832.0)
+        self.assertAlmostEqual(float(objective["variant_value"]), 75520.15192, places=5)
+        self.assertAlmostEqual(float(objective["ratio_variant_to_base"]), 0.012298032566271148)
+        lumber_market = next(
+            row for row in flow_rows
+            if row["origin_node_id"] == "product_pool:lumber"
+            and row["destination_node_id"] == "market_lumber_bc"
+        )
+        self.assertAlmostEqual(float(lumber_market["base_quantity"]), 54160.0)
+        self.assertAlmostEqual(float(lumber_market["variant_quantity"]), 799.53376)
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:
         unit_registry = Path(self.tmp.name) / "unit-registry.csv"

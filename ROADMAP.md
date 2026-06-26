@@ -220,6 +220,8 @@ Metadata surfaces:
   validated `ws3_supply_crosswalk.csv` fixture.
 - [x] Add a separate `bc-mini-ws3-smoke` LP variant that replaces only
   `supply_offer.csv` with the real ws3 smoke supply export.
+- [x] Add generated comparison tables between the stable synthetic BC mini LP
+  solve and the ws3-smoke supply variant.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime

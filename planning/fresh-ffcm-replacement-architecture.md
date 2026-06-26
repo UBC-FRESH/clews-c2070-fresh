@@ -71,13 +71,13 @@ editable from the sibling clone (`python3 -m pip install -e ../ws3`), it loads
 ws3's TSA24 clipped Woodstock example, schedules a tiny harvest, and emits the
 same normalized harvest-output shape plus a supply-offer export. This proves
 the runtime bridge. Its diagnostic spatial-node mapping is now explicit in
-`metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_supply_crosswalk.csv`; the
 `metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_supply_crosswalk.csv`.
 `fresh_fibre.ws3_variant` creates a separate `bc-mini-ws3-smoke` LP variant
 that replaces only `supply_offer.csv` with the real ws3 smoke supply export and
-keeps the stable synthetic BC mini fixture unchanged. The next modelling step
-is to replace those diagnostic rows with accepted FRESH crosswalk rules and an
-accepted inventory/yield source.
+keeps the stable synthetic BC mini fixture unchanged. `fresh_fibre.compare`
+writes summary and pathway-flow deltas between those two solves. The next
+modelling step is to replace the diagnostic rows with accepted FRESH crosswalk
+rules and an accepted inventory/yield source.
 
 ## Downstream LP Replacement
 

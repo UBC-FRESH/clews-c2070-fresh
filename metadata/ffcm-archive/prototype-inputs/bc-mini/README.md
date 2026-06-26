@@ -39,6 +39,9 @@ Run `scripts/ffcm_archive/run_ws3_smoke_lp_variant.py` to create the sibling
 `bc-mini-ws3-smoke` diagnostic variant. That variant copies this fixture,
 replaces only `supply_offer.csv` with the real ws3 smoke supply export, rebuilds
 the graph, solves the LP, and writes `generated/ws3_smoke_variant_summary.csv`.
+Run `scripts/ffcm_archive/compare_bc_mini_variants.py` after both solves to
+write comparison tables under
+`metadata/ffcm-archive/prototype-comparisons/bc-mini-vs-ws3-smoke/`.
 
 Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 

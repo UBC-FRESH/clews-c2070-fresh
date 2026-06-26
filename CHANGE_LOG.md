@@ -15,6 +15,8 @@
   units and supply nodes.
 - Added a repeatable `bc-mini-ws3-smoke` LP variant that swaps in real ws3
   smoke supply while preserving the stable synthetic BC mini fixture.
+- Added generated comparison tables for objective, cost, market quantity, and
+  pathway-flow deltas between the synthetic BC mini solve and ws3-smoke variant.
 
 ## 2026-06-25
 
