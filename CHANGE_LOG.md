@@ -10,6 +10,9 @@
 - Added a real ws3 smoke-run bridge using the local editable `../ws3` clone,
   ws3's TSA24 clipped Woodstock example, and the existing `supply_offer`
   exporter.
+- Added an explicit diagnostic `ws3_supply_crosswalk.csv` fixture and
+  validation path for mapping ws3 smoke-run development types to FRESH spatial
+  units and supply nodes.
 
 ## 2026-06-25
 

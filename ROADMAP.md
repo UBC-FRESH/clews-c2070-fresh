@@ -216,6 +216,8 @@ Metadata surfaces:
   the BC mini-network.
 - [x] Add a tiny real ws3 smoke run from the local editable `../ws3` clone that
   emits the same normalized harvest-output shape.
+- [x] Move the smoke-run spatial/supply-node mapping into an explicit,
+  validated `ws3_supply_crosswalk.csv` fixture.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime

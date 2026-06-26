@@ -70,9 +70,10 @@ The first real ws3 producer path is `fresh_fibre.ws3_smoke`. With ws3 installed
 editable from the sibling clone (`python3 -m pip install -e ../ws3`), it loads
 ws3's TSA24 clipped Woodstock example, schedules a tiny harvest, and emits the
 same normalized harvest-output shape plus a supply-offer export. This proves
-the runtime bridge. The next modelling step is to replace the diagnostic
-spatial-node mapping and costs with an explicit FRESH crosswalk and accepted
-inventory/yield source.
+the runtime bridge. Its diagnostic spatial-node mapping is now explicit in
+`metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_supply_crosswalk.csv`; the
+next modelling step is to replace those diagnostic rows with accepted FRESH
+crosswalk rules and an accepted inventory/yield source.
 
 ## Downstream LP Replacement
 

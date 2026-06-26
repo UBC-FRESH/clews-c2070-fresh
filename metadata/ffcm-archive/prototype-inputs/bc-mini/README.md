@@ -30,7 +30,10 @@ Woodstock example, schedule a tiny harvest with ws3's greedy selector, and emit
 `generated/ws3_smoke_harvest_output.csv`,
 `generated/ws3_smoke_supply_offer.csv`, and
 `generated/ws3_smoke_export_manifest.csv`. These records prove the upstream
-producer path; their spatial-node mapping and costs remain diagnostic.
+producer path. The diagnostic mapping from ws3 development-type keys to FRESH
+spatial units and supply nodes lives in `ws3_supply_crosswalk.csv`; its rows
+are validated by the smoke adapter but are not production geography or cost
+assumptions.
 
 Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 

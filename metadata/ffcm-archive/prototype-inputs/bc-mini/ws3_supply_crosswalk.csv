@@ -1,0 +1,4 @@
+source_model,dtype_key_pattern,spatial_unit_id,supply_node_id,commodity_id,species_group,assortment_class,supply_cost,supply_cost_unit,roadside_cost,delivered_cost_proxy,mapping_status,notes
+ws3.examples.tsa24_clipped,tsa24_clipped|1|2402000|100|2402000,bc_fmu_coast_01,supply_coast_01,log,softwood,sawlog,50,CAD_per_m3,35,65,diagnostic,Maps the first ws3 smoke schedule development type to the BC mini coast supply node; not a production geography crosswalk.
+ws3.examples.tsa24_clipped,tsa24_clipped|1|2401002|204|2401002,bc_fmu_interior_01,supply_interior_01,log,softwood,sawlog,50,CAD_per_m3,35,65,diagnostic,Maps the second ws3 smoke schedule development type to the BC mini interior supply node; not a production geography crosswalk.
+ws3.examples.tsa24_clipped,*,bc_fmu_interior_02,supply_interior_02,log,mixed,smallwood,50,CAD_per_m3,35,65,fallback_diagnostic,Fallback mapping for additional ws3 smoke rows if target area changes; replace before production use.

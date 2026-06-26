@@ -167,6 +167,7 @@ class BcMiniPrototypeTest(unittest.TestCase):
             output_path=generated / "ws3_smoke_harvest_output.csv",
             supply_offer_path=generated / "ws3_smoke_supply_offer.csv",
             manifest_path=generated / "ws3_smoke_export_manifest.csv",
+            crosswalk_path=self.input_dir / "ws3_supply_crosswalk.csv",
         )
 
         self.assertEqual(result["harvest_output_rows"], 2)
@@ -180,12 +181,41 @@ class BcMiniPrototypeTest(unittest.TestCase):
         self.assertEqual(len(harvest_rows), 2)
         self.assertEqual(len(supply_rows), 2)
         self.assertEqual({row["source_model"] for row in harvest_rows}, {"ws3.examples.tsa24_clipped"})
+        self.assertEqual([row["spatial_unit_id"] for row in supply_rows], [
+            "bc_fmu_coast_01",
+            "bc_fmu_interior_01",
+        ])
+        self.assertEqual([row["supply_node_id"] for row in supply_rows], [
+            "supply_coast_01",
+            "supply_interior_01",
+        ])
         self.assertEqual({row["artifact_role"] for row in manifest_rows}, {
             "normalized_ws3_harvest_output",
             "exported_supply_offer",
             "downstream_supply_offer_contract",
         })
         self.assertTrue(all(row["grade"] == "ws3_smoke" for row in supply_rows))
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),
+        "ws3 editable install and example Woodstock files are required",
+    )
+    def test_ws3_smoke_rejects_bad_crosswalk_reference(self) -> None:
+        crosswalk_path = self.input_dir / "ws3_supply_crosswalk.csv"
+        rows = read_csv(crosswalk_path)
+        rows[0]["supply_node_id"] = "unknown_supply_node"
+        write_csv(crosswalk_path, rows)
+
+        with self.assertRaisesRegex(ValueError, "unknown supply node"):
+            run_ws3_smoke(
+                ws3_path=WS3_REPO,
+                model_path=WS3_SMOKE_MODEL,
+                input_dir=self.input_dir,
+                output_path=self.input_dir / "generated" / "ws3_smoke_harvest_output.csv",
+                supply_offer_path=self.input_dir / "generated" / "ws3_smoke_supply_offer.csv",
+                manifest_path=self.input_dir / "generated" / "ws3_smoke_export_manifest.csv",
+                crosswalk_path=crosswalk_path,
+            )
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:
         unit_registry = Path(self.tmp.name) / "unit-registry.csv"
