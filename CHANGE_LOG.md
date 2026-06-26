@@ -1,5 +1,11 @@
 # Change Log
 
+## 2026-06-26
+
+- Added a tested `fresh_fibre.ws3_export` bridge from normalized ws3
+  harvest-output rows to the FRESH `supply_offer` contract, plus a synthetic
+  BC mini-network upstream fixture and generated comparison artifact.
+
 ## 2026-06-25
 
 - Added a dedicated FFCM archive reverse-engineering roadmap phase, planning

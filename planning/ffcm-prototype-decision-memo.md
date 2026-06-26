@@ -71,9 +71,10 @@ The BC mini-network prototype now has:
 The machine-readable gap register is
 `metadata/ffcm-archive/prototype-gap-register.csv`.
 
-Highest-priority gaps:
+Highest-priority gaps after the first ws3-export bridge:
 
-- Build the first real ws3-to-`supply_offer` exporter.
+- Replace the synthetic normalized ws3 harvest-output fixture with a tiny real
+  ws3 run that emits the same exporter input shape.
 - Select accepted diagnostic inventory/yield data for a small real geography.
 - Resolve facility/capacity, transport, and price/cost provenance.
 - Clarify archive/workbook reuse rights before extracting production values.
@@ -86,8 +87,8 @@ The next implementation phase should not deepen the synthetic LP itself unless
 it answers a scaling blocker. Instead, move one step upstream and one step
 outward:
 
-- Upstream: produce a tiny ws3 run that emits the current `supply_offer`
-  contract.
+- Upstream: produce a tiny ws3 run that emits the normalized harvest-output
+  shape consumed by `fresh_fibre.ws3_export`.
 - Outward: replace one synthetic data family at a time with accepted
   diagnostic inputs, starting with inventory/yield and facility/capacity
   provenance.

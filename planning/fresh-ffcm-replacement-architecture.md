@@ -58,6 +58,13 @@ For FRESH, this layer should convert ws3 output into supply offers by
 commodity/assortment class and attach any required cost, value, density, or
 conversion metadata before LP solve.
 
+The first implemented bridge is `fresh_fibre.ws3_export`, which converts a
+normalized harvest-output table into the current `supply_offer` contract. The
+BC mini-network fixture uses synthetic rows in
+`metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_harvest_output.csv`; the
+next upstream step is to replace that synthetic producer with a tiny real ws3
+run that emits the same normalized shape.
+
 ## Downstream LP Replacement
 
 The downstream LP should preserve these FFCM concepts where useful:
@@ -134,6 +141,7 @@ High-level stance:
 - Decide which future input fields may be automatically converted using the
   unit registries and which should continue to fail fast on non-canonical
   units.
-- Connect a tiny ws3 run to the current `supply_offer` contract.
+- Replace the synthetic normalized ws3 harvest-output fixture with a tiny ws3
+  run that emits the same exporter input shape.
 - Replace one synthetic data family at a time with accepted diagnostic inputs,
   following `metadata/ffcm-archive/prototype-gap-register.csv`.

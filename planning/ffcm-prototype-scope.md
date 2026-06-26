@@ -107,10 +107,14 @@ Status:
   `scripts/ffcm_archive/build_prototype_graph.py`.
 - Item 5 has a first PuLP/CBC solve at
   `fresh_fibre.lp`, with validation in `fresh_fibre.validation`.
+- The first upstream bridge now starts from synthetic normalized
+  `ws3_harvest_output.csv` rows and exports the current `supply_offer`
+  contract through `fresh_fibre.ws3_export`.
 
 Next step:
 
 - Use `planning/ffcm-prototype-decision-memo.md` and
   `metadata/ffcm-archive/prototype-gap-register.csv` to drive the next phase:
-  connect a tiny ws3 run to the current `supply_offer` contract and replace
-  one synthetic data family at a time with accepted diagnostic inputs.
+  replace the synthetic ws3 harvest-output fixture with a tiny real ws3 run and
+  then replace one synthetic data family at a time with accepted diagnostic
+  inputs.

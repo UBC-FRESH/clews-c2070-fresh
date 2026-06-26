@@ -206,6 +206,21 @@ Metadata surfaces:
 - [x] Produce a decision memo: reverse-engineer FFCM architecture, adapt only
   selected schemas, or proceed with an independent FRESH design informed by FFCM.
 
+### P2.6 ws3 Supply Bridge and Diagnostic Data Replacement
+
+- [x] Add a normalized synthetic ws3 harvest-output fixture upstream of
+  `supply_offer`.
+- [x] Add and test a `fresh_fibre.ws3_export` bridge that writes the current
+  `supply_offer` contract.
+- [x] Generate an auditable `supply_offer_from_ws3.csv` comparison artifact for
+  the BC mini-network.
+- [ ] Replace the synthetic ws3 harvest-output fixture with a tiny real ws3 run
+  that emits the same normalized shape.
+- [ ] Replace one synthetic supply-side data family with accepted diagnostic
+  inventory/yield inputs.
+- [ ] Add provenance fields or manifests needed to distinguish ws3 runtime
+  output, normalized adapter output, and downstream LP input.
+
 ## Detailed Next Steps Notes
 
 1. Tyler should work through `planning/source-triage-queue.md`. `scanfi_v2`

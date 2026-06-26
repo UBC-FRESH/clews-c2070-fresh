@@ -13,6 +13,7 @@ from fresh_fibre.contract import assert_contract_ok, validate_contract
 from fresh_fibre.lp import build_and_solve
 from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
+from fresh_fibre.ws3_export import export_supply_offer
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +105,30 @@ class BcMiniPrototypeTest(unittest.TestCase):
         self.assertEqual(statuses["supply_offer"]["status"], "missing_required_fields")
         with self.assertRaises(ValueError):
             assert_contract_ok(contract_rows)
+
+    def test_ws3_export_reproduces_supply_offer_contract_rows(self) -> None:
+        output_path = self.input_dir / "generated" / "supply_offer_from_ws3.csv"
+        rows = export_supply_offer(
+            self.input_dir / "ws3_harvest_output.csv",
+            output_path,
+            self.input_dir,
+        )
+
+        self.assertEqual(rows, read_csv(self.input_dir / "supply_offer.csv"))
+        self.assertEqual(read_csv(output_path), read_csv(self.input_dir / "supply_offer.csv"))
+
+    def test_ws3_export_rejects_unknown_supply_node(self) -> None:
+        path = self.input_dir / "ws3_harvest_output.csv"
+        rows = read_csv(path)
+        rows[0]["supply_node_id"] = "unknown_supply_node"
+        write_csv(path, rows)
+
+        with self.assertRaisesRegex(ValueError, "unknown supply node"):
+            export_supply_offer(
+                path,
+                self.input_dir / "generated" / "supply_offer_from_ws3.csv",
+                self.input_dir,
+            )
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:
         unit_registry = Path(self.tmp.name) / "unit-registry.csv"

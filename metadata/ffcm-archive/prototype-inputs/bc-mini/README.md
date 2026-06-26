@@ -14,6 +14,12 @@ ws3-compatible notebook seed:
 - `prc`: processing technologies.
 - `snk`: market/export sink nodes.
 
+The upstream diagnostic handoff starts from `ws3_harvest_output.csv`, a tiny
+synthetic table shaped as normalized ws3 harvest output. It is converted to the
+public `supply_offer` contract by `fresh_fibre.ws3_export`; the compatibility
+CLI is `scripts/ffcm_archive/export_ws3_supply_offer.py`. The generated audit
+copy is `generated/supply_offer_from_ws3.csv`.
+
 Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 
 LP audit and solution outputs are written to `generated/` by `fresh_fibre.lp`.
