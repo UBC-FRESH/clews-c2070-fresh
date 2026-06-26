@@ -42,6 +42,14 @@ WS3_HARVEST_COLUMNS = set(SUPPLY_OFFER_COLUMNS) | {
     "notes",
 }
 
+WS3_HARVEST_FIELDNAMES = [
+    "ws3_run_id",
+    *SUPPLY_OFFER_COLUMNS,
+    "source_model",
+    "source_record_id",
+    "notes",
+]
+
 EXPORT_MANIFEST_COLUMNS = [
     "artifact_role",
     "table_path",

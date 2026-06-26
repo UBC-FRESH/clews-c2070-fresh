@@ -214,8 +214,8 @@ Metadata surfaces:
   `supply_offer` contract.
 - [x] Generate an auditable `supply_offer_from_ws3.csv` comparison artifact for
   the BC mini-network.
-- [ ] Replace the synthetic ws3 harvest-output fixture with a tiny real ws3 run
-  that emits the same normalized shape.
+- [x] Add a tiny real ws3 smoke run from the local editable `../ws3` clone that
+  emits the same normalized harvest-output shape.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime

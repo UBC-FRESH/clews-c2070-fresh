@@ -7,6 +7,9 @@
   BC mini-network upstream fixture and generated comparison artifact.
 - Added a generated ws3 export manifest with row counts and SHA-256 hashes for
   the normalized upstream table, adapter output, and downstream LP input.
+- Added a real ws3 smoke-run bridge using the local editable `../ws3` clone,
+  ws3's TSA24 clipped Woodstock example, and the existing `supply_offer`
+  exporter.
 
 ## 2026-06-25
 

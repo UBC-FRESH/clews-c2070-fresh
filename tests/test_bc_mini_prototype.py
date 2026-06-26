@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import importlib.util
 import shutil
 import tempfile
 import unittest
@@ -14,12 +15,15 @@ from fresh_fibre.lp import build_and_solve
 from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
 from fresh_fibre.ws3_export import export_supply_offer
+from fresh_fibre.ws3_smoke import run_ws3_smoke
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
+WS3_REPO = REPO_ROOT.parent / "ws3"
+WS3_SMOKE_MODEL = WS3_REPO / "examples/data/woodstock_model_files_tsa24_clipped"
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -149,6 +153,39 @@ class BcMiniPrototypeTest(unittest.TestCase):
                 self.input_dir / "generated" / "supply_offer_from_ws3.csv",
                 self.input_dir,
             )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),
+        "ws3 editable install and example Woodstock files are required",
+    )
+    def test_ws3_smoke_run_exports_real_harvest_output(self) -> None:
+        generated = self.input_dir / "generated"
+        result = run_ws3_smoke(
+            ws3_path=WS3_REPO,
+            model_path=WS3_SMOKE_MODEL,
+            input_dir=self.input_dir,
+            output_path=generated / "ws3_smoke_harvest_output.csv",
+            supply_offer_path=generated / "ws3_smoke_supply_offer.csv",
+            manifest_path=generated / "ws3_smoke_export_manifest.csv",
+        )
+
+        self.assertEqual(result["harvest_output_rows"], 2)
+        self.assertEqual(result["supply_offer_rows"], 2)
+        self.assertAlmostEqual(float(result["total_quantity_m3"]), 1604.452295, places=6)
+
+        harvest_rows = read_csv(generated / "ws3_smoke_harvest_output.csv")
+        supply_rows = read_csv(generated / "ws3_smoke_supply_offer.csv")
+        manifest_rows = read_csv(generated / "ws3_smoke_export_manifest.csv")
+
+        self.assertEqual(len(harvest_rows), 2)
+        self.assertEqual(len(supply_rows), 2)
+        self.assertEqual({row["source_model"] for row in harvest_rows}, {"ws3.examples.tsa24_clipped"})
+        self.assertEqual({row["artifact_role"] for row in manifest_rows}, {
+            "normalized_ws3_harvest_output",
+            "exported_supply_offer",
+            "downstream_supply_offer_contract",
+        })
+        self.assertTrue(all(row["grade"] == "ws3_smoke" for row in supply_rows))
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:
         unit_registry = Path(self.tmp.name) / "unit-registry.csv"

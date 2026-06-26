@@ -64,8 +64,15 @@ BC mini-network fixture uses synthetic rows in
 `metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_harvest_output.csv`; the
 exporter writes `generated/ws3_export_manifest.csv` to distinguish normalized
 upstream output, adapter output, and downstream LP input by row count and
-SHA-256 fingerprint. The next upstream step is to replace that synthetic
-producer with a tiny real ws3 run that emits the same normalized shape.
+SHA-256 fingerprint.
+
+The first real ws3 producer path is `fresh_fibre.ws3_smoke`. With ws3 installed
+editable from the sibling clone (`python3 -m pip install -e ../ws3`), it loads
+ws3's TSA24 clipped Woodstock example, schedules a tiny harvest, and emits the
+same normalized harvest-output shape plus a supply-offer export. This proves
+the runtime bridge. The next modelling step is to replace the diagnostic
+spatial-node mapping and costs with an explicit FRESH crosswalk and accepted
+inventory/yield source.
 
 ## Downstream LP Replacement
 

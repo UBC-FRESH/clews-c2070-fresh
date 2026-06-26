@@ -23,6 +23,15 @@ copy is `generated/supply_offer_from_ws3.csv`. The generated
 adapter table, and downstream contract table with row counts and SHA-256
 fingerprints.
 
+A real ws3 smoke path is also available after installing the sibling ws3 clone
+with `python3 -m pip install -e ../ws3`. Run
+`scripts/ffcm_archive/run_ws3_smoke_harvest.py` to load ws3's TSA24 clipped
+Woodstock example, schedule a tiny harvest with ws3's greedy selector, and emit
+`generated/ws3_smoke_harvest_output.csv`,
+`generated/ws3_smoke_supply_offer.csv`, and
+`generated/ws3_smoke_export_manifest.csv`. These records prove the upstream
+producer path; their spatial-node mapping and costs remain diagnostic.
+
 Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 
 LP audit and solution outputs are written to `generated/` by `fresh_fibre.lp`.
