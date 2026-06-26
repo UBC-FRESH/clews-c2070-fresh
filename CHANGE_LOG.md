@@ -20,6 +20,9 @@
 - Added a ws3 diagnostic supply replacement decision layer selecting SCANFI v2
   2025 subset as the first inventory candidate, keeping NFI standard reports as
   validation-only pending license review, and marking yield policy unresolved.
+- Added a generated SCANFI v2 2025 diagnostic subset manifest fixture without
+  downloading raw rasters, including an explicit missing-source flag for the
+  north extrapolation mask.
 
 ## 2026-06-25
 

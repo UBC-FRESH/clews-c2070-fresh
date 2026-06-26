@@ -225,6 +225,8 @@ Metadata surfaces:
 - [x] Select the first diagnostic replacement source path: SCANFI v2 2025
   subset for inventory, NFI standard reports for validation only, yield policy
   unresolved.
+- [x] Add a SCANFI v2 2025 diagnostic subset manifest fixture without
+  downloading raw rasters.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime

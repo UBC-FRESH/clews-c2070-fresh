@@ -28,8 +28,8 @@ Supporting stance:
 
 1. **Current state:** ws3 TSA24 smoke model emits real ws3 harvest-output rows
    through `ws3_supply_crosswalk.csv`; quantities and costs remain diagnostic.
-2. **Next implementation tranche:** create a tiny SCANFI-derived diagnostic
-   inventory manifest or fixture for one small analysis window. Do not commit
+2. **Current inventory-metadata tranche:** create a tiny SCANFI-derived
+   diagnostic inventory manifest for the selected 2025 subset. Do not commit
    raw rasters. Keep quantity generation synthetic or rule-based until yield
    policy is chosen.
 3. **Yield policy tranche:** select a first growth/yield source or documented
@@ -56,8 +56,14 @@ The first accepted diagnostic ws3 supply input is ready when:
 
 ## Next Implementation Tranche
 
-Build a tiny SCANFI-derived diagnostic inventory manifest or fixture that
-selects the minimum 2025 subset needed for a first ws3 supply prototype:
-biomass, height, closure, land cover, age, north extrapolation mask, README, and
-update report. Keep large rasters in the data submodule or scratch space, not
-in the parent repository.
+Build a tiny SCANFI-derived diagnostic inventory fixture from the selected
+manifest rows in
+`metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic/`. The current
+manifest verifies the five 2025 raster rows, English README, and English update
+report against `metadata/source-file-manifests/scanfi_v2_files.csv`. The north
+extrapolation mask is recorded as `missing_from_source_manifest` because it was
+recommended during source review but is absent from the current local and live
+public directory listings.
+
+Keep large rasters in the data submodule or scratch space, not in the parent
+repository.
