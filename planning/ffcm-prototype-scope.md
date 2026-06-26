@@ -110,5 +110,7 @@ Status:
 
 Next step:
 
-- Add typed schema adapters around the current CSV-row dictionaries before
-  scaling beyond the synthetic BC mini-network.
+- Use `planning/ffcm-prototype-decision-memo.md` and
+  `metadata/ffcm-archive/prototype-gap-register.csv` to drive the next phase:
+  connect a tiny ws3 run to the current `supply_offer` contract and replace
+  one synthetic data family at a time with accepted diagnostic inputs.

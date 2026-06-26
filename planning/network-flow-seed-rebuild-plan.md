@@ -107,6 +107,7 @@ Proposed module names for a future implementation:
 - [x] Validate the BC mini-network fixture against
   `metadata/ffcm-archive/fresh-interface-contract.csv`.
 - [x] Add repeatable stdlib regression tests for the BC mini-network prototype.
+- [x] Produce the first prototype decision memo and gap register.
 - [ ] Add explicit quantity-conversion execution only after deciding which
   table fields may be automatically converted versus rejected.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
@@ -169,3 +170,10 @@ intentionally absent optional fixture tables.
 `tests/test_bc_mini_prototype.py` covers the full in-process graph/LP/contract
 path and negative checks for missing required contract fields and cross-
 dimension unit conversions. Run with `python3 -m unittest discover -s tests -v`.
+
+The Phase 2 decision gate is documented in
+`planning/ffcm-prototype-decision-memo.md`, with open scaling/data/license gaps
+tracked in `metadata/ffcm-archive/prototype-gap-register.csv`. The current
+recommendation is to proceed with an independent FRESH implementation informed
+by selected FFCM schemas and formulation concepts, not to port the FCM Java
+runtime.

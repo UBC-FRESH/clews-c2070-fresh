@@ -59,6 +59,9 @@
   contract-coverage audit table.
 - Added stdlib regression tests for the BC mini-network graph, LP solve,
   contract coverage, unit registry, and negative validation cases.
+- Added the BC mini-network decision memo and gap register, recommending an
+  independent FRESH implementation informed by selected FFCM schemas and
+  formulation concepts rather than a port of the FCM runtime.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN

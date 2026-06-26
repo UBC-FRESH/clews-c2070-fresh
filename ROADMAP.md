@@ -102,6 +102,10 @@ Metadata surfaces:
   `metadata/ffcm-archive/unit-conversion-registry.csv`: lightweight unit
   registry scaffolds for prototype validation and future scaling.
 - `tests/`: stdlib regression tests for the BC mini-network prototype.
+- `planning/ffcm-prototype-decision-memo.md`: Phase 2 decision-gate memo for
+  the BC mini-network prototype.
+- `metadata/ffcm-archive/prototype-gap-register.csv`: machine-readable gap
+  register for moving from synthetic prototype to diagnostic/production data.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -197,9 +201,9 @@ Metadata surfaces:
   national subset: ws3-style supply output into the LP network-flow model.
 - [x] Compare prototype data structures against FFCM evidence tables and the
   Ghafghazi et al. architecture.
-- [ ] Document gaps that require new data acquisition, license review,
+- [x] Document gaps that require new data acquisition, license review,
   stakeholder clarification, or model redesign.
-- [ ] Produce a decision memo: reverse-engineer FFCM architecture, adapt only
+- [x] Produce a decision memo: reverse-engineer FFCM architecture, adapt only
   selected schemas, or proceed with an independent FRESH design informed by FFCM.
 
 ## Detailed Next Steps Notes

@@ -129,13 +129,11 @@ High-level stance:
 
 ## Next Design Checks
 
-- Recover the downstream LP model from the gist notebook seed and compare its
-  implied input schema against `fresh-interface-contract.csv`.
 - Decide whether FRESH needs one national commodity vocabulary or separate
   forestry, bioenergy, and CLEWs-accounting vocabularies linked by crosswalks.
-- Choose the first prototype geography and time step.
-- Define unit-conversion conventions for `m3`, `odt`, `bdmt`, `t`, `kg`, `GJ`,
-  `MWh`, and product-specific board/area units.
 - Decide which future input fields may be automatically converted using the
   unit registries and which should continue to fail fast on non-canonical
   units.
+- Connect a tiny ws3 run to the current `supply_offer` contract.
+- Replace one synthetic data family at a time with accepted diagnostic inputs,
+  following `metadata/ffcm-archive/prototype-gap-register.csv`.
