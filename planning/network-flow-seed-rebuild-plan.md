@@ -106,6 +106,7 @@ Proposed module names for a future implementation:
   `kg`, `MWh`, and board/area units before national scaling.
 - [x] Validate the BC mini-network fixture against
   `metadata/ffcm-archive/fresh-interface-contract.csv`.
+- [x] Add repeatable stdlib regression tests for the BC mini-network prototype.
 - [ ] Add explicit quantity-conversion execution only after deciding which
   table fields may be automatically converted versus rejected.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
@@ -164,3 +165,7 @@ objective and commodity totals.
 `generated/contract_validation.csv`. The BC mini-network currently validates
 15 contract tables; `transporter` and `import_offer` are recorded as
 intentionally absent optional fixture tables.
+
+`tests/test_bc_mini_prototype.py` covers the full in-process graph/LP/contract
+path and negative checks for missing required contract fields and cross-
+dimension unit conversions. Run with `python3 -m unittest discover -s tests -v`.

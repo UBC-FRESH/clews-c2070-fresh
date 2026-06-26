@@ -57,6 +57,8 @@
 - Added `fresh_fibre.contract` validation against
   `fresh-interface-contract.csv`, including a generated BC mini-network
   contract-coverage audit table.
+- Added stdlib regression tests for the BC mini-network graph, LP solve,
+  contract coverage, unit registry, and negative validation cases.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN

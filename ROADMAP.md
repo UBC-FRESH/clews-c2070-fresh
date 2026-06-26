@@ -101,6 +101,7 @@ Metadata surfaces:
 - `metadata/ffcm-archive/unit-registry.csv` and
   `metadata/ffcm-archive/unit-conversion-registry.csv`: lightweight unit
   registry scaffolds for prototype validation and future scaling.
+- `tests/`: stdlib regression tests for the BC mini-network prototype.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -179,6 +180,7 @@ Metadata surfaces:
   reusable FRESH module.
 - [x] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
   `kg`, `MWh`, and board/area units before national scaling.
+- [x] Add regression tests for the synthetic BC mini-network prototype.
 - [ ] Continue refactoring remaining recovered notebook scenario and reporting
   semantics into the reusable FRESH module where still relevant.
 - [x] Choose the first prototype geography, time step, commodity subset, and

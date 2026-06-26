@@ -30,5 +30,7 @@ LP reporting metadata is sourced from `scenario.csv`, `run_provenance.csv`, and
 provenance, solver, objective, cost, revenue, and commodity-total rows.
 Soft-link contract coverage is checked by `fresh_fibre.contract`, which writes
 `generated/contract_validation.csv`.
+Regression tests for the fixture live in `tests/test_bc_mini_prototype.py` and
+can be run with `python3 -m unittest discover -s tests -v`.
 
 Compatibility CLIs remain available under `scripts/ffcm_archive/`.
