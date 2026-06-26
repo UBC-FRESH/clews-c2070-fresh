@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from fresh_fibre.schema import number, read_rows, require_columns, write_rows
 DEFAULT_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-mini")
 DEFAULT_WS3_OUTPUT_PATH = DEFAULT_INPUT_DIR / "ws3_harvest_output.csv"
 DEFAULT_OUTPUT_PATH = DEFAULT_INPUT_DIR / "generated" / "supply_offer_from_ws3.csv"
+DEFAULT_MANIFEST_PATH = DEFAULT_INPUT_DIR / "generated" / "ws3_export_manifest.csv"
 
 SUPPLY_OFFER_COLUMNS = [
     "scenario_id",
@@ -39,6 +41,16 @@ WS3_HARVEST_COLUMNS = set(SUPPLY_OFFER_COLUMNS) | {
     "source_record_id",
     "notes",
 }
+
+EXPORT_MANIFEST_COLUMNS = [
+    "artifact_role",
+    "table_path",
+    "row_count",
+    "sha256",
+    "ws3_run_ids",
+    "source_models",
+    "notes",
+]
 
 
 @dataclass(frozen=True)
@@ -94,10 +106,70 @@ def validate_references(
         raise ValueError(f"ws3 harvest-output reference validation failed:\n  - {joined}")
 
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def unique_values(rows: list[dict[str, str]], column: str) -> str:
+    values = sorted({row.get(column, "") for row in rows if row.get(column, "")})
+    return "; ".join(values)
+
+
+def build_export_manifest(
+    ws3_output_path: Path,
+    output_path: Path,
+    input_dir: Path | None,
+) -> list[dict[str, object]]:
+    ws3_rows = read_rows(ws3_output_path)
+    output_rows = read_rows(output_path)
+    rows: list[dict[str, object]] = [
+        {
+            "artifact_role": "normalized_ws3_harvest_output",
+            "table_path": str(ws3_output_path),
+            "row_count": len(ws3_rows),
+            "sha256": file_sha256(ws3_output_path),
+            "ws3_run_ids": unique_values(ws3_rows, "ws3_run_id"),
+            "source_models": unique_values(ws3_rows, "source_model"),
+            "notes": "Input table emitted by the upstream ws3 normalization boundary.",
+        },
+        {
+            "artifact_role": "exported_supply_offer",
+            "table_path": str(output_path),
+            "row_count": len(output_rows),
+            "sha256": file_sha256(output_path),
+            "ws3_run_ids": unique_values(ws3_rows, "ws3_run_id"),
+            "source_models": "fresh_fibre.ws3_export",
+            "notes": "Adapter output written in the FRESH supply_offer contract shape.",
+        },
+    ]
+    if input_dir is not None:
+        contract_supply_offer_path = input_dir / "supply_offer.csv"
+        if contract_supply_offer_path.exists():
+            contract_rows = read_rows(contract_supply_offer_path)
+            rows.append(
+                {
+                    "artifact_role": "downstream_supply_offer_contract",
+                    "table_path": str(contract_supply_offer_path),
+                    "row_count": len(contract_rows),
+                    "sha256": file_sha256(contract_supply_offer_path),
+                    "ws3_run_ids": unique_values(ws3_rows, "ws3_run_id"),
+                    "source_models": "fixture_contract",
+                    "notes": "Current downstream LP input contract table used by the prototype.",
+                }
+            )
+    return rows
+
+
 def export_supply_offer(
     ws3_output_path: Path = DEFAULT_WS3_OUTPUT_PATH,
     output_path: Path = DEFAULT_OUTPUT_PATH,
     input_dir: Path | None = DEFAULT_INPUT_DIR,
+    manifest_path: Path | None = None,
+    write_manifest: bool = True,
 ) -> list[dict[str, str]]:
     rows = read_rows(ws3_output_path)
     require_columns(ws3_output_path, rows, WS3_HARVEST_COLUMNS)
@@ -107,6 +179,10 @@ def export_supply_offer(
     validate_references(records, input_dir)
     supply_offer_rows = [record.to_supply_offer() for record in records]
     write_rows(output_path, SUPPLY_OFFER_COLUMNS, supply_offer_rows)
+    if write_manifest:
+        manifest_path = manifest_path or output_path.parent / DEFAULT_MANIFEST_PATH.name
+        manifest_rows = build_export_manifest(ws3_output_path, output_path, input_dir)
+        write_rows(manifest_path, EXPORT_MANIFEST_COLUMNS, manifest_rows)
     return supply_offer_rows
 
 
@@ -115,15 +191,30 @@ def main() -> None:
     parser.add_argument("--input-dir", type=Path, default=DEFAULT_INPUT_DIR)
     parser.add_argument("--ws3-output-path", type=Path, default=DEFAULT_WS3_OUTPUT_PATH)
     parser.add_argument("--output-path", type=Path, default=DEFAULT_OUTPUT_PATH)
+    parser.add_argument("--manifest-path", type=Path, default=DEFAULT_MANIFEST_PATH)
     parser.add_argument(
         "--skip-reference-validation",
         action="store_true",
         help="Only validate row shape and numeric fields.",
     )
+    parser.add_argument(
+        "--skip-manifest",
+        action="store_true",
+        help="Do not write the ws3 export manifest.",
+    )
     args = parser.parse_args()
     input_dir = None if args.skip_reference_validation else args.input_dir
-    rows = export_supply_offer(args.ws3_output_path, args.output_path, input_dir)
-    print(f"exported {len(rows)} supply offers to {args.output_path}")
+    rows = export_supply_offer(
+        args.ws3_output_path,
+        args.output_path,
+        input_dir,
+        args.manifest_path,
+        not args.skip_manifest,
+    )
+    message = f"exported {len(rows)} supply offers to {args.output_path}"
+    if not args.skip_manifest:
+        message += f"; wrote {args.manifest_path}"
+    print(message)
 
 
 if __name__ == "__main__":

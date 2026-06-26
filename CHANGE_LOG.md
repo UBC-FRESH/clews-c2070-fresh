@@ -5,6 +5,8 @@
 - Added a tested `fresh_fibre.ws3_export` bridge from normalized ws3
   harvest-output rows to the FRESH `supply_offer` contract, plus a synthetic
   BC mini-network upstream fixture and generated comparison artifact.
+- Added a generated ws3 export manifest with row counts and SHA-256 hashes for
+  the normalized upstream table, adapter output, and downstream LP input.
 
 ## 2026-06-25
 

@@ -116,6 +116,26 @@ class BcMiniPrototypeTest(unittest.TestCase):
 
         self.assertEqual(rows, read_csv(self.input_dir / "supply_offer.csv"))
         self.assertEqual(read_csv(output_path), read_csv(self.input_dir / "supply_offer.csv"))
+        manifest_rows = read_csv(self.input_dir / "generated" / "ws3_export_manifest.csv")
+        manifest_by_role = {row["artifact_role"]: row for row in manifest_rows}
+        self.assertEqual(
+            set(manifest_by_role),
+            {
+                "normalized_ws3_harvest_output",
+                "exported_supply_offer",
+                "downstream_supply_offer_contract",
+            },
+        )
+        self.assertEqual(manifest_by_role["normalized_ws3_harvest_output"]["row_count"], "4")
+        self.assertEqual(manifest_by_role["exported_supply_offer"]["row_count"], "4")
+        self.assertEqual(manifest_by_role["downstream_supply_offer_contract"]["row_count"], "4")
+        self.assertEqual(
+            manifest_by_role["exported_supply_offer"]["sha256"],
+            manifest_by_role["downstream_supply_offer_contract"]["sha256"],
+        )
+        for row in manifest_rows:
+            self.assertEqual(len(row["sha256"]), 64)
+            self.assertEqual(row["ws3_run_ids"], "synthetic_ws3_shape_001")
 
     def test_ws3_export_rejects_unknown_supply_node(self) -> None:
         path = self.input_dir / "ws3_harvest_output.csv"

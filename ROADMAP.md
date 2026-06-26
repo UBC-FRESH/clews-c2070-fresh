@@ -218,7 +218,7 @@ Metadata surfaces:
   that emits the same normalized shape.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
-- [ ] Add provenance fields or manifests needed to distinguish ws3 runtime
+- [x] Add provenance fields or manifests needed to distinguish ws3 runtime
   output, normalized adapter output, and downstream LP input.
 
 ## Detailed Next Steps Notes

@@ -62,8 +62,10 @@ The first implemented bridge is `fresh_fibre.ws3_export`, which converts a
 normalized harvest-output table into the current `supply_offer` contract. The
 BC mini-network fixture uses synthetic rows in
 `metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_harvest_output.csv`; the
-next upstream step is to replace that synthetic producer with a tiny real ws3
-run that emits the same normalized shape.
+exporter writes `generated/ws3_export_manifest.csv` to distinguish normalized
+upstream output, adapter output, and downstream LP input by row count and
+SHA-256 fingerprint. The next upstream step is to replace that synthetic
+producer with a tiny real ws3 run that emits the same normalized shape.
 
 ## Downstream LP Replacement
 

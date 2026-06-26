@@ -18,7 +18,10 @@ The upstream diagnostic handoff starts from `ws3_harvest_output.csv`, a tiny
 synthetic table shaped as normalized ws3 harvest output. It is converted to the
 public `supply_offer` contract by `fresh_fibre.ws3_export`; the compatibility
 CLI is `scripts/ffcm_archive/export_ws3_supply_offer.py`. The generated audit
-copy is `generated/supply_offer_from_ws3.csv`.
+copy is `generated/supply_offer_from_ws3.csv`. The generated
+`ws3_export_manifest.csv` records the normalized upstream table, exported
+adapter table, and downstream contract table with row counts and SHA-256
+fingerprints.
 
 Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 
