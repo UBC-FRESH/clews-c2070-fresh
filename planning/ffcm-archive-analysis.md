@@ -41,10 +41,25 @@ Current lightweight metadata products:
 - `metadata/ffcm-archive/fcm-evidence-index.csv`
 - `metadata/ffcm-archive/architecture-crosswalk.csv`
 - `metadata/ffcm-archive/parsed/`
+- `metadata/ffcm-archive/lp-forensics/`
+- `metadata/ffcm-archive/runtime-dependencies.csv`
+- `metadata/ffcm-archive/implementation-boundary.csv`
+- `planning/fresh-ffcm-replacement-architecture.md`
+- `metadata/ffcm-archive/fresh-interface-contract.csv`
+- `metadata/ffcm-archive/data-source-disposition.csv`
+- `planning/ffcm-prototype-scope.md`
+- `metadata/ffcm-archive/prototype-scope.csv`
+- `metadata/ffcm-archive/network-flow-seed/`
+- `planning/network-flow-seed-rebuild-plan.md`
+- `metadata/ffcm-archive/prototype-inputs/bc-mini/`
 
 Repeatable parser:
 
 - `scripts/ffcm_archive/parse_fcm_configs.py`
+- `scripts/ffcm_archive/summarize_lp_models.py`
+- `scripts/ffcm_archive/inventory_runtime_dependencies.py`
+- `scripts/ffcm_archive/extract_network_flow_seed_notebook.py`
+- `scripts/ffcm_archive/build_prototype_graph.py`
 
 ## Initial Archive Map
 
@@ -85,7 +100,21 @@ Network-flow and ws3-linkage method anchors:
   planning models.
 - CIRRELT-2018-23: value-creation potential indicator retrofit logic.
 - CIRRELT-2018-24: hybrid simulation-optimization and profit-maximizing network
-  flow model.
+  flow model. Section 2.1 describes the network-flow optimization model
+  formulation and compilation.
+
+Recovered code seed:
+
+- GitHub gist `gparadis/bcc357dbeaab2c8d247776424c51c25a`, containing
+  `phase2_ua06451.ipynb`, may be the only surviving copy of the
+  ws3-compatible forest-sector supply-chain network-flow optimization model
+  code referenced for FRESH.
+- The notebook was downloaded to ignored local path
+  `tmp/gist-network-flow/phase2_ua06451.ipynb`.
+- Code, markdown, and a cell index were extracted to
+  `metadata/ffcm-archive/network-flow-seed/` for rebuild planning.
+- Function and schema crosswalks were added to support refactoring the notebook
+  into a clean FRESH model module.
 
 Supporting forest-estate method anchor:
 
@@ -199,6 +228,34 @@ Questions to answer:
   post-processing?
 - Which formulation pieces map directly to the existing downstream LP model?
 
+Initial LP forensics outputs:
+
+- `lp-model-summary.csv`
+- `lp-variable-families.csv`
+
+First LP findings:
+
+- The exported LP files are continuous CPLEX LPs in the inspected examples:
+  no `Bounds`, `Binaries`, or `Generals` sections were present in the sampled
+  small report LPs or the two large basecase LPs.
+- `Log_allocation_model.lp` has 34,004 objective variables and 1,837 numbered
+  constraints. All objective variables are FMU log flows to sawmills, plywood
+  mills, OSB mills, or export sinks. Top product families are softwood lumber,
+  hardwood/east lumber, plywood, veneer, OSB, and sawlog export commodities.
+- `Secondary_Log_and_Residue_allocation_model.lp` has 20,065 objective
+  variables and 3,857 numbered constraints. Source commodities include
+  woodchips, sawdust/shavings, logging residue, logs, and hog fuel. Destination
+  classes include pulp/paper, pellet, bioenergy, NSP/MDF, export sinks, and a
+  small import/network-node class.
+- Both large basecase LPs contain positive and negative objective coefficients,
+  which supports interpreting the objective as net value/profit after revenue,
+  processing, transport, and supply-cost terms.
+- Small report LPs are useful pedagogically but use simplified variable names
+  that do not encode the full commodity vocabulary.
+- Constraint senses are visible, but constraint names are exported as numeric
+  `cN` labels. Detailed constraint-family reconstruction must therefore join
+  LP rows back to config evidence rather than relying on semantic LP labels.
+
 ### WP4: Replacement Interface Design
 
 Define a clean soft-link contract from ws3 to the downstream LP network-flow
@@ -214,6 +271,71 @@ Minimum fields to specify:
 - Transport distance/time/cost fields
 - Provenance fields linking records back to source inventory and model run
 
+Initial replacement design outputs:
+
+- `planning/fresh-ffcm-replacement-architecture.md`
+- `metadata/ffcm-archive/fresh-interface-contract.csv`
+- `metadata/ffcm-archive/data-source-disposition.csv`
+
+Initial table families:
+
+- `scenario`
+- `spatial_unit`
+- `commodity`
+- `supply_offer`
+- `network_node`
+- `technology`
+- `technology_flow`
+- `transport_link`
+- `transporter`
+- `market`
+- `import_offer`
+- `export_sink`
+- `run_provenance`
+- `solution_flow`
+- `solution_summary`
+
+First replacement-design findings:
+
+- The ws3 side should own forest state, growth/yield transitions, harvest
+  scheduling, assortment/log generation, logging-residue generation, and supply
+  provenance.
+- The LP side should own industrial allocation, facility/process capacities,
+  market response, transport, conversion, imports/exports, and net-value
+  optimization.
+- The soft-link should be a tabular supply-offer contract, not a packed FCM
+  variable-name convention. Source node, commodity, assortment, period, unit,
+  cost, and provenance should be explicit fields.
+- FFCM basecase values can seed diagnostic prototypes, but production FRESH
+  values should be rebuilt or validated from accepted national data sources.
+
+## Runtime Boundary Notes
+
+The FCM release bundle under `tmp/FCM/FCM_Releases/` appears to be a Java
+application/runtime distribution. The main `FCM-1908.jar` manifest points to
+`ima.IMA` as the main class and contains JaamSim classes, suggesting FCM was
+implemented on or packaged with the JaamSim simulation framework.
+
+The dependency inventory flags these boundaries:
+
+- CPLEX Java API: proprietary solver dependency and a hard no-port boundary for
+  FRESH.
+- lp_solve Java binding: legacy/open solver evidence, but not a preferred FRESH
+  dependency if the existing downstream LP model already has a modern solver
+  stack.
+- PostgreSQL and MongoDB Java drivers: evidence that the FCM runtime may read
+  from relational and/or document stores.
+- NASA WorldWind plus JOGL/GlueGen native jars: GIS/3D visualization runtime
+  evidence rather than core model logic to preserve.
+- Apache commons and json-simple jars: generic Java utility dependencies.
+
+The practical FRESH stance is to preserve schemas, data contracts, and
+formulation evidence from the archive, but not to depend on the FCM Java
+runtime, CPLEX jar, visualization stack, or database drivers.
+
+See `metadata/ffcm-archive/implementation-boundary.csv` for the current
+preserve/adapt/rebuild/avoid matrix.
+
 ### WP5: Prototype Decision Gate
 
 Use the architecture crosswalk and parsed evidence to recommend one of three
@@ -224,6 +346,18 @@ paths:
   independently.
 - Treat FFCM as background evidence only and proceed with a fresh ws3 + LP
   architecture.
+
+Initial prototype scope:
+
+- Recommended first prototype is a BC diagnostic mini-network with synthetic or
+  clearly labelled diagnostic ws3-shaped supply records.
+- Minimum network is 2 to 5 supply nodes, 2 to 5 primary-processing nodes, one
+  pulp/paper or NSP/MDF consumer, one pellet or bioenergy consumer, optional
+  export sink, and one scenario/period.
+- Minimum commodities are log, woodchips, sawdust/shavings, hog fuel, and
+  logging residue.
+- Immediate blocker is not FFCM evidence; it is locating and crosswalking the
+  recovered downstream LP model's current/implied input schema.
 
 ## Open Questions
 

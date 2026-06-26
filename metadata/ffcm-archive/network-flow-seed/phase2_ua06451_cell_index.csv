@@ -1,0 +1,150 @@
+cell_index,cell_type,source_chars,markdown_context,code_cell_index,markdown_cell_index,first_line
+1,markdown,168,,,1,"This notebook implements phase 2 of the project, which involves compiling the network flow model and running a number of scenarios to simulate different policy options."
+2,markdown,21,Initialization code,,2,# Initialization code
+3,code,906,Initialization code,1,,%reload_ext autoreload
+4,code,985,Initialization code,2,,sns.set_style('white')
+5,markdown,14,Introduction,,3,# Introduction
+6,markdown,6072,Introduction,,4,The MERIS database (compiled by experts staff at BMMB) contains all the data needed to estimate unit value-creation-potential of any standing tree stem in Quebec. For each forest management unit in Qu
+7,markdown,23,Load and compile data,,5,# Load and compile data
+8,markdown,153,Load and compile data,,6,"In this section, we load and compile input data for our test case. We use data compiled in phase 1 of this project, for UA 064-51 (located in region 15)."
+9,markdown,85,Load and compile data,,7,"First, we load the `WoodstockModel` object for UA 064-51 that we compiled in phase 1."
+10,code,51,Load and compile data,3,,"wm = dill.load(open(data_path + pickle_path, 'rb'))"
+11,markdown,78,Load and compile data,,8,Define a helper function to perform element-wise sum of two lists of numbers.
+12,code,108,Load and compile data,4,,def elementwise_sum(list_of_lists):
+13,markdown,87,Load and compile data,,9,Define a helper funciton to compile management area data we need to model source nodes.
+14,code,1130,Load and compile data,5,,"def compile_mgmt_areas(wm, target_periods):"
+15,markdown,69,Load and compile data,,10,Compile management area data. Calculate total available harvest area.
+16,code,188,Load and compile data,6,,"#target_periods = [2, 3]"
+17,markdown,49,Load and compile data,,11,Define commodity labels and commodity aggregates.
+18,code,311,Load and compile data,7,,"cdt_labs = ['aur', "
+19,code,368,Load and compile data,8,,"cdt_aggs = {'aur':'autre', "
+20,markdown,129,Load and compile data,,12,Load UA-wise GA volume data for region 15 (compiled in phase 1). Compile list of commodities potentially processed for each mill.
+21,code,601,Load and compile data,9,,"df_ga = dill.load(open(data_path + 'misc/df_ga.dill', 'rb'))"
+22,markdown,133,Load and compile data,,13,Compile commodity-mill-wise GA volumes for UA 064-51. These will be used lated to set upper bounds on commodity-processor arc flows.
+23,code,179,Load and compile data,10,,"s_ga = df_ga.reset_index().groupby(['cmdt', 'mill_nums']).volua06451cfhl20152016.sum()"
+24,markdown,31,Define the network flow model,,14,# Define the network flow model
+25,markdown,880,Define the network flow model,,15,"Version 42.03 of network flow model. Added secondary hardwood chip flows from hardwood sawmill `prc` nodes to hardwood pulpwood `prc` nodes (i.e., Fortress, Domtar). For now, assuming that 100% of har"
+26,code,526,Define the network flow model,11,,"# proportion of hardwood (sawmill, veneer mill) inflow to model as hardwood chip outflow"
+27,code,1065,Define the network flow model,12,,ma_keys = sorted(mgmt_areas.keys())
+28,code,150,Define the network flow model,13,,_ma = mgmt_areas
+29,code,3971,Define the network flow model,14,,"def compile_base_model(subs_srcdsp={}, subs_cdtprc={}, rente_rate=0.18):"
+30,markdown,25,Define helper functions,,16,# Define helper functions
+31,markdown,255,Define helper functions,,17,"Define help functions for doing stuff like copying models, compiling value coefficients, running the model, plotting results, etc. We will use these helper functions later to keep the code that define"
+32,code,282,Define helper functions,15,,def copy_model(model):
+33,code,2295,Define helper functions,16,,"def compile_value_coeffs(arcs, rente_rate=0.18):"
+34,code,408,Define helper functions,17,,"def run_area(model, harv_area):"
+35,code,2032,Define helper functions,18,,"def _compile_solution(arcs, C, flow, subs={}):"
+36,code,4400,Define helper functions,19,,# passing flow is not necessary (can be obtained from model)
+37,code,731,Define helper functions,20,,"def run_areastep(model, nsteps=10, reverse=False):"
+38,code,3061,Define helper functions,21,,"def compile_areastep(model, C, Z, flows, subs_srcdsp={}, subs_cdtprc={}):"
+39,code,80,Define helper functions,22,,def norm_data(data):
+40,code,198,Define helper functions,23,,def linestyle_cdt(cdt):
+41,code,952,Define helper functions,24,,"def plot_vcp(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+42,code,1036,Define helper functions,25,,"def plot_valuecomps(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+43,code,1050,Define helper functions,26,,"def plot_valuecomps_normed(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+44,code,522,Define helper functions,27,,"def plot_cdt_volume(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+45,code,678,Define helper functions,28,,"def plot_cdt_volume_aggregated(X, Y, cdt_aggs, alpha=0.5, ax=None, figsize=(6, 4), "
+46,code,752,Define helper functions,29,,"def plot_cdt_cost(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+47,code,657,Define helper functions,30,,"def plot_cdt_revenue(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+48,code,1323,Define helper functions,31,,"def plot_cdt_vcp_aggregated(X, Y, cdt_aggs, alpha=0.5, ax=None, fig=None, figsize=(6, 4), "
+49,code,935,Define helper functions,32,,"def plot_aac_ga_aggregated(mgmt_areas, cdt_aggs, ax=None, fig=None, figsize=(6, 4), barw=0.3,"
+50,code,949,Define helper functions,33,,"def plot_cdt_vcp(X, Y, alpha=0.5, ax=None, figsize=(6, 4), "
+51,code,522,Define helper functions,34,,"def plot_scenarios(scenarios, plot_funcs, filename='scenariocomp.pdf', "
+52,code,223,Define helper functions,35,,"def run_scenario(model, subs, C, harv_area):"
+53,code,950,Define helper functions,36,,"def run_areas_concurrent(model, nsteps, maxworkers=4):"
+54,code,207,Define helper functions,37,,def compile_xy(models):
+55,code,610,Define helper functions,38,,"def set_ga_bounds(m, cdtprc_ga, enable_lb=True, enable_ub=True, lb_fuzz=0.01):"
+56,code,575,Define helper functions,39,,"def set_ga_penalties(m, cdtprc_ga, ylo=-1e10, yhi=0.):"
+57,code,13,Define helper functions,40,,"X, Y = {}, {}"
+58,markdown,11,Scenarios,,18,# Scenarios
+59,markdown,115,Scenarios,,19,"This section simulates a number of scenarios, using the network flow model and helper functions implemented above."
+60,markdown,150,Scenarios,,20,"First, we output some data comparing AAC (from the BFEC Woodstock model) to GA volumes (i.e. timber licences attributed to mills for the same forest)."
+61,code,44,Scenarios,41,,"plot_aac_ga_aggregated(mgmt_areas, cdt_aggs)"
+62,markdown,228,Scenarios,,21,"We see that a smaller proportion of the _tritf_ (hardwood pulpwood) commodity aggregate is attributed, compared the other two commodity aggregates. This is consistent with other sources of data compar"
+63,markdown,35,Scenario 0,,22,## Scenario 0
+64,code,98,Scenario 0,42,,model = compile_base_model()
+65,code,347,Scenario 0,43,,Z = m.getObjective().getValue()
+66,markdown,183,Scenario 1,,23,## Scenario 1
+67,code,22,Scenario 1,44,,snum = '1'
+68,code,114,Scenario 1,45,,model = compile_base_model()
+69,code,55,Scenario 1,46,,"X[snum], Y[snum] = compile_areastep(model, C, Z, flows)"
+70,code,61,Scenario 1,47,,"fig, ax = plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+71,markdown,56,Scenario 2,,24,## Scenario 2
+72,markdown,16,Scenario 2.1,,25,### Scenario 2.1
+73,markdown,68,Scenario 2.1,,26,Scenario 2.1 subsidy amounts are based on Belzile and Riopel (2015).
+74,code,12,Scenario 2.1,48,,snum = '2.1'
+75,code,377,Scenario 2.1,49,,"subs_cdtprc = {('cdt_pate_fd', 'prc_0720002'):10.,  # pate_fd  -> Fortress"
+76,code,80,Scenario 2.1,50,,"X[snum], Y[snum] = compile_areastep(model, C, Z, flows, subs_cdtprc=subs_cdtprc)"
+77,code,51,Scenario 2.1,51,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+78,markdown,16,Scenario 2.2,,27,### Scenario 2.2
+79,markdown,23,Scenario 2.2,,28,Based on scenario 2.1.
+80,markdown,165,Scenario 2.2,,29,What if we added a 7 $\$/m^3$ subsidy on all volume flowing out of the `cdt_sepm` node? The CIFQ has been lobbying for a similar cost cut for softwood fibre lately.
+81,code,561,Scenario 2.2,52,,snum = '3.1'
+82,code,51,Scenario 2.2,53,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+83,markdown,16,Scenario 2.3,,30,### Scenario 2.3
+84,markdown,102,Scenario 2.3,,31,Next we determine the minimal SEPM subsidy required so that the softwood commodity stream breaks even.
+85,code,248,Scenario 2.3,54,,"_vcomps = ['fixd_cdt', # cost"
+86,code,1577,Scenario 2.3,55,,"subs_cdtprc = {('cdt_pate_fd', 'prc_0720002'):10.,  # pate_fd  -> Fortress"
+87,markdown,210,Scenario 2.3,,32,"The SEPM commodity (almost) breaks even with a \$12.90 subsidy. However, only 94% of available area is harvested. Lets try to find the minimal SEPM subsidy required to induce harvesting of all availab"
+88,code,1843,Scenario 2.3,56,,"subs_cdtprc = {('cdt_pate_fd', 'prc_0720002'):10.,  # pate_fd  -> Fortress"
+89,markdown,118,Scenario 2.3,,33,"Thus, we must increase the SEPM subsidy from \$12.90 to \$13.30 to induce harvesting of the last 6% of available area."
+90,markdown,102,Scenario 2.3,,34,"Next, we run the model based on scenario 2.1 parameteres, with \$12.90 SEPM subsidy, and plot results."
+91,code,16,Scenario 2.3,57,,sepm_sub = 12.90
+92,code,567,Scenario 2.3,58,,snum = '2.3'
+93,code,51,Scenario 2.3,59,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+94,markdown,13,Scenario 3,,35,## Scenario 3
+95,markdown,22,Scenario 3,,36,Based on scenario 2.1.
+96,markdown,15,Scenario 3.1,,37,## Scenario 3.1
+97,markdown,44,Scenario 3.1,,38,What if we omit the rente from scenario 2.1?
+98,code,598,Scenario 3.1,60,,snum = '3.1'
+99,code,51,Scenario 3.1,61,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+100,markdown,16,Scenario 3.2,,39,### Scenario 3.2
+101,markdown,113,Scenario 3.2,,40,Builds on scenario 3.1. 
+102,code,614,Scenario 3.2,62,,snum = '3.2'
+103,code,51,Scenario 3.2,63,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+104,markdown,13,Scenario 4,,41,## Scenario 4
+105,markdown,119,Scenario 4,,42,"Scenario 1, with area-based subsidies. Subsidies on a harvested area basis, amounts based on standard BMMB MAM policy."
+106,markdown,731,Scenario 4,,43,"BMMB subsidies are defined on a harvested area basis. In the case of multiple destinations, subsidies are pro-rated based on proportion of volume by commodity. The formula for the subsidy $s$ is"
+107,markdown,176,Scenario 4,,44,"We used Google Maps to estimate the shortest-path driving distances from the centroid of stumpage zone 661 to Thurso (Fortress mill, 242 km) and Windsor (Domtar mill, 447 km)."
+108,code,1288,Scenario 4,64,,"def bmmb_mam(d, p):"
+109,code,128,Scenario 4,65,,model = compile_base_model(subs_srcdsp=subs_srcdsp)
+110,code,91,Scenario 4,66,,snum = '4'
+111,code,51,Scenario 4,67,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+112,markdown,40,"Plot scenarios [1, 2, 3] side-by-side",,45,"## Plot scenarios [1, 2, 3] side-by-side"
+113,code,679,"Plot scenarios [1, 2, 3] side-by-side",68,,"#scenarios = [1, 2, 3, 4, 5]"
+114,code,679,"Plot scenarios [1, 2, 3] side-by-side",69,,"#scenarios = [1, 2, 3, 4, 5]"
+115,code,658,"Plot scenarios [1, 2, 3] side-by-side",70,,# flip the orientation
+116,code,222,"Plot scenarios [1, 2, 3] side-by-side",71,,"plt.plot(X[1], np.array(Y[9]['zval']) - np.array(Y[1]['zval']))"
+117,code,589,"Plot scenarios [1, 2, 3] side-by-side",72,,vcp = {}
+118,code,4,"Plot scenarios [1, 2, 3] side-by-side",73,,vcp1
+119,code,51,"Plot scenarios [1, 2, 3] side-by-side",74,,"zip(np.array(Y[3]['zval']), np.array(Y[1]['zval']))"
+120,code,505,"Plot scenarios [1, 2, 3] side-by-side",75,,"plot_funcs = [(plot_vcp, {'Xmax':avail_area, 'ylim':[-2e8, +5e8]}),"
+121,code,58,"Plot scenarios [1, 2, 3] side-by-side",76,,"plot_scenarios(scenarios=[1, 2, 3], plot_funcs=plot_funcs)"
+122,markdown,13,Scenario 5,,46,## Scenario 5
+123,markdown,20,Scenario 5,,47,Build on scenario 1.
+124,markdown,16,Scenario 5.1,,48,### Scenario 5.1
+125,markdown,64,Scenario 5.1,,49,Set UB for `cdtprc` flow variables to GA volumes (no subsidies).
+126,code,241,Scenario 5.1,77,,snum = '5.1'
+127,code,51,Scenario 5.1,78,,"plot_cdt_vcp_aggregated(X[snum], Y[snum], cdt_aggs)"
+128,markdown,16,Scenario 5.2,,50,### Scenario 5.2
+129,markdown,49,Scenario 5.2,,51,Set LB for `cdtprc` flow variables to GA volumes.
+130,code,146,Scenario 5.2,79,,snum = '5.2'
+131,code,57,Scenario 5.2,80,,"cdtprc_flwvars = set_ga_bounds(m, cdtprc_ga, True, False)"
+132,code,12,Scenario 5.2,81,,m.optimize()
+133,markdown,122,Scenario 5.2,,52,Disable dual reductions in Gurobi presolve and re-optimize to confirm that the model is infeasible (Gurobi status code 3).
+134,code,27,Scenario 5.2,82,,m.params.DualReductions = 0
+135,code,12,Scenario 5.2,83,,m.optimize()
+136,markdown,412,Scenario 5.2,,53,"Infeasible. It is not possible to minimally meet all GA contract demands, even if we harvested all the available area. Conclusion: GA contracts are not mathematically compatible with the BFEC Woodstoc"
+137,markdown,88,Scenario 5.2,,54,TO DO: Use `Model.feasRelax` instead (can specify which variable bounds may be relaxed).
+138,code,184,Scenario 5.2,84,,"m.feasRelax(0, "
+139,code,12,Scenario 5.2,85,,m.optimize()
+140,code,486,Scenario 5.2,86,,Z = m.getObjective().getValue()
+141,markdown,16,Scenario 5.3,,55,### Scenario 5.3
+142,markdown,244,Scenario 5.3,,56,"Re-implement scenario 5.2 as a goal programming model. Define a piecewise-linear objective for the `cdtprc` flow variables (constant unit incentive values on volume below GA, neutral for volume above "
+143,code,133,Scenario 5.3,87,,model = compile_base_model()
+144,code,47,Scenario 5.3,88,,"cdtprc_flwvars = set_ga_penalties(m, cdtprc_ga)"
+145,code,38,Scenario 5.3,89,,m.Params.LogToConsole = 1
+146,code,486,Scenario 5.3,90,,Z = m.getObjective().getValue()
+147,code,340,Scenario 5.3,91,,"df = pd.DataFrame([(i, j, flow[i, j].x) for i, j in arcs],"
+148,code,2,Scenario 5.3,92,,df
+149,code,120,Scenario 5.3,93,,"fig, ax = plt.subplots(1, 1, figsize=(10, 15))"

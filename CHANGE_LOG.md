@@ -9,6 +9,31 @@
 - Added a repeatable FCM configuration parser and generated normalized metadata
   tables for FMU supply, facilities, processing lines/flows, routes,
   transporters, commodities, markets, imports, and transload costs.
+- Added a repeatable LP forensics summarizer and generated first-pass summaries
+  for small report LP examples plus large basecase log and secondary
+  log/residue allocation models.
+- Added a repeatable FCM runtime dependency inventory and flagged CPLEX,
+  lp_solve, database drivers, and GIS/visualization libraries as implementation
+  evidence rather than FRESH runtime dependencies.
+- Added an implementation-boundary matrix separating FFCM schemas and
+  formulation evidence to preserve/adapt from engines, solvers, visualization
+  runtime, database drivers, and license-sensitive workbooks to replace or
+  avoid.
+- Added an initial FRESH replacement architecture note, ws3-to-LP soft-link
+  interface contract, and data-source disposition table for FFCM-derived
+  prototype seeds versus production rebuild requirements.
+- Scoped the first feasibility prototype as a BC diagnostic mini-network using
+  synthetic or clearly labelled diagnostic ws3-shaped supply records feeding
+  the downstream LP model.
+- Downloaded the likely surviving gist notebook seed for the ws3-compatible
+  network-flow model, extracted notebook code text/markdown/cell metadata, and
+  documented its relationship to CIRRELT-2018-24 section 2.1.
+- Added a rebuild plan, function inventory, and schema crosswalk for refactoring
+  the recovered notebook's five-layer network-flow model into a clean FRESH
+  module.
+- Added a synthetic BC mini-network fixture and repeatable solver-independent
+  graph builder that emits typed `src`, `dsp`, `cdt`, `prc`, and `snk` node/arc
+  tables for the first FRESH soft-link prototype.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN

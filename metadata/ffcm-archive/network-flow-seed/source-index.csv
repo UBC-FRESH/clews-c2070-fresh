@@ -1,0 +1,3 @@
+source_id,source_type,location,local_recovery_path,role,notes
+gist_phase2_ua06451,github_gist,https://gist.github.com/gparadis/bcc357dbeaab2c8d247776424c51c25a,tmp/gist-network-flow/phase2_ua06451.ipynb,possible-surviving-code-seed,"Secret GitHub gist containing phase2_ua06451.ipynb; downloaded locally to ignored tmp/ and extracted into lightweight code/markdown metadata."
+cirrelt_2018_24,pdf,tmp/CIRRELT-2018-24.pdf,tmp/CIRRELT-2018-24.pdf,method-description,"Section 2.1 describes the network flow optimization model formulation and compilation."

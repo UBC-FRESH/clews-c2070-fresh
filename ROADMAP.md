@@ -71,6 +71,30 @@ Metadata surfaces:
   FFCM conceptual modules to archive evidence and candidate FRESH components.
 - `metadata/ffcm-archive/parsed/`: generated normalized CSV tables parsed from
   core FCM configuration and include files.
+- `metadata/ffcm-archive/lp-forensics/`: generated summaries of selected FCM
+  LP model exports and their variable families.
+- `metadata/ffcm-archive/runtime-dependencies.csv`: generated inventory of FCM
+  Java runtime jars and dependency-boundary categories.
+- `metadata/ffcm-archive/implementation-boundary.csv`: curated preserve/adapt/
+  replace/avoid matrix for FFCM evidence and FRESH implementation choices.
+- `planning/fresh-ffcm-replacement-architecture.md`: initial FRESH architecture
+  note translating FFCM evidence into a ws3 plus LP replacement design.
+- `metadata/ffcm-archive/fresh-interface-contract.csv`: initial soft-link table
+  contract between ws3 outputs and downstream LP inputs/outputs.
+- `metadata/ffcm-archive/data-source-disposition.csv`: initial disposition of
+  archive evidence into prototype seeds, production rebuilds, and boundaries.
+- `planning/ffcm-prototype-scope.md`: initial Phase 2 prototype decision-gate
+  scope.
+- `metadata/ffcm-archive/prototype-scope.csv`: compact prototype component
+  choices and evidence links.
+- `metadata/ffcm-archive/network-flow-seed/`: extracted code, markdown, and
+  semantic notes from the recovered gist notebook seed for the ws3-compatible
+  network-flow model.
+- `planning/network-flow-seed-rebuild-plan.md`: refactoring plan for rebuilding
+  the recovered notebook seed into a clean FRESH network-flow module.
+- `metadata/ffcm-archive/prototype-inputs/bc-mini/`: synthetic BC diagnostic
+  soft-link inputs plus generated five-layer graph tables for the first
+  feasibility prototype.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -107,29 +131,49 @@ Metadata surfaces:
   throughput, markets, imports, constraints, groups, and transload nodes.
 - [x] Add a repeatable parser for the core FCM configuration files under
   `scripts/ffcm_archive/`.
-- [ ] Inspect generated `.lp` files to infer objective terms, decision-variable
-  families, balance constraints, capacity constraints, and residue-flow logic.
-- [ ] Inventory FCM runtime dependencies, especially CPLEX, lp_solve, Java
+- [x] Generate first-pass `.lp` summaries for the small report examples and
+  large basecase log/residue allocation models.
+- [x] Infer first-pass objective term, decision-variable, source commodity,
+  destination class, product, and constraint-sense families from generated LPs.
+- [ ] Reconstruct detailed constraint families by joining numbered LP
+  constraints back to config entities, facility capacities, supply bounds,
+  market requirements, and process throughput records.
+- [x] Inventory FCM runtime dependencies, especially CPLEX, lp_solve, Java
   libraries, database drivers, and GIS/visualization dependencies.
-- [ ] Separate reusable data schema and model logic from runtime-specific or
+- [x] Separate reusable data schema and model logic from runtime-specific or
   proprietary executable components.
 
 ### P2.4 FRESH Replacement Architecture
 
-- [ ] Specify the ws3-side forest-estate replacement: input datasets, stand
+- [x] Specify the ws3-side forest-estate replacement: input datasets, stand
   state variables, growth/yield transitions, harvest scheduling, assortment/log
   outputs, and FMU/transport-node handoff.
-- [ ] Specify the downstream LP network-flow replacement using the CIRRELT
+- [x] Specify the downstream LP network-flow replacement using the CIRRELT
   reports as method documentation for disaggregation, value-creation potential,
   and profit-maximizing industrial fibre consumption.
-- [ ] Define the soft-link contract between ws3 outputs and the network-flow
+- [x] Define the soft-link contract between ws3 outputs and the network-flow
   input port, including units, time steps, species/assortment classes, spatial
   keys, and scenario metadata.
-- [ ] Identify which FFCM data inputs can seed FRESH prototypes and which must
+- [x] Identify which FFCM data inputs can seed FRESH prototypes and which must
   be rebuilt from accepted national data sources.
+- [ ] Compare the initial FRESH contract against the existing downstream LP
+  model input schema and update field names/types accordingly.
+- [x] Recover the likely surviving notebook seed for the ws3-compatible
+  network-flow model from the GitHub gist and extract code/markdown for rebuild
+  planning.
+- [x] Inventory recovered notebook functions and crosswalk old graph concepts
+  to the FRESH soft-link contract.
+- [ ] Refactor the recovered notebook seed into a clean Python module that can
+  consume the FRESH soft-link contract.
+- [x] Choose the first prototype geography, time step, commodity subset, and
+  minimal scenario set.
 
 ### P2.5 Feasibility Prototype and Decision Gate
 
+- [x] Scope a minimal BC diagnostic mini-network prototype using synthetic or
+  clearly labelled diagnostic ws3-shaped supply records.
+- [x] Create tiny synthetic soft-link input tables and generated five-layer
+  graph node/arc tables for the BC diagnostic mini-network.
 - [ ] Build a minimal end-to-end prototype using a small region or synthetic
   national subset: ws3-style supply output into the LP network-flow model.
 - [ ] Compare prototype data structures against FFCM evidence tables and the
