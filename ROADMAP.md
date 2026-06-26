@@ -229,6 +229,8 @@ Metadata surfaces:
   downloading raw rasters.
 - [x] Add a tiny SCANFI-derived diagnostic inventory-cell fixture with
   synthetic proxy values and verified SCANFI layer provenance.
+- [x] Add a SCANFI diagnostic supply generator and BC mini LP variant that
+  converts inventory cells through the ws3-shaped harvest-output boundary.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime

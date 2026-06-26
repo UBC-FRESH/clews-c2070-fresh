@@ -13,6 +13,7 @@ from fresh_fibre import graph
 from fresh_fibre.compare import compare_runs
 from fresh_fibre.contract import assert_contract_ok, validate_contract
 from fresh_fibre.lp import build_and_solve
+from fresh_fibre.scanfi_supply import build_scanfi_diagnostic_supply, run_scanfi_diagnostic_variant
 from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
 from fresh_fibre.ws3_export import export_supply_offer
@@ -22,6 +23,7 @@ from fresh_fibre.ws3_variant import run_ws3_smoke_variant
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
+SCANFI_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -155,6 +157,53 @@ class BcMiniPrototypeTest(unittest.TestCase):
                 self.input_dir / "generated" / "supply_offer_from_ws3.csv",
                 self.input_dir,
             )
+
+    def test_scanfi_diagnostic_supply_preserves_provenance(self) -> None:
+        scanfi_dir = Path(self.tmp.name) / "scanfi-diagnostic"
+        shutil.copytree(SCANFI_FIXTURE_DIR, scanfi_dir)
+        output_path = scanfi_dir / "scanfi_diagnostic_harvest_output.csv"
+
+        rows = build_scanfi_diagnostic_supply(
+            inventory_path=scanfi_dir / "diagnostic_inventory_cells.csv",
+            yield_rules_path=scanfi_dir / "diagnostic_yield_rules.csv",
+            output_path=output_path,
+            input_dir=self.input_dir,
+        )
+
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(len(read_csv(scanfi_dir / "diagnostic_yield_rules.csv")), 6)
+        harvest_rows = read_csv(output_path)
+        self.assertEqual(len(harvest_rows), 4)
+        self.assertEqual({row["grade"] for row in harvest_rows}, {"scanfi_diagnostic"})
+        self.assertEqual({row["yield_value_policy"] for row in harvest_rows}, {
+            "synthetic_placeholder_yield_not_calibrated",
+        })
+        self.assertTrue(all(row["biomass_source_file"].startswith("SCANFI_att_biomass_2025") for row in harvest_rows))
+        self.assertTrue(any("; " in row["inventory_cell_id"] for row in harvest_rows))
+
+    def test_scanfi_diagnostic_lp_variant_solves_with_replaced_supply(self) -> None:
+        scanfi_dir = Path(self.tmp.name) / "scanfi-diagnostic"
+        variant_dir = Path(self.tmp.name) / "bc-mini-scanfi-diagnostic"
+        shutil.copytree(SCANFI_FIXTURE_DIR, scanfi_dir)
+
+        result = run_scanfi_diagnostic_variant(self.input_dir, scanfi_dir, variant_dir)
+
+        self.assertEqual(result["status"], "Optimal")
+        self.assertAlmostEqual(float(result["objective_value"]), 5795998.91275, places=5)
+        self.assertEqual(result["graph_nodes"], 37)
+        self.assertEqual(result["graph_arcs"], 45)
+        self.assertEqual(result["variables"], 28)
+        self.assertEqual(result["constraints"], 43)
+        self.assertEqual(result["solution_flows"], 21)
+        self.assertEqual(result["harvest_output_rows"], 4)
+
+        supply_rows = read_csv(variant_dir / "supply_offer.csv")
+        summary_rows = read_csv(variant_dir / "generated" / "scanfi_diagnostic_variant_summary.csv")
+        summary = {row["metric"]: row["value"] for row in summary_rows}
+        self.assertEqual(len(supply_rows), 4)
+        self.assertEqual(summary["solver_status"], "Optimal")
+        self.assertEqual(summary["diagnostic_quantity_m3"], "104700")
+        self.assertEqual(summary["diagnostic_quantity_odt"], "6600")
 
     @unittest.skipUnless(
         importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),

@@ -32,9 +32,9 @@ Supporting stance:
    diagnostic inventory manifest and inventory-cell fixture for the selected
    2025 subset. Do not commit raw rasters. Keep quantity generation synthetic
    or rule-based until yield policy is chosen.
-3. **Supply-generation tranche:** convert the diagnostic inventory cells into
-   an explicit ws3-style harvest-output or `supply_offer` bridge fixture using
-   documented placeholder yield rules.
+3. **Current supply-generation tranche:** convert the diagnostic inventory
+   cells into an explicit ws3-style harvest-output and `supply_offer` bridge
+   fixture using documented placeholder yield rules.
 4. **Yield policy tranche:** select a first growth/yield source or documented
    placeholder policy from MAGPlot, provincial yield curves, or another
    reviewed source.
@@ -74,13 +74,26 @@ supply nodes. Its values are not sampled from SCANFI rasters; they are
 deliberately labelled as synthetic proxies and carry verified SCANFI source-file
 references for biomass, height, closure, land-cover, and age fields.
 
-## Next Implementation Tranche
+## Current Implementation Tranche
 
 Convert the diagnostic inventory cells into a first explicit supply-generation
-fixture. The next tranche should define placeholder yield rules, emit a
-ws3-style harvest-output table or adapter-ready `supply_offer` table, and keep
-all quantities labelled diagnostic until a MAGPlot/provincial-yield policy is
-accepted.
+fixture. `diagnostic_yield_rules.csv` defines synthetic placeholder yields by
+diagnostic region, and `scanfi_diagnostic_harvest_output.csv` aggregates
+inventory-cell contributions at the supply-node/commodity boundary so the rows
+can pass through the existing ws3 export and LP graph machinery.
+
+The generated `bc-mini-scanfi-diagnostic` variant replaces the base
+`supply_offer.csv` table with SCANFI-provenance diagnostic supply, rebuilds the
+graph, solves the downstream LP, and writes a variant summary. The result is
+still diagnostic: quantities and costs remain placeholder assumptions until a
+MAGPlot/provincial-yield policy is accepted.
+
+## Next Implementation Tranche
+
+Compare the SCANFI diagnostic variant against the synthetic BC mini and ws3
+smoke variants, then define the next decision gate for selecting a real yield
+policy. The comparison should separate inventory provenance progress from yield
+assumption quality so the model does not overclaim calibration.
 
 Keep large rasters in the data submodule or scratch space, not in the parent
 repository.

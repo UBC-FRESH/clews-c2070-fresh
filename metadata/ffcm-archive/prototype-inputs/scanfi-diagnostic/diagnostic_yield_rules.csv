@@ -1,0 +1,7 @@
+yield_rule_id,diagnostic_region,commodity_id,quantity_unit,period_available_quantity_per_ha,supply_cost,supply_cost_unit,roadside_cost,delivered_cost_proxy,species_group,assortment_class,moisture_basis,value_policy,notes
+scanfi_diag_yield_coast_wet_log,coast_wet_forest,log,m3,0.65,57,CAD_per_m3,41,73,softwood,sawlog,green,synthetic_placeholder_yield_not_calibrated,Synthetic period-available log yield for coast wet forest proxy cells.
+scanfi_diag_yield_coast_second_log,coast_second_growth,log,m3,0.5,55,CAD_per_m3,39,70,softwood,sawlog,green,synthetic_placeholder_yield_not_calibrated,Synthetic period-available log yield for coast second-growth proxy cells.
+scanfi_diag_yield_int_dry_log,interior_dry_forest,log,m3,0.75,50,CAD_per_m3,36,67,softwood,sawlog,green,synthetic_placeholder_yield_not_calibrated,Synthetic period-available log yield for interior dry forest proxy cells.
+scanfi_diag_yield_int_cold_log,interior_cold_forest,log,m3,0.5,52,CAD_per_m3,38,69,softwood,sawlog,green,synthetic_placeholder_yield_not_calibrated,Synthetic period-available log yield for older interior proxy cells.
+scanfi_diag_yield_int_salvage_log,interior_disturbance_mix,log,m3,0.7,43,CAD_per_m3,30,62,mixed,smallwood,green,synthetic_placeholder_yield_not_calibrated,Synthetic period-available log yield for disturbance-mix proxy cells.
+scanfi_diag_yield_int_residue,interior_residue_candidate,logging_residue,odt,0.55,23,CAD_per_odt,17,33,mixed,residue,dry,synthetic_placeholder_yield_not_calibrated,Synthetic period-available logging residue yield for residue proxy cells.

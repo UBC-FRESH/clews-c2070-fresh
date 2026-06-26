@@ -1,0 +1,11 @@
+node_id,node_type,province,active_from_period,active_to_period,spatial_unit_id,geometry_ref,facility_class,owner_ref,license_status
+supply_coast_01,supply,BC,0,0,bc_fmu_coast_01,data:diagnostic/supply_coast_01,,,diagnostic
+supply_interior_01,supply,BC,0,0,bc_fmu_interior_01,data:diagnostic/supply_interior_01,,,diagnostic
+supply_interior_02,supply,BC,0,0,bc_fmu_interior_02,data:diagnostic/supply_interior_02,,,diagnostic
+supply_residue_02,supply,BC,0,0,bc_fmu_interior_02,data:diagnostic/supply_residue_02,,,diagnostic
+mill_sawmill_coast,facility,BC,0,0,,data:diagnostic/mill_sawmill_coast,sawmill,synthetic,diagnostic
+mill_sawmill_interior,facility,BC,0,0,,data:diagnostic/mill_sawmill_interior,sawmill,synthetic,diagnostic
+mill_pulp_interior,facility,BC,0,0,,data:diagnostic/mill_pulp_interior,pulp,synthetic,diagnostic
+mill_pellet_interior,facility,BC,0,0,,data:diagnostic/mill_pellet_interior,pellet,synthetic,diagnostic
+plant_bioenergy_coast,facility,BC,0,0,,data:diagnostic/plant_bioenergy_coast,bioenergy,synthetic,diagnostic
+export_vancouver,export,BC,0,0,,data:diagnostic/export_vancouver,export,synthetic,diagnostic

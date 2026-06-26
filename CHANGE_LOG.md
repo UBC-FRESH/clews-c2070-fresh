@@ -26,6 +26,9 @@
 - Added a tiny SCANFI-derived diagnostic inventory-cell fixture that maps
   synthetic proxy cells to BC mini supply nodes while preserving verified
   SCANFI layer provenance and explicitly marking values as unsampled proxies.
+- Added a SCANFI diagnostic supply generator, synthetic placeholder yield-rule
+  table, ws3-shaped harvest-output artifact, and solved BC mini SCANFI
+  diagnostic LP variant.
 
 ## 2026-06-25
 
