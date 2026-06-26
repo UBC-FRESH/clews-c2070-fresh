@@ -35,6 +35,11 @@ spatial units and supply nodes lives in `ws3_supply_crosswalk.csv`; its rows
 are validated by the smoke adapter but are not production geography or cost
 assumptions.
 
+Run `scripts/ffcm_archive/run_ws3_smoke_lp_variant.py` to create the sibling
+`bc-mini-ws3-smoke` diagnostic variant. That variant copies this fixture,
+replaces only `supply_offer.csv` with the real ws3 smoke supply export, rebuilds
+the graph, solves the LP, and writes `generated/ws3_smoke_variant_summary.csv`.
+
 Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 
 LP audit and solution outputs are written to `generated/` by `fresh_fibre.lp`.

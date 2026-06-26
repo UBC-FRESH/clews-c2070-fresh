@@ -1,0 +1,13 @@
+metric,value,unit,notes
+variant_run_id,bc_mini_ws3_smoke_lp_001,id,LP run id written to run_provenance.csv.
+ws3_run_id,ws3_smoke_tsa24_p1_area10,id,Real ws3 smoke producer run.
+smoke_supply_offer_rows,2,rows,Rows copied into variant supply_offer.csv.
+smoke_total_quantity,1604.452295,m3,Total ws3 smoke log supply.
+graph_nodes,32,count,Generated graph node count for the variant.
+graph_arcs,39,count,Generated graph arc count for the variant.
+solver_status,Optimal,status,LP solver status.
+objective_value,75520.15191999999,CAD,Diagnostic LP objective.
+lp_variables,24,count,Generated LP variable count.
+lp_constraints,39,count,Generated LP constraint count.
+solution_flows,16,rows,Positive solution_flow rows.
+contract_tables_validated,15,tables,Contract validation row count.

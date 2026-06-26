@@ -16,6 +16,7 @@ from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
 from fresh_fibre.ws3_export import export_supply_offer
 from fresh_fibre.ws3_smoke import run_ws3_smoke
+from fresh_fibre.ws3_variant import run_ws3_smoke_variant
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -216,6 +217,31 @@ class BcMiniPrototypeTest(unittest.TestCase):
                 manifest_path=self.input_dir / "generated" / "ws3_smoke_export_manifest.csv",
                 crosswalk_path=crosswalk_path,
             )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),
+        "ws3 editable install and example Woodstock files are required",
+    )
+    def test_ws3_smoke_lp_variant_solves_with_replaced_supply(self) -> None:
+        variant_dir = Path(self.tmp.name) / "bc-mini-ws3-smoke"
+        result = run_ws3_smoke_variant(self.input_dir, variant_dir)
+
+        self.assertEqual(result["status"], "Optimal")
+        self.assertAlmostEqual(float(result["objective_value"]), 75520.15192, places=5)
+        self.assertEqual(result["graph_nodes"], 32)
+        self.assertEqual(result["graph_arcs"], 39)
+        self.assertEqual(result["variables"], 24)
+        self.assertEqual(result["constraints"], 39)
+        self.assertEqual(result["solution_flows"], 16)
+
+        supply_rows = read_csv(variant_dir / "supply_offer.csv")
+        summary_rows = read_csv(variant_dir / "generated" / "ws3_smoke_variant_summary.csv")
+        summary = {row["metric"]: row["value"] for row in summary_rows}
+        self.assertEqual(len(supply_rows), 2)
+        self.assertEqual(summary["solver_status"], "Optimal")
+        self.assertEqual(summary["graph_nodes"], "32")
+        self.assertEqual(summary["graph_arcs"], "39")
+        self.assertEqual(summary["smoke_supply_offer_rows"], "2")
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:
         unit_registry = Path(self.tmp.name) / "unit-registry.csv"

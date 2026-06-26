@@ -13,6 +13,8 @@
 - Added an explicit diagnostic `ws3_supply_crosswalk.csv` fixture and
   validation path for mapping ws3 smoke-run development types to FRESH spatial
   units and supply nodes.
+- Added a repeatable `bc-mini-ws3-smoke` LP variant that swaps in real ws3
+  smoke supply while preserving the stable synthetic BC mini fixture.
 
 ## 2026-06-25
 

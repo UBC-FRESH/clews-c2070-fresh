@@ -218,6 +218,8 @@ Metadata surfaces:
   emits the same normalized harvest-output shape.
 - [x] Move the smoke-run spatial/supply-node mapping into an explicit,
   validated `ws3_supply_crosswalk.csv` fixture.
+- [x] Add a separate `bc-mini-ws3-smoke` LP variant that replaces only
+  `supply_offer.csv` with the real ws3 smoke supply export.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime

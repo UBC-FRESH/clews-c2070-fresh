@@ -1,0 +1,14 @@
+technology_id,flow_type,commodity_id,coefficient_or_quantity,unit,basis_commodity_id,basis_unit,conversion_source,loss_factor
+tech_sawmill_coast,output,lumber,0.48,m3_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_coast,byproduct,woodchips,0.22,odt_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_coast,byproduct,sawdust_shavings,0.08,odt_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_coast,byproduct,hogfuel,0.04,odt_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_interior,output,lumber,0.50,m3_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_interior,byproduct,woodchips,0.20,odt_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_interior,byproduct,sawdust_shavings,0.09,odt_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_sawmill_interior,byproduct,hogfuel,0.03,odt_per_m3_log,log,m3,synthetic_bc_mini,0
+tech_pulp_chips,output,pulp,0.92,odt_per_odt_chip,woodchips,odt,synthetic_bc_mini,0.08
+tech_pellet_residue,output,pellets,0.97,odt_per_odt_residue,sawdust_shavings,odt,synthetic_bc_mini,0.03
+tech_bioenergy_hogfuel,output,bioenergy,14.0,GJ_per_odt_hogfuel,hogfuel,odt,synthetic_bc_mini,0
+tech_bioenergy_logging_residue,output,bioenergy,12.0,GJ_per_odt_logging_residue,logging_residue,odt,synthetic_bc_mini,0
+tech_export_logs,output,log,1.0,m3_per_m3_log,log,m3,synthetic_bc_mini,0
