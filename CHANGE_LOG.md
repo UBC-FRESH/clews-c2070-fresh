@@ -23,6 +23,9 @@
 - Added a generated SCANFI v2 2025 diagnostic subset manifest fixture without
   downloading raw rasters, including an explicit missing-source flag for the
   north extrapolation mask.
+- Added a tiny SCANFI-derived diagnostic inventory-cell fixture that maps
+  synthetic proxy cells to BC mini supply nodes while preserving verified
+  SCANFI layer provenance and explicitly marking values as unsampled proxies.
 
 ## 2026-06-25
 

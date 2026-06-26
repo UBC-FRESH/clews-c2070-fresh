@@ -227,6 +227,8 @@ Metadata surfaces:
   unresolved.
 - [x] Add a SCANFI v2 2025 diagnostic subset manifest fixture without
   downloading raw rasters.
+- [x] Add a tiny SCANFI-derived diagnostic inventory-cell fixture with
+  synthetic proxy values and verified SCANFI layer provenance.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime
