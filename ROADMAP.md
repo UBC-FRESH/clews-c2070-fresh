@@ -93,8 +93,8 @@ Metadata surfaces:
 - `planning/network-flow-seed-rebuild-plan.md`: refactoring plan for rebuilding
   the recovered notebook seed into a clean FRESH network-flow module.
 - `metadata/ffcm-archive/prototype-inputs/bc-mini/`: synthetic BC diagnostic
-  soft-link inputs plus generated five-layer graph tables for the first
-  feasibility prototype.
+  soft-link inputs plus generated five-layer graph, LP audit, and solution
+  tables for the first feasibility prototype.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -167,6 +167,7 @@ Metadata surfaces:
   consume the FRESH soft-link contract.
 - [x] Choose the first prototype geography, time step, commodity subset, and
   minimal scenario set.
+- [x] Add a first open-source LP solver path for the synthetic BC mini-network.
 
 ### P2.5 Feasibility Prototype and Decision Gate
 
@@ -174,9 +175,9 @@ Metadata surfaces:
   clearly labelled diagnostic ws3-shaped supply records.
 - [x] Create tiny synthetic soft-link input tables and generated five-layer
   graph node/arc tables for the BC diagnostic mini-network.
-- [ ] Build a minimal end-to-end prototype using a small region or synthetic
+- [x] Build a minimal end-to-end prototype using a small region or synthetic
   national subset: ws3-style supply output into the LP network-flow model.
-- [ ] Compare prototype data structures against FFCM evidence tables and the
+- [x] Compare prototype data structures against FFCM evidence tables and the
   Ghafghazi et al. architecture.
 - [ ] Document gaps that require new data acquisition, license review,
   stakeholder clarification, or model redesign.

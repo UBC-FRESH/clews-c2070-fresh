@@ -136,5 +136,5 @@ High-level stance:
 - Choose the first prototype geography and time step.
 - Define unit-conversion conventions for `m3`, `odt`, `bdmt`, `t`, `kg`, `GJ`,
   `MWh`, and product-specific board/area units.
-- Build a minimal synthetic `ws3` supply table that can solve through the
-  downstream LP model.
+- Promote the solved BC mini-network prototype from archive-analysis scripts
+  into a reusable FRESH graph/LP module.

@@ -16,3 +16,7 @@ ws3-compatible notebook seed:
 
 Generated graph outputs are written to `generated/` by
 `scripts/ffcm_archive/build_prototype_graph.py`.
+
+LP audit and solution outputs are written to `generated/` by
+`scripts/ffcm_archive/solve_bc_mini_lp.py`. Validate the full generated bundle
+with `scripts/ffcm_archive/validate_bc_mini_solution.py`.

@@ -91,9 +91,13 @@ Proposed module names for a future implementation:
 - [x] Create tiny synthetic input tables for the BC diagnostic mini-network.
 - [x] Implement a solver-independent graph/table builder before wiring any
   solver.
-- [ ] Convert generated graph arcs into coefficient tables for a tiny LP solve.
-- [ ] Add a solver backend for the mini-network and write `solution_flow` /
+- [x] Convert generated graph arcs into coefficient tables for a tiny LP solve.
+- [x] Add a solver backend for the mini-network and write `solution_flow` /
   `solution_summary` outputs.
+- [ ] Refactor graph building and LP solving out of archive-analysis scripts
+  into a reusable FRESH module with typed inputs.
+- [ ] Replace synthetic fixture quantities with accepted diagnostic or
+  production data sources after provenance and rights review.
 
 ## BC Mini-Network Graph Fixture
 
@@ -107,3 +111,14 @@ an export option, transport links, markets, and provenance metadata.
 writes generated graph tables to the fixture's `generated/` directory. The
 current graph has 37 nodes and 45 arcs across the recovered five-layer pattern:
 `src`, `dsp`, `cdt`, `prc`, and `snk`.
+
+`scripts/ffcm_archive/solve_bc_mini_lp.py` uses PuLP/CBC to solve the first
+tiny profit-maximizing downstream LP prototype. It writes variable,
+constraint, objective-term, `solution_flow`, and `solution_summary` tables to
+the same generated directory. The current solve is optimal with 28 variables,
+43 constraints, and 24 positive solution-flow records.
+
+`scripts/ffcm_archive/validate_bc_mini_solution.py` checks graph counts, ID
+uniqueness, solver status, nonnegative flows, supply/route/technology/market
+bounds, and the expected positive pathways for sawmills, residues, bioenergy,
+and profitable log export.

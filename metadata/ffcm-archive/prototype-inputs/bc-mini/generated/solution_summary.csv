@@ -1,0 +1,12 @@
+run_id,period,region_id,metric_id,value,unit,commodity_id,facility_class,market_id,scenario_comparison_id
+bc_mini_lp_001,0,BC,solver_status,Optimal,status,,,,
+bc_mini_lp_001,0,BC,objective_value,6140832.0,CAD,,,,
+bc_mini_lp_001,0,BC,total_revenue,19520472.0,CAD,,,,
+bc_mini_lp_001,0,BC,total_supply_cost,6412000.0,CAD,,,,
+bc_mini_lp_001,0,BC,total_transport_cost,2982200.0,CAD,,,,
+bc_mini_lp_001,0,BC,total_processing_cost,3985440.0,CAD,,,,
+bc_mini_lp_001,0,BC,total_market_quantity,148080.0,GJ,bioenergy,,,
+bc_mini_lp_001,0,BC,total_market_quantity,8000.0,m3,log,,,
+bc_mini_lp_001,0,BC,total_market_quantity,54160.0,m3,lumber,,,
+bc_mini_lp_001,0,BC,total_market_quantity,9195.6,odt,pellets,,,
+bc_mini_lp_001,0,BC,total_market_quantity,21012.8,odt,pulp,,,

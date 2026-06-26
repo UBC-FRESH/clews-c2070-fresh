@@ -34,6 +34,9 @@
 - Added a synthetic BC mini-network fixture and repeatable solver-independent
   graph builder that emits typed `src`, `dsp`, `cdt`, `prc`, and `snk` node/arc
   tables for the first FRESH soft-link prototype.
+- Added a PuLP/CBC BC mini-network LP prototype, generated variable,
+  constraint, objective, `solution_flow`, and `solution_summary` tables, and a
+  repeatable validation script for bounds/pathway checks.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN
