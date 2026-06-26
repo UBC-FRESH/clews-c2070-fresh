@@ -136,5 +136,6 @@ High-level stance:
 - Choose the first prototype geography and time step.
 - Define unit-conversion conventions for `m3`, `odt`, `bdmt`, `t`, `kg`, `GJ`,
   `MWh`, and product-specific board/area units.
-- Add unit-conversion and dimensional-consistency checks around the solved BC
-  mini-network graph/LP module before scaling beyond the synthetic fixture.
+- Extend the current unit checks to explicit conversion registries for `bdmt`,
+  `t`, `kg`, `MWh`, and product-specific board/area units before scaling beyond
+  the synthetic fixture.

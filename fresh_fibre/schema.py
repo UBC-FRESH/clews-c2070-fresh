@@ -102,6 +102,8 @@ class TechnologyFlow:
     commodity_id: str
     coefficient_or_quantity: float
     unit: str
+    basis_commodity_id: str
+    basis_unit: str
 
     @classmethod
     def from_row(cls, row: dict[str, str]) -> "TechnologyFlow":
@@ -111,6 +113,8 @@ class TechnologyFlow:
             row["commodity_id"],
             number(row["coefficient_or_quantity"]),
             row["unit"],
+            row.get("basis_commodity_id", ""),
+            row.get("basis_unit", ""),
         )
 
 

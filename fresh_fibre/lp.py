@@ -29,6 +29,7 @@ from fresh_fibre.schema import (
     read_rows,
     write_rows,
 )
+from fresh_fibre.units import validate_graph_units, validate_input_units
 
 
 RUN_ID = "bc_mini_lp_001"
@@ -123,6 +124,8 @@ def add_objective_row(
 
 
 def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
+    validate_input_units(input_dir)
+    validate_graph_units(input_dir)
     graph_dir = input_dir / "generated"
     commodities = {
         row.commodity_id: row

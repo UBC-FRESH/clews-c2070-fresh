@@ -98,8 +98,10 @@ Proposed module names for a future implementation:
   into a reusable FRESH module.
 - [x] Add typed input objects or dataframe/schema adapters around the current
   CSV-row dictionaries.
-- [ ] Add unit-conversion and dimensional-consistency checks around `m3`, `odt`,
+- [x] Add unit-conversion and dimensional-consistency checks around `m3`, `odt`,
   `GJ`, and product-specific conversion coefficients.
+- [ ] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
+  `kg`, `MWh`, and board/area units before national scaling.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
   production data sources after provenance and rights review.
 
@@ -132,3 +134,8 @@ offers, technologies, technology flows, transport links, markets, graph arcs,
 and solution flows. The adapters preserve the CSV contract while giving the
 prototype explicit numeric parsing and field access at the LP/validation
 boundary.
+
+`fresh_fibre.units` validates the current prototype's canonical commodity
+units, `CAD_per_*` cost and price bases, generated graph arc units, and
+technology-flow coefficient dimensions. It can be run directly with
+`python3 -m fresh_fibre.units --include-generated`.

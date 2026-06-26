@@ -43,6 +43,9 @@
 - Added typed `fresh_fibre.schema` adapters for core contract rows and rewired
   graph, LP, and validation modules to share CSV I/O, numeric parsing, and
   row-level model objects without changing generated output tables.
+- Added `fresh_fibre.units` validation for canonical commodity units,
+  cost/price unit bases, generated graph arc units, and technology conversion
+  coefficient dimensions.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN

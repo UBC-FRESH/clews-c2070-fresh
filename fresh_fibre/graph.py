@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fresh_fibre.schema import number as num
 from fresh_fibre.schema import read_rows, require_columns, write_rows
+from fresh_fibre.units import validate_input_units
 
 
 TABLE_COLUMNS = {
@@ -584,6 +585,7 @@ def main() -> None:
     input_dir = args.input_dir
     output_dir = args.output_dir or input_dir / "generated"
 
+    validate_input_units(input_dir)
     tables = {
         table: read_table(input_dir, table)
         for table in TABLE_COLUMNS

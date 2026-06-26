@@ -16,6 +16,7 @@ from fresh_fibre.schema import (
     number,
     read_rows,
 )
+from fresh_fibre.units import validate_graph_units, validate_input_units
 
 DEFAULT_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-mini")
 
@@ -40,6 +41,8 @@ def has_positive_flow(rows: list[SolutionFlow], **criteria: str) -> bool:
 
 
 def validate(input_dir: Path) -> None:
+    validate_input_units(input_dir)
+    validate_graph_units(input_dir)
     generated_dir = input_dir / "generated"
     graph_nodes = read_rows(generated_dir / "graph_nodes.csv")
     graph_arcs = read_rows(generated_dir / "graph_arcs.csv")
