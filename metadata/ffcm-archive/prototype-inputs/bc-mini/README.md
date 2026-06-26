@@ -18,5 +18,7 @@ Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 
 LP audit and solution outputs are written to `generated/` by `fresh_fibre.lp`.
 Validate the full generated bundle with `fresh_fibre.validation`.
+Typed CSV-row adapters live in `fresh_fibre.schema`; the public fixture tables
+remain plain CSV.
 
 Compatibility CLIs remain available under `scripts/ffcm_archive/`.

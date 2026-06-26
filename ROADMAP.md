@@ -96,7 +96,7 @@ Metadata surfaces:
   soft-link inputs plus generated five-layer graph, LP audit, and solution
   tables for the first feasibility prototype.
 - `fresh_fibre/`: initial reusable Python module home for FRESH graph
-  construction, LP solving, and prototype validation logic.
+  construction, LP solving, prototype validation, and typed CSV-row adapters.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -167,6 +167,8 @@ Metadata surfaces:
   to the FRESH soft-link contract.
 - [x] Promote the first recovered-notebook-inspired graph/LP prototype subset
   into a clean Python module that consumes the FRESH soft-link contract.
+- [x] Add typed input adapters around the current CSV-row dictionaries without
+  changing the public soft-link tables.
 - [ ] Continue refactoring remaining recovered notebook scenario and reporting
   semantics into the reusable FRESH module where still relevant.
 - [x] Choose the first prototype geography, time step, commodity subset, and

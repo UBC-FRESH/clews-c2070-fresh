@@ -96,8 +96,10 @@ Proposed module names for a future implementation:
   `solution_summary` outputs.
 - [x] Refactor graph building and LP solving out of archive-analysis scripts
   into a reusable FRESH module.
-- [ ] Add typed input objects or dataframe/schema adapters around the current
+- [x] Add typed input objects or dataframe/schema adapters around the current
   CSV-row dictionaries.
+- [ ] Add unit-conversion and dimensional-consistency checks around `m3`, `odt`,
+  `GJ`, and product-specific conversion coefficients.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
   production data sources after provenance and rights review.
 
@@ -124,3 +126,9 @@ solution-flow records.
 nonnegative flows, supply/route/technology/market bounds, and the expected
 positive pathways for sawmills, residues, bioenergy, and profitable log export.
 The `scripts/ffcm_archive/` entrypoints are retained as compatibility wrappers.
+
+`fresh_fibre.schema` provides typed row adapters for commodities, supply
+offers, technologies, technology flows, transport links, markets, graph arcs,
+and solution flows. The adapters preserve the CSV contract while giving the
+prototype explicit numeric parsing and field access at the LP/validation
+boundary.

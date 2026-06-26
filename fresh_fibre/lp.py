@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -18,6 +17,18 @@ except ImportError:  # pragma: no cover - exercised only when dependency missing
         file=sys.stderr,
     )
     raise
+
+from fresh_fibre.schema import (
+    Commodity,
+    GraphArc,
+    Market,
+    SupplyOffer,
+    Technology,
+    TechnologyFlow,
+    number,
+    read_rows,
+    write_rows,
+)
 
 
 RUN_ID = "bc_mini_lp_001"
@@ -80,25 +91,6 @@ SOLUTION_SUMMARY_COLUMNS = [
 ]
 
 
-def read_table(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
-
-
-def write_table(path: Path, fieldnames: list[str], rows: list[dict[str, object]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def number(value: str | float | int | None, default: float = 0.0) -> float:
-    if value is None or value == "":
-        return default
-    return float(value)
-
-
 def clean_id(value: str) -> str:
     return "".join(char if char.isalnum() else "_" for char in value)
 
@@ -109,22 +101,6 @@ def variable_id(prefix: str, key: str) -> str:
 
 def positive(value: float, tolerance: float = 1e-7) -> bool:
     return value > tolerance
-
-
-def parse_secondary_source_technology(arc_id: str) -> str:
-    prefix = "arc__cdt_prc_secondary__"
-    if not arc_id.startswith(prefix):
-        raise ValueError(f"Cannot parse secondary source technology from {arc_id}")
-    return arc_id[len(prefix):].split("__", 1)[0]
-
-
-def table_index(rows: list[dict[str, str]], key: str) -> dict[str, dict[str, str]]:
-    return {row[key]: row for row in rows}
-
-
-def expression_value(expression: pulp.LpAffineExpression) -> float:
-    value = pulp.value(expression)
-    return 0.0 if value is None else float(value)
 
 
 def add_objective_row(
@@ -148,34 +124,41 @@ def add_objective_row(
 
 def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
     graph_dir = input_dir / "generated"
-    tables = {
-        "commodity": read_table(input_dir / "commodity.csv"),
-        "market": read_table(input_dir / "market.csv"),
-        "supply_offer": read_table(input_dir / "supply_offer.csv"),
-        "technology": read_table(input_dir / "technology.csv"),
-        "technology_flow": read_table(input_dir / "technology_flow.csv"),
-        "graph_arcs": read_table(graph_dir / "graph_arcs.csv"),
-        "graph_nodes": read_table(graph_dir / "graph_nodes.csv"),
+    commodities = {
+        row.commodity_id: row
+        for row in (Commodity.from_row(row) for row in read_rows(input_dir / "commodity.csv"))
     }
-
-    commodities = table_index(tables["commodity"], "commodity_id")
-    markets = table_index(tables["market"], "market_id")
-    technologies = table_index(tables["technology"], "technology_id")
+    markets = {
+        row.market_id: row
+        for row in (Market.from_row(row) for row in read_rows(input_dir / "market.csv"))
+    }
+    technologies = {
+        row.technology_id: row
+        for row in (Technology.from_row(row) for row in read_rows(input_dir / "technology.csv"))
+    }
+    technology_flows = [
+        TechnologyFlow.from_row(row)
+        for row in read_rows(input_dir / "technology_flow.csv")
+    ]
+    graph_arcs = [
+        GraphArc.from_row(row)
+        for row in read_rows(graph_dir / "graph_arcs.csv")
+    ]
     supply_offers = {
-        (row["supply_node_id"], row["commodity_id"]): row
-        for row in tables["supply_offer"]
+        (row.supply_node_id, row.commodity_id): row
+        for row in (SupplyOffer.from_row(row) for row in read_rows(input_dir / "supply_offer.csv"))
     }
-    flows_by_technology: dict[str, list[dict[str, str]]] = defaultdict(list)
-    for row in tables["technology_flow"]:
-        flows_by_technology[row["technology_id"]].append(row)
+    flows_by_technology: dict[str, list[TechnologyFlow]] = defaultdict(list)
+    for row in technology_flows:
+        flows_by_technology[row.technology_id].append(row)
 
     primary_arcs = [
-        row for row in tables["graph_arcs"]
-        if row["arc_family"] == "cdt_to_prc_feedstock_allocation"
+        row for row in graph_arcs
+        if row.arc_family == "cdt_to_prc_feedstock_allocation"
     ]
     secondary_arcs = [
-        row for row in tables["graph_arcs"]
-        if row["arc_family"] == "cdt_to_prc_secondary_allocation"
+        row for row in graph_arcs
+        if row.arc_family == "cdt_to_prc_secondary_allocation"
     ]
 
     problem = pulp.LpProblem("fresh_bc_mini_network_flow", pulp.LpMaximize)
@@ -234,116 +217,116 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
             }
         )
 
-    for offer in tables["supply_offer"]:
-        key = (offer["supply_node_id"], offer["commodity_id"])
+    for offer in supply_offers.values():
+        key = (offer.supply_node_id, offer.commodity_id)
         name = variable_id("supply_use", "__".join(key))
         var = add_variable(
             name,
             "supply_use",
             0.0,
-            number(offer["quantity"]),
-            offer["quantity_unit"],
-            f"supply_offer:{offer['supply_node_id']}:{offer['commodity_id']}",
+            offer.quantity,
+            offer.quantity_unit,
+            f"supply_offer:{offer.supply_node_id}:{offer.commodity_id}",
         )
         supply_vars[key] = var
-        coefficient = -number(offer["supply_cost"])
+        coefficient = -offer.supply_cost
         objective_terms.append(coefficient * var)
         add_objective_row(
             objective_rows,
             name,
             "supply_cost",
             coefficient,
-            offer["supply_cost_unit"],
-            f"supply_offer:{offer['supply_node_id']}:{offer['commodity_id']}",
+            offer.supply_cost_unit,
+            f"supply_offer:{offer.supply_node_id}:{offer.commodity_id}",
         )
 
     for arc in primary_arcs:
-        name = variable_id("ship_primary", arc["graph_arc_id"])
+        name = variable_id("ship_primary", arc.graph_arc_id)
         var = add_variable(
             name,
             "primary_feedstock_shipment",
             0.0,
-            number(arc["capacity"]),
-            arc["capacity_unit"],
-            arc["source_ref"],
+            arc.capacity,
+            arc.capacity_unit,
+            arc.source_ref,
         )
-        primary_vars[arc["graph_arc_id"]] = var
-        coefficient = -number(arc["cost"])
+        primary_vars[arc.graph_arc_id] = var
+        coefficient = -arc.cost
         objective_terms.append(coefficient * var)
         add_objective_row(
             objective_rows,
             name,
             "transport_cost",
             coefficient,
-            arc["cost_unit"],
-            arc["source_ref"],
+            arc.cost_unit,
+            arc.source_ref,
         )
 
     for arc in secondary_arcs:
-        name = variable_id("ship_secondary", arc["graph_arc_id"])
+        name = variable_id("ship_secondary", arc.graph_arc_id)
         var = add_variable(
             name,
             "secondary_residue_shipment",
             0.0,
-            number(arc["capacity"]),
-            arc["capacity_unit"],
-            arc["source_ref"],
+            arc.capacity,
+            arc.capacity_unit,
+            arc.source_ref,
         )
-        secondary_vars[arc["graph_arc_id"]] = var
-        coefficient = -number(arc["cost"])
+        secondary_vars[arc.graph_arc_id] = var
+        coefficient = -arc.cost
         objective_terms.append(coefficient * var)
         add_objective_row(
             objective_rows,
             name,
             "transport_cost",
             coefficient,
-            arc["cost_unit"],
-            arc["source_ref"],
+            arc.cost_unit,
+            arc.source_ref,
         )
 
-    for technology in tables["technology"]:
-        name = variable_id("activity", technology["technology_id"])
+    for technology in technologies.values():
+        name = variable_id("activity", technology.technology_id)
         var = add_variable(
             name,
             "technology_activity",
-            number(technology.get("minimum_production", "0")),
-            number(technology["maximum_capacity"]),
-            commodities[technology["feedstock_commodity_id"]]["canonical_unit"],
-            f"technology:{technology['technology_id']}",
+            technology.minimum_production,
+            technology.maximum_capacity,
+            commodities[technology.feedstock_commodity_id].canonical_unit,
+            f"technology:{technology.technology_id}",
         )
-        activity_vars[technology["technology_id"]] = var
-        coefficient = -number(technology["operating_cost"])
+        activity_vars[technology.technology_id] = var
+        coefficient = -technology.operating_cost
         objective_terms.append(coefficient * var)
         add_objective_row(
             objective_rows,
             name,
             "processing_cost",
             coefficient,
-            technology["operating_cost_unit"],
-            f"technology:{technology['technology_id']}",
+            technology.operating_cost_unit,
+            f"technology:{technology.technology_id}",
         )
 
-    for market in tables["market"]:
-        commodity_id = market["product_commodity_id"]
-        name = variable_id("market_sale", market["market_id"])
+    for market in markets.values():
+        commodity_id = market.product_commodity_id
+        name = variable_id("market_sale", market.market_id)
         var = add_variable(
             name,
             "market_sale",
-            number(market.get("minimum_demand", "0")),
-            number(market["maximum_demand"]),
-            commodities[commodity_id]["canonical_unit"],
-            f"market:{market['market_id']}",
+            market.minimum_demand,
+            market.maximum_demand,
+            commodities[commodity_id].canonical_unit,
+            f"market:{market.market_id}",
         )
-        market_vars[market["market_id"]] = var
-        coefficient = number(market["price"])
+        market_vars[market.market_id] = var
+        coefficient = market.price
         objective_terms.append(coefficient * var)
         add_objective_row(
             objective_rows,
             name,
             "market_revenue",
             coefficient,
-            market["price_unit"],
-            f"market:{market['market_id']}",
+            market.price_unit,
+            f"market:{market.market_id}",
         )
 
     problem += pulp.lpSum(objective_terms), "net_value"
@@ -351,33 +334,33 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
     primary_by_supply: dict[tuple[str, str], list[pulp.LpVariable]] = defaultdict(list)
     primary_by_technology: dict[str, list[pulp.LpVariable]] = defaultdict(list)
     for arc in primary_arcs:
-        key = (arc["source_node_id"], arc["commodity_id"])
-        primary_by_supply[key].append(primary_vars[arc["graph_arc_id"]])
-        primary_by_technology[arc["technology_id"]].append(primary_vars[arc["graph_arc_id"]])
+        key = (arc.source_node_id, arc.commodity_id)
+        primary_by_supply[key].append(primary_vars[arc.graph_arc_id])
+        primary_by_technology[arc.technology_id].append(primary_vars[arc.graph_arc_id])
         add_constraint(
-            primary_vars[arc["graph_arc_id"]] <= number(arc["capacity"]),
-            f"route_capacity__{clean_id(arc['graph_arc_id'])}",
+            primary_vars[arc.graph_arc_id] <= arc.capacity,
+            f"route_capacity__{clean_id(arc.graph_arc_id)}",
             "route_capacity",
             "<=",
-            number(arc["capacity"]),
-            arc["capacity_unit"],
-            f"Route capacity for {arc['transport_link_id']}",
+            arc.capacity,
+            arc.capacity_unit,
+            f"Route capacity for {arc.transport_link_id}",
         )
 
     secondary_by_technology: dict[str, list[pulp.LpVariable]] = defaultdict(list)
     secondary_consumption_by_commodity: dict[str, list[pulp.LpVariable]] = defaultdict(list)
     for arc in secondary_arcs:
-        var = secondary_vars[arc["graph_arc_id"]]
-        secondary_by_technology[arc["technology_id"]].append(var)
-        secondary_consumption_by_commodity[arc["commodity_id"]].append(var)
+        var = secondary_vars[arc.graph_arc_id]
+        secondary_by_technology[arc.technology_id].append(var)
+        secondary_consumption_by_commodity[arc.commodity_id].append(var)
         add_constraint(
-            var <= number(arc["capacity"]),
-            f"route_capacity__{clean_id(arc['graph_arc_id'])}",
+            var <= arc.capacity,
+            f"route_capacity__{clean_id(arc.graph_arc_id)}",
             "route_capacity",
             "<=",
-            number(arc["capacity"]),
-            arc["capacity_unit"],
-            f"Route capacity for {arc['transport_link_id']}",
+            arc.capacity,
+            arc.capacity_unit,
+            f"Route capacity for {arc.transport_link_id}",
         )
 
     for key, supply_var in supply_vars.items():
@@ -387,7 +370,7 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
             "supply_dispatch_balance",
             "=",
             0.0,
-            supply_offers[key]["quantity_unit"],
+            supply_offers[key].quantity_unit,
             "Supply used must be dispatched to primary feedstock arcs.",
         )
 
@@ -399,37 +382,37 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
             "technology_activity_balance",
             "=",
             0.0,
-            commodities[technology["feedstock_commodity_id"]]["canonical_unit"],
+            commodities[technology.feedstock_commodity_id].canonical_unit,
             "Technology activity equals inbound feedstock.",
         )
         add_constraint(
-            activity_vars[technology_id] <= number(technology["maximum_capacity"]),
+            activity_vars[technology_id] <= technology.maximum_capacity,
             f"technology_capacity__{clean_id(technology_id)}",
             "technology_capacity",
             "<=",
-            number(technology["maximum_capacity"]),
-            commodities[technology["feedstock_commodity_id"]]["canonical_unit"],
+            technology.maximum_capacity,
+            commodities[technology.feedstock_commodity_id].canonical_unit,
             "Technology activity cannot exceed maximum capacity.",
         )
 
     output_by_commodity: dict[str, list[pulp.LpAffineExpression]] = defaultdict(list)
     for technology_id, flows in flows_by_technology.items():
         for flow in flows:
-            output_by_commodity[flow["commodity_id"]].append(
-                number(flow["coefficient_or_quantity"]) * activity_vars[technology_id]
+            output_by_commodity[flow.commodity_id].append(
+                flow.coefficient_or_quantity * activity_vars[technology_id]
             )
 
     sales_by_commodity: dict[str, list[pulp.LpVariable]] = defaultdict(list)
     for market_id, var in market_vars.items():
         market = markets[market_id]
-        sales_by_commodity[market["product_commodity_id"]].append(var)
+        sales_by_commodity[market.product_commodity_id].append(var)
         add_constraint(
-            var <= number(market["maximum_demand"]),
+            var <= market.maximum_demand,
             f"market_demand__{clean_id(market_id)}",
             "market_demand",
             "<=",
-            number(market["maximum_demand"]),
-            commodities[market["product_commodity_id"]]["canonical_unit"],
+            market.maximum_demand,
+            commodities[market.product_commodity_id].canonical_unit,
             "Market sales cannot exceed maximum demand.",
         )
 
@@ -445,7 +428,7 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
             "commodity_balance",
             "=",
             0.0,
-            commodities[commodity_id]["canonical_unit"],
+            commodities[commodity_id].canonical_unit,
             "Produced product/byproduct volume must be sold or consumed downstream.",
         )
 
@@ -510,43 +493,43 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
         offer = supply_offers[(source_node_id, commodity_id)]
         add_solution_flow(
             var,
-            offer["period"],
+            offer.period,
             source_node_id,
             source_node_id,
             commodity_id,
             commodity_id,
-            offer["quantity_unit"],
+            offer.quantity_unit,
             "supply_cost",
         )
 
     for arc in primary_arcs:
-        tech = technologies[arc["technology_id"]]
+        tech = technologies[arc.technology_id]
         add_solution_flow(
-            primary_vars[arc["graph_arc_id"]],
-            arc["period"],
-            arc["source_node_id"],
-            arc["destination_node_id"],
-            arc["commodity_id"],
-            tech["primary_product_id"],
-            arc["capacity_unit"],
+            primary_vars[arc.graph_arc_id],
+            arc.period,
+            arc.source_node_id,
+            arc.destination_node_id,
+            arc.commodity_id,
+            tech.primary_product_id,
+            arc.capacity_unit,
             "transport_cost",
-            technology_id=arc["technology_id"],
-            transport_link_id=arc["transport_link_id"],
+            technology_id=arc.technology_id,
+            transport_link_id=arc.transport_link_id,
         )
 
     for arc in secondary_arcs:
-        tech = technologies[arc["technology_id"]]
+        tech = technologies[arc.technology_id]
         add_solution_flow(
-            secondary_vars[arc["graph_arc_id"]],
-            arc["period"],
-            arc["source_node_id"],
-            arc["destination_node_id"],
-            arc["commodity_id"],
-            tech["primary_product_id"],
-            arc["capacity_unit"],
+            secondary_vars[arc.graph_arc_id],
+            arc.period,
+            arc.source_node_id,
+            arc.destination_node_id,
+            arc.commodity_id,
+            tech.primary_product_id,
+            arc.capacity_unit,
             "transport_cost",
-            technology_id=arc["technology_id"],
-            transport_link_id=arc["transport_link_id"],
+            technology_id=arc.technology_id,
+            transport_link_id=arc.transport_link_id,
         )
 
     for technology_id, var in activity_vars.items():
@@ -554,11 +537,11 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
         add_solution_flow(
             var,
             "0",
-            technology["facility_node_id"],
-            technology["facility_node_id"],
-            technology["feedstock_commodity_id"],
-            technology["primary_product_id"],
-            commodities[technology["feedstock_commodity_id"]]["canonical_unit"],
+            technology.facility_node_id,
+            technology.facility_node_id,
+            technology.feedstock_commodity_id,
+            technology.primary_product_id,
+            commodities[technology.feedstock_commodity_id].canonical_unit,
             "processing_cost",
             technology_id=technology_id,
         )
@@ -568,11 +551,11 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
         add_solution_flow(
             var,
             "0",
-            f"product_pool:{market['product_commodity_id']}",
+            f"product_pool:{market.product_commodity_id}",
             market_id,
-            market["product_commodity_id"],
-            market["product_commodity_id"],
-            commodities[market["product_commodity_id"]]["canonical_unit"],
+            market.product_commodity_id,
+            market.product_commodity_id,
+            commodities[market.product_commodity_id].canonical_unit,
             "market_revenue",
             market_id=market_id,
         )
@@ -607,21 +590,21 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
 
     market_quantity_by_commodity = defaultdict(float)
     for market_id, var in market_vars.items():
-        commodity_id = markets[market_id]["product_commodity_id"]
+        commodity_id = markets[market_id].product_commodity_id
         market_quantity_by_commodity[commodity_id] += var_value(var)
     for commodity_id, quantity in sorted(market_quantity_by_commodity.items()):
         add_summary(
             "total_market_quantity",
             quantity,
-            commodities[commodity_id]["canonical_unit"],
+            commodities[commodity_id].canonical_unit,
             commodity_id=commodity_id,
         )
 
-    write_table(output_dir / "lp_variables.csv", VARIABLE_COLUMNS, variable_rows)
-    write_table(output_dir / "lp_constraints.csv", CONSTRAINT_COLUMNS, constraint_rows)
-    write_table(output_dir / "objective_terms.csv", OBJECTIVE_COLUMNS, objective_rows)
-    write_table(output_dir / "solution_flow.csv", SOLUTION_FLOW_COLUMNS, solution_rows)
-    write_table(output_dir / "solution_summary.csv", SOLUTION_SUMMARY_COLUMNS, summary_rows)
+    write_rows(output_dir / "lp_variables.csv", VARIABLE_COLUMNS, variable_rows)
+    write_rows(output_dir / "lp_constraints.csv", CONSTRAINT_COLUMNS, constraint_rows)
+    write_rows(output_dir / "objective_terms.csv", OBJECTIVE_COLUMNS, objective_rows)
+    write_rows(output_dir / "solution_flow.csv", SOLUTION_FLOW_COLUMNS, solution_rows)
+    write_rows(output_dir / "solution_summary.csv", SOLUTION_SUMMARY_COLUMNS, summary_rows)
 
     return {
         "status": status,

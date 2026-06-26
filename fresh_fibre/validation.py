@@ -4,23 +4,20 @@
 from __future__ import annotations
 
 import argparse
-import csv
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from fresh_fibre.schema import (
+    Market,
+    SolutionFlow,
+    SupplyOffer,
+    Technology,
+    TransportLink,
+    number,
+    read_rows,
+)
 
 DEFAULT_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-mini")
-
-
-def read_table(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
-
-
-def number(value: str | None, default: float = 0.0) -> float:
-    if value is None or value == "":
-        return default
-    return float(value)
 
 
 def assert_true(condition: bool, message: str) -> None:
@@ -33,26 +30,41 @@ def assert_no_duplicates(rows: list[dict[str, str]], column: str, label: str) ->
     assert_true(not duplicates, f"{label} has duplicate {column}: {duplicates}")
 
 
-def has_positive_flow(rows: list[dict[str, str]], **criteria: str) -> bool:
+def has_positive_flow(rows: list[SolutionFlow], **criteria: str) -> bool:
     for row in rows:
-        if number(row["quantity"]) <= 1e-7:
+        if row.quantity <= 1e-7:
             continue
-        if all(row.get(key, "") == value for key, value in criteria.items()):
+        if all(getattr(row, key) == value for key, value in criteria.items()):
             return True
     return False
 
 
 def validate(input_dir: Path) -> None:
     generated_dir = input_dir / "generated"
-    graph_nodes = read_table(generated_dir / "graph_nodes.csv")
-    graph_arcs = read_table(generated_dir / "graph_arcs.csv")
-    variables = read_table(generated_dir / "lp_variables.csv")
-    solution_flow = read_table(generated_dir / "solution_flow.csv")
-    solution_summary = read_table(generated_dir / "solution_summary.csv")
-    supply_offer = read_table(input_dir / "supply_offer.csv")
-    technology = read_table(input_dir / "technology.csv")
-    market = read_table(input_dir / "market.csv")
-    transport_link = read_table(input_dir / "transport_link.csv")
+    graph_nodes = read_rows(generated_dir / "graph_nodes.csv")
+    graph_arcs = read_rows(generated_dir / "graph_arcs.csv")
+    variables = read_rows(generated_dir / "lp_variables.csv")
+    solution_flow = [
+        SolutionFlow.from_row(row)
+        for row in read_rows(generated_dir / "solution_flow.csv")
+    ]
+    solution_summary = read_rows(generated_dir / "solution_summary.csv")
+    supply_offer = [
+        SupplyOffer.from_row(row)
+        for row in read_rows(input_dir / "supply_offer.csv")
+    ]
+    technology = [
+        Technology.from_row(row)
+        for row in read_rows(input_dir / "technology.csv")
+    ]
+    market = [
+        Market.from_row(row)
+        for row in read_rows(input_dir / "market.csv")
+    ]
+    transport_link = [
+        TransportLink.from_row(row)
+        for row in read_rows(input_dir / "transport_link.csv")
+    ]
 
     assert_true(len(graph_nodes) == 37, f"expected 37 graph nodes, found {len(graph_nodes)}")
     assert_true(len(graph_arcs) == 45, f"expected 45 graph arcs, found {len(graph_arcs)}")
@@ -67,43 +79,43 @@ def validate(input_dir: Path) -> None:
     assert_true(status == ["Optimal"], f"expected solver status Optimal, found {status}")
 
     for row in solution_flow:
-        assert_true(number(row["quantity"]) >= -1e-7, f"negative flow quantity: {row}")
+        assert_true(row.quantity >= -1e-7, f"negative flow quantity: {row}")
 
     supply_bounds = {
-        (row["supply_node_id"], row["commodity_id"]): number(row["quantity"])
+        (row.supply_node_id, row.commodity_id): row.quantity
         for row in supply_offer
     }
     supply_used: dict[tuple[str, str], float] = defaultdict(float)
     for row in solution_flow:
-        if row["origin_node_id"] == row["destination_node_id"] and not row["technology_id"]:
-            supply_used[(row["origin_node_id"], row["source_commodity_id"])] += number(row["quantity"])
+        if row.origin_node_id == row.destination_node_id and not row.technology_id:
+            supply_used[(row.origin_node_id, row.source_commodity_id)] += row.quantity
     for key, quantity in supply_used.items():
         assert_true(quantity <= supply_bounds[key] + 1e-7, f"supply bound exceeded for {key}")
 
-    route_bounds = {row["route_id"]: number(row["capacity"]) for row in transport_link}
+    route_bounds = {row.route_id: row.capacity for row in transport_link}
     route_used: dict[str, float] = defaultdict(float)
     for row in solution_flow:
-        if row["transport_link_id"]:
-            route_used[row["transport_link_id"]] += number(row["quantity"])
+        if row.transport_link_id:
+            route_used[row.transport_link_id] += row.quantity
     for route_id, quantity in route_used.items():
         assert_true(quantity <= route_bounds[route_id] + 1e-7, f"route bound exceeded for {route_id}")
 
-    technology_bounds = {row["technology_id"]: number(row["maximum_capacity"]) for row in technology}
+    technology_bounds = {row.technology_id: row.maximum_capacity for row in technology}
     technology_activity: dict[str, float] = defaultdict(float)
     for row in solution_flow:
-        if row["technology_id"] and not row["transport_link_id"] and not row["market_id"]:
-            technology_activity[row["technology_id"]] += number(row["quantity"])
+        if row.technology_id and not row.transport_link_id and not row.market_id:
+            technology_activity[row.technology_id] += row.quantity
     for technology_id, quantity in technology_activity.items():
         assert_true(
             quantity <= technology_bounds[technology_id] + 1e-7,
             f"technology capacity exceeded for {technology_id}",
         )
 
-    market_bounds = {row["market_id"]: number(row["maximum_demand"]) for row in market}
+    market_bounds = {row.market_id: row.maximum_demand for row in market}
     market_sales: dict[str, float] = defaultdict(float)
     for row in solution_flow:
-        if row["market_id"]:
-            market_sales[row["market_id"]] += number(row["quantity"])
+        if row.market_id:
+            market_sales[row.market_id] += row.quantity
     for market_id, quantity in market_sales.items():
         assert_true(quantity <= market_bounds[market_id] + 1e-7, f"market bound exceeded for {market_id}")
 

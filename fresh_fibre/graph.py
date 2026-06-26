@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import csv
 from collections import Counter
 from pathlib import Path
+
+from fresh_fibre.schema import number as num
+from fresh_fibre.schema import read_rows, require_columns, write_rows
 
 
 TABLE_COLUMNS = {
@@ -106,28 +108,13 @@ def read_table(input_dir: Path, table: str) -> list[dict[str, str]]:
     path = input_dir / f"{table}.csv"
     if not path.exists():
         raise FileNotFoundError(f"Missing required table: {path}")
-    with path.open(newline="", encoding="utf-8") as handle:
-        rows = list(csv.DictReader(handle))
-    if not rows:
-        raise ValueError(f"Table has no data rows: {path}")
-    missing = TABLE_COLUMNS[table] - set(rows[0])
-    if missing:
-        raise ValueError(f"{path} is missing required columns: {sorted(missing)}")
+    rows = read_rows(path)
+    require_columns(path, rows, TABLE_COLUMNS[table])
     return rows
 
 
 def write_table(path: Path, fieldnames: list[str], rows: list[dict[str, object]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-def num(value: str, default: float = 0.0) -> float:
-    if value is None or value == "":
-        return default
-    return float(value)
+    write_rows(path, fieldnames, rows)
 
 
 def period_key(row: dict[str, str]) -> tuple[str, str]:
