@@ -17,6 +17,9 @@
   smoke supply while preserving the stable synthetic BC mini fixture.
 - Added generated comparison tables for objective, cost, market quantity, and
   pathway-flow deltas between the synthetic BC mini solve and ws3-smoke variant.
+- Added a ws3 diagnostic supply replacement decision layer selecting SCANFI v2
+  2025 subset as the first inventory candidate, keeping NFI standard reports as
+  validation-only pending license review, and marking yield policy unresolved.
 
 ## 2026-06-25
 

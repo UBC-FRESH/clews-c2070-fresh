@@ -222,6 +222,9 @@ Metadata surfaces:
   `supply_offer.csv` with the real ws3 smoke supply export.
 - [x] Add generated comparison tables between the stable synthetic BC mini LP
   solve and the ws3-smoke supply variant.
+- [x] Select the first diagnostic replacement source path: SCANFI v2 2025
+  subset for inventory, NFI standard reports for validation only, yield policy
+  unresolved.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime
