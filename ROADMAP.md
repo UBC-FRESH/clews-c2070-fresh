@@ -96,8 +96,8 @@ Metadata surfaces:
   soft-link inputs plus generated five-layer graph, LP audit, and solution
   tables for the first feasibility prototype.
 - `fresh_fibre/`: initial reusable Python module home for FRESH graph
-  construction, LP solving, prototype validation, typed CSV-row adapters, and
-  unit/dimensional checks.
+  construction, LP solving, contract checks, prototype validation, typed
+  CSV-row adapters, and unit/dimensional checks.
 - `metadata/ffcm-archive/unit-registry.csv` and
   `metadata/ffcm-archive/unit-conversion-registry.csv`: lightweight unit
   registry scaffolds for prototype validation and future scaling.
@@ -162,7 +162,7 @@ Metadata surfaces:
   keys, and scenario metadata.
 - [x] Identify which FFCM data inputs can seed FRESH prototypes and which must
   be rebuilt from accepted national data sources.
-- [ ] Compare the initial FRESH contract against the existing downstream LP
+- [x] Compare the initial FRESH contract against the existing downstream LP
   model input schema and update field names/types accordingly.
 - [x] Recover the likely surviving notebook seed for the ws3-compatible
   network-flow model from the GitHub gist and extract code/markdown for rebuild

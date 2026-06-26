@@ -54,6 +54,9 @@
   provenance metadata from fixture input tables instead of hard-coded values.
 - Standardized generated CSV writes on LF line endings through the shared
   schema writer.
+- Added `fresh_fibre.contract` validation against
+  `fresh-interface-contract.csv`, including a generated BC mini-network
+  contract-coverage audit table.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN

@@ -104,6 +104,8 @@ Proposed module names for a future implementation:
   metadata from input tables.
 - [x] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
   `kg`, `MWh`, and board/area units before national scaling.
+- [x] Validate the BC mini-network fixture against
+  `metadata/ffcm-archive/fresh-interface-contract.csv`.
 - [ ] Add explicit quantity-conversion execution only after deciding which
   table fields may be automatically converted versus rejected.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
@@ -156,3 +158,9 @@ quantities.
 period, region, scenario, solver, and provenance metrics. The current
 `solution_summary.csv` has 18 rows, including seven metadata rows before the
 objective and commodity totals.
+
+`fresh_fibre.contract` validates fixture input and output tables against
+`metadata/ffcm-archive/fresh-interface-contract.csv` and writes
+`generated/contract_validation.csv`. The BC mini-network currently validates
+15 contract tables; `transporter` and `import_offer` are recorded as
+intentionally absent optional fixture tables.

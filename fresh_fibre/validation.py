@@ -7,6 +7,7 @@ import argparse
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from fresh_fibre.contract import assert_contract_ok, validate_contract
 from fresh_fibre.schema import (
     Market,
     RunProvenance,
@@ -43,6 +44,7 @@ def has_positive_flow(rows: list[SolutionFlow], **criteria: str) -> bool:
 
 
 def validate(input_dir: Path) -> None:
+    assert_contract_ok(validate_contract(input_dir))
     validate_input_units(input_dir)
     validate_graph_units(input_dir)
     generated_dir = input_dir / "generated"

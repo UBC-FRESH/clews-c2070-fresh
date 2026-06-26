@@ -28,5 +28,7 @@ Unit definitions and candidate conversions live in
 LP reporting metadata is sourced from `scenario.csv`, `run_provenance.csv`, and
 `network_node.csv`; generated `solution_summary.csv` includes scenario,
 provenance, solver, objective, cost, revenue, and commodity-total rows.
+Soft-link contract coverage is checked by `fresh_fibre.contract`, which writes
+`generated/contract_validation.csv`.
 
 Compatibility CLIs remain available under `scripts/ffcm_archive/`.
