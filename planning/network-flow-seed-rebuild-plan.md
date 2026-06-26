@@ -100,6 +100,8 @@ Proposed module names for a future implementation:
   CSV-row dictionaries.
 - [x] Add unit-conversion and dimensional-consistency checks around `m3`, `odt`,
   `GJ`, and product-specific conversion coefficients.
+- [x] Derive LP output run, scenario, period, region, solver, and provenance
+  metadata from input tables.
 - [ ] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
   `kg`, `MWh`, and board/area units before national scaling.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
@@ -139,3 +141,9 @@ boundary.
 units, `CAD_per_*` cost and price bases, generated graph arc units, and
 technology-flow coefficient dimensions. It can be run directly with
 `python3 -m fresh_fibre.units --include-generated`.
+
+`fresh_fibre.lp` now reads `scenario.csv`, `run_provenance.csv`, and
+`network_node.csv` to populate `solution_flow` and `solution_summary` run id,
+period, region, scenario, solver, and provenance metrics. The current
+`solution_summary.csv` has 18 rows, including seven metadata rows before the
+objective and commodity totals.

@@ -172,6 +172,8 @@ Metadata surfaces:
   changing the public soft-link tables.
 - [x] Add unit and dimensional consistency checks around the synthetic BC
   mini-network graph/LP module.
+- [x] Refactor first-pass scenario/provenance/reporting semantics into the
+  reusable FRESH module.
 - [ ] Continue refactoring remaining recovered notebook scenario and reporting
   semantics into the reusable FRESH module where still relevant.
 - [x] Choose the first prototype geography, time step, commodity subset, and

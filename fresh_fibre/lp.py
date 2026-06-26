@@ -22,6 +22,9 @@ from fresh_fibre.schema import (
     Commodity,
     GraphArc,
     Market,
+    NetworkNode,
+    RunProvenance,
+    Scenario,
     SupplyOffer,
     Technology,
     TechnologyFlow,
@@ -32,7 +35,6 @@ from fresh_fibre.schema import (
 from fresh_fibre.units import validate_graph_units, validate_input_units
 
 
-RUN_ID = "bc_mini_lp_001"
 DEFAULT_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-mini")
 
 VARIABLE_COLUMNS = [
@@ -123,10 +125,39 @@ def add_objective_row(
     )
 
 
+def single_row(rows: list[dict[str, str]], table_name: str) -> dict[str, str]:
+    if len(rows) != 1:
+        raise ValueError(f"Expected one row in {table_name}, found {len(rows)}")
+    return rows[0]
+
+
+def solve_region(nodes: list[NetworkNode]) -> str:
+    provinces = sorted({node.province for node in nodes if node.province})
+    if len(provinces) == 1:
+        return provinces[0]
+    if not provinces:
+        return "unknown"
+    return "multi_region"
+
+
 def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
     validate_input_units(input_dir)
     validate_graph_units(input_dir)
     graph_dir = input_dir / "generated"
+    scenario = Scenario.from_row(single_row(read_rows(input_dir / "scenario.csv"), "scenario.csv"))
+    provenance = RunProvenance.from_row(
+        single_row(read_rows(input_dir / "run_provenance.csv"), "run_provenance.csv")
+    )
+    if provenance.scenario_id != scenario.scenario_id:
+        raise ValueError(
+            f"run_provenance scenario {provenance.scenario_id!r} does not match "
+            f"scenario table {scenario.scenario_id!r}"
+        )
+    run_id = provenance.output_run_id
+    solve_period = scenario.start_period
+    region_id = solve_region(
+        [NetworkNode.from_row(row) for row in read_rows(input_dir / "network_node.csv")]
+    )
     commodities = {
         row.commodity_id: row
         for row in (Commodity.from_row(row) for row in read_rows(input_dir / "commodity.csv"))
@@ -164,7 +195,7 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
         if row.arc_family == "cdt_to_prc_secondary_allocation"
     ]
 
-    problem = pulp.LpProblem("fresh_bc_mini_network_flow", pulp.LpMaximize)
+    problem = pulp.LpProblem(clean_id(f"fresh_{scenario.scenario_id}_network_flow"), pulp.LpMaximize)
     variables: dict[str, pulp.LpVariable] = {}
     variable_rows: list[dict[str, object]] = []
     constraint_rows: list[dict[str, object]] = []
@@ -475,7 +506,7 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
             return
         solution_rows.append(
             {
-                "run_id": RUN_ID,
+                "run_id": run_id,
                 "period": period,
                 "origin_node_id": origin_node_id,
                 "destination_node_id": destination_node_id,
@@ -571,9 +602,9 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
     def add_summary(metric_id: str, value: object, unit: str, commodity_id: str = "", market_id: str = "") -> None:
         summary_rows.append(
             {
-                "run_id": RUN_ID,
-                "period": "0",
-                "region_id": "BC",
+                "run_id": run_id,
+                "period": solve_period,
+                "region_id": region_id,
                 "metric_id": metric_id,
                 "value": value,
                 "unit": unit,
@@ -585,6 +616,13 @@ def build_and_solve(input_dir: Path, output_dir: Path) -> dict[str, object]:
         )
 
     add_summary("solver_status", status, "status")
+    add_summary("scenario_id", scenario.scenario_id, "id")
+    add_summary("scenario_name", scenario.scenario_name, "label")
+    add_summary("code_version", provenance.code_version, "version")
+    add_summary("data_version", provenance.data_version, "version")
+    add_summary("ws3_run_id", provenance.ws3_run_id, "id")
+    add_summary("solver_name", provenance.solver_name or "PULP_CBC_CMD", "solver")
+    add_summary("solver_version", provenance.solver_version, "version")
     add_summary("objective_value", objective_value, "CAD")
     add_summary("total_revenue", component_totals["market_revenue"], "CAD")
     add_summary("total_supply_cost", -component_totals["supply_cost"], "CAD")

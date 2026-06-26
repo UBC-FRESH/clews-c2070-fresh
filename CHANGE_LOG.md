@@ -46,6 +46,11 @@
 - Added `fresh_fibre.units` validation for canonical commodity units,
   cost/price unit bases, generated graph arc units, and technology conversion
   coefficient dimensions.
+- Reworked the BC mini-network LP reporting path so `solution_flow` and
+  `solution_summary` derive run, scenario, period, region, solver, and
+  provenance metadata from fixture input tables instead of hard-coded values.
+- Standardized generated CSV writes on LF line endings through the shared
+  schema writer.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN

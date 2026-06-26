@@ -9,6 +9,8 @@ from pathlib import Path
 
 from fresh_fibre.schema import (
     Market,
+    RunProvenance,
+    Scenario,
     SolutionFlow,
     SupplyOffer,
     Technology,
@@ -52,6 +54,9 @@ def validate(input_dir: Path) -> None:
         for row in read_rows(generated_dir / "solution_flow.csv")
     ]
     solution_summary = read_rows(generated_dir / "solution_summary.csv")
+    scenario = Scenario.from_row(read_rows(input_dir / "scenario.csv")[0])
+    provenance = RunProvenance.from_row(read_rows(input_dir / "run_provenance.csv")[0])
+    expected_run_id = provenance.output_run_id
     supply_offer = [
         SupplyOffer.from_row(row)
         for row in read_rows(input_dir / "supply_offer.csv")
@@ -80,9 +85,47 @@ def validate(input_dir: Path) -> None:
         if row["metric_id"] == "solver_status"
     ]
     assert_true(status == ["Optimal"], f"expected solver status Optimal, found {status}")
+    for row in solution_summary:
+        assert_true(row["run_id"] == expected_run_id, f"unexpected solution_summary run_id: {row['run_id']}")
+        assert_true(row["period"] == scenario.start_period, f"unexpected solution_summary period: {row['period']}")
+    summary_metrics = {
+        row["metric_id"]: row["value"]
+        for row in solution_summary
+        if row["commodity_id"] == "" and row["market_id"] == ""
+    }
+    assert_true(
+        summary_metrics.get("scenario_id") == scenario.scenario_id,
+        "solution summary scenario_id does not match scenario.csv",
+    )
+    assert_true(
+        summary_metrics.get("scenario_name") == scenario.scenario_name,
+        "solution summary scenario_name does not match scenario.csv",
+    )
+    assert_true(
+        summary_metrics.get("code_version") == provenance.code_version,
+        "solution summary code_version does not match run_provenance.csv",
+    )
+    assert_true(
+        summary_metrics.get("data_version") == provenance.data_version,
+        "solution summary data_version does not match run_provenance.csv",
+    )
+    assert_true(
+        summary_metrics.get("ws3_run_id") == provenance.ws3_run_id,
+        "solution summary ws3_run_id does not match run_provenance.csv",
+    )
+    assert_true(
+        summary_metrics.get("solver_name") == provenance.solver_name,
+        "solution summary solver_name does not match run_provenance.csv",
+    )
+    assert_true(
+        summary_metrics.get("solver_version") == provenance.solver_version,
+        "solution summary solver_version does not match run_provenance.csv",
+    )
 
     for row in solution_flow:
         assert_true(row.quantity >= -1e-7, f"negative flow quantity: {row}")
+        assert_true(row.run_id == expected_run_id, f"unexpected solution_flow run_id: {row.run_id}")
+        assert_true(row.period == scenario.start_period, f"unexpected solution_flow period: {row.period}")
 
     supply_bounds = {
         (row.supply_node_id, row.commodity_id): row.quantity

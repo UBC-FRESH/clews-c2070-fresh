@@ -16,7 +16,12 @@ def read_rows(path: Path) -> list[dict[str, str]]:
 def write_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -33,6 +38,63 @@ def require_columns(path: Path, rows: list[dict[str, str]], required: set[str]) 
     missing = required - set(rows[0])
     if missing:
         raise ValueError(f"{path} is missing required columns: {sorted(missing)}")
+
+
+@dataclass(frozen=True)
+class Scenario:
+    scenario_id: str
+    scenario_name: str
+    start_period: str
+    end_period: str
+
+    @classmethod
+    def from_row(cls, row: dict[str, str]) -> "Scenario":
+        return cls(
+            row["scenario_id"],
+            row["scenario_name"],
+            row["start_period"],
+            row["end_period"],
+        )
+
+
+@dataclass(frozen=True)
+class RunProvenance:
+    run_id: str
+    scenario_id: str
+    code_version: str
+    data_version: str
+    ws3_run_id: str
+    lp_run_id: str
+    solver_name: str
+    solver_version: str
+
+    @property
+    def output_run_id(self) -> str:
+        return self.lp_run_id or self.run_id
+
+    @classmethod
+    def from_row(cls, row: dict[str, str]) -> "RunProvenance":
+        return cls(
+            row["run_id"],
+            row["scenario_id"],
+            row.get("code_version", ""),
+            row.get("data_version", ""),
+            row.get("ws3_run_id", ""),
+            row.get("lp_run_id", ""),
+            row.get("solver_name", ""),
+            row.get("solver_version", ""),
+        )
+
+
+@dataclass(frozen=True)
+class NetworkNode:
+    node_id: str
+    node_type: str
+    province: str
+
+    @classmethod
+    def from_row(cls, row: dict[str, str]) -> "NetworkNode":
+        return cls(row["node_id"], row["node_type"], row["province"])
 
 
 @dataclass(frozen=True)
@@ -196,11 +258,14 @@ class GraphArc:
 
 @dataclass(frozen=True)
 class SolutionFlow:
+    run_id: str
+    period: str
     origin_node_id: str
     destination_node_id: str
     source_commodity_id: str
     product_commodity_id: str
     quantity: float
+    quantity_unit: str
     technology_id: str
     market_id: str
     transport_link_id: str
@@ -208,11 +273,14 @@ class SolutionFlow:
     @classmethod
     def from_row(cls, row: dict[str, str]) -> "SolutionFlow":
         return cls(
+            row["run_id"],
+            row["period"],
             row["origin_node_id"],
             row["destination_node_id"],
             row["source_commodity_id"],
             row["product_commodity_id"],
             number(row["quantity"]),
+            row["quantity_unit"],
             row["technology_id"],
             row["market_id"],
             row["transport_link_id"],

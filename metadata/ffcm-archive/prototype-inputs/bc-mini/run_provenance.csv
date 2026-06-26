@@ -1,2 +1,2 @@
 run_id,scenario_id,created_at,source_manifest_ref,code_version,data_version,ws3_run_id,lp_run_id,solver_name,solver_version,parameter_hash,notes
-bc_mini_graph_001,bc_mini_001,2026-06-26T00:00:00Z,metadata/ffcm-archive/archive-manifest.csv,working-tree,synthetic_bc_mini,synthetic_ws3_shape_001,,none,,not_computed,Synthetic fixture for graph-building only; no LP solve yet.
+bc_mini_lp_001,bc_mini_001,2026-06-26T00:00:00Z,metadata/ffcm-archive/archive-manifest.csv,working-tree,synthetic_bc_mini,synthetic_ws3_shape_001,bc_mini_lp_001,PuLP/CBC,2.9.0,not_computed,Synthetic fixture for graph building and LP solve; diagnostic only.

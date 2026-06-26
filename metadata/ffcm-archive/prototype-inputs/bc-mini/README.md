@@ -22,5 +22,8 @@ Typed CSV-row adapters live in `fresh_fibre.schema`; the public fixture tables
 remain plain CSV.
 Unit and dimensional checks live in `fresh_fibre.units` and can be run with
 `python3 -m fresh_fibre.units --include-generated`.
+LP reporting metadata is sourced from `scenario.csv`, `run_provenance.csv`, and
+`network_node.csv`; generated `solution_summary.csv` includes scenario,
+provenance, solver, objective, cost, revenue, and commodity-total rows.
 
 Compatibility CLIs remain available under `scripts/ffcm_archive/`.

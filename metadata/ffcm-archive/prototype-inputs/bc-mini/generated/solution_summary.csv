@@ -1,5 +1,12 @@
 run_id,period,region_id,metric_id,value,unit,commodity_id,facility_class,market_id,scenario_comparison_id
 bc_mini_lp_001,0,BC,solver_status,Optimal,status,,,,
+bc_mini_lp_001,0,BC,scenario_id,bc_mini_001,id,,,,
+bc_mini_lp_001,0,BC,scenario_name,BC synthetic mini-network,label,,,,
+bc_mini_lp_001,0,BC,code_version,working-tree,version,,,,
+bc_mini_lp_001,0,BC,data_version,synthetic_bc_mini,version,,,,
+bc_mini_lp_001,0,BC,ws3_run_id,synthetic_ws3_shape_001,id,,,,
+bc_mini_lp_001,0,BC,solver_name,PuLP/CBC,solver,,,,
+bc_mini_lp_001,0,BC,solver_version,2.9.0,version,,,,
 bc_mini_lp_001,0,BC,objective_value,6140832.0,CAD,,,,
 bc_mini_lp_001,0,BC,total_revenue,19520472.0,CAD,,,,
 bc_mini_lp_001,0,BC,total_supply_cost,6412000.0,CAD,,,,
