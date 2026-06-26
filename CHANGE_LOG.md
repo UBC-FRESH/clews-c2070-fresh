@@ -29,6 +29,9 @@
 - Added a SCANFI diagnostic supply generator, synthetic placeholder yield-rule
   table, ws3-shaped harvest-output artifact, and solved BC mini SCANFI
   diagnostic LP variant.
+- Added a three-way BC mini variant comparison surface covering synthetic,
+  ws3-smoke, and SCANFI-diagnostic supply paths, with objective, supply,
+  solution-summary, pathway-flow, and decision-memo outputs.
 
 ## 2026-06-25
 

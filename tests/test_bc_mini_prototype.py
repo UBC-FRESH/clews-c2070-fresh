@@ -16,6 +16,7 @@ from fresh_fibre.lp import build_and_solve
 from fresh_fibre.scanfi_supply import build_scanfi_diagnostic_supply, run_scanfi_diagnostic_variant
 from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
+from fresh_fibre.variant_compare import compare_three_way
 from fresh_fibre.ws3_export import export_supply_offer
 from fresh_fibre.ws3_smoke import run_ws3_smoke
 from fresh_fibre.ws3_variant import run_ws3_smoke_variant
@@ -321,6 +322,47 @@ class BcMiniPrototypeTest(unittest.TestCase):
         )
         self.assertAlmostEqual(float(lumber_market["base_quantity"]), 54160.0)
         self.assertAlmostEqual(float(lumber_market["variant_quantity"]), 799.53376)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),
+        "ws3 editable install and example Woodstock files are required",
+    )
+    def test_three_way_variant_comparison_reports_decision_tables(self) -> None:
+        ws3_variant_dir = Path(self.tmp.name) / "bc-mini-ws3-smoke"
+        scanfi_variant_dir = Path(self.tmp.name) / "bc-mini-scanfi-diagnostic"
+        output_dir = Path(self.tmp.name) / "three-way"
+
+        result = compare_three_way(
+            self.input_dir,
+            ws3_variant_dir,
+            scanfi_variant_dir,
+            output_dir,
+        )
+
+        self.assertEqual(result["variant_rows"], 3)
+        self.assertEqual(result["objective_rows"], 5)
+        self.assertEqual(result["supply_rows"], 2)
+        self.assertEqual(result["summary_rows"], 10)
+        self.assertEqual(result["flow_rows"], 24)
+
+        matrix = {row["variant_id"]: row for row in read_csv(output_dir / "variant_run_matrix.csv")}
+        self.assertEqual({row["solver_status"] for row in matrix.values()}, {"Optimal"})
+        self.assertEqual(matrix["synthetic_bc_mini"]["graph_nodes"], "37")
+        self.assertEqual(matrix["ws3_smoke"]["graph_nodes"], "32")
+        self.assertEqual(matrix["scanfi_diagnostic"]["graph_nodes"], "37")
+
+        objectives = {row["metric_id"]: row for row in read_csv(output_dir / "variant_objective_comparison.csv")}
+        self.assertAlmostEqual(float(objectives["objective_value"]["synthetic_bc_mini"]), 6140832.0)
+        self.assertAlmostEqual(float(objectives["objective_value"]["ws3_smoke"]), 75520.15192, places=5)
+        self.assertAlmostEqual(float(objectives["objective_value"]["scanfi_diagnostic"]), 5795998.91275, places=5)
+
+        supply = {
+            (row["commodity_id"], row["quantity_unit"]): row
+            for row in read_csv(output_dir / "variant_supply_comparison.csv")
+        }
+        self.assertAlmostEqual(float(supply[("log", "m3")]["scanfi_diagnostic_quantity"]), 104700.0)
+        self.assertAlmostEqual(float(supply[("logging_residue", "odt")]["scanfi_diagnostic_quantity"]), 6600.0)
+        self.assertTrue((output_dir / "decision_memo.md").exists())
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:
         unit_registry = Path(self.tmp.name) / "unit-registry.csv"

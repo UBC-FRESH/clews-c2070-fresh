@@ -88,12 +88,22 @@ graph, solves the downstream LP, and writes a variant summary. The result is
 still diagnostic: quantities and costs remain placeholder assumptions until a
 MAGPlot/provincial-yield policy is accepted.
 
-## Next Implementation Tranche
+## Current Implementation Tranche
 
 Compare the SCANFI diagnostic variant against the synthetic BC mini and ws3
-smoke variants, then define the next decision gate for selecting a real yield
-policy. The comparison should separate inventory provenance progress from yield
-assumption quality so the model does not overclaim calibration.
+smoke variants. The comparison surface writes a variant run matrix, objective
+comparison, supply comparison, solution-summary comparison, pathway-flow
+comparison, and short decision memo under
+`metadata/ffcm-archive/prototype-comparisons/bc-mini-three-way/`.
+
+The comparison separates inventory provenance progress from yield assumption
+quality so the model does not overclaim calibration.
+
+## Next Implementation Tranche
+
+Define the yield-policy decision gate. The next tranche should compare candidate
+MAGPlot/provincial-yield options, document minimum acceptable yield provenance,
+and define how placeholder `diagnostic_yield_rules.csv` rows will be replaced.
 
 Keep large rasters in the data submodule or scratch space, not in the parent
 repository.
