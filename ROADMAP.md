@@ -95,6 +95,8 @@ Metadata surfaces:
 - `metadata/ffcm-archive/prototype-inputs/bc-mini/`: synthetic BC diagnostic
   soft-link inputs plus generated five-layer graph, LP audit, and solution
   tables for the first feasibility prototype.
+- `fresh_fibre/`: initial reusable Python module home for FRESH graph
+  construction, LP solving, and prototype validation logic.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -163,8 +165,10 @@ Metadata surfaces:
   planning.
 - [x] Inventory recovered notebook functions and crosswalk old graph concepts
   to the FRESH soft-link contract.
-- [ ] Refactor the recovered notebook seed into a clean Python module that can
-  consume the FRESH soft-link contract.
+- [x] Promote the first recovered-notebook-inspired graph/LP prototype subset
+  into a clean Python module that consumes the FRESH soft-link contract.
+- [ ] Continue refactoring remaining recovered notebook scenario and reporting
+  semantics into the reusable FRESH module where still relevant.
 - [x] Choose the first prototype geography, time step, commodity subset, and
   minimal scenario set.
 - [x] Add a first open-source LP solver path for the synthetic BC mini-network.

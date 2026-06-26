@@ -103,12 +103,12 @@ Status:
 - Item 3 now has a synthetic fixture at
   `metadata/ffcm-archive/prototype-inputs/bc-mini/`.
 - Item 4 has a first solver-independent graph builder at
+  `fresh_fibre.graph`, with a compatibility CLI at
   `scripts/ffcm_archive/build_prototype_graph.py`.
 - Item 5 has a first PuLP/CBC solve at
-  `scripts/ffcm_archive/solve_bc_mini_lp.py`, with validation in
-  `scripts/ffcm_archive/validate_bc_mini_solution.py`.
+  `fresh_fibre.lp`, with validation in `fresh_fibre.validation`.
 
 Next step:
 
-- Promote the graph/LP logic from archive-analysis scripts into a small
-  reusable FRESH module once the prototype contract stabilizes.
+- Add typed schema adapters around the current CSV-row dictionaries before
+  scaling beyond the synthetic BC mini-network.

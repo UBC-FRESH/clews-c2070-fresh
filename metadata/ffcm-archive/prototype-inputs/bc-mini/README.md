@@ -14,9 +14,9 @@ ws3-compatible notebook seed:
 - `prc`: processing technologies.
 - `snk`: market/export sink nodes.
 
-Generated graph outputs are written to `generated/` by
-`scripts/ffcm_archive/build_prototype_graph.py`.
+Generated graph outputs are written to `generated/` by `fresh_fibre.graph`.
 
-LP audit and solution outputs are written to `generated/` by
-`scripts/ffcm_archive/solve_bc_mini_lp.py`. Validate the full generated bundle
-with `scripts/ffcm_archive/validate_bc_mini_solution.py`.
+LP audit and solution outputs are written to `generated/` by `fresh_fibre.lp`.
+Validate the full generated bundle with `fresh_fibre.validation`.
+
+Compatibility CLIs remain available under `scripts/ffcm_archive/`.

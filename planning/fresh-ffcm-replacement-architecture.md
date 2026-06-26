@@ -136,5 +136,5 @@ High-level stance:
 - Choose the first prototype geography and time step.
 - Define unit-conversion conventions for `m3`, `odt`, `bdmt`, `t`, `kg`, `GJ`,
   `MWh`, and product-specific board/area units.
-- Promote the solved BC mini-network prototype from archive-analysis scripts
-  into a reusable FRESH graph/LP module.
+- Add typed schema adapters around the solved BC mini-network graph/LP module
+  before scaling beyond the synthetic fixture.

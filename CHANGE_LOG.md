@@ -37,6 +37,9 @@
 - Added a PuLP/CBC BC mini-network LP prototype, generated variable,
   constraint, objective, `solution_flow`, and `solution_summary` tables, and a
   repeatable validation script for bounds/pathway checks.
+- Promoted the BC mini-network graph, LP solve, and validation logic into a
+  reusable `fresh_fibre` Python package while preserving the archive-analysis
+  script entrypoints as compatibility CLIs.
 - Completed first-pass National Road Network triage: inventoried all 13
   province/territory GeoPackage ZIP packages and all 13 shapefile ZIP packages,
   recorded HTTP package sizes and release validity/version notes, accepted NRN
