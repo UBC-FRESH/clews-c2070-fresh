@@ -102,8 +102,10 @@ Proposed module names for a future implementation:
   `GJ`, and product-specific conversion coefficients.
 - [x] Derive LP output run, scenario, period, region, solver, and provenance
   metadata from input tables.
-- [ ] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
+- [x] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
   `kg`, `MWh`, and board/area units before national scaling.
+- [ ] Add explicit quantity-conversion execution only after deciding which
+  table fields may be automatically converted versus rejected.
 - [ ] Replace synthetic fixture quantities with accepted diagnostic or
   production data sources after provenance and rights review.
 
@@ -141,6 +143,13 @@ boundary.
 units, `CAD_per_*` cost and price bases, generated graph arc units, and
 technology-flow coefficient dimensions. It can be run directly with
 `python3 -m fresh_fibre.units --include-generated`.
+
+Unit definitions live in `metadata/ffcm-archive/unit-registry.csv`, and
+dimension-preserving conversion candidates live in
+`metadata/ffcm-archive/unit-conversion-registry.csv`. These registries are
+validation scaffolds only: the LP still rejects table rows whose quantity units
+do not match declared commodity canonical units rather than silently converting
+quantities.
 
 `fresh_fibre.lp` now reads `scenario.csv`, `run_provenance.csv`, and
 `network_node.csv` to populate `solution_flow` and `solution_summary` run id,

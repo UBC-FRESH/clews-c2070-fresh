@@ -1,0 +1,6 @@
+from_unit,to_unit,multiplier,status,notes
+MWh,GJ,3.6,active,Energy conversion.
+kg,t,0.001,active,Metric mass conversion.
+t,kg,1000,active,Metric mass conversion.
+mbf,bf,1000,candidate,Board-foot reporting conversion only; no solid-volume conversion implied.
+bdmt,odt,1,candidate,Dry-mass equivalence pending project convention confirmation.

@@ -136,6 +136,6 @@ High-level stance:
 - Choose the first prototype geography and time step.
 - Define unit-conversion conventions for `m3`, `odt`, `bdmt`, `t`, `kg`, `GJ`,
   `MWh`, and product-specific board/area units.
-- Extend the current unit checks to explicit conversion registries for `bdmt`,
-  `t`, `kg`, `MWh`, and product-specific board/area units before scaling beyond
-  the synthetic fixture.
+- Decide which future input fields may be automatically converted using the
+  unit registries and which should continue to fail fast on non-canonical
+  units.

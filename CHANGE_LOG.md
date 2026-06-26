@@ -46,6 +46,9 @@
 - Added `fresh_fibre.units` validation for canonical commodity units,
   cost/price unit bases, generated graph arc units, and technology conversion
   coefficient dimensions.
+- Added lightweight unit and conversion registries covering current prototype
+  units plus candidate `bdmt`, `t`, `kg`, `MWh`, and product-specific board/area
+  units.
 - Reworked the BC mini-network LP reporting path so `solution_flow` and
   `solution_summary` derive run, scenario, period, region, solver, and
   provenance metadata from fixture input tables instead of hard-coded values.

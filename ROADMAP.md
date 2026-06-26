@@ -98,6 +98,9 @@ Metadata surfaces:
 - `fresh_fibre/`: initial reusable Python module home for FRESH graph
   construction, LP solving, prototype validation, typed CSV-row adapters, and
   unit/dimensional checks.
+- `metadata/ffcm-archive/unit-registry.csv` and
+  `metadata/ffcm-archive/unit-conversion-registry.csv`: lightweight unit
+  registry scaffolds for prototype validation and future scaling.
 
 ### P2.1 Archive Stabilization and Triage
 
@@ -174,6 +177,8 @@ Metadata surfaces:
   mini-network graph/LP module.
 - [x] Refactor first-pass scenario/provenance/reporting semantics into the
   reusable FRESH module.
+- [x] Extend unit checks to explicit conversion registries for `bdmt`, `t`,
+  `kg`, `MWh`, and board/area units before national scaling.
 - [ ] Continue refactoring remaining recovered notebook scenario and reporting
   semantics into the reusable FRESH module where still relevant.
 - [x] Choose the first prototype geography, time step, commodity subset, and

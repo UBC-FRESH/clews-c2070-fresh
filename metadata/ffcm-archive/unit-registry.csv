@@ -1,0 +1,11 @@
+unit_id,dimension,canonical_unit,scale_to_canonical,status,notes
+m3,solid_volume,m3,1,active,Roundwood and product volume basis used in the BC mini-network.
+odt,dry_mass,odt,1,active,Oven-dry tonne basis used for residues and fibre products.
+GJ,energy,GJ,1,active,Energy basis used for bioenergy output.
+bdmt,dry_mass,odt,1,candidate,Bone-dry metric tonne; equivalent treatment requires project convention confirmation.
+t,mass,t,1,candidate,Metric tonne; moisture basis must be explicit before use for fibre quantities.
+kg,mass,t,0.001,candidate,Kilogram; conversion to metric tonne is arithmetic but moisture basis remains external.
+MWh,energy,GJ,3.6,candidate,Megawatt-hour energy basis convertible to GJ.
+bf,board_volume,bf,1,candidate,Board-foot product-specific basis; no m3 conversion until product convention is selected.
+mbf,board_volume,bf,1000,candidate,Thousand board feet; product-specific conversion to m3 is not assumed.
+m2,area,m2,1,candidate,Area basis for panel products or land metrics where applicable.
