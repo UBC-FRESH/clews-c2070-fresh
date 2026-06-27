@@ -260,3 +260,64 @@ Metadata surfaces:
    `planning/ffcm-archive-analysis.md`: preserve the Ghafghazi et al. 2017
    paper as the architectural overview, then work inward through FCM configs,
    generated LP artifacts, and the CIRRELT network-flow reports.
+
+## Phase 3: Diagnostic ws3 Supply and Yield Replacement
+
+GitHub parent issue: `#2`.
+
+Active branch: `feature/p2-ffcm-ws3-diagnostic-yield`
+
+Governing planning note: `planning/phase-3-diagnostic-ws3-supply-yield.md`.
+
+Goal: replace the synthetic BC mini supply path with a diagnostic, provenance
+tracked ws3/SCANFI/Gauthier lane while keeping raw data and private inputs out
+of the parent repository.
+
+- [x] P3.1 Establish ws3 harvest-output bridge and smoke-run baseline. Child
+  issue: `#3`.
+  - [x] Add normalized ws3-shaped harvest-output fixture.
+  - [x] Add `fresh_fibre.ws3_export` adapter to the `supply_offer` contract.
+  - [x] Add editable local `../ws3` smoke-run bridge.
+  - [x] Add explicit smoke-run crosswalk validation.
+  - [x] Add ws3-smoke LP variant and regression coverage.
+- [x] P3.2 Build and compare BC mini supply variants. Child issue: `#4`.
+  - [x] Add synthetic-vs-ws3 comparison tables.
+  - [x] Add SCANFI diagnostic LP variant outputs to comparison scope.
+  - [x] Add three-way variant run matrix.
+  - [x] Add objective, supply, solution-summary, and pathway-flow comparisons.
+  - [x] Add comparison decision memo.
+- [x] P3.3 Select and fixture SCANFI diagnostic inventory source. Child issue:
+  `#5`.
+  - [x] Select SCANFI v2 2025 subset as first diagnostic inventory source.
+  - [x] Generate lightweight SCANFI subset manifest without raw rasters.
+  - [x] Generate synthetic diagnostic inventory cells tied to SCANFI layer
+    provenance.
+  - [x] Record missing north extrapolation mask status.
+  - [x] Update gap register and replacement planning notes.
+- [x] P3.4 Generate SCANFI diagnostic supply and LP variant. Child issue:
+  `#6`.
+  - [x] Add synthetic diagnostic yield-rule table.
+  - [x] Generate ws3-shaped SCANFI diagnostic harvest output.
+  - [x] Aggregate inventory-cell contributions at supply-node/commodity
+    boundary.
+  - [x] Solve `bc-mini-scanfi-diagnostic` LP variant.
+  - [x] Add provenance and regression tests.
+- [x] P3.5 Define Gauthier yield-policy gate and diagnostic evaluator. Child
+  issue: `#7`.
+  - [x] Install and verify `pdftotext` for Gauthier paper extraction.
+  - [x] Select Gauthier et al. (2015) as primary yield-method reproduction
+    path.
+  - [x] Encode published coniferous/deciduous coefficients and Duan factors.
+  - [x] Generate synthetic diagnostic curve, maturity, and candidate yield-rule
+    outputs.
+  - [x] Record required real-data inputs and access/license gaps.
+  - [x] Add regression tests for the diagnostic evaluator.
+- [ ] P3.6 Close phase with issue, branch, and PR hygiene. Child issue:
+  `#8`.
+  - [x] Create GitHub parent issue for Phase 3.
+  - [x] Create child issues for P3.1 through P3.6.
+  - [x] Update roadmap task lines with issue numbers.
+  - [x] Check child issue checklist items against completed work.
+  - [ ] Push phase branch and open a PR to `main`.
+
+Status: in progress.

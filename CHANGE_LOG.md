@@ -6,6 +6,9 @@
   reproduction path, including a lightweight coefficient table, synthetic
   diagnostic evaluator fixture, candidate yield-rule output, and method input
   gap matrix.
+- Added Phase 3 workflow scaffolding for diagnostic ws3 supply and yield
+  replacement, including a dedicated phase planning note, roadmap task/subtask
+  breakdown, feature-branch name, and GitHub issue hierarchy draft.
 
 ## 2026-06-26
 
