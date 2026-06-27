@@ -12,6 +12,7 @@ from pathlib import Path
 from fresh_fibre import graph
 from fresh_fibre.compare import compare_runs
 from fresh_fibre.contract import assert_contract_ok, validate_contract
+from fresh_fibre.gauthier_yield import build_gauthier_diagnostic_fixture
 from fresh_fibre.lp import build_and_solve
 from fresh_fibre.scanfi_supply import build_scanfi_diagnostic_supply, run_scanfi_diagnostic_variant
 from fresh_fibre.units import UnitValidationError, load_unit_registry
@@ -205,6 +206,46 @@ class BcMiniPrototypeTest(unittest.TestCase):
         self.assertEqual(summary["solver_status"], "Optimal")
         self.assertEqual(summary["diagnostic_quantity_m3"], "104700")
         self.assertEqual(summary["diagnostic_quantity_odt"], "6600")
+
+    def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
+        output_dir = Path(self.tmp.name) / "gauthier-diagnostic"
+
+        result = build_gauthier_diagnostic_fixture(output_dir)
+
+        self.assertEqual(result["coefficient_rows"], 2)
+        self.assertEqual(result["input_rows"], 6)
+        self.assertEqual(result["curve_rows"], 1200)
+        self.assertEqual(result["maturity_rows"], 6)
+        self.assertGreaterEqual(result["productive_rows"], 1)
+
+        coefficients = read_csv(output_dir / "gauthier_2015_coefficients.csv")
+        self.assertEqual({row["species_group"] for row in coefficients}, {"coniferous", "deciduous"})
+        for row in coefficients:
+            for field in ("beta0", "beta1", "beta2", "beta3", "beta4", "beta5", "duan_correction", "r2"):
+                self.assertNotEqual(row[field], "")
+
+        curve_rows = read_csv(output_dir / "gauthier_diagnostic_curve_points.csv")
+        self.assertTrue(all(float(row["scaled_composite_volume_m3_per_ha"]) >= 0 for row in curve_rows))
+        self.assertEqual({row["value_policy"] for row in curve_rows}, {
+            "synthetic_method_reproduction_not_calibrated",
+        })
+
+        maturity_rows = read_csv(output_dir / "gauthier_diagnostic_maturity.csv")
+        self.assertEqual(len(maturity_rows), 6)
+        self.assertTrue(any(row["productive_flag"] == "true" for row in maturity_rows))
+        self.assertTrue(
+            all(
+                row["productive_flag"] != "true" or float(row["maturity_age_years"]) <= 200
+                for row in maturity_rows
+            )
+        )
+
+        candidate_rules = read_csv(output_dir / "gauthier_diagnostic_yield_rules_candidate.csv")
+        self.assertEqual(len(candidate_rules), 6)
+        self.assertEqual({row["replacement_status"] for row in candidate_rules}, {"candidate_not_accepted"})
+        self.assertEqual({row["value_policy"] for row in candidate_rules}, {
+            "synthetic_method_reproduction_not_calibrated",
+        })
 
     @unittest.skipUnless(
         importlib.util.find_spec("ws3") and WS3_SMOKE_MODEL.exists(),

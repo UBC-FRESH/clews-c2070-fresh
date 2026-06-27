@@ -22,3 +22,9 @@ diagnostic assumptions.
 Decision implication: keep the SCANFI path as the preferred diagnostic
 inventory branch, but make the next gate a yield-policy decision rather than a
 solver or network-mechanics decision.
+
+The current primary yield-policy gate is the Gauthier et al. (2015)
+merchantable-volume method reproduction path documented in
+`planning/ws3-yield-policy-decision-gate.md`. The diagnostic Gauthier fixture is
+a method spike only; it does not yet replace the placeholder SCANFI diagnostic
+yield rules.

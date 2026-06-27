@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-06-27
+
+- Added the Gauthier et al. 2015 method as the primary yield-policy
+  reproduction path, including a lightweight coefficient table, synthetic
+  diagnostic evaluator fixture, candidate yield-rule output, and method input
+  gap matrix.
+
 ## 2026-06-26
 
 - Added a tested `fresh_fibre.ws3_export` bridge from normalized ws3

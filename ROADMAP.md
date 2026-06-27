@@ -233,6 +233,8 @@ Metadata surfaces:
   converts inventory cells through the ws3-shaped harvest-output boundary.
 - [x] Add a three-way comparison surface for the synthetic BC mini, ws3-smoke,
   and SCANFI-diagnostic supply variants.
+- [x] Select the Gauthier et al. 2015 method as the primary yield-policy
+  reproduction path and add a diagnostic evaluator fixture.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime
