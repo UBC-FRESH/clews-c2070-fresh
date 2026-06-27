@@ -312,12 +312,12 @@ of the parent repository.
     outputs.
   - [x] Record required real-data inputs and access/license gaps.
   - [x] Add regression tests for the diagnostic evaluator.
-- [ ] P3.6 Close phase with issue, branch, and PR hygiene. Child issue:
+- [x] P3.6 Close phase with issue, branch, and PR hygiene. Child issue:
   `#8`.
   - [x] Create GitHub parent issue for Phase 3.
   - [x] Create child issues for P3.1 through P3.6.
   - [x] Update roadmap task lines with issue numbers.
   - [x] Check child issue checklist items against completed work.
-  - [ ] Push phase branch and open a PR to `main`.
+  - [x] Push phase branch and open a PR to `main` (`#9`).
 
 Status: in progress.

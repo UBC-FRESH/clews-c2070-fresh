@@ -4,8 +4,7 @@
 
 Live issue creation is complete. `gh auth status` succeeded as `gparadis`, and
 the Phase 3 parent and child issue bodies were created from the tracked drafts.
-The remaining workflow items are pushing the phase branch and opening the pull
-request after the branch-local commit is complete.
+The phase branch was pushed and pull request `#9` was opened against `main`.
 
 ## Parent Issue
 
@@ -72,5 +71,5 @@ After issue creation:
 2. Each child issue body now starts with `Parent issue: #2`.
 3. `ROADMAP.md` records the created parent and child issue numbers.
 4. Commit the issue-number backfill.
-5. Push `feature/p2-ffcm-ws3-diagnostic-yield` and open a pull request to
-   `main` after the phase issue checklist is reconciled.
+5. Pushed `feature/p2-ffcm-ws3-diagnostic-yield` and opened pull request `#9`
+   against `main`.
