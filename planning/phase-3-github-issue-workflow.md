@@ -5,6 +5,8 @@
 Live issue creation is complete. `gh auth status` succeeded as `gparadis`, and
 the Phase 3 parent and child issue bodies were created from the tracked drafts.
 The phase branch was pushed and pull request `#9` was opened against `main`.
+Child task issues `#3` through `#8` were closed after their checklists were
+reconciled.
 
 ## Parent Issue
 

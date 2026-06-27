@@ -320,4 +320,4 @@ of the parent repository.
   - [x] Check child issue checklist items against completed work.
   - [x] Push phase branch and open a PR to `main` (`#9`).
 
-Status: in progress.
+Status: in PR review.
