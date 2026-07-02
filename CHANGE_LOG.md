@@ -9,6 +9,13 @@
 - Added repo-root `.venv` bootstrap guidance requiring DataLad and FreshForge
   from the local virtual environment and `git-annex` as an OS-level
   prerequisite.
+- Merged Phase 3 and the CLEWS FreshForge materialization workflow to `main`,
+  closed the Phase 3 parent issue, and opened Phase 4 for real diagnostic
+  SCANFI+Gauthier input materialization.
+- Added the Phase 4 planning note, GitHub issue hierarchy, and
+  `real-diagnostic-input-contract.csv` to define the first tiny real-input gate
+  across SCANFI rasters, Gauthier predictors, NFI validation/access, residue
+  yield, and cost calibration.
 
 ## 2026-06-27
 

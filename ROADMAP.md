@@ -282,6 +282,65 @@ Metadata surfaces:
    residue yield policy, cost calibration, and validation against accepted
    summaries.
 
+## Phase 4: Real Diagnostic SCANFI+Gauthier Input Materialization
+
+GitHub parent issue: `#12`.
+
+Active branch: `feature/p4-real-diagnostic-input-materialization`
+
+Governing planning note:
+`planning/phase-4-real-diagnostic-input-materialization.md`.
+
+Goal: move the SCANFI+Gauthier BC mini diagnostic lane from synthetic
+method-reproduction fixtures toward a tiny, provenance-tracked real-input
+materialization path while preserving the parent-repo data boundary and using
+FreshForge/DataLad workflows for reproducibility.
+
+- [x] P4.1 Define the real diagnostic input contract. Child issue: `#13`.
+  - [x] Define required SCANFI raster fields, spatial sampling keys, and
+    fixture extent.
+  - [x] Define required Gauthier predictor fields.
+  - [x] Define parent-repo metadata outputs versus DataLad submodule payload
+    outputs.
+  - [x] Add a machine-readable input-contract/gate table.
+  - [x] Update gap register and planning note.
+- [ ] P4.2 Add a FreshForge/DataLad materialization plan for the tiny SCANFI
+  fixture. Child issue: `#14`.
+  - [ ] Define lightweight manifest paths under `data/metadata` or
+    `data/manifests`.
+  - [ ] Keep raw raster payloads opt-in and outside the parent repo.
+  - [ ] Add or update FreshForge overlay examples for the tiny diagnostic
+    fixture.
+  - [ ] Document required `CLEWS_EXTERNAL_DATA_ROOT` behavior.
+  - [ ] Add tests or dry-run validation for the workflow metadata.
+- [ ] P4.3 Resolve Gauthier predictor/access gates for the diagnostic fixture.
+  Child issue: `#15`.
+  - [ ] Inventory accepted or candidate sources for NFI reference pixels/plots.
+  - [ ] Select climate predictor source candidates for temperature and
+    precipitation.
+  - [ ] Define conifer/deciduous composition source and aggregation rules.
+  - [ ] Record license/access state for each required predictor source.
+  - [ ] Identify which predictors can be represented by public-safe tiny
+    fixtures.
+- [ ] P4.4 Define residue, cost, and validation policy for production
+  acceptance. Child issue: `#16`.
+  - [ ] Define candidate residue-yield policy paths.
+  - [ ] Define cost-calibration source requirements and placeholder
+    boundaries.
+  - [ ] Define validation benchmarks, including NFI standard reports where
+    license permits.
+  - [ ] Update prototype gap register with production acceptance states.
+  - [ ] Produce a short decision memo for unresolved versus accepted policies.
+- [ ] P4.5 Close the phase with a decision memo and PR hygiene. Child issue:
+  `#17`.
+  - [ ] Reconcile all child issue checklists.
+  - [ ] Add a phase decision memo.
+  - [ ] Update `ROADMAP.md`, `CHANGE_LOG.md`, and GitHub issue comments.
+  - [ ] Run required verification commands.
+  - [ ] Open or update the phase PR and close child issues when complete.
+
+Status: P4.1 complete; P4.2 is the next active implementation task.
+
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 
 GitHub parent issue: `#2`.
