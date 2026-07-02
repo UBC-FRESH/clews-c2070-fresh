@@ -1,0 +1,75 @@
+workflow:
+  id: clews_scanfi_diagnostic_materialization
+  name: CLEWS SCANFI diagnostic materialization workflow
+  description: Initialize data submodule metadata paths for the tiny SCANFI diagnostic fixture.
+nodes:
+  - id: check_toolchain
+    provider: clews.materialization.check_toolchain
+    outputs:
+      toolchain: toolchain
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: check_python_environment
+    provider: clews.materialization.check_python_environment
+    inputs:
+      toolchain: toolchain
+    outputs:
+      python_environment: python_environment
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: install_packages
+    provider: clews.materialization.install_packages
+    inputs:
+      python_environment: python_environment
+    outputs:
+      packages: packages
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: init_submodules
+    provider: clews.materialization.init_submodules
+    inputs:
+      packages: packages
+    outputs:
+      submodules: submodules
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: init_annex
+    provider: clews.materialization.init_annex
+    inputs:
+      submodules: submodules
+    outputs:
+      annex_repository: annex_repository
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: enable_special_remote
+    provider: clews.materialization.enable_special_remote
+    inputs:
+      annex_repository: annex_repository
+    outputs:
+      special_remote: special_remote
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: materialize_paths
+    provider: clews.materialization.materialize_paths
+    inputs:
+      special_remote: special_remote
+    outputs:
+      materialized_paths: materialized_paths
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: audit_annex_availability
+    provider: clews.materialization.audit_annex_availability
+    inputs:
+      materialized_paths: materialized_paths
+    outputs:
+      annex_audit: annex_audit
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+  - id: write_materialization_report
+    provider: clews.materialization.write_materialization_report
+    outputs:
+      materialization_report: materialization_report
+    parameters:
+      overlay: examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml
+    artifacts:
+      report: runtime/freshforge/scanfi_diagnostic_materialization_report.json

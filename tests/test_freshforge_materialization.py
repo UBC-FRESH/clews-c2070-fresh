@@ -22,8 +22,10 @@ except Exception:  # pragma: no cover - exercised only when dependency is absent
 
 
 OVERLAY_PATH = Path("examples/freshforge/materialization_overlay.yaml")
+SCANFI_OVERLAY_PATH = Path("examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml")
 SMOKE_WORKFLOW_PATH = Path("examples/freshforge/materialization_smoke_workflow.yaml")
 DATA_WORKFLOW_PATH = Path("examples/freshforge/data_materialization_workflow.yaml")
+SCANFI_WORKFLOW_PATH = Path("examples/freshforge/scanfi_diagnostic_materialization_workflow.yaml")
 COMMAND_NODE_TYPES = (
     "check_toolchain",
     "check_python_environment",
@@ -149,6 +151,23 @@ class FreshForgeMaterializationTest(unittest.TestCase):
         self.assertEqual(overlay.special_remote, "arbutus-s3")
         self.assertEqual(overlay.materialization_paths, (Path("metadata"), Path("manifests")))
         self.assertEqual(overlay.audit_paths, (Path("metadata"), Path("manifests")))
+
+    def test_overlay_parser_accepts_scanfi_diagnostic_fixture(self) -> None:
+        overlay, diagnostics = load_materialization_overlay(SCANFI_OVERLAY_PATH)
+
+        self.assertEqual(diagnostics, ())
+        self.assertIsNotNone(overlay)
+        assert overlay is not None
+        self.assertTrue(overlay.annex_enabled)
+        self.assertEqual(overlay.instance_root, Path("data"))
+        self.assertEqual(
+            overlay.materialization_paths,
+            (Path("metadata/scanfi-diagnostic"), Path("manifests/scanfi-diagnostic")),
+        )
+        self.assertEqual(
+            overlay.report_path,
+            Path("runtime/freshforge/scanfi_diagnostic_materialization_report.json"),
+        )
 
     def test_overlay_parser_accepts_plain_git_overlay_without_special_remote(
         self,
@@ -338,6 +357,57 @@ class FreshForgeMaterializationTest(unittest.TestCase):
 
                 self.assertEqual(commands, expected_commands)
 
+    def test_scanfi_diagnostic_materialization_commands_match_contract(self) -> None:
+        from freshforge.execution import RunContext
+
+        expected = {
+            "materialize_paths": [
+                (".venv/bin/datalad", "get", "-r", "data/metadata/scanfi-diagnostic"),
+                (".venv/bin/datalad", "get", "-r", "data/manifests/scanfi-diagnostic"),
+            ],
+            "audit_annex_availability": [
+                (
+                    "git",
+                    "-C",
+                    "data",
+                    "annex",
+                    "find",
+                    "--not",
+                    "--in",
+                    "arbutus-s3",
+                    "--",
+                    "metadata/scanfi-diagnostic",
+                ),
+                (
+                    "git",
+                    "-C",
+                    "data",
+                    "annex",
+                    "find",
+                    "--not",
+                    "--in",
+                    "arbutus-s3",
+                    "--",
+                    "manifests/scanfi-diagnostic",
+                ),
+            ],
+        }
+        for node_type_id, expected_commands in expected.items():
+            with self.subTest(node_type_id=node_type_id):
+                commands: list[tuple[str, ...]] = []
+                provider = ClewsMaterializationProvider(
+                    command_runner=_successful_runner(commands)
+                )
+                node = _workflow_node(node_type_id, overlay=str(SCANFI_OVERLAY_PATH))
+
+                provider.run_node(
+                    node,
+                    _node_type(provider, node_type_id),
+                    context=RunContext(workflow_id="wf", workdir=Path("/tmp")),
+                )
+
+                self.assertEqual(commands, expected_commands)
+
     def test_annex_audit_stdout_is_failure_even_with_zero_returncode(self) -> None:
         from freshforge.execution import RunContext
         from freshforge.records import RunStatus
@@ -488,7 +558,7 @@ class FreshForgeMaterializationTest(unittest.TestCase):
         from freshforge.planning import create_run_plan
         from freshforge.validation import validate_workflow_with_providers
 
-        for workflow_path in (SMOKE_WORKFLOW_PATH, DATA_WORKFLOW_PATH):
+        for workflow_path in (SMOKE_WORKFLOW_PATH, DATA_WORKFLOW_PATH, SCANFI_WORKFLOW_PATH):
             with self.subTest(workflow_path=workflow_path):
                 spec, diagnostics = load_workflow(workflow_path)
                 self.assertIsNotNone(spec)

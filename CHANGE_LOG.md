@@ -9,6 +9,27 @@
 - Added repo-root `.venv` bootstrap guidance requiring DataLad and FreshForge
   from the local virtual environment and `git-annex` as an OS-level
   prerequisite.
+- Merged Phase 3 and the CLEWS FreshForge materialization workflow to `main`,
+  closed the Phase 3 parent issue, and opened Phase 4 for real diagnostic
+  SCANFI+Gauthier input materialization.
+- Added the Phase 4 planning note, GitHub issue hierarchy, and
+  `real-diagnostic-input-contract.csv` to define the first tiny real-input gate
+  across SCANFI rasters, Gauthier predictors, NFI validation/access, residue
+  yield, and cost calibration.
+- Added a Phase 4 SCANFI diagnostic FreshForge materialization overlay and
+  workflow targeting only `data/metadata/scanfi-diagnostic` and
+  `data/manifests/scanfi-diagnostic`, with tests and docs confirming raw
+  SCANFI rasters remain opt-in.
+- Added `gauthier-predictor-access-gates.csv` to distinguish accepted
+  diagnostic predictors from open access, license, climate, species
+  composition, measured-volume, and NFI reference-pixel gates.
+- Added `residue-cost-validation-policy-gates.csv` to keep logging residue,
+  mill residue, cost calibration, market prices, and validation benchmarks as
+  explicit production-acceptance gates rather than implicit diagnostic
+  assumptions.
+- Added the Phase 4 decision memo and completed the Phase 4 roadmap task
+  checklist, recommending a follow-on tiny real-sampling implementation phase
+  that keeps raw rasters and private data in the DataLad boundary.
 
 ## 2026-06-27
 
