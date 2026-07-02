@@ -237,7 +237,9 @@ Metadata surfaces:
   reproduction path and add a diagnostic evaluator fixture.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
   inventory/yield inputs, beginning with SCANFI diagnostic inventory plus
-  Gauthier diagnostic log-yield rules.
+  Gauthier diagnostic log-yield rules. Diagnostic log-yield replacement is now
+  implemented; production acceptance remains blocked by residue policy, real
+  raster sampling, NFI/climate input access, and validation.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime
   output, normalized adapter output, and downstream LP input.
 
@@ -261,6 +263,11 @@ Metadata surfaces:
    `planning/ffcm-archive-analysis.md`: preserve the Ghafghazi et al. 2017
    paper as the architectural overview, then work inward through FCM configs,
    generated LP artifacts, and the CIRRELT network-flow reports.
+6. For Phase 3, the SCANFI+Gauthier diagnostic lane now replaces log-yield
+   placeholders in a runnable BC mini variant. The next model-development gate
+   is production yield policy: real raster sampling, NFI/climate input access,
+   residue yield policy, cost calibration, and validation against accepted
+   summaries.
 
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 
@@ -320,16 +327,17 @@ of the parent repository.
   - [x] Update roadmap task lines with issue numbers.
   - [x] Check child issue checklist items against completed work.
   - [x] Push phase branch and open a PR to `main` (`#9`).
-- [ ] P3.7 Gauthier-to-SCANFI diagnostic yield integration. Child issue:
+- [x] P3.7 Gauthier-to-SCANFI diagnostic yield integration. Child issue:
   `#11`.
-  - [ ] Update CLEWS agent workflow notes to match UBC-FRESH
+  - [x] Update CLEWS agent workflow notes to match UBC-FRESH
     roadmap/issue/branch discipline.
-  - [ ] Add a Gauthier-to-SCANFI yield-rule adapter.
-  - [ ] Add the `bc-mini-scanfi-gauthier-diagnostic` solved variant.
-  - [ ] Extend BC mini variant comparison outputs from three lanes to four
+  - [x] Add a Gauthier-to-SCANFI yield-rule adapter.
+  - [x] Add the `bc-mini-scanfi-gauthier-diagnostic` solved variant.
+  - [x] Extend BC mini variant comparison outputs from three lanes to four
     lanes.
-  - [ ] Update roadmap, planning, gap register, changelog, parent issue, and
+  - [x] Update roadmap, planning, gap register, changelog, parent issue, and
     PR `#9`.
-  - [ ] Add regression tests and run verification commands.
+  - [x] Add regression tests and run verification commands.
 
-Status: extended before PR merge for P3.7 diagnostic yield integration.
+Status: P3.7 implementation complete; PR `#9` needs final review/merge before
+closing parent issue `#2`.

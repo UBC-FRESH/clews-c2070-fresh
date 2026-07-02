@@ -9,6 +9,13 @@
 - Added Phase 3 workflow scaffolding for diagnostic ws3 supply and yield
   replacement, including a dedicated phase planning note, roadmap task/subtask
   breakdown, feature-branch name, and GitHub issue hierarchy draft.
+- Added P3.7 as a Phase 3 continuation, tightened CLEWS agent workflow notes
+  around the UBC-FRESH roadmap/issue/branch pattern, and created child issue
+  `#11` under parent issue `#2`.
+- Added a SCANFI-compatible Gauthier yield-rule adapter, the
+  `bc-mini-scanfi-gauthier-diagnostic` solved LP variant, and a four-lane BC
+  mini comparison that preserves the existing LP contract while replacing log
+  yield placeholders with diagnostic Gauthier method-reproduction values.
 
 ## 2026-06-26
 

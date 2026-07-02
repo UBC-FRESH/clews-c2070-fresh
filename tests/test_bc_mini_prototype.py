@@ -14,7 +14,14 @@ from fresh_fibre.compare import compare_runs
 from fresh_fibre.contract import assert_contract_ok, validate_contract
 from fresh_fibre.gauthier_yield import build_gauthier_diagnostic_fixture
 from fresh_fibre.lp import build_and_solve
-from fresh_fibre.scanfi_supply import build_scanfi_diagnostic_supply, run_scanfi_diagnostic_variant
+from fresh_fibre.scanfi_supply import (
+    GAUTHIER_VALUE_POLICY,
+    RESIDUE_VALUE_POLICY,
+    build_gauthier_scanfi_yield_rules,
+    build_scanfi_diagnostic_supply,
+    run_scanfi_diagnostic_variant,
+    run_scanfi_gauthier_diagnostic_variant,
+)
 from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
 from fresh_fibre.variant_compare import compare_three_way
@@ -26,6 +33,7 @@ from fresh_fibre.ws3_variant import run_ws3_smoke_variant
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
 SCANFI_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic"
+GAUTHIER_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/gauthier-diagnostic"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -207,6 +215,78 @@ class BcMiniPrototypeTest(unittest.TestCase):
         self.assertEqual(summary["diagnostic_quantity_m3"], "104700")
         self.assertEqual(summary["diagnostic_quantity_odt"], "6600")
 
+    def test_gauthier_scanfi_adapter_replaces_only_log_yields(self) -> None:
+        scanfi_dir = Path(self.tmp.name) / "scanfi-diagnostic"
+        gauthier_dir = Path(self.tmp.name) / "gauthier-diagnostic"
+        shutil.copytree(SCANFI_FIXTURE_DIR, scanfi_dir)
+        shutil.copytree(GAUTHIER_FIXTURE_DIR, gauthier_dir)
+        output_path = scanfi_dir / "gauthier_diagnostic_yield_rules.csv"
+
+        rows = build_gauthier_scanfi_yield_rules(
+            placeholder_rules_path=scanfi_dir / "diagnostic_yield_rules.csv",
+            gauthier_candidate_rules_path=gauthier_dir / "gauthier_diagnostic_yield_rules_candidate.csv",
+            output_path=output_path,
+        )
+
+        self.assertEqual(len(rows), 6)
+        self.assertEqual(read_csv(output_path), [{key: str(value) for key, value in row.items()} for row in rows])
+        log_rows = [row for row in rows if row["commodity_id"] == "log"]
+        residue_rows = [row for row in rows if row["commodity_id"] == "logging_residue"]
+        self.assertEqual(len(log_rows), 5)
+        self.assertEqual(len(residue_rows), 1)
+        self.assertEqual({row["value_policy"] for row in log_rows}, {GAUTHIER_VALUE_POLICY})
+        self.assertEqual({row["value_policy"] for row in residue_rows}, {RESIDUE_VALUE_POLICY})
+        self.assertEqual(residue_rows[0]["period_available_quantity_per_ha"], "0.55")
+        self.assertEqual(
+            {row["period_available_quantity_per_ha"] for row in log_rows},
+            {"1.612903", "2", "1.25", "1.204819", "0.598802"},
+        )
+
+    def test_scanfi_gauthier_diagnostic_lp_variant_solves_with_log_yield_replacement(self) -> None:
+        scanfi_dir = Path(self.tmp.name) / "scanfi-diagnostic"
+        gauthier_dir = Path(self.tmp.name) / "gauthier-diagnostic"
+        variant_dir = Path(self.tmp.name) / "bc-mini-scanfi-gauthier-diagnostic"
+        shutil.copytree(SCANFI_FIXTURE_DIR, scanfi_dir)
+        shutil.copytree(GAUTHIER_FIXTURE_DIR, gauthier_dir)
+
+        result = run_scanfi_gauthier_diagnostic_variant(
+            self.input_dir,
+            scanfi_dir,
+            gauthier_dir,
+            variant_dir,
+        )
+
+        self.assertEqual(result["status"], "Optimal")
+        self.assertAlmostEqual(float(result["objective_value"]), 6562205.49236, places=5)
+        self.assertEqual(result["graph_nodes"], 37)
+        self.assertEqual(result["graph_arcs"], 45)
+        self.assertEqual(result["variables"], 28)
+        self.assertEqual(result["constraints"], 43)
+        self.assertEqual(result["solution_flows"], 24)
+        self.assertEqual(result["harvest_output_rows"], 4)
+
+        supply_rows = read_csv(variant_dir / "supply_offer.csv")
+        harvest_rows = read_csv(variant_dir / "ws3_harvest_output.csv")
+        summary_rows = read_csv(variant_dir / "generated" / "scanfi_gauthier_diagnostic_variant_summary.csv")
+        summary = {row["metric"]: row["value"] for row in summary_rows}
+        self.assertEqual(len(supply_rows), 4)
+        self.assertEqual(summary["solver_status"], "Optimal")
+        self.assertEqual(summary["diagnostic_quantity_m3"], "222824.665")
+        self.assertEqual(summary["diagnostic_quantity_odt"], "6600")
+        self.assertEqual({row["grade"] for row in harvest_rows}, {"scanfi_gauthier_diagnostic"})
+        yield_policies = {
+            policy
+            for row in harvest_rows
+            for policy in row["yield_value_policy"].split("; ")
+        }
+        self.assertEqual(yield_policies, {GAUTHIER_VALUE_POLICY, RESIDUE_VALUE_POLICY})
+        for filename in ("solution_flow.csv", "solution_summary.csv"):
+            rows = read_csv(variant_dir / "generated" / filename)
+            self.assertTrue(rows)
+            for row in rows:
+                if "quantity" in row and row["quantity"]:
+                    self.assertGreaterEqual(float(row["quantity"]), 0.0)
+
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"
 
@@ -371,6 +451,7 @@ class BcMiniPrototypeTest(unittest.TestCase):
     def test_three_way_variant_comparison_reports_decision_tables(self) -> None:
         ws3_variant_dir = Path(self.tmp.name) / "bc-mini-ws3-smoke"
         scanfi_variant_dir = Path(self.tmp.name) / "bc-mini-scanfi-diagnostic"
+        scanfi_gauthier_variant_dir = Path(self.tmp.name) / "bc-mini-scanfi-gauthier-diagnostic"
         output_dir = Path(self.tmp.name) / "three-way"
 
         result = compare_three_way(
@@ -378,31 +459,59 @@ class BcMiniPrototypeTest(unittest.TestCase):
             ws3_variant_dir,
             scanfi_variant_dir,
             output_dir,
+            scanfi_gauthier_variant_dir=scanfi_gauthier_variant_dir,
         )
 
-        self.assertEqual(result["variant_rows"], 3)
+        self.assertEqual(result["variant_rows"], 4)
         self.assertEqual(result["objective_rows"], 5)
         self.assertEqual(result["supply_rows"], 2)
         self.assertEqual(result["summary_rows"], 10)
-        self.assertEqual(result["flow_rows"], 24)
+        self.assertEqual(result["flow_rows"], 25)
 
         matrix = {row["variant_id"]: row for row in read_csv(output_dir / "variant_run_matrix.csv")}
+        self.assertEqual(
+            set(matrix),
+            {
+                "synthetic_bc_mini",
+                "ws3_smoke",
+                "scanfi_diagnostic",
+                "scanfi_gauthier_diagnostic",
+            },
+        )
         self.assertEqual({row["solver_status"] for row in matrix.values()}, {"Optimal"})
         self.assertEqual(matrix["synthetic_bc_mini"]["graph_nodes"], "37")
         self.assertEqual(matrix["ws3_smoke"]["graph_nodes"], "32")
         self.assertEqual(matrix["scanfi_diagnostic"]["graph_nodes"], "37")
+        self.assertEqual(matrix["scanfi_gauthier_diagnostic"]["graph_nodes"], "37")
 
         objectives = {row["metric_id"]: row for row in read_csv(output_dir / "variant_objective_comparison.csv")}
         self.assertAlmostEqual(float(objectives["objective_value"]["synthetic_bc_mini"]), 6140832.0)
         self.assertAlmostEqual(float(objectives["objective_value"]["ws3_smoke"]), 75520.15192, places=5)
         self.assertAlmostEqual(float(objectives["objective_value"]["scanfi_diagnostic"]), 5795998.91275, places=5)
+        self.assertAlmostEqual(
+            float(objectives["objective_value"]["scanfi_gauthier_diagnostic"]),
+            6562205.49236,
+            places=5,
+        )
 
         supply = {
             (row["commodity_id"], row["quantity_unit"]): row
             for row in read_csv(output_dir / "variant_supply_comparison.csv")
         }
         self.assertAlmostEqual(float(supply[("log", "m3")]["scanfi_diagnostic_quantity"]), 104700.0)
+        self.assertAlmostEqual(
+            float(supply[("log", "m3")]["scanfi_gauthier_diagnostic_quantity"]),
+            222824.665,
+        )
+        self.assertAlmostEqual(
+            float(supply[("log", "m3")]["scanfi_gauthier_delta_vs_scanfi"]),
+            118124.665,
+        )
         self.assertAlmostEqual(float(supply[("logging_residue", "odt")]["scanfi_diagnostic_quantity"]), 6600.0)
+        self.assertAlmostEqual(
+            float(supply[("logging_residue", "odt")]["scanfi_gauthier_diagnostic_quantity"]),
+            6600.0,
+        )
         self.assertTrue((output_dir / "decision_memo.md").exists())
 
     def test_unit_registry_rejects_cross_dimension_conversion(self) -> None:

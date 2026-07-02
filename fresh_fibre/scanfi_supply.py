@@ -15,13 +15,28 @@ from fresh_fibre.ws3_export import WS3_HARVEST_FIELDNAMES, export_supply_offer
 
 DEFAULT_BASE_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-mini")
 DEFAULT_SCANFI_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic")
+DEFAULT_GAUTHIER_INPUT_DIR = Path("metadata/ffcm-archive/prototype-inputs/gauthier-diagnostic")
 DEFAULT_INVENTORY_PATH = DEFAULT_SCANFI_INPUT_DIR / "diagnostic_inventory_cells.csv"
 DEFAULT_YIELD_RULES_PATH = DEFAULT_SCANFI_INPUT_DIR / "diagnostic_yield_rules.csv"
+DEFAULT_GAUTHIER_CANDIDATE_RULES_PATH = (
+    DEFAULT_GAUTHIER_INPUT_DIR / "gauthier_diagnostic_yield_rules_candidate.csv"
+)
+DEFAULT_SCANFI_GAUTHIER_YIELD_RULES_PATH = (
+    DEFAULT_SCANFI_INPUT_DIR / "gauthier_diagnostic_yield_rules.csv"
+)
 DEFAULT_VARIANT_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-diagnostic")
+DEFAULT_GAUTHIER_VARIANT_DIR = Path(
+    "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-gauthier-diagnostic"
+)
 VARIANT_RUN_ID = "bc_mini_scanfi_diagnostic_lp_001"
+GAUTHIER_VARIANT_RUN_ID = "bc_mini_scanfi_gauthier_diagnostic_lp_001"
 WS3_RUN_ID = "scanfi_diagnostic_supply_001"
+GAUTHIER_WS3_RUN_ID = "scanfi_gauthier_diagnostic_supply_001"
 SOURCE_MODEL = "scanfi_v2_2025_diagnostic_inventory_fixture"
+GAUTHIER_SOURCE_MODEL = "scanfi_v2_2025_inventory_gauthier_2015_yield_diagnostic"
 VALUE_POLICY = "synthetic_placeholder_yield_not_calibrated"
+GAUTHIER_VALUE_POLICY = "gauthier_2015_method_reproduction_diagnostic_not_calibrated"
+RESIDUE_VALUE_POLICY = "synthetic_placeholder_residue_policy_unresolved"
 
 YIELD_RULE_COLUMNS = [
     "yield_rule_id",
@@ -200,6 +215,86 @@ def validate_yield_rules(rows: list[dict[str, object]]) -> None:
             raise ValueError(f"Unexpected yield value policy for region {region}")
 
 
+def validate_yield_rules_for_policy(
+    rows: list[dict[str, object]],
+    allowed_value_policies: set[str],
+) -> None:
+    seen_regions: set[str] = set()
+    for row in rows:
+        region = str(row["diagnostic_region"])
+        if region in seen_regions:
+            raise ValueError(f"Duplicate diagnostic yield rule for region {region}")
+        seen_regions.add(region)
+        if number(row["period_available_quantity_per_ha"]) < 0:
+            raise ValueError(f"Negative yield for region {region}")
+        if number(row["supply_cost"]) < 0:
+            raise ValueError(f"Negative supply cost for region {region}")
+        if str(row["value_policy"]) not in allowed_value_policies:
+            raise ValueError(f"Unexpected yield value policy for region {region}: {row['value_policy']}")
+
+
+def build_gauthier_scanfi_yield_rules(
+    placeholder_rules_path: Path = DEFAULT_YIELD_RULES_PATH,
+    gauthier_candidate_rules_path: Path = DEFAULT_GAUTHIER_CANDIDATE_RULES_PATH,
+    output_path: Path = DEFAULT_SCANFI_GAUTHIER_YIELD_RULES_PATH,
+) -> list[dict[str, object]]:
+    placeholder_rows = read_rows(placeholder_rules_path)
+    require_columns(placeholder_rules_path, placeholder_rows, set(YIELD_RULE_COLUMNS))
+    validate_yield_rules(placeholder_rows)
+
+    candidate_rows = read_rows(gauthier_candidate_rules_path)
+    require_columns(
+        gauthier_candidate_rules_path,
+        candidate_rows,
+        {
+            "yield_rule_id",
+            "diagnostic_region",
+            "commodity_id",
+            "quantity_unit",
+            "period_available_quantity_per_ha",
+            "source_method",
+            "value_policy",
+            "replacement_status",
+            "notes",
+        },
+    )
+    candidates_by_region = {
+        row["diagnostic_region"]: row
+        for row in candidate_rows
+        if row["commodity_id"] == "log" and row["quantity_unit"] == "m3"
+    }
+
+    adapted_rows: list[dict[str, object]] = []
+    for row in placeholder_rows:
+        adapted = dict(row)
+        region = row["diagnostic_region"]
+        if row["commodity_id"] == "log":
+            if region not in candidates_by_region:
+                raise ValueError(f"Missing Gauthier diagnostic candidate rule for log region {region}")
+            candidate = candidates_by_region[region]
+            adapted["yield_rule_id"] = candidate["yield_rule_id"]
+            adapted["period_available_quantity_per_ha"] = candidate[
+                "period_available_quantity_per_ha"
+            ]
+            adapted["value_policy"] = GAUTHIER_VALUE_POLICY
+            adapted["notes"] = (
+                "Gauthier et al. 2015 diagnostic method-reproduction log yield; "
+                "cost and assortment fields preserved from the SCANFI placeholder "
+                "diagnostic rule; not calibrated production yield."
+            )
+        else:
+            adapted["value_policy"] = RESIDUE_VALUE_POLICY
+            adapted["notes"] = (
+                "Residue yield remains the SCANFI diagnostic placeholder pending "
+                "an accepted residue policy; do not interpret as calibrated supply."
+            )
+        adapted_rows.append(adapted)
+
+    validate_yield_rules_for_policy(adapted_rows, {GAUTHIER_VALUE_POLICY, RESIDUE_VALUE_POLICY})
+    write_rows(output_path, YIELD_RULE_COLUMNS, adapted_rows)
+    return adapted_rows
+
+
 def validate_inventory_references(rows: list[dict[str, str]], input_dir: Path) -> None:
     spatial_unit_ids = {row["spatial_unit_id"] for row in read_rows(input_dir / "spatial_unit.csv")}
     supply_node_ids = {
@@ -224,14 +319,20 @@ def build_harvest_rows(
     inventory_path: Path,
     yield_rules_path: Path,
     input_dir: Path,
+    ws3_run_id: str = WS3_RUN_ID,
+    source_model: str = SOURCE_MODEL,
+    grade: str = "scanfi_diagnostic",
+    allowed_yield_policies: set[str] | None = None,
 ) -> list[dict[str, object]]:
+    if allowed_yield_policies is None:
+        allowed_yield_policies = {VALUE_POLICY}
     inventory_rows = read_rows(inventory_path)
     require_columns(inventory_path, inventory_rows, REQUIRED_INVENTORY_COLUMNS)
     validate_inventory_references(inventory_rows, input_dir)
 
     yield_rows = read_rows(yield_rules_path)
     require_columns(yield_rules_path, yield_rows, set(YIELD_RULE_COLUMNS))
-    validate_yield_rules(yield_rows)
+    validate_yield_rules_for_policy(yield_rows, allowed_yield_policies)
     rules_by_region = {row["diagnostic_region"]: row for row in yield_rows}
 
     cell_rows: list[dict[str, object]] = []
@@ -246,7 +347,7 @@ def build_harvest_rows(
         record_id = cell["inventory_cell_id"]
         cell_rows.append(
             {
-                "ws3_run_id": WS3_RUN_ID,
+                "ws3_run_id": ws3_run_id,
                 "scenario_id": "bc_mini_001",
                 "period": cell["period"],
                 "spatial_unit_id": cell["spatial_unit_id"],
@@ -258,14 +359,14 @@ def build_harvest_rows(
                 "supply_cost_unit": rule["supply_cost_unit"],
                 "species_group": rule["species_group"],
                 "assortment_class": rule["assortment_class"],
-                "grade": "scanfi_diagnostic",
+                "grade": grade,
                 "moisture_basis": rule["moisture_basis"],
                 "carbon_factor": "",
                 "harvest_action_id": f"scanfi_diag_harvest_{index:03d}",
                 "roadside_cost": rule["roadside_cost"],
                 "delivered_cost_proxy": rule["delivered_cost_proxy"],
-                "source_model": SOURCE_MODEL,
-                "source_record_id": f"{WS3_RUN_ID}:{record_id}",
+                "source_model": source_model,
+                "source_record_id": f"{ws3_run_id}:{record_id}",
                 "notes": (
                     "Synthetic SCANFI diagnostic supply row; quantity is "
                     "representative_area_ha times period_available_quantity_per_ha; "
@@ -287,12 +388,17 @@ def build_harvest_rows(
                 "age_source_file": cell["age_source_file"],
             }
         )
-    harvest_rows = aggregate_cell_rows_for_lp(cell_rows)
-    validate_harvest_rows(harvest_rows)
+    harvest_rows = aggregate_cell_rows_for_lp(cell_rows, ws3_run_id, source_model, grade)
+    validate_harvest_rows(harvest_rows, allowed_yield_policies)
     return harvest_rows
 
 
-def aggregate_cell_rows_for_lp(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def aggregate_cell_rows_for_lp(
+    rows: list[dict[str, object]],
+    ws3_run_id: str = WS3_RUN_ID,
+    source_model: str = SOURCE_MODEL,
+    grade: str = "scanfi_diagnostic",
+) -> list[dict[str, object]]:
     grouped: dict[tuple[str, str, str, str, str, str], list[dict[str, object]]] = {}
     for row in rows:
         key = (
@@ -322,7 +428,7 @@ def aggregate_cell_rows_for_lp(rows: list[dict[str, object]]) -> list[dict[str, 
         first = group[0]
         aggregated_rows.append(
             {
-                "ws3_run_id": WS3_RUN_ID,
+                "ws3_run_id": ws3_run_id,
                 "scenario_id": scenario_id,
                 "period": period,
                 "spatial_unit_id": spatial_unit_id,
@@ -334,14 +440,14 @@ def aggregate_cell_rows_for_lp(rows: list[dict[str, object]]) -> list[dict[str, 
                 "supply_cost_unit": first["supply_cost_unit"],
                 "species_group": unique_join("species_group"),
                 "assortment_class": unique_join("assortment_class"),
-                "grade": "scanfi_diagnostic",
+                "grade": grade,
                 "moisture_basis": unique_join("moisture_basis"),
                 "carbon_factor": "",
                 "harvest_action_id": f"scanfi_diag_supply_{index:03d}",
                 "roadside_cost": weighted_average("roadside_cost"),
                 "delivered_cost_proxy": weighted_average("delivered_cost_proxy"),
-                "source_model": SOURCE_MODEL,
-                "source_record_id": f"{WS3_RUN_ID}:{supply_node_id}:{commodity_id}",
+                "source_model": source_model,
+                "source_record_id": f"{ws3_run_id}:{supply_node_id}:{commodity_id}",
                 "notes": (
                     "Aggregated synthetic SCANFI diagnostic supply row for LP handoff; "
                     "cell-level provenance remains in diagnostic_inventory_cells.csv."
@@ -365,7 +471,12 @@ def aggregate_cell_rows_for_lp(rows: list[dict[str, object]]) -> list[dict[str, 
     return aggregated_rows
 
 
-def validate_harvest_rows(rows: list[dict[str, object]]) -> None:
+def validate_harvest_rows(
+    rows: list[dict[str, object]],
+    allowed_yield_policies: set[str] | None = None,
+) -> None:
+    if allowed_yield_policies is None:
+        allowed_yield_policies = {VALUE_POLICY}
     seen_record_ids: set[str] = set()
     for row in rows:
         record_id = str(row["source_record_id"])
@@ -378,7 +489,7 @@ def validate_harvest_rows(rows: list[dict[str, object]]) -> None:
         if inventory_policies != {"synthetic_proxy_not_sampled_from_raster"}:
             raise ValueError(f"Unexpected inventory value policy for {record_id}")
         yield_policies = set(str(row["yield_value_policy"]).split("; "))
-        if yield_policies != {VALUE_POLICY}:
+        if not yield_policies.issubset(allowed_yield_policies):
             raise ValueError(f"Unexpected yield value policy for {record_id}")
 
 
@@ -419,6 +530,26 @@ def update_run_provenance(variant_dir: Path, scanfi_input_dir: Path) -> None:
     write_rows(path, list(row.keys()), rows)
 
 
+def update_gauthier_run_provenance(variant_dir: Path, scanfi_input_dir: Path) -> None:
+    path = variant_dir / "run_provenance.csv"
+    rows = read_rows(path)
+    if len(rows) != 1:
+        raise ValueError(f"Expected one run_provenance row in {path}, found {len(rows)}")
+    row = rows[0]
+    row["run_id"] = GAUTHIER_VARIANT_RUN_ID
+    row["ws3_run_id"] = GAUTHIER_WS3_RUN_ID
+    row["lp_run_id"] = GAUTHIER_VARIANT_RUN_ID
+    row["data_version"] = "diagnostic_scanfi_inventory_gauthier_2015_yield"
+    row["source_manifest_ref"] = str(scanfi_input_dir / "scanfi_v2_2025_diagnostic_subset_manifest.csv")
+    row["notes"] = (
+        "Diagnostic variant replacing the synthetic BC mini supply_offer table "
+        "with SCANFI-provenance inventory-cell supply rows and Gauthier et al. "
+        "2015 diagnostic method-reproduction log yield rules; residue yield "
+        "and costs remain diagnostic placeholders."
+    )
+    write_rows(path, list(row.keys()), rows)
+
+
 def write_variant_readme(variant_dir: Path) -> None:
     text = """# BC Mini-Network SCANFI Diagnostic Variant
 
@@ -432,6 +563,23 @@ The variant is diagnostic only. It proves that accepted SCANFI inventory
 provenance can flow into the existing ws3-shaped harvest-output boundary and
 downstream LP path, but the yield rules, quantities, and costs are not
 calibrated production assumptions.
+"""
+    (variant_dir / "README.md").write_text(text, encoding="utf-8")
+
+
+def write_gauthier_variant_readme(variant_dir: Path) -> None:
+    text = """# BC Mini-Network SCANFI + Gauthier Diagnostic Variant
+
+This directory is generated by `fresh_fibre.scanfi_supply` from the base
+`bc-mini` fixture. It replaces `supply_offer.csv` with supply rows generated
+from the lightweight SCANFI diagnostic inventory cells and Gauthier et al.
+(2015) diagnostic method-reproduction log yield rules while keeping downstream
+BC mini network, technology, transport, and market tables unchanged.
+
+The variant is diagnostic only. Log yield quantities are no longer the original
+SCANFI placeholder values, but they still come from synthetic method-
+reproduction inputs rather than calibrated production data. Logging-residue
+yield and cost fields remain unresolved diagnostic placeholders.
 """
     (variant_dir / "README.md").write_text(text, encoding="utf-8")
 
@@ -556,6 +704,31 @@ def write_variant_summary(
     write_rows(variant_dir / "generated" / "scanfi_diagnostic_variant_summary.csv", VARIANT_SUMMARY_COLUMNS, summary_rows)
 
 
+def write_gauthier_variant_summary(
+    variant_dir: Path,
+    harvest_rows: list[dict[str, object]],
+    lp_result: dict[str, object],
+    node_count: int,
+    arc_count: int,
+    contract_rows: list[dict[str, object]],
+) -> None:
+    write_variant_summary(variant_dir, harvest_rows, lp_result, node_count, arc_count, contract_rows)
+    source = variant_dir / "generated" / "scanfi_diagnostic_variant_summary.csv"
+    target = variant_dir / "generated" / "scanfi_gauthier_diagnostic_variant_summary.csv"
+    rows = read_rows(source)
+    for row in rows:
+        if row["metric"] == "variant_run_id":
+            row["value"] = GAUTHIER_VARIANT_RUN_ID
+        elif row["metric"] == "ws3_run_id":
+            row["value"] = GAUTHIER_WS3_RUN_ID
+        elif row["metric"] == "diagnostic_quantity_m3":
+            row["notes"] = "Diagnostic log quantity generated by Gauthier method-reproduction yield rules."
+        elif row["metric"] == "diagnostic_quantity_odt":
+            row["notes"] = "Diagnostic logging residue quantity remains unresolved placeholder policy."
+    write_rows(target, VARIANT_SUMMARY_COLUMNS, rows)
+    source.unlink()
+
+
 def run_scanfi_diagnostic_variant(
     base_input_dir: Path = DEFAULT_BASE_INPUT_DIR,
     scanfi_input_dir: Path = DEFAULT_SCANFI_INPUT_DIR,
@@ -596,6 +769,56 @@ def run_scanfi_diagnostic_variant(
     }
 
 
+def run_scanfi_gauthier_diagnostic_variant(
+    base_input_dir: Path = DEFAULT_BASE_INPUT_DIR,
+    scanfi_input_dir: Path = DEFAULT_SCANFI_INPUT_DIR,
+    gauthier_input_dir: Path = DEFAULT_GAUTHIER_INPUT_DIR,
+    variant_dir: Path = DEFAULT_GAUTHIER_VARIANT_DIR,
+) -> dict[str, object]:
+    copy_fixture(base_input_dir, variant_dir)
+    gauthier_rules_path = scanfi_input_dir / "gauthier_diagnostic_yield_rules.csv"
+    build_gauthier_scanfi_yield_rules(
+        placeholder_rules_path=scanfi_input_dir / "diagnostic_yield_rules.csv",
+        gauthier_candidate_rules_path=gauthier_input_dir / "gauthier_diagnostic_yield_rules_candidate.csv",
+        output_path=gauthier_rules_path,
+    )
+    harvest_output_path = variant_dir / "ws3_harvest_output.csv"
+    harvest_rows = build_harvest_rows(
+        inventory_path=scanfi_input_dir / "diagnostic_inventory_cells.csv",
+        yield_rules_path=gauthier_rules_path,
+        input_dir=variant_dir,
+        ws3_run_id=GAUTHIER_WS3_RUN_ID,
+        source_model=GAUTHIER_SOURCE_MODEL,
+        grade="scanfi_gauthier_diagnostic",
+        allowed_yield_policies={GAUTHIER_VALUE_POLICY, RESIDUE_VALUE_POLICY},
+    )
+    write_rows(harvest_output_path, SCANFI_HARVEST_FIELDNAMES, harvest_rows)
+    export_supply_offer(
+        harvest_output_path,
+        variant_dir / "supply_offer.csv",
+        variant_dir,
+        variant_dir / "generated" / "scanfi_gauthier_diagnostic_export_manifest.csv",
+    )
+    update_gauthier_run_provenance(variant_dir, scanfi_input_dir)
+    write_gauthier_variant_readme(variant_dir)
+    node_count, arc_count = build_graph_tables(variant_dir)
+    lp_result = build_and_solve(variant_dir, variant_dir / "generated")
+    contract_rows = write_contract_validation(variant_dir)
+    write_gauthier_variant_summary(variant_dir, harvest_rows, lp_result, node_count, arc_count, contract_rows)
+    return {
+        "variant_dir": str(variant_dir),
+        "ws3_run_id": GAUTHIER_WS3_RUN_ID,
+        "status": lp_result["status"],
+        "objective_value": lp_result["objective_value"],
+        "graph_nodes": node_count,
+        "graph_arcs": arc_count,
+        "variables": lp_result["variables"],
+        "constraints": lp_result["constraints"],
+        "solution_flows": lp_result["solution_flows"],
+        "harvest_output_rows": len(harvest_rows),
+    }
+
+
 def main_supply() -> None:
     parser = argparse.ArgumentParser(description="Build SCANFI diagnostic harvest output.")
     parser.add_argument("--scanfi-input-dir", type=Path, default=DEFAULT_SCANFI_INPUT_DIR)
@@ -624,6 +847,26 @@ def main_variant() -> None:
     result = run_scanfi_diagnostic_variant(args.base_input_dir, args.scanfi_input_dir, args.variant_dir)
     print(
         f"solved SCANFI diagnostic LP variant {result['status']} "
+        f"objective={float(result['objective_value']):.5f}; "
+        f"wrote {result['variant_dir']}"
+    )
+
+
+def main_gauthier_variant() -> None:
+    parser = argparse.ArgumentParser(description="Solve the BC mini SCANFI + Gauthier diagnostic supply variant.")
+    parser.add_argument("--base-input-dir", type=Path, default=DEFAULT_BASE_INPUT_DIR)
+    parser.add_argument("--scanfi-input-dir", type=Path, default=DEFAULT_SCANFI_INPUT_DIR)
+    parser.add_argument("--gauthier-input-dir", type=Path, default=DEFAULT_GAUTHIER_INPUT_DIR)
+    parser.add_argument("--variant-dir", type=Path, default=DEFAULT_GAUTHIER_VARIANT_DIR)
+    args = parser.parse_args()
+    result = run_scanfi_gauthier_diagnostic_variant(
+        args.base_input_dir,
+        args.scanfi_input_dir,
+        args.gauthier_input_dir,
+        args.variant_dir,
+    )
+    print(
+        f"solved SCANFI + Gauthier diagnostic LP variant {result['status']} "
         f"objective={float(result['objective_value']):.5f}; "
         f"wrote {result['variant_dir']}"
     )

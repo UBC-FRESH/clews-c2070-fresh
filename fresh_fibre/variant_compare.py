@@ -8,7 +8,9 @@ from pathlib import Path
 from fresh_fibre import graph
 from fresh_fibre.contract import VALIDATION_COLUMNS, assert_contract_ok, validate_contract
 from fresh_fibre.lp import build_and_solve
+from fresh_fibre.scanfi_supply import DEFAULT_GAUTHIER_VARIANT_DIR as DEFAULT_SCANFI_GAUTHIER_VARIANT_DIR
 from fresh_fibre.scanfi_supply import DEFAULT_VARIANT_DIR as DEFAULT_SCANFI_VARIANT_DIR
+from fresh_fibre.scanfi_supply import run_scanfi_gauthier_diagnostic_variant
 from fresh_fibre.scanfi_supply import run_scanfi_diagnostic_variant
 from fresh_fibre.schema import number, read_rows, write_rows
 from fresh_fibre.ws3_variant import DEFAULT_VARIANT_DIR as DEFAULT_WS3_VARIANT_DIR
@@ -42,9 +44,12 @@ OBJECTIVE_COMPARISON_COLUMNS = [
     "synthetic_bc_mini",
     "ws3_smoke",
     "scanfi_diagnostic",
+    "scanfi_gauthier_diagnostic",
     "ws3_smoke_delta_vs_synthetic",
     "scanfi_delta_vs_synthetic",
     "scanfi_delta_vs_ws3_smoke",
+    "scanfi_gauthier_delta_vs_synthetic",
+    "scanfi_gauthier_delta_vs_scanfi",
     "notes",
 ]
 
@@ -54,9 +59,12 @@ SUPPLY_COMPARISON_COLUMNS = [
     "synthetic_bc_mini_quantity",
     "ws3_smoke_quantity",
     "scanfi_diagnostic_quantity",
+    "scanfi_gauthier_diagnostic_quantity",
     "ws3_smoke_delta_vs_synthetic",
     "scanfi_delta_vs_synthetic",
     "scanfi_delta_vs_ws3_smoke",
+    "scanfi_gauthier_delta_vs_synthetic",
+    "scanfi_gauthier_delta_vs_scanfi",
 ]
 
 SUMMARY_COMPARISON_COLUMNS = [
@@ -68,9 +76,12 @@ SUMMARY_COMPARISON_COLUMNS = [
     "synthetic_bc_mini_value",
     "ws3_smoke_value",
     "scanfi_diagnostic_value",
+    "scanfi_gauthier_diagnostic_value",
     "ws3_smoke_delta_vs_synthetic",
     "scanfi_delta_vs_synthetic",
     "scanfi_delta_vs_ws3_smoke",
+    "scanfi_gauthier_delta_vs_synthetic",
+    "scanfi_gauthier_delta_vs_scanfi",
 ]
 
 FLOW_COMPARISON_COLUMNS = [
@@ -86,9 +97,12 @@ FLOW_COMPARISON_COLUMNS = [
     "synthetic_bc_mini_quantity",
     "ws3_smoke_quantity",
     "scanfi_diagnostic_quantity",
+    "scanfi_gauthier_diagnostic_quantity",
     "ws3_smoke_delta_vs_synthetic",
     "scanfi_delta_vs_synthetic",
     "scanfi_delta_vs_ws3_smoke",
+    "scanfi_gauthier_delta_vs_synthetic",
+    "scanfi_gauthier_delta_vs_scanfi",
 ]
 
 
@@ -107,6 +121,11 @@ VARIANTS = [
         "variant_id": "scanfi_diagnostic",
         "variant_label": "SCANFI diagnostic inventory",
         "notes": "SCANFI-provenance inventory cells with synthetic placeholder yield rules.",
+    },
+    {
+        "variant_id": "scanfi_gauthier_diagnostic",
+        "variant_label": "SCANFI inventory + Gauthier diagnostic yield",
+        "notes": "SCANFI-provenance inventory cells with Gauthier diagnostic log yield rules.",
     },
 ]
 
@@ -155,11 +174,17 @@ def run_provenance(input_dir: Path) -> dict[str, str]:
     return rows[0]
 
 
-def variant_dirs(base_dir: Path, ws3_variant_dir: Path, scanfi_variant_dir: Path) -> dict[str, Path]:
+def variant_dirs(
+    base_dir: Path,
+    ws3_variant_dir: Path,
+    scanfi_variant_dir: Path,
+    scanfi_gauthier_variant_dir: Path,
+) -> dict[str, Path]:
     return {
         "synthetic_bc_mini": base_dir,
         "ws3_smoke": ws3_variant_dir,
         "scanfi_diagnostic": scanfi_variant_dir,
+        "scanfi_gauthier_diagnostic": scanfi_gauthier_variant_dir,
     }
 
 
@@ -167,11 +192,16 @@ def regenerate_variants(
     base_dir: Path,
     ws3_variant_dir: Path,
     scanfi_variant_dir: Path,
+    scanfi_gauthier_variant_dir: Path,
 ) -> dict[str, dict[str, object]]:
     results: dict[str, dict[str, object]] = {}
     results["synthetic_bc_mini"] = build_base_graph_and_solution(base_dir)
     results["ws3_smoke"] = run_ws3_smoke_variant(base_dir, ws3_variant_dir)
     results["scanfi_diagnostic"] = run_scanfi_diagnostic_variant(base_dir, variant_dir=scanfi_variant_dir)
+    results["scanfi_gauthier_diagnostic"] = run_scanfi_gauthier_diagnostic_variant(
+        base_dir,
+        variant_dir=scanfi_gauthier_variant_dir,
+    )
     return results
 
 
@@ -242,14 +272,18 @@ def wide_metric_row(
     synthetic = values_by_variant["synthetic_bc_mini"].get(key, 0.0)
     ws3 = values_by_variant["ws3_smoke"].get(key, 0.0)
     scanfi = values_by_variant["scanfi_diagnostic"].get(key, 0.0)
+    scanfi_gauthier = values_by_variant["scanfi_gauthier_diagnostic"].get(key, 0.0)
     return {
         **prefix_columns,
         "synthetic_bc_mini_value": synthetic,
         "ws3_smoke_value": ws3,
         "scanfi_diagnostic_value": scanfi,
+        "scanfi_gauthier_diagnostic_value": scanfi_gauthier,
         "ws3_smoke_delta_vs_synthetic": ws3 - synthetic,
         "scanfi_delta_vs_synthetic": scanfi - synthetic,
         "scanfi_delta_vs_ws3_smoke": scanfi - ws3,
+        "scanfi_gauthier_delta_vs_synthetic": scanfi_gauthier - synthetic,
+        "scanfi_gauthier_delta_vs_scanfi": scanfi_gauthier - scanfi,
     }
 
 
@@ -297,9 +331,12 @@ def objective_comparison(summary_rows: list[dict[str, object]]) -> list[dict[str
                 "synthetic_bc_mini": row["synthetic_bc_mini_value"],
                 "ws3_smoke": row["ws3_smoke_value"],
                 "scanfi_diagnostic": row["scanfi_diagnostic_value"],
+                "scanfi_gauthier_diagnostic": row["scanfi_gauthier_diagnostic_value"],
                 "ws3_smoke_delta_vs_synthetic": row["ws3_smoke_delta_vs_synthetic"],
                 "scanfi_delta_vs_synthetic": row["scanfi_delta_vs_synthetic"],
                 "scanfi_delta_vs_ws3_smoke": row["scanfi_delta_vs_ws3_smoke"],
+                "scanfi_gauthier_delta_vs_synthetic": row["scanfi_gauthier_delta_vs_synthetic"],
+                "scanfi_gauthier_delta_vs_scanfi": row["scanfi_gauthier_delta_vs_scanfi"],
                 "notes": metric_ids[metric_id],
             }
         )
@@ -325,6 +362,7 @@ def supply_comparison(dirs: dict[str, Path]) -> list[dict[str, object]]:
         synthetic = values_by_variant["synthetic_bc_mini"].get(key, 0.0)
         ws3 = values_by_variant["ws3_smoke"].get(key, 0.0)
         scanfi = values_by_variant["scanfi_diagnostic"].get(key, 0.0)
+        scanfi_gauthier = values_by_variant["scanfi_gauthier_diagnostic"].get(key, 0.0)
         rows.append(
             {
                 "commodity_id": commodity_id,
@@ -332,9 +370,12 @@ def supply_comparison(dirs: dict[str, Path]) -> list[dict[str, object]]:
                 "synthetic_bc_mini_quantity": synthetic,
                 "ws3_smoke_quantity": ws3,
                 "scanfi_diagnostic_quantity": scanfi,
+                "scanfi_gauthier_diagnostic_quantity": scanfi_gauthier,
                 "ws3_smoke_delta_vs_synthetic": ws3 - synthetic,
                 "scanfi_delta_vs_synthetic": scanfi - synthetic,
                 "scanfi_delta_vs_ws3_smoke": scanfi - ws3,
+                "scanfi_gauthier_delta_vs_synthetic": scanfi_gauthier - synthetic,
+                "scanfi_gauthier_delta_vs_scanfi": scanfi_gauthier - scanfi,
             }
         )
     return rows
@@ -387,6 +428,7 @@ def pathway_flow_comparison(dirs: dict[str, Path]) -> list[dict[str, object]]:
         synthetic = values_by_variant["synthetic_bc_mini"].get(key, 0.0)
         ws3 = values_by_variant["ws3_smoke"].get(key, 0.0)
         scanfi = values_by_variant["scanfi_diagnostic"].get(key, 0.0)
+        scanfi_gauthier = values_by_variant["scanfi_gauthier_diagnostic"].get(key, 0.0)
         rows.append(
             {
                 "pathway_id": pathway_id(key),
@@ -401,9 +443,12 @@ def pathway_flow_comparison(dirs: dict[str, Path]) -> list[dict[str, object]]:
                 "synthetic_bc_mini_quantity": synthetic,
                 "ws3_smoke_quantity": ws3,
                 "scanfi_diagnostic_quantity": scanfi,
+                "scanfi_gauthier_diagnostic_quantity": scanfi_gauthier,
                 "ws3_smoke_delta_vs_synthetic": ws3 - synthetic,
                 "scanfi_delta_vs_synthetic": scanfi - synthetic,
                 "scanfi_delta_vs_ws3_smoke": scanfi - ws3,
+                "scanfi_gauthier_delta_vs_synthetic": scanfi_gauthier - synthetic,
+                "scanfi_gauthier_delta_vs_scanfi": scanfi_gauthier - scanfi,
             }
         )
     return rows
@@ -411,30 +456,33 @@ def pathway_flow_comparison(dirs: dict[str, Path]) -> list[dict[str, object]]:
 
 def write_decision_memo(output_dir: Path, matrix_rows: list[dict[str, object]]) -> None:
     matrix = {row["variant_id"]: row for row in matrix_rows}
-    text = f"""# BC Mini Three-Way Variant Comparison
+    text = f"""# BC Mini Variant Comparison
 
-This memo compares the three currently runnable BC mini supply paths:
+This memo compares the four currently runnable BC mini supply paths:
 
 - `synthetic_bc_mini`: stable synthetic supply fixture.
 - `ws3_smoke`: real local ws3 TSA24 smoke run mapped through diagnostic
   crosswalk rows.
 - `scanfi_diagnostic`: SCANFI-provenance diagnostic inventory cells with
   synthetic placeholder yield rules.
+- `scanfi_gauthier_diagnostic`: SCANFI-provenance diagnostic inventory cells
+  with Gauthier et al. (2015) diagnostic method-reproduction log yield rules.
 
-All three variants solve through the same downstream LP machinery. Current
+All four variants solve through the same downstream LP machinery. Current
 solver statuses are `{matrix['synthetic_bc_mini']['solver_status']}`,
-`{matrix['ws3_smoke']['solver_status']}`, and
-`{matrix['scanfi_diagnostic']['solver_status']}`.
+`{matrix['ws3_smoke']['solver_status']}`,
+`{matrix['scanfi_diagnostic']['solver_status']}`, and
+`{matrix['scanfi_gauthier_diagnostic']['solver_status']}`.
 
 The SCANFI branch is now useful as an inventory-provenance bridge: it carries
 verified SCANFI layer references through a ws3-shaped harvest-output boundary and
-into the downstream LP. It should not be interpreted as calibrated supply. The
-yield rules in `diagnostic_yield_rules.csv` are placeholders, and the costs are
-diagnostic assumptions.
+into the downstream LP. The Gauthier branch replaces log yield placeholders with
+method-reproduction diagnostic quantities, but it should not be interpreted as
+calibrated supply. Residue yield and costs remain diagnostic assumptions.
 
-Decision implication: keep the SCANFI path as the preferred diagnostic
-inventory branch, but make the next gate a yield-policy decision rather than a
-solver or network-mechanics decision.
+Decision implication: keep the SCANFI+Gauthier path as the preferred diagnostic
+inventory/yield branch for log supply, but keep production yield calibration,
+residue policy, and validation as open gates.
 """
     (output_dir / "decision_memo.md").write_text(text, encoding="utf-8")
 
@@ -445,10 +493,11 @@ def compare_three_way(
     scanfi_variant_dir: Path = DEFAULT_SCANFI_VARIANT_DIR,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     regenerate: bool = True,
+    scanfi_gauthier_variant_dir: Path = DEFAULT_SCANFI_GAUTHIER_VARIANT_DIR,
 ) -> dict[str, object]:
     if regenerate:
-        regenerate_variants(base_dir, ws3_variant_dir, scanfi_variant_dir)
-    dirs = variant_dirs(base_dir, ws3_variant_dir, scanfi_variant_dir)
+        regenerate_variants(base_dir, ws3_variant_dir, scanfi_variant_dir, scanfi_gauthier_variant_dir)
+    dirs = variant_dirs(base_dir, ws3_variant_dir, scanfi_variant_dir, scanfi_gauthier_variant_dir)
     matrix_rows = variant_run_matrix(dirs)
     summary_rows = solution_summary_comparison(dirs)
     objective_rows = objective_comparison(summary_rows)
@@ -477,6 +526,7 @@ def main() -> None:
     parser.add_argument("--base-dir", type=Path, default=DEFAULT_BASE_DIR)
     parser.add_argument("--ws3-variant-dir", type=Path, default=DEFAULT_WS3_VARIANT_DIR)
     parser.add_argument("--scanfi-variant-dir", type=Path, default=DEFAULT_SCANFI_VARIANT_DIR)
+    parser.add_argument("--scanfi-gauthier-variant-dir", type=Path, default=DEFAULT_SCANFI_GAUTHIER_VARIANT_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--skip-regenerate", action="store_true")
     args = parser.parse_args()
@@ -486,9 +536,10 @@ def main() -> None:
         args.scanfi_variant_dir,
         args.output_dir,
         regenerate=not args.skip_regenerate,
+        scanfi_gauthier_variant_dir=args.scanfi_gauthier_variant_dir,
     )
     print(
-        f"wrote three-way comparison to {result['output_dir']}: "
+        f"wrote variant comparison to {result['output_dir']}: "
         f"{result['variant_rows']} variants, "
         f"{result['objective_rows']} objective rows, "
         f"{result['supply_rows']} supply rows, "
