@@ -54,6 +54,19 @@ The workflow is defined by
 intended to validate and plan the collaborator materialization path before any
 raw SCANFI raster payloads or raster windows are requested.
 
+## P4.3 Predictor Access Decision
+
+`metadata/ffcm-archive/gauthier-predictor-access-gates.csv` records the current
+access and substitution state for each Gauthier predictor. The phase can use
+SCANFI age and BC mini spatial units for the tiny diagnostic fixture, and it can
+continue using the published Gauthier coefficients and maturity threshold.
+
+The phase must not promote NFI reference pixels, measured-volume scaling,
+climate predictors, species composition, or vegetated-fraction proxies to
+production status until their access/license position and substitution policy
+are explicit. For now, those rows remain open gates or parent-repo metadata-only
+decisions.
+
 ## Phase Close-Out Criteria
 
 - The tiny real-input contract is explicit and machine-readable.

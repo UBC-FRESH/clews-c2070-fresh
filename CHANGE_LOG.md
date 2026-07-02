@@ -20,6 +20,9 @@
   workflow targeting only `data/metadata/scanfi-diagnostic` and
   `data/manifests/scanfi-diagnostic`, with tests and docs confirming raw
   SCANFI rasters remain opt-in.
+- Added `gauthier-predictor-access-gates.csv` to distinguish accepted
+  diagnostic predictors from open access, license, climate, species
+  composition, measured-volume, and NFI reference-pixel gates.
 
 ## 2026-06-27
 

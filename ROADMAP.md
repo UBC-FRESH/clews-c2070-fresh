@@ -313,14 +313,14 @@ FreshForge/DataLad workflows for reproducibility.
     fixture.
   - [x] Document required `CLEWS_EXTERNAL_DATA_ROOT` behavior.
   - [x] Add tests or dry-run validation for the workflow metadata.
-- [ ] P4.3 Resolve Gauthier predictor/access gates for the diagnostic fixture.
+- [x] P4.3 Resolve Gauthier predictor/access gates for the diagnostic fixture.
   Child issue: `#15`.
-  - [ ] Inventory accepted or candidate sources for NFI reference pixels/plots.
-  - [ ] Select climate predictor source candidates for temperature and
+  - [x] Inventory accepted or candidate sources for NFI reference pixels/plots.
+  - [x] Select climate predictor source candidates for temperature and
     precipitation.
-  - [ ] Define conifer/deciduous composition source and aggregation rules.
-  - [ ] Record license/access state for each required predictor source.
-  - [ ] Identify which predictors can be represented by public-safe tiny
+  - [x] Define conifer/deciduous composition source and aggregation rules.
+  - [x] Record license/access state for each required predictor source.
+  - [x] Identify which predictors can be represented by public-safe tiny
     fixtures.
 - [ ] P4.4 Define residue, cost, and validation policy for production
   acceptance. Child issue: `#16`.
@@ -339,7 +339,8 @@ FreshForge/DataLad workflows for reproducibility.
   - [ ] Run required verification commands.
   - [ ] Open or update the phase PR and close child issues when complete.
 
-Status: P4.1 and P4.2 complete; P4.3 is the next active implementation task.
+Status: P4.1 through P4.3 complete; P4.4 is the next active implementation
+task.
 
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 
