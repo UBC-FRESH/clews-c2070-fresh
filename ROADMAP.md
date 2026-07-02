@@ -277,10 +277,10 @@ Metadata surfaces:
    paper as the architectural overview, then work inward through FCM configs,
    generated LP artifacts, and the CIRRELT network-flow reports.
 6. For Phase 3, the SCANFI+Gauthier diagnostic lane now replaces log-yield
-   placeholders in a runnable BC mini variant. The next model-development gate
-   is production yield policy: real raster sampling, NFI/climate input access,
-   residue yield policy, cost calibration, and validation against accepted
-   summaries.
+   placeholders in a runnable BC mini variant. Phase 4 defined the real-input
+   materialization gates. The next model-development gate is Phase 5: design a
+   tiny public-safe SCANFI real-sampling fixture skeleton before any raw raster
+   payloads or private validation inputs are materialized.
 
 ## Phase 4: Real Diagnostic SCANFI+Gauthier Input Materialization
 
@@ -339,8 +339,116 @@ FreshForge/DataLad workflows for reproducibility.
   - [x] Run required verification commands.
   - [x] Open or update the phase PR and close child issues when complete.
 
-Status: Phase 4 implementation complete; PR review/merge remains before
-closing parent issue `#12`.
+Status: Phase 4 implementation complete and merged.
+
+## Phase 5: Tiny Real-Sampling Design And Fixture Skeleton
+
+GitHub parent issue: `#19`.
+
+Release milestone: `v0.1.0a1 Conceptual Alpha`.
+
+Active branch: `feature/p5-tiny-real-sampling-fixture`.
+
+Governing planning note: `planning/phase-5-tiny-real-sampling-fixture.md`.
+
+Goal: convert Phase 4's SCANFI+Gauthier policy gates into a concrete,
+public-safe tiny sampling fixture design that can authorize Phase 6
+materialization without committing raw rasters, private NFI material, or
+production yield assumptions to the parent repository.
+
+- [ ] P5.1 Define the tiny BC diagnostic sampling extent and cell keys. Child
+  issue: `#20`.
+  - [ ] Select the minimum BC mini supply-node coverage needed for the first
+    real-sampled diagnostic fixture.
+  - [ ] Define stable sampled-cell identifiers and spatial-unit keys.
+  - [ ] Record expected DataLad source, metadata, manifest, and derived-output
+    paths.
+  - [ ] Define required provenance fields for source layer, version,
+    acquisition state, and value policy.
+- [ ] P5.2 Define the SCANFI raster-window extraction and manifest contract.
+  Child issue: `#21`.
+  - [ ] Identify required SCANFI source layers for the tiny fixture.
+  - [ ] Define raw raster-window, manifest, and parent-repo derived-table
+    boundaries.
+  - [ ] Specify checksum, unit, nodata, CRS, resolution, and sampling-method
+    metadata.
+  - [ ] Keep all raw raster payloads in the `data` DataLad/git-annex boundary.
+- [ ] P5.3 Define validation checks for diagnostic acceptance. Child issue:
+  `#22`.
+  - [ ] Define required-column and parseability checks.
+  - [ ] Define nonnegative quantity, area accounting, nodata, and expected
+    range checks.
+  - [ ] Define provenance-completeness checks against the extraction contract.
+  - [ ] Identify which checks are diagnostic acceptance gates versus
+    production calibration gates.
+- [ ] P5.4 Update gap and release-readiness surfaces. Child issue: `#23`.
+  - [ ] Update `prototype-gap-register.csv` to distinguish planned real
+    sampling from production-ready national input.
+  - [ ] Update the conceptual alpha release roadmap with Phase 5 status.
+  - [ ] Confirm residue, cost, climate, NFI, and validation gates remain open.
+  - [ ] Add changelog and issue progress notes.
+- [ ] P5.5 Close Phase 5 with a decision memo and Phase 6 authorization.
+  Child issue: `#24`.
+  - [ ] State whether Phase 6 may materialize a tiny SCANFI-derived fixture.
+  - [ ] Identify exactly which `data` paths and parent-repo outputs are
+    allowed.
+  - [ ] Reconcile child issue checklists, roadmap, changelog, and PR body.
+  - [ ] Run verification and close child issues when complete.
+
+## Phase 6: Tiny Real-Sampled Diagnostic Supply Lane
+
+Release milestone: `v0.1.0a1 Conceptual Alpha`.
+
+Goal: add the first tiny real-sampled diagnostic supply lane while preserving
+existing synthetic, ws3-smoke, SCANFI diagnostic, and SCANFI+Gauthier
+diagnostic lanes.
+
+- [ ] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
+  the `data` DataLad submodule.
+- [ ] P6.2 Generate a public-safe derived inventory table consumed by the
+  parent repository.
+- [ ] P6.3 Build a ws3-shaped supply output from real-sampled SCANFI diagnostic
+  inventory plus existing Gauthier diagnostic log-yield rules.
+- [ ] P6.4 Solve the downstream LP variant and emit `ws3_harvest_output`,
+  `supply_offer`, `solution_flow`, `solution_summary`, and comparison tables.
+- [ ] P6.5 Write a validation memo that clearly labels unresolved residue,
+  cost, climate, NFI, and production-calibration assumptions.
+
+## Phase 7: Source Triage And Production Readiness Gates
+
+Release milestone: `v0.1.0a1 Conceptual Alpha`.
+
+Goal: reconnect the model prototype to the broader source-discovery roadmap and
+decide what blocks production readiness after the conceptual alpha.
+
+- [ ] P7.1 Finish open source-triage issue `#1`, beginning with
+  `biomass_inventory_business`.
+- [ ] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only
+  when license, provenance, and access status are clear.
+- [ ] P7.3 Add explicit readiness gates for NFI access, climate predictors,
+  residue yield policy, calibrated cost surfaces, species composition, and
+  national scaling.
+- [ ] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and
+  production model states are visibly separate.
+- [ ] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work.
+
+## Phase 8: Conceptual Alpha Release Preparation
+
+Release milestone: `v0.1.0a1 Conceptual Alpha`.
+
+Goal: make the repository understandable, reproducible, and announceable as the
+first conceptual alpha release.
+
+- [ ] P8.1 Update README and planning surfaces with a compact "what works,
+  what is diagnostic, what is blocked" status section.
+- [ ] P8.2 Bump the package version to `0.1.0a1` and prepare tag
+  `v0.1.0a1`.
+- [ ] P8.3 Run full verification from the repo-root `.venv`, including unit
+  tests, script compilation, FreshForge validate/plan checks, CSV parse checks,
+  and `git diff --check`.
+- [ ] P8.4 Create the GitHub release notes summarizing Phases 1 through 8.
+- [ ] P8.5 Enable GitHub Discussions if still disabled and post a progress
+  announcement linked to the release.
 
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 

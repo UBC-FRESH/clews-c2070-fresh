@@ -2,6 +2,9 @@
 
 ## 2026-07-02
 
+- Added the `v0.1.0a1` Conceptual Alpha release roadmap and opened Phase 5
+  planning for a tiny public-safe SCANFI real-sampling fixture skeleton,
+  connecting the Phase 4 real-input gates to release-bound Phases 6 through 8.
 - Added a CLEWS-owned FreshForge materialization provider and workflow fixtures
   for initializing the `data` DataLad submodule and selectively materializing
   lightweight `metadata` and `manifests` paths through the FEMIC-style
