@@ -1,0 +1,33 @@
+graph_node_id,node_layer,scenario_id,period,source_table,source_id,node_type,commodity_id,facility_node_id,technology_id,label
+cdt__bc_mini_001__0__log,cdt,bc_mini_001,0,commodity,log,commodity_pool,log,,,log pool
+cdt__product__bioenergy,cdt,,,commodity,bioenergy,commodity_pool,bioenergy,,,bioenergy product pool
+cdt__product__hogfuel,cdt,,,commodity,hogfuel,commodity_pool,hogfuel,,,hogfuel product pool
+cdt__product__log,cdt,,,commodity,log,commodity_pool,log,,,log product pool
+cdt__product__lumber,cdt,,,commodity,lumber,commodity_pool,lumber,,,lumber product pool
+cdt__product__pellets,cdt,,,commodity,pellets,commodity_pool,pellets,,,pellets product pool
+cdt__product__pulp,cdt,,,commodity,pulp,commodity_pool,pulp,,,pulp product pool
+cdt__product__sawdust_shavings,cdt,,,commodity,sawdust_shavings,commodity_pool,sawdust_shavings,,,sawdust_shavings product pool
+cdt__product__woodchips,cdt,,,commodity,woodchips,commodity_pool,woodchips,,,woodchips product pool
+dsp__supply_coast_01__log,dsp,bc_mini_001,0,supply_offer,supply_coast_01,dispatch,log,,,dispatch supply_coast_01 log
+dsp__supply_interior_01__log,dsp,bc_mini_001,0,supply_offer,supply_interior_01,dispatch,log,,,dispatch supply_interior_01 log
+prc__tech_bioenergy_hogfuel,prc,,,technology,tech_bioenergy_hogfuel,processor,hogfuel,plant_bioenergy_coast,tech_bioenergy_hogfuel,tech_bioenergy_hogfuel
+prc__tech_bioenergy_logging_residue,prc,,,technology,tech_bioenergy_logging_residue,processor,logging_residue,plant_bioenergy_coast,tech_bioenergy_logging_residue,tech_bioenergy_logging_residue
+prc__tech_export_logs,prc,,,technology,tech_export_logs,processor,log,export_vancouver,tech_export_logs,tech_export_logs
+prc__tech_pellet_residue,prc,,,technology,tech_pellet_residue,processor,sawdust_shavings,mill_pellet_interior,tech_pellet_residue,tech_pellet_residue
+prc__tech_pulp_chips,prc,,,technology,tech_pulp_chips,processor,woodchips,mill_pulp_interior,tech_pulp_chips,tech_pulp_chips
+prc__tech_sawmill_coast,prc,,,technology,tech_sawmill_coast,processor,log,mill_sawmill_coast,tech_sawmill_coast,tech_sawmill_coast
+prc__tech_sawmill_interior,prc,,,technology,tech_sawmill_interior,processor,log,mill_sawmill_interior,tech_sawmill_interior,tech_sawmill_interior
+snk__facility__export_vancouver__tech_export_logs,snk,,,network_node,export_vancouver,facility_sink,,export_vancouver,tech_export_logs,export_vancouver capacity sink
+snk__facility__mill_pellet_interior__tech_pellet_residue,snk,,,network_node,mill_pellet_interior,facility_sink,,mill_pellet_interior,tech_pellet_residue,mill_pellet_interior capacity sink
+snk__facility__mill_pulp_interior__tech_pulp_chips,snk,,,network_node,mill_pulp_interior,facility_sink,,mill_pulp_interior,tech_pulp_chips,mill_pulp_interior capacity sink
+snk__facility__mill_sawmill_coast__tech_sawmill_coast,snk,,,network_node,mill_sawmill_coast,facility_sink,,mill_sawmill_coast,tech_sawmill_coast,mill_sawmill_coast capacity sink
+snk__facility__mill_sawmill_interior__tech_sawmill_interior,snk,,,network_node,mill_sawmill_interior,facility_sink,,mill_sawmill_interior,tech_sawmill_interior,mill_sawmill_interior capacity sink
+snk__facility__plant_bioenergy_coast__tech_bioenergy_hogfuel,snk,,,network_node,plant_bioenergy_coast,facility_sink,,plant_bioenergy_coast,tech_bioenergy_hogfuel,plant_bioenergy_coast capacity sink
+snk__facility__plant_bioenergy_coast__tech_bioenergy_logging_residue,snk,,,network_node,plant_bioenergy_coast,facility_sink,,plant_bioenergy_coast,tech_bioenergy_logging_residue,plant_bioenergy_coast capacity sink
+snk__market__market_bioenergy_bc,snk,,,market,market_bioenergy_bc,market_sink,bioenergy,,,market_bioenergy_bc
+snk__market__market_log_export,snk,,,market,market_log_export,market_sink,log,,,market_log_export
+snk__market__market_lumber_bc,snk,,,market,market_lumber_bc,market_sink,lumber,,,market_lumber_bc
+snk__market__market_pellets_bc,snk,,,market,market_pellets_bc,market_sink,pellets,,,market_pellets_bc
+snk__market__market_pulp_bc,snk,,,market,market_pulp_bc,market_sink,pulp,,,market_pulp_bc
+src__supply_coast_01__log,src,bc_mini_001,0,supply_offer,supply_coast_01,supply_offer,log,,,supply_coast_01 log
+src__supply_interior_01__log,src,bc_mini_001,0,supply_offer,supply_interior_01,supply_offer,log,,,supply_interior_01 log

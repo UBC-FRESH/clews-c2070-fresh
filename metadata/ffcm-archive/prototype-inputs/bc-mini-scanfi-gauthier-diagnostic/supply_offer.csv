@@ -1,0 +1,5 @@
+scenario_id,period,spatial_unit_id,supply_node_id,commodity_id,quantity,quantity_unit,supply_cost,supply_cost_unit,species_group,assortment_class,grade,moisture_basis,carbon_factor,harvest_action_id,roadside_cost,delivered_cost_proxy
+bc_mini_001,0,bc_fmu_coast_01,supply_coast_01,log,112451.605,m3,56.004016,CAD_per_m3,softwood,sawlog,scanfi_gauthier_diagnostic,green,,scanfi_diag_supply_001,40.004016,71.506024
+bc_mini_001,0,bc_fmu_interior_01,supply_interior_01,log,94804.208,m3,50.813344,CAD_per_m3,softwood,sawlog,scanfi_gauthier_diagnostic,green,,scanfi_diag_supply_002,36.813344,67.813344
+bc_mini_001,0,bc_fmu_interior_02,supply_interior_02,log,15568.852,m3,43,CAD_per_m3,mixed,smallwood,scanfi_gauthier_diagnostic,green,,scanfi_diag_supply_003,30,62
+bc_mini_001,0,bc_fmu_interior_02,supply_residue_02,logging_residue,6600,odt,23,CAD_per_odt,mixed,residue,scanfi_gauthier_diagnostic,dry,,scanfi_diag_supply_004,17,33

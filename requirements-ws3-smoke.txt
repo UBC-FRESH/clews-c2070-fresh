@@ -1,0 +1,7 @@
+# Optional local smoke-run dependency for the ws3 upstream bridge.
+# Expected developer setup:
+#   python3 -m pip install -e ../ws3
+#
+# The editable ws3 install pulls its declared runtime dependencies from
+# ../ws3/pyproject.toml.
+-e ../ws3

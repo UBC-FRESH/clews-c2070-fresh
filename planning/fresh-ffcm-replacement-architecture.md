@@ -1,0 +1,161 @@
+# FRESH FFCM Replacement Architecture
+
+## Purpose
+
+This note translates the first FFCM archive-analysis pass into an initial FRESH
+implementation architecture. It assumes FRESH should preserve the useful FFCM
+model concepts while replacing the closed or stale runtime stack:
+
+- Replace the upstream forest-estate/log-supply engine with `ws3`.
+- Replace the FCM Java/CPLEX/lp_solve supply-chain runtime by rebuilding the
+  ws3-compatible LP network-flow model from the recovered notebook seed.
+- Preserve reusable FFCM schema concepts, commodity vocabulary clues, market
+  decomposition, and generated-LP formulation evidence.
+
+## Architecture Spine
+
+The proposed FRESH spine is:
+
+1. National source data foundation
+2. `ws3` forest-estate model
+3. `ws3` output normalization and disaggregation layer
+4. LP-ready supply/commodity/network/technology input tables
+5. Downstream profit-maximizing LP network-flow model
+6. Scenario, provenance, validation, and reporting layer
+
+The clean handoff is step 3 to step 4. That handoff is the soft-link contract
+documented in `metadata/ffcm-archive/fresh-interface-contract.csv`.
+
+## ws3-Side Replacement
+
+The ws3-side model should be responsible for forest state and supply:
+
+- Spatial modelling units: stand, polygon, FMU, TSA/management unit, or a
+  project-specific crosswalk to LP supply nodes.
+- Stand state variables: species composition, age, yield stratum/site class,
+  disturbance history, management eligibility, protected/access status, and
+  carbon/climate attributes where needed by CLEWs.
+- Dynamics: growth/yield transitions, disturbance transitions where modelled,
+  harvest scheduling, silvicultural treatments, and period-to-period inventory
+  updates.
+- Outputs: available and selected harvest volumes, assortment/log classes,
+  logging residue, roadside supply cost, spatial supply node, time period, and
+  scenario metadata.
+
+The ws3 output should not try to mimic the FCM Java runtime. It should emit
+LP-ready supply records with explicit units and provenance.
+
+## Disaggregation and Value Layer
+
+The CIRRELT reports are the method anchor for the bridge between long-term
+forest supply and short-term industrial allocation:
+
+- CIRRELT-2017-43: disaggregation coefficients for linking planning scales.
+- CIRRELT-2018-23: value-creation potential indicators and retrofit logic.
+- CIRRELT-2018-24: downstream network-flow simulation/optimization.
+
+For FRESH, this layer should convert ws3 output into supply offers by
+commodity/assortment class and attach any required cost, value, density, or
+conversion metadata before LP solve.
+
+The first implemented bridge is `fresh_fibre.ws3_export`, which converts a
+normalized harvest-output table into the current `supply_offer` contract. The
+BC mini-network fixture uses synthetic rows in
+`metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_harvest_output.csv`; the
+exporter writes `generated/ws3_export_manifest.csv` to distinguish normalized
+upstream output, adapter output, and downstream LP input by row count and
+SHA-256 fingerprint.
+
+The first real ws3 producer path is `fresh_fibre.ws3_smoke`. With ws3 installed
+editable from the sibling clone (`python3 -m pip install -e ../ws3`), it loads
+ws3's TSA24 clipped Woodstock example, schedules a tiny harvest, and emits the
+same normalized harvest-output shape plus a supply-offer export. This proves
+the runtime bridge. Its diagnostic spatial-node mapping is now explicit in
+`metadata/ffcm-archive/prototype-inputs/bc-mini/ws3_supply_crosswalk.csv`.
+`fresh_fibre.ws3_variant` creates a separate `bc-mini-ws3-smoke` LP variant
+that replaces only `supply_offer.csv` with the real ws3 smoke supply export and
+keeps the stable synthetic BC mini fixture unchanged. `fresh_fibre.compare`
+writes summary and pathway-flow deltas between those two solves. The next
+modelling step is to replace the diagnostic rows with accepted FRESH crosswalk
+rules and an accepted inventory/yield source.
+
+## Downstream LP Replacement
+
+The downstream LP should preserve these FFCM concepts where useful:
+
+- Product-market split: primary logs; woodchips; hog fuel; secondary logs;
+  sawdust/shavings; logging residue.
+- Network entities: FMU/supply nodes, facilities, processing lines, import
+  sources, export sinks, transload/water/transport nodes, and markets.
+- Technology records: feedstock, primary product, infeed rate, outfeed or
+  byproduct flows, throughput/capacity, and operating cost.
+- Transport records: origin, destination, mode, distance, speed or travel time,
+  cost, and handled commodity classes.
+- Objective semantics: profit or net value, with positive revenue/value terms
+  and negative supply, processing, and transport cost terms.
+
+The generated FCM LPs should be treated as formulation evidence, not as a model
+artifact to run or reproduce verbatim.
+
+The likely surviving code seed for the ws3-compatible downstream model is the
+GitHub gist `gparadis/bcc357dbeaab2c8d247776424c51c25a`, which contains
+`phase2_ua06451.ipynb`. The notebook has been downloaded locally under ignored
+`tmp/` space and extracted into
+`metadata/ffcm-archive/network-flow-seed/`. The network-flow model formulation
+is described in section 2.1 of `tmp/CIRRELT-2018-24.pdf`.
+
+The seed notebook's downstream model uses a five-layer graph
+(`src -> dsp -> cdt -> prc -> snk`) with optional processor-to-processor
+coproduct arcs. See `planning/network-flow-seed-rebuild-plan.md` for the
+rebuild plan and `metadata/ffcm-archive/network-flow-seed/` for function and
+schema crosswalks.
+
+## Initial Table Contract
+
+The initial contract is a set of table families:
+
+- `scenario`
+- `spatial_unit`
+- `commodity`
+- `supply_offer`
+- `network_node`
+- `technology`
+- `technology_flow`
+- `transport_link`
+- `transporter`
+- `market`
+- `import_offer`
+- `export_sink`
+- `run_provenance`
+- `solution_flow`
+- `solution_summary`
+
+See `metadata/ffcm-archive/fresh-interface-contract.csv` for grain, required
+fields, optional fields, evidence sources, and unit notes.
+
+## Data Disposition
+
+The FFCM archive is useful for architecture and prototyping, but not all data
+should be treated as reusable production input. The initial disposition is in
+`metadata/ffcm-archive/data-source-disposition.csv`.
+
+High-level stance:
+
+- Prototype seed: parsed FCM schemas, generated LP summaries, small synthetic
+  subsets, and possibly selected basecase records if licensing permits.
+- Rebuild: national inventory, disturbance, roads, facilities, cost tables,
+  market/prices, and transport distances from accepted project sources.
+- Avoid as dependency: FCM Java runtime, CPLEX jar, visualization/runtime jars,
+  and proprietary or license-unclear workbook payloads.
+
+## Next Design Checks
+
+- Decide whether FRESH needs one national commodity vocabulary or separate
+  forestry, bioenergy, and CLEWs-accounting vocabularies linked by crosswalks.
+- Decide which future input fields may be automatically converted using the
+  unit registries and which should continue to fail fast on non-canonical
+  units.
+- Replace the synthetic normalized ws3 harvest-output fixture with a tiny ws3
+  run that emits the same exporter input shape.
+- Replace one synthetic data family at a time with accepted diagnostic inputs,
+  following `metadata/ffcm-archive/prototype-gap-register.csv`.

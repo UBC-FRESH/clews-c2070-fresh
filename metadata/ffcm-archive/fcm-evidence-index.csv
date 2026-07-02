@@ -1,0 +1,24 @@
+relative_path,evidence_type,interpretive_note,analysis_priority,fresh_mapping,line_count_or_na
+tmp/FCM/Carbon/01-Basecase/FMUs.cfg,forest-management-units,Supply units and/or forest management unit definitions feeding the fibre network.,parse-first,ws3 spatial supply key candidate,733
+tmp/FCM/Carbon/01-Basecase/Facilities.cfg,facilities,"Mill/facility node definitions, transporter eligibility, mutually exclusive processes, and minimum production requirements.",parse-first,downstream LP facility schema candidate,1371
+tmp/FCM/Carbon/01-Basecase/Routes.cfg,transport-routes,Road arcs between transport nodes and facilities with segmented distance and speed fields.,parse-first,transport cost/distance schema candidate,38390
+tmp/FCM/Carbon/01-Basecase/Processinglines.cfg,processing-lines,Facility process definitions and conversion/process alternatives.,parse-first,LP technology/process schema candidate,957
+tmp/FCM/Carbon/01-Basecase/Transporters.cfg,transporters,Truck/transport mode definitions and handling capabilities.,parse-first,transport mode schema candidate,22
+tmp/FCM/Carbon/01-Basecase/Markets.cfg,markets,Exogenous market nodes or demand sinks.,parse-first,LP demand/market schema candidate,17
+tmp/FCM/Carbon/01-Basecase/Imports.cfg,imports,Import supply definitions.,parse-first,external supply treatment,37
+tmp/FCM/Carbon/01-Basecase/Transload.cfg,transload,Transload node definitions.,parse-second,optional network node type,57
+tmp/FCM/Carbon/01-Basecase/Groups.cfg,groups,Grouping definitions for entities or reporting categories.,parse-second,classification/crosswalk support,115
+tmp/FCM/Carbon/01-Basecase/DefinedEntities.cfg,defined-entities,Named entity declarations used by configs.,parse-second,schema vocabulary support,20
+tmp/FCM/Carbon/01-Basecase/MutuallyExclusive_Processinglines.cfg,mutually-exclusive-processes,Mutually exclusive processing-line group constraints.,parse-first,capacity/process-choice constraints,151
+tmp/FCM/Carbon/02-Inc/Commodities.inc,commodities,"Commodity definitions for logs, residues, products, and possibly energy/carbon extensions.",parse-first,shared commodity vocabulary,148
+tmp/FCM/Carbon/02-Inc/Throughput.inc,throughput,Throughput parameters corresponding to processing lines.,parse-first,capacity/conversion data,957
+tmp/FCM/Carbon/02-Inc/Constraints.inc,constraints,Additional named constraints.,parse-first,formulation evidence,48
+tmp/FCM/Carbon/03-Scenarios/Basecase.cfg,scenario-basecase,Scenario-level runtime/configuration wrapper.,parse-first,scenario metadata pattern,23
+tmp/FCM/Carbon/Test_runs/Basecase-20190514/Log_allocation_model.lp,generated-lp-log-allocation,Large generated LP for log allocation.,forensics-first-large,objective/variables/constraints evidence,146941
+tmp/FCM/Carbon/Test_runs/Basecase-20190514/Secondary_Log_and_Residue_allocation_model.lp,generated-lp-secondary-residue,Large generated LP for secondary log and residue allocation.,forensics-first-large,residue cascade evidence,94878
+tmp/FCM/Report/log_residue/Logflow_model.lp,generated-lp-logflow-small,Small report LP example for log flow.,forensics-first-small,human-readable LP starting point,27
+tmp/FCM/Report/log_residue/ResidueFlow_model.lp,generated-lp-residueflow-small,Small report LP example for residue flow.,forensics-first-small,human-readable residue-flow starting point,34
+tmp/FCM/Report/testFCM2/FCM_model.lp,generated-lp-fcm-small,Small report LP example for full FCM.,forensics-first-small,human-readable full-model starting point,22
+tmp/FCM/FCM_Releases/FCM-1908.jar,runtime-release,FCM Java runtime jar.,inspect-metadata-only,do not depend on runtime for FRESH architecture,na
+tmp/FCM/FCM_Releases/FCM-1908_lib/cplex.jar,solver-dependency,CPLEX Java dependency.,license-boundary,proprietary solver dependency boundary,na
+tmp/FCM/FCM_Releases/FCM-1908_lib/lpsolve55j.jar,solver-dependency,lp_solve Java dependency.,runtime-boundary,open/legacy solver dependency boundary,na

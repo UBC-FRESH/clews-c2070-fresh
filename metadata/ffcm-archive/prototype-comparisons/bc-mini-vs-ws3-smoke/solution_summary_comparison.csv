@@ -1,0 +1,11 @@
+comparison_id,metric_id,commodity_id,facility_class,market_id,unit,base_value,variant_value,delta,ratio_variant_to_base,base_run_id,variant_run_id,notes
+bc_mini_vs_ws3_smoke,objective_value,,,,CAD,6140832.0,75520.15191999999,-6065311.84808,0.012298032566271148,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_market_quantity,bioenergy,,,GJ,148080.0,692.71665,-147387.28335,0.004677989262560777,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_market_quantity,log,,,m3,8000.0,0.0,-8000.0,0.0,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_market_quantity,lumber,,,m3,54160.0,799.53376,-53360.46624,0.014762440177252586,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_market_quantity,pellets,,,odt,9195.6,138.76288,-9056.83712,0.015090138762016616,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_market_quantity,pulp,,,odt,21012.8,297.69621,-20715.10379,0.014167374647833702,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_processing_cost,,,,CAD,3985440.0,53963.247279999996,-3931476.75272,0.013540097775904291,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_revenue,,,,CAD,19520472.0,247429.18610000002,-19273042.8139,0.012675369022839203,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_supply_cost,,,,CAD,6412000.0,80222.6125,-6331777.3875,0.01251132446974423,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.
+bc_mini_vs_ws3_smoke,total_transport_cost,,,,CAD,2982200.0,37723.174399999996,-2944476.8256,0.012649444839380321,bc_mini_lp_001,bc_mini_ws3_smoke_lp_001,Non-numeric metadata rows are excluded.

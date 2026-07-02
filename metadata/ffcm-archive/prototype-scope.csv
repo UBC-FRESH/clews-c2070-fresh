@@ -1,0 +1,12 @@
+prototype_component,scope_choice,archive_evidence,implementation_note,status
+prototype_geography,BC diagnostic mini-network,"metadata/ffcm-archive/parsed/fmu_supply.csv; metadata/ffcm-archive/parsed/facilities.csv; tmp/BC Fibre Database Benchmark 2018 V3  August/","Use BC because archive evidence is rich and local domain knowledge is strong; keep data diagnostic until provenance/rights are resolved.",selected
+time_horizon,one scenario and one period,tmp/FCM/Carbon/03-Scenarios/Basecase.cfg,Start with one-period LP plumbing before multi-period ws3 dynamics.,selected
+supply_nodes,2 to 5 synthetic ws3-shaped supply nodes,metadata/ffcm-archive/parsed/fmu_supply.csv,Use synthetic or clearly labelled diagnostic records shaped like ws3 output.,selected
+primary_processors,2 to 5 sawmill or primary-processing nodes,metadata/ffcm-archive/parsed/facilities.csv; metadata/ffcm-archive/parsed/processing_lines.csv,Choose enough processors to generate chips/sawdust/hog fuel and test cascade logic.,selected
+secondary_consumers,1 pulp/paper or NSP/MDF plus 1 pellet or bioenergy node,metadata/ffcm-archive/lp-forensics/lp-variable-families.csv,Include at least one residue consumer and one material consumer.,selected
+commodities,"log; woodchips; sawdust_shavings; hogfuel; logging_residue",metadata/ffcm-archive/parsed/commodities.csv,Use explicit canonical units and conversion assumptions.,selected
+transport,complete graph or simple route subset,metadata/ffcm-archive/parsed/routes.csv,Use synthetic distances first; rebuild production distances from accepted transport data later.,selected
+market_modules,primary log plus secondary residue/product markets,metadata/ffcm-archive/parsed/markets.csv,Preserve FFCM market split where compatible with downstream LP model.,selected
+solver_runtime,existing downstream LP model solver stack,metadata/ffcm-archive/runtime-dependencies.csv,Do not use FCM Java runtime, CPLEX jar, or lp_solve jar.,selected
+downstream_model_seed,recovered gist notebook,metadata/ffcm-archive/network-flow-seed/,Use phase2_ua06451.ipynb extracted code and markdown as seed for rebuilding the ws3-compatible LP model.,selected
+success_output,solution_flow table,metadata/ffcm-archive/fresh-interface-contract.csv,Output explicit fields instead of packed FCM variable names.,selected

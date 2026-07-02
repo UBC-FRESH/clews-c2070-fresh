@@ -1,0 +1,19 @@
+old_notebook_concept,old_symbol_or_prefix,old_grain,fresh_contract_table,fresh_field_or_concept,rebuild_note
+source node,src_,one per harvesting decision or management-area action,supply_offer,spatial_unit_id; harvest_action_id; quantity; quantity_unit,"Old src->dsp flow is harvested area in ha; FRESH should make this explicit in supply offers or a harvest_action table."
+dispatch node,dsp_,one per source node,network_node,node_type=dispatch,Dispatch layer converts harvested area to commodity volumes; may be virtual in rebuilt model.
+commodity node,cdt_,one per commodity class,commodity,commodity_id; commodity_group,"Old labels are MERIS commodity classes; map to FRESH commodity registry."
+processor node,prc_,one per mill/processor,network_node; technology,facility_node_id; technology_id,"Separate facility identity from technology/process records."
+sink node,snk_,one per processor,network_node,node_type=sink,Can be represented as market/capacity sink or omitted if capacity constraints are attached to technologies.
+source-dispatch arc,src_->dsp_,one per harvesting decision,supply_offer; model arc,quantity; upper_bound; value coefficient,"Flow unit is area ha; objective coefficient is nvcp at source-dispatch level."
+dispatch-commodity arc,dsp_->cdt_,one per source x commodity,technology_flow or internal model arc,conversion from area to volume,"Uses nmhv_cdt_* coefficients; represent as disaggregation/conversion coefficients."
+commodity-processor arc,cdt_->prc_,one per eligible commodity x processor,transport_link or allocation arc,capacity; subsidy; allocation bound,"Carries merchantable volume; eligibility comes from mill commodity lists and GA/TL constraints."
+processor-sink arc,prc_->snk_,one per processor,technology,maximum_capacity,"Represents facility capacity after coproduct adjustment."
+hardwood-chip coproduct arc,prc_->prc_,one per chip generator x chip processor,technology_flow; transport_link,coproduct flow; processor-to-processor flow,"Rebuild as explicit coproduct generation and secondary consumption arcs."
+GA rente variable,garentevar_,one per commodity-processor GA record,scenario; market; objective adjustment,rente_rate; fixed/allocation charge,"Old implementation uses fixed lb=ub variable with negative objective."
+flow variable,flwvar_,one per graph arc,solution_flow,origin_node_id; destination_node_id; commodity; quantity,"FRESH output should not pack semantics into variable names."
+flow conservation,flwcns_,one per dispatch/commodity/processor node,model constraint,node balance,"Keep generic node-balance constraint builder."
+hardwood chip constraint,flwhwc_,one per hardwood chip generator,technology_flow constraint,coproduct proportion,"Replace hard-coded p_hwc dict with process-flow coefficients."
+harvest area scenario,harv_area,one scenario-level solve constraint,scenario; supply_offer,harvest_area_bound,"Used to sweep proportion of available area harvested."
+GA bounds,set_ga_bounds,one per commodity-processor allocation,transport_link or market allocation,lower_bound; upper_bound,"Map to allocation/capacity constraints with explicit provenance."
+GA penalties,set_ga_penalties,one per commodity-processor allocation,scenario objective modifier,piecewise penalty,"Optional solver-specific feature; avoid in first clean prototype unless necessary."
+value components,C dictionaries,one per arc or commodity aggregate,solution_summary,fixd; harv; sylv; stmp; trns; pval; rnte; subs,"Retain as reporting metrics and objective decomposition."

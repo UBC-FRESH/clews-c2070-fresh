@@ -1,0 +1,3 @@
+commodity_id,quantity_unit,synthetic_bc_mini_quantity,ws3_smoke_quantity,scanfi_diagnostic_quantity,scanfi_gauthier_diagnostic_quantity,ws3_smoke_delta_vs_synthetic,scanfi_delta_vs_synthetic,scanfi_delta_vs_ws3_smoke,scanfi_gauthier_delta_vs_synthetic,scanfi_gauthier_delta_vs_scanfi
+log,m3,119000.0,1604.452295,104700.0,222824.665,-117395.547705,-14300.0,103095.547705,103824.66500000001,118124.66500000001
+logging_residue,odt,9000.0,0.0,6600.0,6600.0,-9000.0,-2400.0,6600.0,-2400.0,0.0

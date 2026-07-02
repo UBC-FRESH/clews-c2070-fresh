@@ -1,3 +1,4 @@
+tmp/
 .venv/
 __pycache__/
 .pytest_cache/
@@ -5,6 +6,7 @@ __pycache__/
 .mypy_cache/
 _build/
 runtime/
+*.egg-info/
 *.pyc
 
 # Local handoff/reference material copied into a fresh clone.

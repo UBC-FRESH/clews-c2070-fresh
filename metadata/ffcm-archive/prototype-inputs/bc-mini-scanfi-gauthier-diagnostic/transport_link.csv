@@ -1,0 +1,13 @@
+scenario_id,period,origin_node_id,destination_node_id,transport_mode,distance,distance_unit,route_id,segment_lengths,speed_limits,travel_time,transport_cost,transport_cost_unit,capacity
+bc_mini_001,0,supply_coast_01,mill_sawmill_coast,truck,95,km,route_001,,,2.1,16,CAD_per_m3,60000
+bc_mini_001,0,supply_coast_01,export_vancouver,truck,140,km,route_002,,,3.0,24,CAD_per_m3,12000
+bc_mini_001,0,supply_interior_01,mill_sawmill_interior,truck,110,km,route_003,,,2.4,18,CAD_per_m3,72000
+bc_mini_001,0,supply_interior_01,export_vancouver,rail,780,km,route_004,,,14.0,38,CAD_per_m3,8000
+bc_mini_001,0,supply_interior_02,mill_sawmill_interior,truck,65,km,route_005,,,1.4,12,CAD_per_m3,30000
+bc_mini_001,0,supply_residue_02,plant_bioenergy_coast,truck,290,km,route_006,,,6.2,34,CAD_per_odt,12000
+bc_mini_001,0,mill_sawmill_coast,mill_pulp_interior,rail,620,km,route_007,,,11.5,31,CAD_per_odt,20000
+bc_mini_001,0,mill_sawmill_coast,mill_pellet_interior,rail,640,km,route_008,,,12.0,29,CAD_per_odt,12000
+bc_mini_001,0,mill_sawmill_coast,plant_bioenergy_coast,truck,45,km,route_009,,,1.0,10,CAD_per_odt,10000
+bc_mini_001,0,mill_sawmill_interior,mill_pulp_interior,truck,120,km,route_010,,,2.7,20,CAD_per_odt,26000
+bc_mini_001,0,mill_sawmill_interior,mill_pellet_interior,truck,85,km,route_011,,,1.8,15,CAD_per_odt,16000
+bc_mini_001,0,mill_sawmill_interior,plant_bioenergy_coast,rail,540,km,route_012,,,10.0,27,CAD_per_odt,9000

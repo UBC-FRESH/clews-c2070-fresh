@@ -280,9 +280,9 @@ datasets:
       include: "mirror_after_pi_approval"
       rationale: "Full core raster set is about 1.15 GB, manageable for DataLad/S3 once accepted."
 
-  - id: national_road_network
+  - id: nrn
     category: transport
-    status: triage_ready
+    status: accepted_baseline
     required_for:
       - "national haul-distance baseline"
       - "accessibility and delivered feedstock cost screening"
@@ -294,7 +294,7 @@ datasets:
       url: "https://open.canada.ca/data/en/dataset/3d282116-e556-400c-9306-ca1a3cada77f"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Need jurisdiction package inventory and assessment against forest-resource road layers."
+      provenance_notes: "Official metadata observed 2026-06-25. Package inventory observed 2026-06-25: documentation plus 13 GeoPackage ZIPs and 13 shapefile ZIPs. Accept as a coarse national haul-distance baseline; jurisdiction-specific forest/resource road layers remain mandatory follow-up for operational access modelling."
       metadata_created: "2017-03-29T20:52:44.682526"
       metadata_modified: "2024-12-18T13:20:17.877602"
       date_published: "2015-01-01"
@@ -305,18 +305,92 @@ datasets:
         - format: "ESRI REST"
           name: "Road Network service"
           url: "https://geo.statcan.gc.ca/geo_wa/rest/services/NRN-RRN/nrn_rrn/MapServer"
+        - format: "CSV manifest"
+          name: "Inventoried jurisdiction packages"
+          url: "metadata/source-file-manifests/nrn_files.csv"
     coverage:
       spatial: "Canada by province/territory"
-      temporal: "current published release"
+      temporal: "current published release by jurisdiction; release validity ranges from 2012-04 to 2025-10 in observed documentation"
       resolution: "linear vector network"
+    package_inventory:
+      observed_utc: "2026-06-25T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/nrn_files.csv"
+      documentation_count: 1
+      documentation_size_mb: 2.329
+      gpkg_package_count: 13
+      gpkg_total_size_gb: 1.628
+      shp_package_count: 13
+      shp_total_size_gb: 1.539
+      preferred_distribution: "GPKG"
+      jurisdiction_release_notes:
+        - code: "AB"
+          validity_date: "2024-10"
+          version: "17.0"
+        - code: "BC"
+          validity_date: "2017-03"
+          version: "14.0"
+        - code: "MB"
+          validity_date: "2012-04"
+          version: "6.0"
+        - code: "NB"
+          validity_date: "2025-01"
+          version: "15.0"
+        - code: "NL"
+          validity_date: "2012-09"
+          version: "7.0"
+        - code: "NT"
+          validity_date: "2025-10"
+          version: "16.0"
+        - code: "NS"
+          validity_date: "2025-10"
+          version: "18.0"
+        - code: "NU"
+          validity_date: "2025-10"
+          version: "13.0"
+        - code: "ON"
+          validity_date: "2025-01"
+          version: "18.0"
+        - code: "PE"
+          validity_date: "2024-09"
+          version: "22.1"
+        - code: "QC"
+          validity_date: "2016-02"
+          version: "9.0"
+        - code: "SK"
+          validity_date: "2025-02"
+          version: "15.0"
+        - code: "YT"
+          validity_date: "2025-10"
+          version: "20.0"
+    schema_notes:
+      model_entities:
+        - "ADDRANGE"
+        - "ALTNAMLINK"
+        - "BLKPASSAGE"
+        - "FERRYSEG"
+        - "JUNCTION"
+        - "ROADSEG"
+        - "STRPLANAME"
+        - "TOLLPOINT"
+      roadseg_fields_for_screening:
+        - "ROADCLASS"
+        - "NBRLANES"
+        - "PAVSTATUS"
+        - "PAVSURF"
+        - "UNPAVSURF"
+        - "ROADJURIS"
+        - "SPEED"
+        - "TRAFFICDIR"
+        - "CLOSING"
+      suitability: "Coarse national haul-distance baseline; not sufficient alone for operational forest access or delivered-cost modelling."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "review"
-      rationale: "Public and structured, but exact release snapshots should be archived when used for model products."
+      include: "gpkg_when_used"
+      rationale: "Mirror exact GeoPackage release ZIPs if NRN supports model outputs. Keep shapefile URLs as alternates unless a workflow requires both distributions."
 
   - id: biomass_inventory_business_data
     category: industry
