@@ -18,9 +18,19 @@ large model outputs remain under ignored `tmp/` or the `data` submodule.
 ## Phase Close-Out Criteria
 
 - The active branch and GitHub issue hierarchy match the roadmap.
-- The ws3 bridge, SCANFI diagnostic inventory/supply path, three-way comparison,
-  and Gauthier yield-method fixture are documented and tested.
-- Placeholder yield rules are clearly marked as diagnostic and not accepted.
+- The ws3 bridge, SCANFI diagnostic inventory/supply path, variant comparison,
+  Gauthier yield-method fixture, and SCANFI+Gauthier diagnostic variant are
+  documented and tested.
+- Placeholder yield rules are clearly marked as diagnostic; log-yield
+  placeholders are replaced only by Gauthier diagnostic method-reproduction
+  values, while residue yield remains unresolved.
 - All child issue checklists are complete or explicitly deferred.
 - A pull request from the phase branch to `main` is opened after child issues
   are complete.
+
+## Active Extension
+
+P3.6 completed the first closeout pass and opened PR `#9`. P3.7 extends the
+same phase before merge to replace the SCANFI diagnostic log-yield placeholder
+with Gauthier et al. (2015) diagnostic method-reproduction rules while keeping
+raw rasters, NFI pixels, and production calibration out of scope.

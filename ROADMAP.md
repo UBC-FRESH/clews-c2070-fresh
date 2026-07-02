@@ -236,7 +236,8 @@ Metadata surfaces:
 - [x] Select the Gauthier et al. 2015 method as the primary yield-policy
   reproduction path and add a diagnostic evaluator fixture.
 - [ ] Replace one synthetic supply-side data family with accepted diagnostic
-  inventory/yield inputs.
+  inventory/yield inputs, beginning with SCANFI diagnostic inventory plus
+  Gauthier diagnostic log-yield rules.
 - [x] Add provenance fields or manifests needed to distinguish ws3 runtime
   output, normalized adapter output, and downstream LP input.
 
@@ -319,5 +320,16 @@ of the parent repository.
   - [x] Update roadmap task lines with issue numbers.
   - [x] Check child issue checklist items against completed work.
   - [x] Push phase branch and open a PR to `main` (`#9`).
+- [ ] P3.7 Gauthier-to-SCANFI diagnostic yield integration. Child issue:
+  `#11`.
+  - [ ] Update CLEWS agent workflow notes to match UBC-FRESH
+    roadmap/issue/branch discipline.
+  - [ ] Add a Gauthier-to-SCANFI yield-rule adapter.
+  - [ ] Add the `bc-mini-scanfi-gauthier-diagnostic` solved variant.
+  - [ ] Extend BC mini variant comparison outputs from three lanes to four
+    lanes.
+  - [ ] Update roadmap, planning, gap register, changelog, parent issue, and
+    PR `#9`.
+  - [ ] Add regression tests and run verification commands.
 
-Status: in PR review.
+Status: extended before PR merge for P3.7 diagnostic yield integration.
