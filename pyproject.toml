@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clews-c2070-fresh"
+version = "0.0.0"
+description = "UBC FRESH workspace for CLEWs-C2070 forestry and forest-biomass supply modelling."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML>=6",
+]
+
+[project.optional-dependencies]
+workflow = [
+  "datalad[full]>=1.0",
+  "freshforge==0.1.0a5",
+  "PuLP>=2.8,<3",
+]
+
+[project.entry-points."freshforge.providers"]
+"clews.materialization" = "fresh_fibre.freshforge_materialization:provider_factory"
+
+[tool.setuptools.packages.find]
+include = ["fresh_fibre*"]

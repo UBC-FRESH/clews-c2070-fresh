@@ -1,0 +1,7 @@
+# Optional workflow/materialization dependencies for the CLEWS DataLad submodule.
+#
+# git-annex remains an OS-level prerequisite. Install this file inside the
+# repo-local .venv before running FreshForge materialization workflows.
+datalad[full]>=1.0
+freshforge==0.1.0a5
+PuLP>=2.8,<3
