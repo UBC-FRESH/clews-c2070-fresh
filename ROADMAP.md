@@ -349,6 +349,8 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 
 Active branch: `feature/p5-tiny-real-sampling-fixture`.
 
+Draft PR: `#25`.
+
 Governing planning note: `planning/phase-5-tiny-real-sampling-fixture.md`.
 
 Goal: convert Phase 4's SCANFI+Gauthier policy gates into a concrete,
