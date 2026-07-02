@@ -16,6 +16,10 @@
   `real-diagnostic-input-contract.csv` to define the first tiny real-input gate
   across SCANFI rasters, Gauthier predictors, NFI validation/access, residue
   yield, and cost calibration.
+- Added a Phase 4 SCANFI diagnostic FreshForge materialization overlay and
+  workflow targeting only `data/metadata/scanfi-diagnostic` and
+  `data/manifests/scanfi-diagnostic`, with tests and docs confirming raw
+  SCANFI rasters remain opt-in.
 
 ## 2026-06-27
 

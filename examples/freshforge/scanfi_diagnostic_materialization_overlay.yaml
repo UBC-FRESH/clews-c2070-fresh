@@ -1,0 +1,23 @@
+instance:
+  root: data
+  submodule_path: data
+environment:
+  venv_path: .venv
+install:
+  requirements:
+    - requirements-workflow.txt
+  editable_paths: []
+  extras: []
+  packages: []
+annex:
+  special_remote: arbutus-s3
+materialization:
+  required_paths:
+    - metadata/scanfi-diagnostic
+    - manifests/scanfi-diagnostic
+audit:
+  required_paths:
+    - metadata/scanfi-diagnostic
+    - manifests/scanfi-diagnostic
+report:
+  path: runtime/freshforge/scanfi_diagnostic_materialization_report.json

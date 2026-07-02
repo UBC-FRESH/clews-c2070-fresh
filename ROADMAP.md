@@ -304,15 +304,15 @@ FreshForge/DataLad workflows for reproducibility.
     outputs.
   - [x] Add a machine-readable input-contract/gate table.
   - [x] Update gap register and planning note.
-- [ ] P4.2 Add a FreshForge/DataLad materialization plan for the tiny SCANFI
+- [x] P4.2 Add a FreshForge/DataLad materialization plan for the tiny SCANFI
   fixture. Child issue: `#14`.
-  - [ ] Define lightweight manifest paths under `data/metadata` or
+  - [x] Define lightweight manifest paths under `data/metadata` or
     `data/manifests`.
-  - [ ] Keep raw raster payloads opt-in and outside the parent repo.
-  - [ ] Add or update FreshForge overlay examples for the tiny diagnostic
+  - [x] Keep raw raster payloads opt-in and outside the parent repo.
+  - [x] Add or update FreshForge overlay examples for the tiny diagnostic
     fixture.
-  - [ ] Document required `CLEWS_EXTERNAL_DATA_ROOT` behavior.
-  - [ ] Add tests or dry-run validation for the workflow metadata.
+  - [x] Document required `CLEWS_EXTERNAL_DATA_ROOT` behavior.
+  - [x] Add tests or dry-run validation for the workflow metadata.
 - [ ] P4.3 Resolve Gauthier predictor/access gates for the diagnostic fixture.
   Child issue: `#15`.
   - [ ] Inventory accepted or candidate sources for NFI reference pixels/plots.
@@ -339,7 +339,7 @@ FreshForge/DataLad workflows for reproducibility.
   - [ ] Run required verification commands.
   - [ ] Open or update the phase PR and close child issues when complete.
 
-Status: P4.1 complete; P4.2 is the next active implementation task.
+Status: P4.1 and P4.2 complete; P4.3 is the next active implementation task.
 
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 

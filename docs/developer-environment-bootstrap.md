@@ -56,6 +56,18 @@ The default executable workflow initializes the `data` submodule, enables the
 export CLEWS_EXTERNAL_DATA_ROOT=$PWD/data
 ```
 
+For Phase 4 SCANFI+Gauthier diagnostic input work, use the
+diagnostic-specific workflow when you only need the tiny fixture metadata and
+manifests:
+
+```bash
+.venv/bin/python -m freshforge validate examples/freshforge/scanfi_diagnostic_materialization_workflow.yaml
+.venv/bin/python -m freshforge plan examples/freshforge/scanfi_diagnostic_materialization_workflow.yaml
+```
+
+That workflow targets `data/metadata/scanfi-diagnostic` and
+`data/manifests/scanfi-diagnostic`. It does not materialize raw SCANFI rasters.
+
 ## Boundaries
 
 Maintainer actions that create or publish the DataLad repository, configure the

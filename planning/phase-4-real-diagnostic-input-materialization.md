@@ -40,6 +40,20 @@ as validation summaries only until license/re-hosting policy is resolved.
 Residue yield, cost calibration, climate predictor source, and NFI reference
 pixel access remain separate gates.
 
+## P4.2 Materialization Decision
+
+The first Phase 4 materialization workflow targets only lightweight DataLad
+paths:
+
+- `data/metadata/scanfi-diagnostic`
+- `data/manifests/scanfi-diagnostic`
+
+The workflow is defined by
+`examples/freshforge/scanfi_diagnostic_materialization_workflow.yaml` and uses
+`examples/freshforge/scanfi_diagnostic_materialization_overlay.yaml`. It is
+intended to validate and plan the collaborator materialization path before any
+raw SCANFI raster payloads or raster windows are requested.
+
 ## Phase Close-Out Criteria
 
 - The tiny real-input contract is explicit and machine-readable.
