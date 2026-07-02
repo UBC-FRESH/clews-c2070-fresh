@@ -1,5 +1,15 @@
 # Change Log
 
+## 2026-07-02
+
+- Added a CLEWS-owned FreshForge materialization provider and workflow fixtures
+  for initializing the `data` DataLad submodule and selectively materializing
+  lightweight `metadata` and `manifests` paths through the FEMIC-style
+  provider/overlay pattern.
+- Added repo-root `.venv` bootstrap guidance requiring DataLad and FreshForge
+  from the local virtual environment and `git-annex` as an OS-level
+  prerequisite.
+
 ## 2026-06-27
 
 - Added the Gauthier et al. 2015 method as the primary yield-policy

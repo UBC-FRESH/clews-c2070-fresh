@@ -45,6 +45,19 @@ forest-biomass supply modelling before model implementation work depends on it.
   industrial facility, protected-area, and carbon/climate layers.
 - [ ] Produce the first modelling-readiness assessment for WS3/FEMIC expansion.
 
+### P1.5 FreshForge Data Materialization Workflow
+
+- [x] Preserve raw/heavy-data boundaries while adding a collaborator
+  materialization workflow for the `data` submodule.
+- [x] Add a CLEWS-owned FreshForge provider namespace for DataLad/git-annex
+  materialization using the FEMIC provider/overlay pattern.
+- [x] Add public-safe smoke and executable workflow fixtures that target
+  `data/metadata` and `data/manifests`, not `data/raw`.
+- [x] Document repo-root `.venv` bootstrap expectations for Python, DataLad,
+  and FreshForge, with `git-annex` as an OS-level prerequisite.
+- [x] Add regression tests for provider metadata, overlay parsing, command
+  generation, workflow planning, and report-only smoke execution.
+
 ## Phase 2: FFCM Archive Reverse Engineering
 
 Target window: June 2026 to October 2026.

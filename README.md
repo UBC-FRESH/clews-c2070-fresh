@@ -36,16 +36,40 @@ For Tyler's first work package, use:
 For the data repository and Arbutus/DataLad pattern, use:
 
 - [docs/data-repository-runbook.md](docs/data-repository-runbook.md)
+- [docs/developer-environment-bootstrap.md](docs/developer-environment-bootstrap.md)
 
-## First Bootstrap Commands
+## Developer Bootstrap
 
-After the `data` submodule exists:
+Use a repo-root local virtual environment. DataLad and FreshForge should come
+from `.venv`, while `git-annex` remains an OS-level prerequisite:
 
 ```bash
-git submodule update --init --recursive
-git -C data annex enableremote arbutus-s3
-datalad get -r data/raw
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -e ".[workflow]"
+.venv/bin/python -m freshforge --version
+.venv/bin/datalad --version
+git annex version
 ```
 
-Use selective `datalad get` calls for large layers. Avoid materializing the
-entire archive unless a workflow explicitly requires it.
+For the full ws3 smoke-test lane, add the editable local `../ws3` checkout:
+
+```bash
+python -m pip install -r requirements-ws3-smoke.txt
+```
+
+Use FreshForge to inspect and run the collaborator materialization workflow:
+
+```bash
+.venv/bin/python -m freshforge validate examples/freshforge/data_materialization_workflow.yaml
+.venv/bin/python -m freshforge plan examples/freshforge/data_materialization_workflow.yaml
+.venv/bin/python -m freshforge run examples/freshforge/data_materialization_workflow.yaml \
+  --workdir runtime/freshforge \
+  --namespace data-bootstrap
+export CLEWS_EXTERNAL_DATA_ROOT=$PWD/data
+```
+
+The default workflow materializes only `data/metadata` and `data/manifests`.
+Use selective `datalad get` calls for large layers only when a workflow
+explicitly requires them; avoid materializing `data/raw` by default.

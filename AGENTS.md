@@ -28,7 +28,7 @@ operational guide. The bootstrap and publish side is stateful infrastructure
 work; read the runbook before issuing raw `datalad`, `git annex`, or S3
 commands.
 
-## Fresh Clone Bootstrap
+## Developer Environment Bootstrap
 
 Use a repository-root local virtual environment for Python, DataLad,
 FreshForge, ws3 smoke runs, and test commands. Agent terminal sessions should
@@ -36,28 +36,33 @@ prefer explicit `.venv/bin/...` commands instead of probing the global shell
 path and reporting missing executables that are expected to live in the project
 environment.
 
-Baseline setup from the repo root:
+Fresh-clone baseline:
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements-prototype.txt
-python -m pip install -r requirements-ws3-smoke.txt
-```
-
-If the FreshForge/DataLad workflow files are present on the active branch,
-install the workflow dependency set and run workflow commands from `.venv`:
-
-```bash
 python -m pip install -e ".[workflow]"
+python -m pip install -r requirements-ws3-smoke.txt  # optional full ws3 smoke lane
 .venv/bin/python -m freshforge --version
 .venv/bin/datalad --version
 git annex version
 ```
 
-`git-annex` is an OS-level prerequisite. DataLad should be installed through
-the repo-local `.venv`.
+For collaborator materialization of the `data` submodule, use the CLEWS
+FreshForge workflow pattern instead of one-off shell recipes:
+
+```bash
+.venv/bin/python -m freshforge validate examples/freshforge/data_materialization_workflow.yaml
+.venv/bin/python -m freshforge plan examples/freshforge/data_materialization_workflow.yaml
+.venv/bin/python -m freshforge run examples/freshforge/data_materialization_workflow.yaml \
+  --workdir runtime/freshforge \
+  --namespace data-bootstrap
+export CLEWS_EXTERNAL_DATA_ROOT=$PWD/data
+```
+
+`git-annex` is an OS-level prerequisite. DataLad is installed through the
+repo-local `.venv` via `.[workflow]`.
 
 ## Development Workflow
 
