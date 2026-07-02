@@ -23,6 +23,10 @@
 - Added `gauthier-predictor-access-gates.csv` to distinguish accepted
   diagnostic predictors from open access, license, climate, species
   composition, measured-volume, and NFI reference-pixel gates.
+- Added `residue-cost-validation-policy-gates.csv` to keep logging residue,
+  mill residue, cost calibration, market prices, and validation benchmarks as
+  explicit production-acceptance gates rather than implicit diagnostic
+  assumptions.
 
 ## 2026-06-27
 

@@ -67,6 +67,19 @@ production status until their access/license position and substitution policy
 are explicit. For now, those rows remain open gates or parent-repo metadata-only
 decisions.
 
+## P4.4 Residue, Cost, And Validation Decision
+
+`metadata/ffcm-archive/residue-cost-validation-policy-gates.csv` records the
+remaining non-log-yield policy gates. The current decision is conservative:
+logging-residue yield, mill-residue conversion provenance, log supply costs,
+roadside costs, delivered-cost proxies, transport costs, and market prices are
+not production assumptions. They remain diagnostic placeholders or open gates
+until source, year, currency, unit basis, and validation policy are recorded.
+
+Validation is split into three lanes: NFI standard reports as license-pending
+validation summaries, SCANFI internal/range checks once real raster sampling is
+implemented, and LP solution sanity checks for compact diagnostic scenarios.
+
 ## Phase Close-Out Criteria
 
 - The tiny real-input contract is explicit and machine-readable.

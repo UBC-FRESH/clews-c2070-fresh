@@ -322,15 +322,15 @@ FreshForge/DataLad workflows for reproducibility.
   - [x] Record license/access state for each required predictor source.
   - [x] Identify which predictors can be represented by public-safe tiny
     fixtures.
-- [ ] P4.4 Define residue, cost, and validation policy for production
+- [x] P4.4 Define residue, cost, and validation policy for production
   acceptance. Child issue: `#16`.
-  - [ ] Define candidate residue-yield policy paths.
-  - [ ] Define cost-calibration source requirements and placeholder
+  - [x] Define candidate residue-yield policy paths.
+  - [x] Define cost-calibration source requirements and placeholder
     boundaries.
-  - [ ] Define validation benchmarks, including NFI standard reports where
+  - [x] Define validation benchmarks, including NFI standard reports where
     license permits.
-  - [ ] Update prototype gap register with production acceptance states.
-  - [ ] Produce a short decision memo for unresolved versus accepted policies.
+  - [x] Update prototype gap register with production acceptance states.
+  - [x] Produce a short decision memo for unresolved versus accepted policies.
 - [ ] P4.5 Close the phase with a decision memo and PR hygiene. Child issue:
   `#17`.
   - [ ] Reconcile all child issue checklists.
@@ -339,8 +339,8 @@ FreshForge/DataLad workflows for reproducibility.
   - [ ] Run required verification commands.
   - [ ] Open or update the phase PR and close child issues when complete.
 
-Status: P4.1 through P4.3 complete; P4.4 is the next active implementation
-task.
+Status: P4.1 through P4.4 complete; P4.5 phase closeout is the next active
+implementation task.
 
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 
