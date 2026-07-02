@@ -331,16 +331,16 @@ FreshForge/DataLad workflows for reproducibility.
     license permits.
   - [x] Update prototype gap register with production acceptance states.
   - [x] Produce a short decision memo for unresolved versus accepted policies.
-- [ ] P4.5 Close the phase with a decision memo and PR hygiene. Child issue:
+- [x] P4.5 Close the phase with a decision memo and PR hygiene. Child issue:
   `#17`.
-  - [ ] Reconcile all child issue checklists.
-  - [ ] Add a phase decision memo.
-  - [ ] Update `ROADMAP.md`, `CHANGE_LOG.md`, and GitHub issue comments.
-  - [ ] Run required verification commands.
-  - [ ] Open or update the phase PR and close child issues when complete.
+  - [x] Reconcile all child issue checklists.
+  - [x] Add a phase decision memo.
+  - [x] Update `ROADMAP.md`, `CHANGE_LOG.md`, and GitHub issue comments.
+  - [x] Run required verification commands.
+  - [x] Open or update the phase PR and close child issues when complete.
 
-Status: P4.1 through P4.4 complete; P4.5 phase closeout is the next active
-implementation task.
+Status: Phase 4 implementation complete; PR review/merge remains before
+closing parent issue `#12`.
 
 ## Phase 3: Diagnostic ws3 Supply and Yield Replacement
 

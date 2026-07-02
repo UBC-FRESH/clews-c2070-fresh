@@ -89,3 +89,5 @@ implemented, and LP solution sanity checks for compact diagnostic scenarios.
   reproduction.
 - A decision memo states whether the next implementation phase can sample real
   rasters or remains blocked by access/licensing.
+
+Closeout memo: `planning/phase-4-decision-memo.md`.

@@ -27,6 +27,9 @@
   mill residue, cost calibration, market prices, and validation benchmarks as
   explicit production-acceptance gates rather than implicit diagnostic
   assumptions.
+- Added the Phase 4 decision memo and completed the Phase 4 roadmap task
+  checklist, recommending a follow-on tiny real-sampling implementation phase
+  that keeps raw rasters and private data in the DataLad boundary.
 
 ## 2026-06-27
 
