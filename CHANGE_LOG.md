@@ -2,6 +2,10 @@
 
 ## 2026-07-03
 
+- Added the P5.4 conceptual-alpha readiness surface, updated the forest
+  inventory/yield gap register to reflect designed-but-not-materialized tiny
+  real-sampling contracts, and kept Phase 6 materialization and production
+  readiness gates explicitly open.
 - Added the P5.3 tiny real-sampling validation contract, separating diagnostic
   acceptance checks for future sampled SCANFI fixture outputs from production
   calibration gates for residue yield, costs, climate predictors, NFI access,

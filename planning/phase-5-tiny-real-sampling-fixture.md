@@ -104,6 +104,17 @@ and production-ready national input. Phase 5 can move SCANFI real sampling from
 open concept to planned fixture, but it must leave production gates open until
 access, validation, and calibration decisions are complete.
 
+P5.4 implementation table:
+`metadata/ffcm-archive/conceptual-alpha-readiness.csv`.
+
+The readiness surface records current state without authorizing Phase 6
+materialization. Existing BC mini, ws3-smoke, SCANFI diagnostic, and
+SCANFI+Gauthier lanes are diagnostic implementation evidence. The three Phase
+5 real-sampling contracts are designed but not materialized. The tiny
+real-sampled diagnostic lane is not implemented until Phase 6, and the national
+production model remains blocked by open residue, cost, climate, NFI,
+validation, and scaling gates.
+
 ## P5.5 Close-Out Decision
 
 Phase 5 should close with a short decision memo that says whether Phase 6 is

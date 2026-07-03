@@ -383,12 +383,12 @@ production yield assumptions to the parent repository.
   - [x] Define provenance-completeness checks against the extraction contract.
   - [x] Identify which checks are diagnostic acceptance gates versus
     production calibration gates.
-- [ ] P5.4 Update gap and release-readiness surfaces. Child issue: `#23`.
-  - [ ] Update `prototype-gap-register.csv` to distinguish planned real
+- [x] P5.4 Update gap and release-readiness surfaces. Child issue: `#23`.
+  - [x] Update `prototype-gap-register.csv` to distinguish planned real
     sampling from production-ready national input.
-  - [ ] Update the conceptual alpha release roadmap with Phase 5 status.
-  - [ ] Confirm residue, cost, climate, NFI, and validation gates remain open.
-  - [ ] Add changelog and issue progress notes.
+  - [x] Update the conceptual alpha release roadmap with Phase 5 status.
+  - [x] Confirm residue, cost, climate, NFI, and validation gates remain open.
+  - [x] Add changelog and issue progress notes.
 - [ ] P5.5 Close Phase 5 with a decision memo and Phase 6 authorization.
   Child issue: `#24`.
   - [ ] State whether Phase 6 may materialize a tiny SCANFI-derived fixture.

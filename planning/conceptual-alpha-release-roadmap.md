@@ -42,3 +42,17 @@ validation against accepted reference summaries.
   `CHANGE_LOG.md`, PR bodies, and commits.
 - `main` is clean before tagging, the GitHub release exists, and the
   announcement discussion links back to the release.
+
+## Current Readiness
+
+Machine-readable readiness surface:
+`metadata/ffcm-archive/conceptual-alpha-readiness.csv`.
+
+Current conceptual-alpha readiness is diagnostic only. The BC mini LP
+prototype, ws3 smoke bridge, SCANFI diagnostic lane, and SCANFI+Gauthier
+diagnostic lane are implemented diagnostic components. The Phase 5 tiny
+real-sampling fixture cells, extraction contract, and validation contract are
+designed but not materialized. The tiny real-sampled lane remains a Phase 6
+implementation target and is not yet available. The national production model
+remains blocked by open residue-yield, cost-calibration, climate-predictor,
+NFI-access, benchmark-validation, and national-scaling gates.

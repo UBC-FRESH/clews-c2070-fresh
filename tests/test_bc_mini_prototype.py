@@ -41,6 +41,8 @@ TINY_REAL_SAMPLING_EXTRACTION_CONTRACT = (
 TINY_REAL_SAMPLING_VALIDATION_CONTRACT = (
     REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv"
 )
+CONCEPTUAL_ALPHA_READINESS = REPO_ROOT / "metadata/ffcm-archive/conceptual-alpha-readiness.csv"
+PROTOTYPE_GAP_REGISTER = REPO_ROOT / "metadata/ffcm-archive/prototype-gap-register.csv"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -502,6 +504,74 @@ class BcMiniPrototypeTest(unittest.TestCase):
             self.assertNotEqual(row["production_status"], "production_ready")
             self.assertTrue(row["fixture_id"])
             self.assertTrue(row["acceptance_rule"])
+
+    def test_conceptual_alpha_readiness_tracks_phase5_without_production_claims(self) -> None:
+        rows = read_csv(CONCEPTUAL_ALPHA_READINESS)
+        required_columns = {
+            "component_id",
+            "component_name",
+            "readiness_state",
+            "release_relevance",
+            "diagnostic_status",
+            "production_status",
+            "blocking_gates",
+            "evidence_paths",
+            "next_action",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        by_component = {row["component_id"]: row for row in rows}
+        expected_components = {
+            "ffcm_archive_evidence",
+            "bc_mini_lp_prototype",
+            "ws3_smoke_bridge",
+            "scanfi_diagnostic_lane",
+            "scanfi_gauthier_diagnostic_lane",
+            "tiny_real_sampling_fixture_cells",
+            "tiny_real_sampling_extraction_contract",
+            "tiny_real_sampling_validation_contract",
+            "tiny_real_sampled_lane",
+            "production_national_model",
+        }
+        self.assertEqual(set(by_component), expected_components)
+
+        self.assertEqual(
+            by_component["tiny_real_sampling_fixture_cells"]["readiness_state"],
+            "designed_not_materialized",
+        )
+        self.assertEqual(
+            by_component["tiny_real_sampling_extraction_contract"]["readiness_state"],
+            "designed_not_materialized",
+        )
+        self.assertEqual(
+            by_component["tiny_real_sampling_validation_contract"]["readiness_state"],
+            "designed_not_materialized",
+        )
+        self.assertEqual(by_component["tiny_real_sampled_lane"]["readiness_state"], "not_implemented")
+        self.assertEqual(
+            by_component["production_national_model"]["production_status"],
+            "blocked_open_gates",
+        )
+        self.assertTrue(all(row["production_status"] != "production_ready" for row in rows))
+
+        evidence = "\n".join(row["evidence_paths"] for row in rows)
+        for path in (
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv",
+        ):
+            self.assertIn(path, evidence)
+
+        gap_rows = {row["gap_id"]: row for row in read_csv(PROTOTYPE_GAP_REGISTER)}
+        self.assertIn("gap_002", gap_rows)
+        gap_evidence = gap_rows["gap_002"]["current_evidence"]
+        for path in (
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv",
+        ):
+            self.assertIn(path, gap_evidence)
+        self.assertIn("not materialized", gap_rows["gap_002"]["why_it_matters"])
 
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"
