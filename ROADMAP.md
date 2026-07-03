@@ -367,14 +367,14 @@ production yield assumptions to the parent repository.
     paths.
   - [x] Define required provenance fields for source layer, version,
     acquisition state, and value policy.
-- [ ] P5.2 Define the SCANFI raster-window extraction and manifest contract.
+- [x] P5.2 Define the SCANFI raster-window extraction and manifest contract.
   Child issue: `#21`.
-  - [ ] Identify required SCANFI source layers for the tiny fixture.
-  - [ ] Define raw raster-window, manifest, and parent-repo derived-table
+  - [x] Identify required SCANFI source layers for the tiny fixture.
+  - [x] Define raw raster-window, manifest, and parent-repo derived-table
     boundaries.
-  - [ ] Specify checksum, unit, nodata, CRS, resolution, and sampling-method
+  - [x] Specify checksum, unit, nodata, CRS, resolution, and sampling-method
     metadata.
-  - [ ] Keep all raw raster payloads in the `data` DataLad/git-annex boundary.
+  - [x] Keep all raw raster payloads in the `data` DataLad/git-annex boundary.
 - [ ] P5.3 Define validation checks for diagnostic acceptance. Child issue:
   `#22`.
   - [ ] Define required-column and parseability checks.

@@ -2,6 +2,10 @@
 
 ## 2026-07-03
 
+- Added the P5.2 tiny SCANFI extraction contract, defining the five selected
+  SCANFI v2 2025 source layers, planned DataLad raw/window/manifest paths,
+  parent-repo derived-output boundary, nodata/sampling/checksum policies, and
+  regression checks without materializing raster payloads.
 - Added the P5.1 tiny BC real-sampling fixture-cell skeleton, defining six
   planned SCANFI raster-window cells that cover all current BC mini
   SCANFI+Gauthier spatial units and supply nodes without materializing raw

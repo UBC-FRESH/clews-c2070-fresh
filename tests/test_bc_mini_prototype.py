@@ -35,6 +35,9 @@ FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
 SCANFI_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic"
 GAUTHIER_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/gauthier-diagnostic"
 TINY_REAL_SAMPLING_FIXTURE = REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv"
+TINY_REAL_SAMPLING_EXTRACTION_CONTRACT = (
+    REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv"
+)
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -359,6 +362,77 @@ class BcMiniPrototypeTest(unittest.TestCase):
             {row["supply_node_id"] for row in rows},
             {row["supply_node_id"] for row in supply_rows},
         )
+
+    def test_tiny_real_sampling_extraction_contract_keeps_payloads_in_data_boundary(self) -> None:
+        contract_rows = read_csv(TINY_REAL_SAMPLING_EXTRACTION_CONTRACT)
+        self.assertEqual(len(contract_rows), 5)
+
+        required_columns = {
+            "contract_id",
+            "fixture_id",
+            "layer_role",
+            "source_file_name",
+            "source_manifest_path",
+            "data_raw_source_path",
+            "data_window_output_dir",
+            "data_window_manifest_path",
+            "parent_repo_derived_output_path",
+            "expected_crs",
+            "expected_resolution_m",
+            "nodata_policy",
+            "sampling_method",
+            "summary_statistics",
+            "checksum_policy",
+            "license_position",
+            "materialization_status",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, contract_rows[0].keys())
+
+        expected_contract_ids = {
+            "scanfi_biomass_2025",
+            "scanfi_height_2025",
+            "scanfi_closure_2025",
+            "scanfi_landcover_2025",
+            "scanfi_age_2025",
+        }
+        self.assertEqual({row["contract_id"] for row in contract_rows}, expected_contract_ids)
+
+        fixture_layers = {
+            source_layer
+            for row in read_csv(TINY_REAL_SAMPLING_FIXTURE)
+            for source_layer in row["required_source_layers"].split("|")
+        }
+        self.assertEqual({row["source_file_name"] for row in contract_rows}, fixture_layers)
+        self.assertNotIn("SCANFI_north_extrapol_area.tif", fixture_layers)
+
+        for row in contract_rows:
+            self.assertTrue(row["data_raw_source_path"].startswith("data/raw/scanfi/v2/"))
+            self.assertTrue(
+                row["data_window_output_dir"].startswith(
+                    "data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/"
+                )
+            )
+            self.assertTrue(
+                row["data_window_manifest_path"].startswith(
+                    "data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/"
+                )
+            )
+            self.assertEqual(
+                row["parent_repo_derived_output_path"],
+                "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_inventory_cells.csv",
+            )
+            self.assertEqual(row["materialization_status"], "planned_not_materialized")
+            self.assertEqual(row["sampling_method"], "window_extract_then_cell_summary")
+            self.assertEqual(row["checksum_policy"], "sha256_for_window_outputs_and_manifest_rows")
+            self.assertNotIn(
+                row["data_raw_source_path"].split("/", 1)[0],
+                {"metadata", "planning", "fresh_fibre", "scripts", "tests"},
+            )
+            self.assertNotIn(
+                row["data_window_output_dir"].split("/", 1)[0],
+                {"metadata", "planning", "fresh_fibre", "scripts", "tests"},
+            )
 
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"

@@ -64,6 +64,19 @@ checksum/provenance fields, unit fields, and value-policy labels. It should be
 usable by a later implementation script without committing the raw raster
 window itself to the parent repository.
 
+P5.2 implementation table:
+`metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv`.
+
+The contract covers the five selected SCANFI v2 2025 layers required by the
+P5.1 fixture cells: aboveground biomass, height, canopy closure, NFI
+landcover, and median age. Raw source rasters are referenced only under
+`data/raw/scanfi/v2/`; tiny raster-window outputs and their manifests are
+planned under `data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/`
+and `data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/`. The only
+parent-repo output boundary is the future derived diagnostic inventory table
+for the `bc-mini-scanfi-real-sampled` lane. The north extrapolation mask stays
+as a missing follow-up source, not a required Phase 6 extraction input.
+
 ## P5.3 Validation Decision
 
 Validation should cover parseability, required columns, nonnegative sampled
