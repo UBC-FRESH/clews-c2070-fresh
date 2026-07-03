@@ -34,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
 SCANFI_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic"
 GAUTHIER_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/gauthier-diagnostic"
+TINY_REAL_SAMPLING_FIXTURE = REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -286,6 +287,78 @@ class BcMiniPrototypeTest(unittest.TestCase):
             for row in rows:
                 if "quantity" in row and row["quantity"]:
                     self.assertGreaterEqual(float(row["quantity"]), 0.0)
+
+    def test_tiny_real_sampling_fixture_cells_cover_bc_mini_supply_nodes(self) -> None:
+        rows = read_csv(TINY_REAL_SAMPLING_FIXTURE)
+        self.assertEqual(len(rows), 6)
+
+        required_columns = {
+            "fixture_cell_id",
+            "source_proxy_cell_id",
+            "fixture_id",
+            "scenario_id",
+            "period",
+            "province",
+            "diagnostic_region",
+            "spatial_unit_id",
+            "supply_node_id",
+            "geometry_ref",
+            "representative_area_ha",
+            "inventory_year",
+            "required_source_layers",
+            "data_source_window_dir",
+            "data_manifest_path",
+            "parent_repo_derived_inventory_path",
+            "value_policy",
+            "sampling_status",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        fixture_ids = {row["fixture_cell_id"] for row in rows}
+        self.assertEqual(len(fixture_ids), len(rows))
+
+        required_nonempty = {
+            "spatial_unit_id",
+            "supply_node_id",
+            "data_source_window_dir",
+            "data_manifest_path",
+            "parent_repo_derived_inventory_path",
+            "value_policy",
+            "sampling_status",
+        }
+        for row in rows:
+            for column in required_nonempty:
+                self.assertTrue(row[column], f"{column} is empty for {row['fixture_cell_id']}")
+            self.assertEqual(row["value_policy"], "real_sampling_fixture_design_not_sampled")
+            self.assertEqual(row["sampling_status"], "planned_not_materialized")
+            self.assertTrue(
+                row["data_source_window_dir"].startswith(
+                    "data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/"
+                )
+            )
+            self.assertTrue(
+                row["data_manifest_path"].startswith(
+                    "data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/"
+                )
+            )
+            self.assertEqual(
+                row["parent_repo_derived_inventory_path"],
+                "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_inventory_cells.csv",
+            )
+
+        supply_rows = read_csv(
+            REPO_ROOT
+            / "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-gauthier-diagnostic/supply_offer.csv"
+        )
+        self.assertEqual(
+            {row["spatial_unit_id"] for row in rows},
+            {row["spatial_unit_id"] for row in supply_rows},
+        )
+        self.assertEqual(
+            {row["supply_node_id"] for row in rows},
+            {row["supply_node_id"] for row in supply_rows},
+        )
 
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"

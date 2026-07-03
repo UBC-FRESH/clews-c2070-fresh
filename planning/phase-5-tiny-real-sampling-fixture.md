@@ -44,6 +44,18 @@ supply node, with stable cell identifiers, spatial-unit keys, and DataLad path
 expectations. The phase should prefer metadata-only definitions until raw
 SCANFI sampling is explicitly authorized.
 
+P5.1 implementation table:
+`metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv`.
+
+The first fixture skeleton uses six planned SCANFI raster windows copied from
+the existing diagnostic proxy-cell design. This is the minimum useful design
+because it covers all three BC mini spatial units and all four active
+SCANFI+Gauthier downstream supply nodes: coast log, first interior log, second
+interior log, and interior logging-residue candidate. The rows are explicitly
+marked `real_sampling_fixture_design_not_sampled` and
+`planned_not_materialized`; they define cell keys and expected DataLad paths
+only, not real sampled values.
+
 ## P5.2 Extraction Contract Decision
 
 The extraction contract should identify required SCANFI source layers,

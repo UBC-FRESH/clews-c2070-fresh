@@ -358,14 +358,14 @@ public-safe tiny sampling fixture design that can authorize Phase 6
 materialization without committing raw rasters, private NFI material, or
 production yield assumptions to the parent repository.
 
-- [ ] P5.1 Define the tiny BC diagnostic sampling extent and cell keys. Child
+- [x] P5.1 Define the tiny BC diagnostic sampling extent and cell keys. Child
   issue: `#20`.
-  - [ ] Select the minimum BC mini supply-node coverage needed for the first
+  - [x] Select the minimum BC mini supply-node coverage needed for the first
     real-sampled diagnostic fixture.
-  - [ ] Define stable sampled-cell identifiers and spatial-unit keys.
-  - [ ] Record expected DataLad source, metadata, manifest, and derived-output
+  - [x] Define stable sampled-cell identifiers and spatial-unit keys.
+  - [x] Record expected DataLad source, metadata, manifest, and derived-output
     paths.
-  - [ ] Define required provenance fields for source layer, version,
+  - [x] Define required provenance fields for source layer, version,
     acquisition state, and value policy.
 - [ ] P5.2 Define the SCANFI raster-window extraction and manifest contract.
   Child issue: `#21`.

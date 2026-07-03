@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-07-03
+
+- Added the P5.1 tiny BC real-sampling fixture-cell skeleton, defining six
+  planned SCANFI raster-window cells that cover all current BC mini
+  SCANFI+Gauthier spatial units and supply nodes without materializing raw
+  rasters or sampled payloads.
+
 ## 2026-07-02
 
 - Added the `v0.1.0a1` Conceptual Alpha release roadmap and opened Phase 5
