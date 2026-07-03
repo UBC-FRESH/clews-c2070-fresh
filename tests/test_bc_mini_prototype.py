@@ -38,6 +38,9 @@ TINY_REAL_SAMPLING_FIXTURE = REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampli
 TINY_REAL_SAMPLING_EXTRACTION_CONTRACT = (
     REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv"
 )
+TINY_REAL_SAMPLING_VALIDATION_CONTRACT = (
+    REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv"
+)
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -433,6 +436,72 @@ class BcMiniPrototypeTest(unittest.TestCase):
                 row["data_window_output_dir"].split("/", 1)[0],
                 {"metadata", "planning", "fresh_fibre", "scripts", "tests"},
             )
+
+    def test_tiny_real_sampling_validation_contract_separates_diagnostic_and_production_gates(self) -> None:
+        rows = read_csv(TINY_REAL_SAMPLING_VALIDATION_CONTRACT)
+        self.assertGreaterEqual(len(rows), 12)
+
+        required_columns = {
+            "validation_id",
+            "fixture_id",
+            "validation_group",
+            "validation_level",
+            "applies_to",
+            "source_contract",
+            "required_inputs",
+            "check_type",
+            "acceptance_rule",
+            "failure_severity",
+            "diagnostic_status",
+            "production_status",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        source_contracts = {
+            source
+            for row in rows
+            for source in row["source_contract"].split("|")
+        }
+        self.assertIn(
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            source_contracts,
+        )
+        self.assertIn(
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            source_contracts,
+        )
+
+        diagnostic_groups = {
+            row["validation_group"]
+            for row in rows
+            if row["validation_level"] == "diagnostic_acceptance_gate"
+        }
+        self.assertIn("coverage", diagnostic_groups)
+        self.assertIn("provenance", diagnostic_groups)
+
+        production_only_groups = {
+            "residue_yield",
+            "cost_calibration",
+            "climate_predictors",
+            "nfi_access",
+            "production_benchmark_validation",
+        }
+        production_rows = [
+            row for row in rows if row["validation_group"] in production_only_groups
+        ]
+        self.assertEqual({row["validation_group"] for row in production_rows}, production_only_groups)
+        self.assertTrue(
+            all(row["validation_level"] == "production_calibration_gate" for row in production_rows)
+        )
+        self.assertTrue(
+            all(row["diagnostic_status"] == "not_required_for_phase6_diagnostic" for row in production_rows)
+        )
+
+        for row in rows:
+            self.assertNotEqual(row["production_status"], "production_ready")
+            self.assertTrue(row["fixture_id"])
+            self.assertTrue(row["acceptance_rule"])
 
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"

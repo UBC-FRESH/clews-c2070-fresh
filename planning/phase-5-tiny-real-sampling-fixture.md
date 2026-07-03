@@ -84,6 +84,18 @@ quantities, unit consistency, nodata policy, cell-area accounting, expected
 diagnostic value ranges, and complete source/provenance references. These
 checks are diagnostic acceptance gates, not production calibration gates.
 
+P5.3 implementation table:
+`metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv`.
+
+The validation contract separates checks needed before a future Phase 6
+sampled fixture can feed the diagnostic lane from checks that remain production
+calibration gates. Diagnostic acceptance covers schema parseability, fixture
+and layer coverage, nonnegative quantities, nodata accounting, broad
+SCANFI-value sanity ranges, landcover logic, CRS/resolution consistency,
+checksums, provenance, and policy labels. Residue yield, cost calibration,
+climate predictors, NFI access, and benchmark validation remain explicitly
+marked as production gates and do not block the tiny diagnostic fixture design.
+
 ## P5.4 Gap And Release Decision
 
 The gap register should distinguish four states: implemented diagnostic

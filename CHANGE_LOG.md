@@ -2,6 +2,10 @@
 
 ## 2026-07-03
 
+- Added the P5.3 tiny real-sampling validation contract, separating diagnostic
+  acceptance checks for future sampled SCANFI fixture outputs from production
+  calibration gates for residue yield, costs, climate predictors, NFI access,
+  and benchmark validation.
 - Added the P5.2 tiny SCANFI extraction contract, defining the five selected
   SCANFI v2 2025 source layers, planned DataLad raw/window/manifest paths,
   parent-repo derived-output boundary, nodata/sampling/checksum policies, and

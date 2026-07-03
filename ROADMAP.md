@@ -375,13 +375,13 @@ production yield assumptions to the parent repository.
   - [x] Specify checksum, unit, nodata, CRS, resolution, and sampling-method
     metadata.
   - [x] Keep all raw raster payloads in the `data` DataLad/git-annex boundary.
-- [ ] P5.3 Define validation checks for diagnostic acceptance. Child issue:
+- [x] P5.3 Define validation checks for diagnostic acceptance. Child issue:
   `#22`.
-  - [ ] Define required-column and parseability checks.
-  - [ ] Define nonnegative quantity, area accounting, nodata, and expected
+  - [x] Define required-column and parseability checks.
+  - [x] Define nonnegative quantity, area accounting, nodata, and expected
     range checks.
-  - [ ] Define provenance-completeness checks against the extraction contract.
-  - [ ] Identify which checks are diagnostic acceptance gates versus
+  - [x] Define provenance-completeness checks against the extraction contract.
+  - [x] Identify which checks are diagnostic acceptance gates versus
     production calibration gates.
 - [ ] P5.4 Update gap and release-readiness surfaces. Child issue: `#23`.
   - [ ] Update `prototype-gap-register.csv` to distinguish planned real
