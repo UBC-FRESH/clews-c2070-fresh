@@ -121,3 +121,18 @@ Phase 5 should close with a short decision memo that says whether Phase 6 is
 authorized to materialize a tiny SCANFI-derived fixture, which paths may be
 materialized, which public-safe parent-repo outputs may be committed, and which
 inputs remain blocked or opt-in.
+
+P5.5 implementation memo:
+`planning/phase-5-decision-memo.md`.
+
+P5.5 authorization table:
+`metadata/ffcm-archive/phase-5-phase-6-authorization.csv`.
+
+Phase 6 is authorized to materialize only the selected tiny SCANFI diagnostic
+fixture paths defined by P5.1 through P5.3. Authorized paths are limited to
+selected SCANFI source references under `data/raw/scanfi/v2/`, tiny raster
+windows under `data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/`,
+tiny manifests under `data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/`,
+and one public-safe parent-repo derived inventory output for the future
+`bc-mini-scanfi-real-sampled` lane. Broad raw-data checkout, restricted NFI
+payloads, production assumptions, and national scaling remain blocked.

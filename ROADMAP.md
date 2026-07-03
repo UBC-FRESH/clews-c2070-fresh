@@ -389,13 +389,13 @@ production yield assumptions to the parent repository.
   - [x] Update the conceptual alpha release roadmap with Phase 5 status.
   - [x] Confirm residue, cost, climate, NFI, and validation gates remain open.
   - [x] Add changelog and issue progress notes.
-- [ ] P5.5 Close Phase 5 with a decision memo and Phase 6 authorization.
+- [x] P5.5 Close Phase 5 with a decision memo and Phase 6 authorization.
   Child issue: `#24`.
-  - [ ] State whether Phase 6 may materialize a tiny SCANFI-derived fixture.
-  - [ ] Identify exactly which `data` paths and parent-repo outputs are
+  - [x] State whether Phase 6 may materialize a tiny SCANFI-derived fixture.
+  - [x] Identify exactly which `data` paths and parent-repo outputs are
     allowed.
-  - [ ] Reconcile child issue checklists, roadmap, changelog, and PR body.
-  - [ ] Run verification and close child issues when complete.
+  - [x] Reconcile child issue checklists, roadmap, changelog, and PR body.
+  - [x] Run verification and close child issues when complete.
 
 ## Phase 6: Tiny Real-Sampled Diagnostic Supply Lane
 

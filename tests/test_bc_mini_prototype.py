@@ -43,6 +43,7 @@ TINY_REAL_SAMPLING_VALIDATION_CONTRACT = (
 )
 CONCEPTUAL_ALPHA_READINESS = REPO_ROOT / "metadata/ffcm-archive/conceptual-alpha-readiness.csv"
 PROTOTYPE_GAP_REGISTER = REPO_ROOT / "metadata/ffcm-archive/prototype-gap-register.csv"
+PHASE5_PHASE6_AUTHORIZATION = REPO_ROOT / "metadata/ffcm-archive/phase-5-phase-6-authorization.csv"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -572,6 +573,85 @@ class BcMiniPrototypeTest(unittest.TestCase):
         ):
             self.assertIn(path, gap_evidence)
         self.assertIn("not materialized", gap_rows["gap_002"]["why_it_matters"])
+
+    def test_phase5_phase6_authorization_blocks_broad_or_production_scope(self) -> None:
+        rows = read_csv(PHASE5_PHASE6_AUTHORIZATION)
+        required_columns = {
+            "authorization_id",
+            "phase6_action",
+            "authorization_status",
+            "allowed_scope",
+            "allowed_paths",
+            "blocked_paths_or_actions",
+            "evidence_paths",
+            "required_followup",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        by_id = {row["authorization_id"]: row for row in rows}
+        self.assertEqual(
+            {
+                "allow_scanfi_source_references",
+                "allow_tiny_raster_windows",
+                "allow_tiny_manifests",
+                "allow_parent_derived_inventory",
+                "block_broad_raw_checkout",
+                "block_private_nfi_inputs",
+                "block_production_assumptions",
+                "block_national_scaling",
+            },
+            set(by_id),
+        )
+
+        authorized_rows = [
+            row for row in rows if row["authorization_status"] == "authorized"
+        ]
+        blocked_rows = [
+            row for row in rows if row["authorization_status"] == "blocked"
+        ]
+        self.assertEqual(len(authorized_rows), 4)
+        self.assertEqual(len(blocked_rows), 4)
+
+        authorized_paths = "\n".join(row["allowed_paths"] for row in authorized_rows)
+        self.assertIn("data/raw/scanfi/v2/SCANFI_att_biomass_2025_v2_20260119.tif", authorized_paths)
+        self.assertIn(
+            "data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/",
+            authorized_paths,
+        )
+        self.assertIn(
+            "data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/",
+            authorized_paths,
+        )
+        self.assertIn(
+            "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_inventory_cells.csv",
+            authorized_paths,
+        )
+        self.assertNotIn("data/raw/|", authorized_paths)
+        self.assertNotIn("data/restricted/nfi/", authorized_paths)
+
+        blocked_actions = "\n".join(row["blocked_paths_or_actions"] for row in blocked_rows)
+        for blocked in (
+            "data/raw/",
+            "data/restricted/nfi/",
+            "production_residue_yield",
+            "calibrated_costs",
+            "climate_predictor_policy",
+            "production_benchmark_validation",
+            "national_inventory_sampling",
+            "production_model_release",
+        ):
+            self.assertIn(blocked, blocked_actions)
+
+        evidence_paths = "\n".join(row["evidence_paths"] for row in rows)
+        for evidence in (
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv",
+            "planning/phase-5-decision-memo.md",
+        ):
+            self.assertIn(evidence, evidence_paths)
+        self.assertTrue(all("production_ready" not in row.values() for row in rows))
 
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"

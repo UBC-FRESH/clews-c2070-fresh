@@ -2,6 +2,10 @@
 
 ## 2026-07-03
 
+- Added the P5.5 Phase 5 decision memo and Phase 6 authorization table,
+  allowing only tiny SCANFI diagnostic fixture materialization while blocking
+  broad raw checkout, restricted NFI payloads, production assumptions, and
+  national scaling.
 - Added the P5.4 conceptual-alpha readiness surface, updated the forest
   inventory/yield gap register to reflect designed-but-not-materialized tiny
   real-sampling contracts, and kept Phase 6 materialization and production

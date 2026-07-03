@@ -29,6 +29,11 @@ NFI access and reuse, climate predictor selection, coniferous/deciduous
 aggregation, residue-yield policy, calibrated cost/price assumptions, and
 validation against accepted reference summaries.
 
+Phase 5 closeout authorizes Phase 6 only for the tiny real-sampled diagnostic
+fixture described in `planning/phase-5-decision-memo.md` and
+`metadata/ffcm-archive/phase-5-phase-6-authorization.csv`. This authorization
+does not change the production-readiness boundary.
+
 ## Release Acceptance
 
 - Existing BC mini variants still solve and compare successfully.
