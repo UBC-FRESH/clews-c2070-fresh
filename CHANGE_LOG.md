@@ -1,7 +1,33 @@
 # Change Log
 
+## 2026-07-03
+
+- Added the P5.5 Phase 5 decision memo and Phase 6 authorization table,
+  allowing only tiny SCANFI diagnostic fixture materialization while blocking
+  broad raw checkout, restricted NFI payloads, production assumptions, and
+  national scaling.
+- Added the P5.4 conceptual-alpha readiness surface, updated the forest
+  inventory/yield gap register to reflect designed-but-not-materialized tiny
+  real-sampling contracts, and kept Phase 6 materialization and production
+  readiness gates explicitly open.
+- Added the P5.3 tiny real-sampling validation contract, separating diagnostic
+  acceptance checks for future sampled SCANFI fixture outputs from production
+  calibration gates for residue yield, costs, climate predictors, NFI access,
+  and benchmark validation.
+- Added the P5.2 tiny SCANFI extraction contract, defining the five selected
+  SCANFI v2 2025 source layers, planned DataLad raw/window/manifest paths,
+  parent-repo derived-output boundary, nodata/sampling/checksum policies, and
+  regression checks without materializing raster payloads.
+- Added the P5.1 tiny BC real-sampling fixture-cell skeleton, defining six
+  planned SCANFI raster-window cells that cover all current BC mini
+  SCANFI+Gauthier spatial units and supply nodes without materializing raw
+  rasters or sampled payloads.
+
 ## 2026-07-02
 
+- Added the `v0.1.0a1` Conceptual Alpha release roadmap and opened Phase 5
+  planning for a tiny public-safe SCANFI real-sampling fixture skeleton,
+  connecting the Phase 4 real-input gates to release-bound Phases 6 through 8.
 - Added a CLEWS-owned FreshForge materialization provider and workflow fixtures
   for initializing the `data` DataLad submodule and selectively materializing
   lightweight `metadata` and `manifests` paths through the FEMIC-style

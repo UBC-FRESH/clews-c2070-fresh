@@ -34,6 +34,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
 SCANFI_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic"
 GAUTHIER_FIXTURE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/gauthier-diagnostic"
+TINY_REAL_SAMPLING_FIXTURE = REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv"
+TINY_REAL_SAMPLING_EXTRACTION_CONTRACT = (
+    REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv"
+)
+TINY_REAL_SAMPLING_VALIDATION_CONTRACT = (
+    REPO_ROOT / "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv"
+)
+CONCEPTUAL_ALPHA_READINESS = REPO_ROOT / "metadata/ffcm-archive/conceptual-alpha-readiness.csv"
+PROTOTYPE_GAP_REGISTER = REPO_ROOT / "metadata/ffcm-archive/prototype-gap-register.csv"
+PHASE5_PHASE6_AUTHORIZATION = REPO_ROOT / "metadata/ffcm-archive/phase-5-phase-6-authorization.csv"
 UNIT_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-registry.csv"
 CONVERSION_REGISTRY = REPO_ROOT / "metadata/ffcm-archive/unit-conversion-registry.csv"
 WS3_REPO = REPO_ROOT.parent / "ws3"
@@ -286,6 +296,362 @@ class BcMiniPrototypeTest(unittest.TestCase):
             for row in rows:
                 if "quantity" in row and row["quantity"]:
                     self.assertGreaterEqual(float(row["quantity"]), 0.0)
+
+    def test_tiny_real_sampling_fixture_cells_cover_bc_mini_supply_nodes(self) -> None:
+        rows = read_csv(TINY_REAL_SAMPLING_FIXTURE)
+        self.assertEqual(len(rows), 6)
+
+        required_columns = {
+            "fixture_cell_id",
+            "source_proxy_cell_id",
+            "fixture_id",
+            "scenario_id",
+            "period",
+            "province",
+            "diagnostic_region",
+            "spatial_unit_id",
+            "supply_node_id",
+            "geometry_ref",
+            "representative_area_ha",
+            "inventory_year",
+            "required_source_layers",
+            "data_source_window_dir",
+            "data_manifest_path",
+            "parent_repo_derived_inventory_path",
+            "value_policy",
+            "sampling_status",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        fixture_ids = {row["fixture_cell_id"] for row in rows}
+        self.assertEqual(len(fixture_ids), len(rows))
+
+        required_nonempty = {
+            "spatial_unit_id",
+            "supply_node_id",
+            "data_source_window_dir",
+            "data_manifest_path",
+            "parent_repo_derived_inventory_path",
+            "value_policy",
+            "sampling_status",
+        }
+        for row in rows:
+            for column in required_nonempty:
+                self.assertTrue(row[column], f"{column} is empty for {row['fixture_cell_id']}")
+            self.assertEqual(row["value_policy"], "real_sampling_fixture_design_not_sampled")
+            self.assertEqual(row["sampling_status"], "planned_not_materialized")
+            self.assertTrue(
+                row["data_source_window_dir"].startswith(
+                    "data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/"
+                )
+            )
+            self.assertTrue(
+                row["data_manifest_path"].startswith(
+                    "data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/"
+                )
+            )
+            self.assertEqual(
+                row["parent_repo_derived_inventory_path"],
+                "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_inventory_cells.csv",
+            )
+
+        supply_rows = read_csv(
+            REPO_ROOT
+            / "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-gauthier-diagnostic/supply_offer.csv"
+        )
+        self.assertEqual(
+            {row["spatial_unit_id"] for row in rows},
+            {row["spatial_unit_id"] for row in supply_rows},
+        )
+        self.assertEqual(
+            {row["supply_node_id"] for row in rows},
+            {row["supply_node_id"] for row in supply_rows},
+        )
+
+    def test_tiny_real_sampling_extraction_contract_keeps_payloads_in_data_boundary(self) -> None:
+        contract_rows = read_csv(TINY_REAL_SAMPLING_EXTRACTION_CONTRACT)
+        self.assertEqual(len(contract_rows), 5)
+
+        required_columns = {
+            "contract_id",
+            "fixture_id",
+            "layer_role",
+            "source_file_name",
+            "source_manifest_path",
+            "data_raw_source_path",
+            "data_window_output_dir",
+            "data_window_manifest_path",
+            "parent_repo_derived_output_path",
+            "expected_crs",
+            "expected_resolution_m",
+            "nodata_policy",
+            "sampling_method",
+            "summary_statistics",
+            "checksum_policy",
+            "license_position",
+            "materialization_status",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, contract_rows[0].keys())
+
+        expected_contract_ids = {
+            "scanfi_biomass_2025",
+            "scanfi_height_2025",
+            "scanfi_closure_2025",
+            "scanfi_landcover_2025",
+            "scanfi_age_2025",
+        }
+        self.assertEqual({row["contract_id"] for row in contract_rows}, expected_contract_ids)
+
+        fixture_layers = {
+            source_layer
+            for row in read_csv(TINY_REAL_SAMPLING_FIXTURE)
+            for source_layer in row["required_source_layers"].split("|")
+        }
+        self.assertEqual({row["source_file_name"] for row in contract_rows}, fixture_layers)
+        self.assertNotIn("SCANFI_north_extrapol_area.tif", fixture_layers)
+
+        for row in contract_rows:
+            self.assertTrue(row["data_raw_source_path"].startswith("data/raw/scanfi/v2/"))
+            self.assertTrue(
+                row["data_window_output_dir"].startswith(
+                    "data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/"
+                )
+            )
+            self.assertTrue(
+                row["data_window_manifest_path"].startswith(
+                    "data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/"
+                )
+            )
+            self.assertEqual(
+                row["parent_repo_derived_output_path"],
+                "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_inventory_cells.csv",
+            )
+            self.assertEqual(row["materialization_status"], "planned_not_materialized")
+            self.assertEqual(row["sampling_method"], "window_extract_then_cell_summary")
+            self.assertEqual(row["checksum_policy"], "sha256_for_window_outputs_and_manifest_rows")
+            self.assertNotIn(
+                row["data_raw_source_path"].split("/", 1)[0],
+                {"metadata", "planning", "fresh_fibre", "scripts", "tests"},
+            )
+            self.assertNotIn(
+                row["data_window_output_dir"].split("/", 1)[0],
+                {"metadata", "planning", "fresh_fibre", "scripts", "tests"},
+            )
+
+    def test_tiny_real_sampling_validation_contract_separates_diagnostic_and_production_gates(self) -> None:
+        rows = read_csv(TINY_REAL_SAMPLING_VALIDATION_CONTRACT)
+        self.assertGreaterEqual(len(rows), 12)
+
+        required_columns = {
+            "validation_id",
+            "fixture_id",
+            "validation_group",
+            "validation_level",
+            "applies_to",
+            "source_contract",
+            "required_inputs",
+            "check_type",
+            "acceptance_rule",
+            "failure_severity",
+            "diagnostic_status",
+            "production_status",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        source_contracts = {
+            source
+            for row in rows
+            for source in row["source_contract"].split("|")
+        }
+        self.assertIn(
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            source_contracts,
+        )
+        self.assertIn(
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            source_contracts,
+        )
+
+        diagnostic_groups = {
+            row["validation_group"]
+            for row in rows
+            if row["validation_level"] == "diagnostic_acceptance_gate"
+        }
+        self.assertIn("coverage", diagnostic_groups)
+        self.assertIn("provenance", diagnostic_groups)
+
+        production_only_groups = {
+            "residue_yield",
+            "cost_calibration",
+            "climate_predictors",
+            "nfi_access",
+            "production_benchmark_validation",
+        }
+        production_rows = [
+            row for row in rows if row["validation_group"] in production_only_groups
+        ]
+        self.assertEqual({row["validation_group"] for row in production_rows}, production_only_groups)
+        self.assertTrue(
+            all(row["validation_level"] == "production_calibration_gate" for row in production_rows)
+        )
+        self.assertTrue(
+            all(row["diagnostic_status"] == "not_required_for_phase6_diagnostic" for row in production_rows)
+        )
+
+        for row in rows:
+            self.assertNotEqual(row["production_status"], "production_ready")
+            self.assertTrue(row["fixture_id"])
+            self.assertTrue(row["acceptance_rule"])
+
+    def test_conceptual_alpha_readiness_tracks_phase5_without_production_claims(self) -> None:
+        rows = read_csv(CONCEPTUAL_ALPHA_READINESS)
+        required_columns = {
+            "component_id",
+            "component_name",
+            "readiness_state",
+            "release_relevance",
+            "diagnostic_status",
+            "production_status",
+            "blocking_gates",
+            "evidence_paths",
+            "next_action",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        by_component = {row["component_id"]: row for row in rows}
+        expected_components = {
+            "ffcm_archive_evidence",
+            "bc_mini_lp_prototype",
+            "ws3_smoke_bridge",
+            "scanfi_diagnostic_lane",
+            "scanfi_gauthier_diagnostic_lane",
+            "tiny_real_sampling_fixture_cells",
+            "tiny_real_sampling_extraction_contract",
+            "tiny_real_sampling_validation_contract",
+            "tiny_real_sampled_lane",
+            "production_national_model",
+        }
+        self.assertEqual(set(by_component), expected_components)
+
+        self.assertEqual(
+            by_component["tiny_real_sampling_fixture_cells"]["readiness_state"],
+            "designed_not_materialized",
+        )
+        self.assertEqual(
+            by_component["tiny_real_sampling_extraction_contract"]["readiness_state"],
+            "designed_not_materialized",
+        )
+        self.assertEqual(
+            by_component["tiny_real_sampling_validation_contract"]["readiness_state"],
+            "designed_not_materialized",
+        )
+        self.assertEqual(by_component["tiny_real_sampled_lane"]["readiness_state"], "not_implemented")
+        self.assertEqual(
+            by_component["production_national_model"]["production_status"],
+            "blocked_open_gates",
+        )
+        self.assertTrue(all(row["production_status"] != "production_ready" for row in rows))
+
+        evidence = "\n".join(row["evidence_paths"] for row in rows)
+        for path in (
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv",
+        ):
+            self.assertIn(path, evidence)
+
+        gap_rows = {row["gap_id"]: row for row in read_csv(PROTOTYPE_GAP_REGISTER)}
+        self.assertIn("gap_002", gap_rows)
+        gap_evidence = gap_rows["gap_002"]["current_evidence"]
+        for path in (
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv",
+        ):
+            self.assertIn(path, gap_evidence)
+        self.assertIn("not materialized", gap_rows["gap_002"]["why_it_matters"])
+
+    def test_phase5_phase6_authorization_blocks_broad_or_production_scope(self) -> None:
+        rows = read_csv(PHASE5_PHASE6_AUTHORIZATION)
+        required_columns = {
+            "authorization_id",
+            "phase6_action",
+            "authorization_status",
+            "allowed_scope",
+            "allowed_paths",
+            "blocked_paths_or_actions",
+            "evidence_paths",
+            "required_followup",
+            "notes",
+        }
+        self.assertLessEqual(required_columns, rows[0].keys())
+
+        by_id = {row["authorization_id"]: row for row in rows}
+        self.assertEqual(
+            {
+                "allow_scanfi_source_references",
+                "allow_tiny_raster_windows",
+                "allow_tiny_manifests",
+                "allow_parent_derived_inventory",
+                "block_broad_raw_checkout",
+                "block_private_nfi_inputs",
+                "block_production_assumptions",
+                "block_national_scaling",
+            },
+            set(by_id),
+        )
+
+        authorized_rows = [
+            row for row in rows if row["authorization_status"] == "authorized"
+        ]
+        blocked_rows = [
+            row for row in rows if row["authorization_status"] == "blocked"
+        ]
+        self.assertEqual(len(authorized_rows), 4)
+        self.assertEqual(len(blocked_rows), 4)
+
+        authorized_paths = "\n".join(row["allowed_paths"] for row in authorized_rows)
+        self.assertIn("data/raw/scanfi/v2/SCANFI_att_biomass_2025_v2_20260119.tif", authorized_paths)
+        self.assertIn(
+            "data/derived/scanfi-diagnostic/tiny-bc-real-sampling/windows/",
+            authorized_paths,
+        )
+        self.assertIn(
+            "data/manifests/scanfi-diagnostic/tiny-bc-real-sampling/",
+            authorized_paths,
+        )
+        self.assertIn(
+            "metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_inventory_cells.csv",
+            authorized_paths,
+        )
+        self.assertNotIn("data/raw/|", authorized_paths)
+        self.assertNotIn("data/restricted/nfi/", authorized_paths)
+
+        blocked_actions = "\n".join(row["blocked_paths_or_actions"] for row in blocked_rows)
+        for blocked in (
+            "data/raw/",
+            "data/restricted/nfi/",
+            "production_residue_yield",
+            "calibrated_costs",
+            "climate_predictor_policy",
+            "production_benchmark_validation",
+            "national_inventory_sampling",
+            "production_model_release",
+        ):
+            self.assertIn(blocked, blocked_actions)
+
+        evidence_paths = "\n".join(row["evidence_paths"] for row in rows)
+        for evidence in (
+            "metadata/ffcm-archive/tiny-real-sampling-fixture-cells.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-extraction-contract.csv",
+            "metadata/ffcm-archive/tiny-real-sampling-validation-contract.csv",
+            "planning/phase-5-decision-memo.md",
+        ):
+            self.assertIn(evidence, evidence_paths)
+        self.assertTrue(all("production_ready" not in row.values() for row in rows))
 
     def test_gauthier_diagnostic_yield_fixture_reproduces_method_shape(self) -> None:
         output_dir = Path(self.tmp.name) / "gauthier-diagnostic"
