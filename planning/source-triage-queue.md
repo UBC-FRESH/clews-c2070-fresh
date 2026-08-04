@@ -78,16 +78,20 @@ canonical inputs and what work is needed before archiving them in `data/`.
 ## Current Status
 
 - `scanfi_v2`: first-pass review complete; subset-first mirroring remains the
-  recommended path.
+  recommended path. Phase 6 acquisition blocked pending explicit authorization.
 - `nfi_standard_reports`: first-pass review complete; license/re-hosting
   decision remains open.
 - `canlad`: first-pass review complete; raster payload access remains
   unresolved. `pre_canlad_v2` is the manageable companion candidate.
 - `nrn`: accepted as a coarse national haul-distance baseline; operational
   forest/resource road follow-up remains open.
-- `biomass_inventory_business`: next active source-triage target.
-- `databasin_canada_forest_tenures`: newly flagged candidate; member dataset,
-  provenance, license, and FMU-boundary fit are unresolved.
+- `biomass_inventory_business`: reviewed 2026-08-04; source review created at
+  `metadata/source-reviews/biomass_inventory_business.md`; field-level
+  inspection of FGDB/CSV package needed before archive decision.
+- `databasin_canada_forest_tenures`: reviewed 2026-08-04; source review
+  created at `metadata/source-reviews/databasin_canada_forest_tenures.md`;
+  member dataset URL, license, provenance, and FMU-boundary fit require
+  resolution before materialization. Remains candidate state.
 
 ## Review Outcome Codes
 

@@ -2,11 +2,43 @@
 
 ## 2026-08-04
 
+- **SCANFI v2 2025 acquisition complete**: Downloaded all 5 authorized rasters
+  from ftp.maps.canada.ca (~20.6 GB total), verified SHA-256 checksums, added
+  to git-annex at `data/raw/scanfi/v2/`, created acquisition manifest at
+  `data/manifests/scanfi-v2-2025-acquisition.csv`, and pushed to origin.
+  - Files: biomass (6.4G), height (2.9G), closure (4.0G), nfiLandcover (1.6G),
+    age_median (5.0G)
+  - **S3 publish blocked**: No AWS credentials in environment; arbutus-s3 push
+    deferred until credentials available.
+- Updated ROADMAP.md Phase 6 section to reflect acquisition complete, S3 publish
+  pending, and P6.1+ blocked on S3 publish.
+
 - Reconciled source-triage and phase-closeout notes against current `main` and
   GitHub state. Restored the Data Basin Canada forest-tenures candidate to the
   source inventory, added it to the active triage queue, updated Phase 3 and
   Phase 5 merge/closure status, and advanced the roadmap handoff from Phase 5
   design to Phase 6 implementation.
+
+- Phase 6 initiation: confirmed SCANFI v2 2025 rasters absent from data
+  submodule (fresh scaffold at commit `731667f`), created acquisition blocker
+  plan at `planning/phase-6-scanfi-acquisition-plan.md`, and prepared Phase 6
+  contracts and skeleton artifacts that do not require raster content.
+- Added source review for `biomass_inventory_business` (
+  `metadata/source-reviews/biomass_inventory_business.md`) noting field
+  inspection needed before archive decision.
+- Added source review for `databasin_canada_forest_tenures` (
+  `metadata/source-reviews/databasin_canada_forest_tenures.md`) noting member
+  dataset URL, license, provenance, and FMU-boundary fit require resolution
+  before materialization.
+- Created Phase 6 real-sampled fixture directory at
+  `metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/` with
+  skeleton `diagnostic_inventory_cells.csv` (six planned fixture cells, correct
+  column schema, placeholder values pending raster sampling) and `README.md`.
+- Created Phase 6 validation memo skeleton at
+  `planning/phase-6-validation-memo.md` with check tables and completion
+  criteria.
+- Updated ROADMAP.md Phase 6 section to reflect P6.0 blocker status and
+  contracts completed.
 
 ## 2026-07-03
 

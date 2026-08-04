@@ -408,16 +408,42 @@ Goal: add the first tiny real-sampled diagnostic supply lane while preserving
 existing synthetic, ws3-smoke, SCANFI diagnostic, and SCANFI+Gauthier
 diagnostic lanes.
 
+**Status**: ACQUISITION COMPLETE — P6.1+ blocked on S3 publish (no AWS credentials)
+
+Governing planning notes:
+- `planning/phase-6-scanfi-acquisition-plan.md` - acquisition plan (COMPLETED)
+- `planning/phase-6-validation-memo.md` - validation memo skeleton
+- `data/manifests/scanfi-v2-2025-acquisition.csv` - acquisition manifest
+- `metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/` - fixture
+
+- [x] P6.0 Resolve SCANFI source availability and prepare acquisition plan. Child
+  issue: `#24` (implicit).
+  - [x] Check data submodule for authorized SCANFI v2 2025 rasters.
+  - [x] Confirm files absent (fresh scaffold at commit `731667f`).
+  - [x] Create `planning/phase-6-scanfi-acquisition-plan.md` with URLs, sizes,
+    license, and acquisition steps.
+  - [x] Await explicit authorization before CDN download (authorized 2026-02-04).
+  - [x] Download all 5 authorized SCANFI v2 2025 rasters from ftp.maps.canada.ca.
+  - [x] Verify SHA-256 checksums and record in acquisition manifest.
+  - [x] Add files to git-annex at `data/raw/scanfi/v2/`.
+  - [ ] Publish annex content to arbutus-s3 (BLOCKED - no AWS credentials).
 - [ ] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
-  the `data` DataLad submodule.
+  the `data` DataLad submodule. Blocked by S3 publish.
 - [ ] P6.2 Generate a public-safe derived inventory table consumed by the
   parent repository.
+  - [x] Create `bc-mini-scanfi-real-sampled/` directory and skeleton
+    `diagnostic_inventory_cells.csv` with six fixture cell rows and correct
+    column schema.
+  - [ ] Populate with real sampled values after P6.1 materialization.
 - [ ] P6.3 Build a ws3-shaped supply output from real-sampled SCANFI diagnostic
-  inventory plus existing Gauthier diagnostic log-yield rules.
+  inventory plus existing Gauthier diagnostic log-yield rules. Blocked by P6.2.
 - [ ] P6.4 Solve the downstream LP variant and emit `ws3_harvest_output`,
   `supply_offer`, `solution_flow`, `solution_summary`, and comparison tables.
+  Blocked by P6.3.
 - [ ] P6.5 Write a validation memo that clearly labels unresolved residue,
   cost, climate, NFI, and production-calibration assumptions.
+  - [x] Create `planning/phase-6-validation-memo.md` skeleton with check
+    tables and completion criteria.
 
 ## Phase 7: Source Triage And Production Readiness Gates
 
