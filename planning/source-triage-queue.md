@@ -1,6 +1,6 @@
 # Source Triage Queue
 
-Date prepared: 2026-06-25.
+Date updated: 2026-08-04.
 
 This is the first practical queue for Tyler's dataset discovery work. The goal
 is not to download everything; the goal is to decide which sources become
@@ -16,7 +16,7 @@ canonical inputs and what work is needed before archiving them in `data/`.
   downloads.
 - Promote only reviewed sources into `metadata/required-datasets.yaml`.
 
-## First Five Sources
+## Current Queue
 
 1. `scanfi_v2`
    - File list and total storage have been inventoried in
@@ -62,6 +62,32 @@ canonical inputs and what work is needed before archiving them in `data/`.
    - Identify facility, residue, location, and quantity fields.
    - Decide whether it can seed the forest industry/facility layer or only
      supports residue screening.
+
+6. `databasin_canada_forest_tenures`
+   - Start from the user-flagged gallery:
+     `https://databasin.org/galleries/1dd5bbe4e47a4855a2095eae7cf3253a/`.
+   - Verify whether the likely member dataset, `Provincial Forest Tenures -
+     Forest Management Areas (draft)`, is actually contained in the gallery:
+     `https://databasin.org/datasets/2f20af8c4f7949ad8ab631b77dc733c3/`.
+   - Resolve the member dataset download endpoint, source lineage, spatial
+     unit semantics, license, update status, and fit to the FRESH FMU/supply
+     node boundary contract.
+   - Materialize accepted payloads only through the DataLad-backed `data`
+     repository after the access and provenance checks are complete.
+
+## Current Status
+
+- `scanfi_v2`: first-pass review complete; subset-first mirroring remains the
+  recommended path.
+- `nfi_standard_reports`: first-pass review complete; license/re-hosting
+  decision remains open.
+- `canlad`: first-pass review complete; raster payload access remains
+  unresolved. `pre_canlad_v2` is the manageable companion candidate.
+- `nrn`: accepted as a coarse national haul-distance baseline; operational
+  forest/resource road follow-up remains open.
+- `biomass_inventory_business`: next active source-triage target.
+- `databasin_canada_forest_tenures`: newly flagged candidate; member dataset,
+  provenance, license, and FMU-boundary fit are unresolved.
 
 ## Review Outcome Codes
 

@@ -30,7 +30,8 @@ large model outputs remain under ignored `tmp/` or the `data` submodule.
 
 ## Active Extension
 
-P3.6 completed the first closeout pass and opened PR `#9`. P3.7 extends the
-same phase before merge to replace the SCANFI diagnostic log-yield placeholder
-with Gauthier et al. (2015) diagnostic method-reproduction rules while keeping
-raw rasters, NFI pixels, and production calibration out of scope.
+P3.6 completed the first closeout pass and opened PR `#9`. P3.7 extended the
+same phase to replace the SCANFI diagnostic log-yield placeholder with
+Gauthier et al. (2015) diagnostic method-reproduction rules while keeping raw
+rasters, NFI pixels, and production calibration out of scope. PR `#9` merged
+and parent issue `#2` is closed; the phase is complete.

@@ -263,8 +263,10 @@ Metadata surfaces:
    `nfi_standard_reports` has first-pass review complete with a license-review
    flag, `canlad` / `pre_canlad_v2` have first-pass disturbance review
    complete, and `nrn` is accepted as a coarse national haul-distance baseline
-   that still needs jurisdiction-specific forest/resource road follow-up. Next
-   target is `biomass_inventory_business`.
+   that still needs jurisdiction-specific forest/resource road follow-up.
+   Next target is `biomass_inventory_business`; the newly flagged
+   `databasin_canada_forest_tenures` candidate needs member-dataset,
+   provenance, license, and FMU-boundary fit resolution.
 2. Tyler's first pass should update `metadata/source-inventory.csv`, not download
    large payloads directly into the parent repo.
 3. Once candidate sources are reviewed, promote only accepted datasets into
@@ -276,11 +278,12 @@ Metadata surfaces:
    `planning/ffcm-archive-analysis.md`: preserve the Ghafghazi et al. 2017
    paper as the architectural overview, then work inward through FCM configs,
    generated LP artifacts, and the CIRRELT network-flow reports.
-6. For Phase 3, the SCANFI+Gauthier diagnostic lane now replaces log-yield
+6. For Phase 3, the SCANFI+Gauthier diagnostic lane replaced log-yield
    placeholders in a runnable BC mini variant. Phase 4 defined the real-input
-   materialization gates. The next model-development gate is Phase 5: design a
-   tiny public-safe SCANFI real-sampling fixture skeleton before any raw raster
-   payloads or private validation inputs are materialized.
+   materialization gates, and Phase 5 completed the tiny public-safe SCANFI
+   real-sampling fixture design. The next model-development gate is Phase 6:
+   materialize and validate only the authorized tiny fixture before any broad
+   raw raster payloads or private validation inputs are considered.
 
 ## Phase 4: Real Diagnostic SCANFI+Gauthier Input Materialization
 
@@ -349,7 +352,7 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 
 Active branch: `feature/p5-tiny-real-sampling-fixture`.
 
-Draft PR: `#25`.
+Merged PR: `#25`.
 
 Governing planning note: `planning/phase-5-tiny-real-sampling-fixture.md`.
 
@@ -522,5 +525,5 @@ of the parent repository.
     PR `#9`.
   - [x] Add regression tests and run verification commands.
 
-Status: P3.7 implementation complete; PR `#9` needs final review/merge before
-closing parent issue `#2`.
+Status: P3.7 implementation complete, PR `#9` merged, and parent issue `#2`
+closed.

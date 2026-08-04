@@ -44,6 +44,6 @@ selection, production validation benchmarks, or national scaling.
 
 ## Closeout
 
-Phase 5 is complete when the authorization table, roadmap, changelog, issue
-checklists, PR body, and verification results are reconciled. The Phase 5
-parent issue remains open until PR `#25` merges.
+Phase 5 is complete. The authorization table, roadmap, changelog, issue
+checklists, PR body, and verification results were reconciled; PR `#25` merged
+to `main` and parent issue `#19` is closed.

@@ -1,5 +1,13 @@
 # Change Log
 
+## 2026-08-04
+
+- Reconciled source-triage and phase-closeout notes against current `main` and
+  GitHub state. Restored the Data Basin Canada forest-tenures candidate to the
+  source inventory, added it to the active triage queue, updated Phase 3 and
+  Phase 5 merge/closure status, and advanced the roadmap handoff from Phase 5
+  design to Phase 6 implementation.
+
 ## 2026-07-03
 
 - Added the P5.5 Phase 5 decision memo and Phase 6 authorization table,

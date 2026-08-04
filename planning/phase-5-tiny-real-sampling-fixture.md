@@ -13,7 +13,7 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 
 Active branch: `feature/p5-tiny-real-sampling-fixture`.
 
-Draft PR: `#25`.
+Merged PR: `#25`.
 
 ## Data Boundary
 

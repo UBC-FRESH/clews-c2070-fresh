@@ -6,7 +6,9 @@ Live issue creation is complete. `gh auth status` succeeded as `gparadis`, and
 the Phase 3 parent and child issue bodies were created from the tracked drafts.
 The phase branch was pushed and pull request `#9` was opened against `main`.
 Child task issues `#3` through `#8` were closed after their checklists were
-reconciled.
+reconciled. The P3.7 continuation was tracked in issue `#11`; PR `#9` merged
+to `main`, issue `#11` was closed, and parent issue `#2` was closed after the
+phase closeout was reconciled.
 
 ## Parent Issue
 
@@ -73,5 +75,5 @@ After issue creation:
 2. Each child issue body now starts with `Parent issue: #2`.
 3. `ROADMAP.md` records the created parent and child issue numbers.
 4. Commit the issue-number backfill.
-5. Pushed `feature/p2-ffcm-ws3-diagnostic-yield` and opened pull request `#9`
-   against `main`.
+5. Pushed `feature/p2-ffcm-ws3-diagnostic-yield`, opened pull request `#9`,
+   merged it to `main`, and closed the phase issues after reconciliation.
