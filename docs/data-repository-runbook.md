@@ -74,6 +74,31 @@ git push origin main
 git push origin git-annex
 ```
 
+## AWS Credentials for arbutus-s3
+
+git-annex does not automatically read `~/.aws/credentials`. A wrapper script
+handles credential injection:
+
+```bash
+# The wrapper is at ~/bin/git-annex-s3
+# It automatically loads AWS credentials from ~/.aws/credentials
+
+# Usage: prefix git-annex commands with the wrapper
+git-annex-s3 copy --to arbutus-s3 <file>
+git-annex-s3 get <file>
+git-annex-s3 whereis <file>
+
+# Or source the helper function in your shell
+source ~/.bashrc  # loads git_annex_s3 function and 'gannex' alias
+gannex copy --to arbutus-s3 <file>
+```
+
+Ensure `~/.aws/credentials` exists with correct permissions:
+```bash
+chmod 700 ~/.aws
+chmod 600 ~/.aws/credentials
+```
+
 ## Link the Parent Repository
 
 From the parent repository root:
