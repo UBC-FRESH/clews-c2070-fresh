@@ -8,10 +8,8 @@
   `data/manifests/scanfi-v2-2025-acquisition.csv`, and pushed to origin.
   - Files: biomass (6.4G), height (2.9G), closure (4.0G), nfiLandcover (1.6G),
     age_median (5.0G)
-  - **S3 publish blocked**: No AWS credentials in environment; arbutus-s3 push
-    deferred until credentials available.
-- Updated ROADMAP.md Phase 6 section to reflect acquisition complete, S3 publish
-  pending, and P6.1+ blocked on S3 publish.
+  - **S3 publish complete**: All 5 files published to arbutus-s3 (~20.6 GB
+    verified). P6.1 now authorized to proceed.
 
 - Reconciled source-triage and phase-closeout notes against current `main` and
   GitHub state. Restored the Data Basin Canada forest-tenures candidate to the

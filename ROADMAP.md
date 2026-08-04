@@ -408,7 +408,7 @@ Goal: add the first tiny real-sampled diagnostic supply lane while preserving
 existing synthetic, ws3-smoke, SCANFI diagnostic, and SCANFI+Gauthier
 diagnostic lanes.
 
-**Status**: ACQUISITION COMPLETE — P6.1+ blocked on S3 publish (no AWS credentials)
+**Status**: READY — P6.0 complete, P6.1 authorized to proceed
 
 Governing planning notes:
 - `planning/phase-6-scanfi-acquisition-plan.md` - acquisition plan (COMPLETED)
@@ -426,9 +426,9 @@ Governing planning notes:
   - [x] Download all 5 authorized SCANFI v2 2025 rasters from ftp.maps.canada.ca.
   - [x] Verify SHA-256 checksums and record in acquisition manifest.
   - [x] Add files to git-annex at `data/raw/scanfi/v2/`.
-  - [ ] Publish annex content to arbutus-s3 (BLOCKED - no AWS credentials).
+  - [x] Publish annex content to arbutus-s3 (~20.6 GB, all 5 files verified).
 - [ ] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
-  the `data` DataLad submodule. Blocked by S3 publish.
+  the `data` DataLad submodule.
 - [ ] P6.2 Generate a public-safe derived inventory table consumed by the
   parent repository.
   - [x] Create `bc-mini-scanfi-real-sampled/` directory and skeleton
