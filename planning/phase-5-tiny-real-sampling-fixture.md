@@ -117,10 +117,10 @@ validation, and scaling gates.
 
 ## P5.5 Close-Out Decision
 
-Phase 5 should close with a short decision memo that says whether Phase 6 is
-authorized to materialize a tiny SCANFI-derived fixture, which paths may be
-materialized, which public-safe parent-repo outputs may be committed, and which
-inputs remain blocked or opt-in.
+Phase 5 closed with a short decision memo stating that Phase 6 is authorized
+to materialize a tiny SCANFI-derived fixture, which paths may be materialized,
+which public-safe parent-repo outputs may be committed, and which inputs remain
+blocked or opt-in.
 
 P5.5 implementation memo:
 `planning/phase-5-decision-memo.md`.
