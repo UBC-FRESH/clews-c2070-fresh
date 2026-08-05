@@ -24,19 +24,6 @@ Pre-CanLaD v2:
 
 ## CanLaD Findings
 
-The Open Canada metadata says the package includes:
-
-- detailed annual disturbance maps;
-- latest disturbance type and latest disturbance year maps; and
-- latest Landsat time-series Julian day map.
-
-The README says the 2025 update was published on May 08, 2026 and describes
-GeoTIFF rasters for 1985-2025:
-
-- 3 latest-disturbance rasters;
-- 41 annual disturbance rasters, one per year from 1985 to 2025; and
-- 1 latest Julian day raster.
-
 Disturbance classes:
 
 - 1: wildfire;
@@ -48,17 +35,17 @@ Disturbance classes:
 - 7: medium severity defoliation; and
 - 8: high severity defoliation.
 
-The public directory listing observed on 2026-06-25 exposed only four support
-files:
+**2026-08-05 update**: Raster payloads are accessible via two subdirectories:
 
-- `_lisezmoi.txt`
-- `_projectionDefinitionWKT_lcccan83.prj.txt`
-- `_readme.txt`
-- `legend_type.csv`
+- `Latest_filtered_CAN_20260508/`: 5 latest-disturbance mosaics (~2.5 GB total),
+  including `canlad_1985_2025_latest_type_v1_1_20260508.tif` (442 MB).
+- `TS_FinalFilter_20260508/`: 42 annual time-series rasters (~80 MB each, ~3.3 GB
+  total), covering `canlad_annual_1984` through `canlad_annual_2025`.
 
-Exact README-named raster URLs returned `404` on 2026-06-25. Common child
-directory probes such as `data/`, `rasters/`, `annual/`, and `latest/` also
-returned `404`.
+Publication date is 2026-05-08 — the package is freshly updated. No `data/`,
+`rasters/`, or `annual/` subdirectories exist; rasters live in the two named
+subdirectories above. Total payload is ~5.8 GB. Access confirmed via HTTP 200 on
+directory listing and TIF file headers.
 
 Manifest:
 

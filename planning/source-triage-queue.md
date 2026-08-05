@@ -1,6 +1,6 @@
 # Source Triage Queue
 
-Date updated: 2026-08-04.
+Date updated: 2026-08-05 (NFI CSVs downloaded; BIMA closed as not_suitable).
 
 This is the first practical queue for Tyler's dataset discovery work. The goal
 is not to download everything; the goal is to decide which sources become
@@ -40,13 +40,12 @@ canonical inputs and what work is needed before archiving them in `data/`.
 
 3. `canlad`
    - Read `metadata/source-reviews/canlad_and_pre_canlad_v2.md`.
-   - `canlad` is flagged `needs_access_resolution`: the README names 45 raster
-     products, but the public directory currently exposes only support files and
-     exact raster URLs return 404.
-   - `pre_canlad_v2` is accepted as a manageable companion source, pending PI
-     approval to mirror the four core rasters.
-   - Follow up with NRCan or monitor the Open Canada package for corrected
-     1985-2025 CanLaD raster payload links.
+   - **Resolved 2026-08-05**: Raster payloads are accessible. Two subdirectories
+     confirmed: `Latest_filtered_CAN_20260508/` (5 latest mosaics, ~2.5 GB) and
+     `TS_FinalFilter_20260508/` (42 annual rasters, ~3.3 GB, 1984–2025). Total
+     ~5.8 GB. License: OGL Canada. Updated to `accepted` in source-inventory.csv.
+   - `pre_canlad_v2` remains accepted as companion, pending PI approval to mirror
+     the four core rasters.
 
 4. `nrn`
    - File list and package sizes have been inventoried in
@@ -63,17 +62,77 @@ canonical inputs and what work is needed before archiving them in `data/`.
    - Decide whether it can seed the forest industry/facility layer or only
      supports residue screening.
 
+7. `cwfis_nfdb_fire_polygons`
+   - **Resolved 2026-08-05**: NFDB polygon data directly downloadable. 742 MB all
+     perimeters, 647 MB large-fire subset, 35 MB pre-1972. OGL Canada. Updated
+     to `accepted`.
+
+8. `cwfis_nfdb_fire_points`
+   - **Resolved 2026-08-05**: NFDB point data directly downloadable. 1 GB all
+     points, 65 MB large-fire subset. OGL Canada. Updated to `accepted`.
+
+7. `forest_management_canada`
+   - **Resolved 2026-08-05**: Accepted as national management constraint layer.
+     NRCan's "Map of Forest Management in Canada" — OGL Canada, direct download
+     via ca.nfis.org (TIFF 2020, TIFF 2017, FGDB 2017 vector). Generalized
+     classification of protected areas, Treaty/Settlement Lands, and forest
+     management zones. Use for management constraint screening; use databasin
+     tenures for supply-node spatial unit boundaries. Source review created.
+
 6. `databasin_canada_forest_tenures`
-   - Start from the user-flagged gallery:
-     `https://databasin.org/galleries/1dd5bbe4e47a4855a2095eae7cf3253a/`.
-   - Verify whether the likely member dataset, `Provincial Forest Tenures -
-     Forest Management Areas (draft)`, is actually contained in the gallery:
-     `https://databasin.org/datasets/2f20af8c4f7949ad8ab631b77dc733c3/`.
-   - Resolve the member dataset download endpoint, source lineage, spatial
-     unit semantics, license, update status, and fit to the FRESH FMU/supply
-     node boundary contract.
-   - Materialize accepted payloads only through the DataLad-backed `data`
-     repository after the access and provenance checks are complete.
+   - **Resolved 2026-08-05**: Superseded by `gfw_canada_forest_tenures_2016` (see
+     below). Databasin zips remain as reference but are no longer the canonical
+     source. Status updated to `accepted_superseded`.
+
+9a. `gfw_canada_forest_tenures_2016`
+    - **Resolved 2026-08-05**: Downloaded from ArcGIS Online (item aa8797d,
+      owner markempey). 3,680 tenure polygons, 11 jurisdictions (BC, AB, SK, MB,
+      ON, QC, NB, NL, NS, NT, YT — missing NU only), 2016 vintage. 313 MB.
+      Source: Global Forest Watch Canada compiled from provincial/territorial
+      government sources. Live feature service at
+      `gis-gfw.wri.org/arcgis/rest/services/country_data/north_america/MapServer/1`.
+      Archived to DataLad (git-annex + arbutus-s3). Status: `accepted` as
+      canonical national forest tenure boundary layer. Source review created.
+      Supersedes `databasin_canada_forest_tenures` zips (9 provinces, ~2010).
+
+9. `ontario_forest_management_units`
+   - **Resolved 2026-08-05**: OGL Canada, ESRI REST + shapefile/FGDB via Open
+     Canada. Official ON provincial layer — more detail than national
+     `forest_management_canada` for ON. Source review created.
+
+10. `manitoba_forest_management_boundaries`
+    - **Resolved 2026-08-05**: OGL Canada, ArcGIS tile service only on Open
+      Canada. 2021 MB boundaries (forest sections, FMUs, provincial forests,
+      FMLAs). Source review created.
+
+11. `alberta_forest_management_units`
+    - **Open 2026-08-05**: OGL Alberta, but only PDF cartographic maps found on
+      Open Alberta. Actual GIS boundary data may be on GeoDiscover Alberta
+      geoportal. Source review created; need to resolve GIS access before
+      accepting.
+
+12. `bc_fadm_timber_supply_areas`
+    - **Resolved 2026-08-05**: OGL BC, ESRI REST + direct download via DataBC.
+      Authoritative BC TSA boundaries. Also see FEMIC/external/femic-public-data
+      for BC FADM layer as local mirror. Source review created.
+
+13. `nfdp_harvest_tables`
+    - **Open 2026-08-05**: Tableau-based with CSV export. License/redistribution
+      rights unclear. Download CSV exports manually and verify license before
+      promoting. Source review created.
+
+14. `eccc_forest_management_disturbances`
+    - **Resolved 2026-08-05**: Small CSV summary files (~7.5 kB total) downloaded
+      to tmp/. Accepted as reference_only. Source review updated.
+
+15. `cpcad`
+    - **Resolved 2026-08-05**: OGL Canada, FGDB + ESRI REST + WMS. Accepted as
+      national protected/conserved areas constraint layer. Source review created.
+
+16. `nbac`
+    - **Resolved 2026-08-05**: OGL Canada, annual zips at cwfis.cfs.nrcan.gc.ca/
+      downloads/nbac/. Accepted; 2020 sample archived to DataLad. Composite
+      ~756 MB download interrupted; annual subsets work. Source review created.
 
 ## Current Status
 
@@ -85,9 +144,10 @@ canonical inputs and what work is needed before archiving them in `data/`.
   unresolved. `pre_canlad_v2` is the manageable companion candidate.
 - `nrn`: accepted as a coarse national haul-distance baseline; operational
   forest/resource road follow-up remains open.
-- `biomass_inventory_business`: reviewed 2026-08-04; source review created at
-  `metadata/source-reviews/biomass_inventory_business.md`; field-level
-  inspection of FGDB/CSV package needed before archive decision.
+- `biomass_inventory_business`: **not_suitable** — inspected 2026-08-05; BIMA is
+  agricultural biomass (crop residues, farmland MSW), NOT forest biomass.
+  No forest facility locations or mill residue data. Closed; see
+  `metadata/source-reviews/biomass_inventory_business.md` for full rationale.
 - `databasin_canada_forest_tenures`: reviewed 2026-08-04; source review
   created at `metadata/source-reviews/databasin_canada_forest_tenures.md`;
   member dataset URL, license, provenance, and FMU-boundary fit require

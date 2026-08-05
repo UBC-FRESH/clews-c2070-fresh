@@ -1,8 +1,9 @@
 # Biomass Inventory Mapping and Analysis - Business Data Source Review
 
 **Review date**: 2026-08-04
+**Updated**: 2026-08-05 — field inspection complete
 **Source ID**: `biomass_inventory_business`
-**Status**: `triage_ready`
+**Status**: `not_suitable` — agricultural biomass, not forest biomass
 
 ## Source Overview
 
@@ -17,8 +18,28 @@
 
 ## Package Inventory
 
-Not yet inventoried. Next action: download and inspect the package contents
-to identify facility, residue, location, and quantity fields.
+Inspected 2026-08-05 via direct download from Open Canada portal.
+
+**Available formats**:
+- `BIOMASS_MSW_INV.csv` — 1,843 rows: Municipal solid waste (organic, paper) volumes by census farmland grid cell
+- `BIOMASS_AG_INV.csv` — Agriculture crop area, yield, and residue data by grid cell
+- `BIOMASS_AG_INV_10.csv` — Same at 10 km grid resolution
+- `BIOMASS_AG_INV_20.csv` — Same at 20 km grid resolution
+- `BIOMASS_INV_CT_FGDB.zip` (~11 MB) — Same tables with geometry (census farmland grid polygons)
+- `BIOMASS_REPORT_FRMWRK_FGDB.zip` (~11 MB) — Reporting framework/lookup tables
+
+**Schema (MSW)**:
+- `OBJECTID`, `BIOMASS_GRID_ID`, `MNCPL_SOLID_WASTE_TOTAL_VOL`, `MNCPL_SOLID_WASTE_ORGANIC_VOL`, `MNCPL_SOLID_WASTE_PAPER_VOL`
+- Volumes in cubic metres (estimated)
+- `BIOMASS_GRID_ID` links to Census farmland enumeration areas, NOT forest inventory
+
+**Schema (AG)**:
+- Crop area (barley, corn, flax, oat, wheat, canola, soybean)
+- Crop yield and quantity
+- Residue yield (chaff, straw, stover) by tillage practice
+- Livestock straw requirements
+
+**No forest-related content confirmed.**
 
 ## Intended Modelling Role
 
@@ -45,6 +66,18 @@ residue screening.
 
 ## Decision
 
-**Triage status**: `needs_field_inspection`
+**Triage status**: `not_suitable`
 
-Do not archive or promote until field-level inspection confirms fit.
+**Rationale**: BIMA is agricultural biomass inventory (crop residues, municipal solid waste from farmland areas). It does NOT contain:
+- Forest facility locations
+- Mill residue data
+- Forest biomass supply data
+- Any content relevant to the forest industry/facility layer or forest residue screening
+
+The dataset is correctly named "Biomass Inventory Mapping and Analysis" from Agriculture and Agri-Food Canada — its scope is farmland biomass, not forest biomass.
+
+**Recommended actions**:
+1. Mark `biomass_inventory_business` as `not_suitable` in `source-inventory.csv`
+2. Do NOT archive or promote to `required-datasets.yaml`
+3. Close P7.1 sub-task for this item
+4. Look for forest industry facility data elsewhere (e.g., NRCan's "Forest Industry Facility Database" or provincial timber facility lists)

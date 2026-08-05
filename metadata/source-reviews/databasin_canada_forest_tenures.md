@@ -1,63 +1,55 @@
 # Data Basin Canada Forest Tenures - Source Review
 
-**Review date**: 2026-08-04
+**Review date**: 2026-08-05
 **Source ID**: `databasin_canada_forest_tenures`
-**Status**: `candidate`
+**Status**: `accepted` (interim)
 
 ## Source Overview
 
 - **Dataset**: Canada - forest tenures (draft)
-- **Publisher**: Data Basin / James R. Strittholt
-- **License**: Not yet verified
-- **Access**: Data Basin gallery
-- **Format**: Geospatial gallery (individual dataset format TBD)
+- **Publisher**: Data Basin / James R. Strittholt; original compilation: Global Forest
+  Watch Canada
+- **License**: Public domain (per use constraint inside each zip archive)
+- **Access**: Data Basin gallery (login required for download; acquired via web UI)
+- **Format**: Shapefile (4 provincial zips)
 - **Gallery URL**: https://databasin.org/galleries/1dd5bbe4e47a4855a2095eae7cf3253a/
-- **Likely member dataset URL**: https://databasin.org/datasets/2f20af8c4f7949ad8ab631b77dc733c3/
-- **Created**: 2012-07-02 (draft)
-- **Temporal**: 2012 draft; currency unknown
+- **Created**: 2012-07-02 (draft); geometry dates ~2010
+- **Temporal**: ~2010 geometry; 2012 upload to Data Basin
 
-## Gallery Notes (from source-inventory.csv)
+## Acquired Payloads
 
-- Title: "Canada - forest tenures (draft)"
-- Description: nationally compiled forest tenures in Canada
-- Created by: James R. Strittholt
-- Gallery contains 4 datasets
-- Likely national member dataset: "Provincial Forest Tenures - Forest Management
-  Areas (draft)"
+Located in `tmp/databasin/`:
 
-## Key Questions
+| File | Provinces | Shapefile | Records |
+|------|-----------|-----------|---------|
+| `BC_tenures/` | British Columbia | 54.7 MB .shp | 2501 polys, 424 unique tenure IDs |
+| `AB_SK_MB_tenures/` | Alberta, Saskatchewan, Manitoba | ~ | ~ |
+| `ON_QC_tenures/` | Ontario, Quebec | 64.3 MB .shp | ~ |
+| `Atlantic_tenures/` | New Brunswick, Newfoundland, Nova Scotia | 21 MB .shp | ~ |
 
-1. **Member dataset verification**: Is the "Provincial Forest Tenures - Forest
-   Management Areas (draft)" dataset actually accessible through the gallery?
-2. **Download endpoint**: What is the actual download URL for the member dataset?
-   Is it a direct download or does it require interaction?
-3. **Source lineage**: Who originally compiled this data? Is it derived from
-   provincial tenure records, and if so, which ones?
-4. **Spatial unit semantics**: Are the features Forest Management Units (FMUs),
-   timber sales areas, or other tenure boundaries? What is the relationship to
-   FRESH supply-node boundaries?
-5. **License**: What is the license for this Data Basin content? Is it open
-   for modelling use or is it rights-managed by the creator?
-6. **Update status**: The 2012 draft label suggests the data may be stale.
-   Has it been updated since 2012? What is the currency?
-7. **Fit to FMU/supply-node boundary contract**: Would this provide a national
-   Forest Management Unit boundary layer, or is it too coarse/generalized for
-   the FRESH supply-node spatial unit needs?
+**BC tenure IDs include**: TFL (Tree Farm Licenses), TSAs (Timber Supply Areas),
+UAU (User Area Units), and numeric forest district codes.
 
-## Safety Stop Condition
+**Coverage**: 9 of 13 provinces/territories. Missing: Yukon, Northwest
+Territories, Nunavut.
 
-Do not archive or materialize merely because the gallery exists. The 2012 draft
-status and unverified license/redownload path make this a candidate only. Keep
-in `triage_ready` state until all questions above are resolved.
+## Key Findings
 
-## Recommended Next Steps
+1. **License**: Public domain — no use restriction beyond attribution to Global
+   Forest Watch Canada / Data Basin.
+2. **Source lineage**: Global Forest Watch Canada compiled from provincial tenure
+   data. BC boundaries compiled from "several different sources" (per CONTENTS.txt).
+3. **Spatial unit**: Forest tenure/management area polygons — directly relevant to
+   FRESH supply-node spatial unit definitions.
+4. **Currency**: Geometry dates ~2010 (shapefile internal dates). 2012 Data Basin
+   upload date. Consider stale for active tenure management.
+5. **Gap**: No northern territory coverage (YK, NT, NU).
 
-1. Visit the gallery URL to verify member dataset accessibility
-2. Identify the actual download endpoint for the tenure boundary layer
-3. Check Data Basin terms of service and license for the content
-4. Determine source agency and update status for the underlying provincial
-   tenure data
-5. Assess spatial unit semantics against FRESH FMU/supply-node requirements
+## Status
+
+**Accepted as interim** national forest tenure boundary layer. Replace with more
+current authoritative provincial open data when available. BC tenure boundaries are
+the highest priority for FRESH supply node spatial definition.
 
 ## Decision
 

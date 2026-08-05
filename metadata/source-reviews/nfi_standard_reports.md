@@ -1,6 +1,7 @@
 # NFI Standard Reports Source Review
 
 Review date: 2026-06-25.
+Updated: 2026-08-05 — key CSVs downloaded to `data/raw/nfi/standard_reports/t1/`.
 
 ## Source
 
