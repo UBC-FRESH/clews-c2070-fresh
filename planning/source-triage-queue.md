@@ -1,6 +1,7 @@
 # Source Triage Queue
 
-Date updated: 2026-08-05 (NFI CSVs downloaded; BIMA closed as not_suitable).
+Date updated: 2026-08-08 (SCANFI subset acquisition reconciled; BIMA closed as
+not_suitable).
 
 This is the first practical queue for Tyler's dataset discovery work. The goal
 is not to download everything; the goal is to decide which sources become
@@ -22,10 +23,12 @@ canonical inputs and what work is needed before archiving them in `data/`.
    - File list and total storage have been inventoried in
      `metadata/source-file-manifests/scanfi_v2_files.csv`.
    - Read `metadata/source-reviews/scanfi_v2.md`.
-   - Confirm or revise which rasters are needed for first-pass forest inventory,
-     biomass, age, canopy, and species-composition screening.
-   - Decide whether to approve the recommended first-pass subset before any
-     raster payloads are archived in `data/`.
+   - **Subset reconciled 2026-08-08**: the five authorized 2025 rasters are
+     downloaded, checksum-verified, and archived at `data/raw/scanfi/v2/`;
+     see `data/manifests/scanfi-v2-2025-acquisition.csv`.
+   - Keep the subset-first boundary. Full time-series, species layers, and the
+     north extrapolation mask require separate approval; do not treat the six
+     heuristic windows as inferential evidence.
 
 2. `nfi_standard_reports`
    - Public report links have been inventoried in
@@ -44,8 +47,17 @@ canonical inputs and what work is needed before archiving them in `data/`.
      confirmed: `Latest_filtered_CAN_20260508/` (5 latest mosaics, ~2.5 GB) and
      `TS_FinalFilter_20260508/` (42 annual rasters, ~3.3 GB, 1984–2025). Total
      ~5.8 GB. License: OGL Canada. Updated to `accepted` in source-inventory.csv.
-   - `pre_canlad_v2` remains accepted as companion, pending PI approval to mirror
-     the four core rasters.
+   - `pre_canlad_v2` is accepted as a companion source; mirroring its four core
+     rasters and documentation remains pending PI approval.
+
+3a. `canlabs_v2`
+    - **Open 2026-08-08**: Source metadata and the official FTP endpoint are
+      documented, but the local primary severity TIFF is not safe to use or
+      archive. Its 1,787,556,259-byte local size exceeds the observed server
+      Content-Length of 1,751,083,497 bytes.
+    - Resolve the transfer with a fresh download and SHA-256 comparison before
+      DataLad archiving or model use. Do not treat structural BigTIFF
+      readability as proof of provenance.
 
 4. `nrn`
    - File list and package sizes have been inventoried in
@@ -136,12 +148,17 @@ canonical inputs and what work is needed before archiving them in `data/`.
 
 ## Current Status
 
-- `scanfi_v2`: first-pass review complete; subset-first mirroring remains the
-  recommended path. Phase 6 acquisition blocked pending explicit authorization.
+- `scanfi_v2`: first-pass review complete; the authorized five-file 2025 subset
+  is acquired and verified. Further expansion remains blocked pending separate
+  authorization.
+- `canlabs_v2`: source accepted with a provenance caveat; primary severity
+  payload remains blocked pending a fresh transfer and checksum comparison.
 - `nfi_standard_reports`: first-pass review complete; license/re-hosting
   decision remains open.
-- `canlad`: first-pass review complete; raster payload access remains
-  unresolved. `pre_canlad_v2` is the manageable companion candidate.
+- `canlad`: first-pass review complete; raster payload access was confirmed on
+  2026-08-05 and the source is accepted in the inventory. Archive or use only
+  the documented payload subset; `pre_canlad_v2` remains the companion source
+  pending PI approval to mirror.
 - `nrn`: accepted as a coarse national haul-distance baseline; operational
   forest/resource road follow-up remains open.
 - `biomass_inventory_business`: **not_suitable** — inspected 2026-08-05; BIMA is

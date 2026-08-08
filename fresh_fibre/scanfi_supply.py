@@ -37,6 +37,11 @@ GAUTHIER_SOURCE_MODEL = "scanfi_v2_2025_inventory_gauthier_2015_yield_diagnostic
 VALUE_POLICY = "synthetic_placeholder_yield_not_calibrated"
 GAUTHIER_VALUE_POLICY = "gauthier_2015_method_reproduction_diagnostic_not_calibrated"
 RESIDUE_VALUE_POLICY = "synthetic_placeholder_residue_policy_unresolved"
+INVENTORY_DIAGNOSTIC_POLICIES = {
+    "synthetic_proxy_not_sampled_from_raster",
+    "real_sampling_fixture_design_not_sampled",
+    "real_sampled",
+}
 
 YIELD_RULE_COLUMNS = [
     "yield_rule_id",
@@ -164,6 +169,16 @@ SCANFI_HARVEST_FIELDNAMES = [
     "closure_source_file",
     "landcover_source_file",
     "age_source_file",
+    # Optional CanLaBS v2 raw dNBR severity signal (provenance-aware, not classified).
+    # Absence of these columns is valid for all legacy diagnostic rows.
+    "canlabs_severity_source_path",
+    "canlabs_severity_mean_dnbr",
+    "canlabs_severity_valid_count",
+    "canlabs_severity_nodata_count",
+    "canlabs_severity_min_dnbr",
+    "canlabs_severity_max_dnbr",
+    "canlabs_severity_value_policy",
+    "canlabs_severity_manifest_ref",
 ]
 
 REQUIRED_INVENTORY_COLUMNS = {
@@ -323,6 +338,7 @@ def build_harvest_rows(
     source_model: str = SOURCE_MODEL,
     grade: str = "scanfi_diagnostic",
     allowed_yield_policies: set[str] | None = None,
+    canlabs_severity: dict[str, object] | None = None,
 ) -> list[dict[str, object]]:
     if allowed_yield_policies is None:
         allowed_yield_policies = {VALUE_POLICY}
@@ -386,6 +402,40 @@ def build_harvest_rows(
                 "closure_source_file": cell["closure_source_file"],
                 "landcover_source_file": cell["landcover_source_file"],
                 "age_source_file": cell["age_source_file"],
+                # Optional CanLaBS v2 raw dNBR severity signal.
+                # Populated only when canlabs_severity mapping is provided.
+                "canlabs_severity_source_path": (
+                    canlabs_severity.get(record_id, {}).get("source_path", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_mean_dnbr": (
+                    canlabs_severity.get(record_id, {}).get("mean_dnbr", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_valid_count": (
+                    canlabs_severity.get(record_id, {}).get("valid_count", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_nodata_count": (
+                    canlabs_severity.get(record_id, {}).get("nodata_count", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_min_dnbr": (
+                    canlabs_severity.get(record_id, {}).get("min_dnbr", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_max_dnbr": (
+                    canlabs_severity.get(record_id, {}).get("max_dnbr", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_value_policy": (
+                    canlabs_severity.get(record_id, {}).get("value_policy", "")
+                    if canlabs_severity else ""
+                ),
+                "canlabs_severity_manifest_ref": (
+                    canlabs_severity.get(record_id, {}).get("manifest_ref", "")
+                    if canlabs_severity else ""
+                ),
             }
         )
     harvest_rows = aggregate_cell_rows_for_lp(cell_rows, ws3_run_id, source_model, grade)
@@ -419,7 +469,17 @@ def aggregate_cell_rows_for_lp(
         def weighted_average(column: str) -> str:
             if quantity == 0:
                 return format_number(number(group[0][column]))
-            value = sum(number(row[column]) * number(row["quantity"]) for row in group) / quantity
+            # Skip rows with empty values for this column
+            valid_rows = [row for row in group if str(row[column]).strip()]
+            if not valid_rows:
+                return ""
+            total_weight = sum(number(row["quantity"]) for row in valid_rows)
+            if total_weight == 0:
+                return format_number(number(valid_rows[0][column]))
+            value = sum(
+                number(row[column]) * number(row["quantity"])
+                for row in valid_rows
+            ) / total_weight
             return format_number(value)
 
         def unique_join(column: str) -> str:
@@ -466,6 +526,29 @@ def aggregate_cell_rows_for_lp(
                 "closure_source_file": unique_join("closure_source_file"),
                 "landcover_source_file": unique_join("landcover_source_file"),
                 "age_source_file": unique_join("age_source_file"),
+                # CanLaBS v2 raw dNBR severity aggregation.
+                # Provenance fields use unique_join; mean_dnbr uses
+                # quantity-weighted average; counts use sum.
+                "canlabs_severity_source_path": unique_join("canlabs_severity_source_path"),
+                "canlabs_severity_mean_dnbr": weighted_average("canlabs_severity_mean_dnbr"),
+                "canlabs_severity_valid_count": format_number(
+                    sum(
+                        number(row["canlabs_severity_valid_count"])
+                        for row in group
+                        if str(row["canlabs_severity_valid_count"]).strip()
+                    )
+                ),
+                "canlabs_severity_nodata_count": format_number(
+                    sum(
+                        number(row["canlabs_severity_nodata_count"])
+                        for row in group
+                        if str(row["canlabs_severity_nodata_count"]).strip()
+                    )
+                ),
+                "canlabs_severity_min_dnbr": unique_join("canlabs_severity_min_dnbr"),
+                "canlabs_severity_max_dnbr": unique_join("canlabs_severity_max_dnbr"),
+                "canlabs_severity_value_policy": unique_join("canlabs_severity_value_policy"),
+                "canlabs_severity_manifest_ref": unique_join("canlabs_severity_manifest_ref"),
             }
         )
     return aggregated_rows
@@ -486,8 +569,11 @@ def validate_harvest_rows(
         if number(row["quantity"]) < 0:
             raise ValueError(f"Negative diagnostic supply quantity for {record_id}")
         inventory_policies = set(str(row["inventory_value_policy"]).split("; "))
-        if inventory_policies != {"synthetic_proxy_not_sampled_from_raster"}:
-            raise ValueError(f"Unexpected inventory value policy for {record_id}")
+        if not inventory_policies.issubset(INVENTORY_DIAGNOSTIC_POLICIES):
+            raise ValueError(
+                f"Unexpected inventory value policy for {record_id}: "
+                f"{inventory_policies!r}; allowed {INVENTORY_DIAGNOSTIC_POLICIES!r}"
+            )
         yield_policies = set(str(row["yield_value_policy"]).split("; "))
         if not yield_policies.issubset(allowed_yield_policies):
             raise ValueError(f"Unexpected yield value policy for {record_id}")

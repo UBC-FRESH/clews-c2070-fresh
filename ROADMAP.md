@@ -408,7 +408,13 @@ Goal: add the first tiny real-sampled diagnostic supply lane while preserving
 existing synthetic, ws3-smoke, SCANFI diagnostic, and SCANFI+Gauthier
 diagnostic lanes.
 
-**Status**: READY — P6.0 complete, P6.1 authorized to proceed
+**Status**: COMPLETE — diagnostic lane and P6.5 memo complete; production gates remain open
+
+**Workspace note** (2026-08-08): Phase 6 implementation was completed in-session
+and preserved on the Phase 7 branch. P6.5 is now complete as a diagnostic-only
+validation memo. The six heuristic SCANFI windows are quarantined as software
+fixtures, not inferential evidence. Phase 7 parent issue `#26` and recovery task
+`#27` govern the carryover; source triage continues under issue `#1`.
 
 Governing planning notes:
 - `planning/phase-6-scanfi-acquisition-plan.md` - acquisition plan (COMPLETED)
@@ -427,23 +433,37 @@ Governing planning notes:
   - [x] Verify SHA-256 checksums and record in acquisition manifest.
   - [x] Add files to git-annex at `data/raw/scanfi/v2/`.
   - [x] Publish annex content to arbutus-s3 (~20.6 GB, all 5 files verified).
-- [ ] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
+- [x] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
   the `data` DataLad submodule.
-- [ ] P6.2 Generate a public-safe derived inventory table consumed by the
+  - [x] Extract 5 SCANFI v2 2025 raster layers (biomass, height, closure,
+    landcover, age) for `tiny_bc_real_sample_interior_dry_001` cell.
+- [x] P6.2 Generate a public-safe derived inventory table consumed by the
   parent repository.
   - [x] Create `bc-mini-scanfi-real-sampled/` directory and skeleton
     `diagnostic_inventory_cells.csv` with six fixture cell rows and correct
     column schema.
-  - [ ] Populate with real sampled values after P6.1 materialization.
-- [ ] P6.3 Build a ws3-shaped supply output from real-sampled SCANFI diagnostic
-  inventory plus existing Gauthier diagnostic log-yield rules. Blocked by P6.2.
-- [ ] P6.4 Solve the downstream LP variant and emit `ws3_harvest_output`,
+  - [x] Populate with real sampled values: sampled_area_ha=66219.9,
+    biomass_t_per_ha=53.23, height_m=9.97, closure_pct=56.6, landcover_class=6,
+    age_yr=median after P6.1 materialization.
+- [x] P6.3 Build a ws3-shaped supply output from real-sampled SCANFI diagnostic
+  inventory plus existing Gauthier diagnostic log-yield rules.
+  - [x] Emit `ws3_harvest_output.csv` (49,665 m³) and `supply_offer.csv` with
+    real-sampled provenance.
+  - [x] Key insight: graph tables (`graph_arcs.csv`) must be rebuilt after
+    replacing `supply_offer.csv` to sync constraint arcs with updated supply
+    quantities and costs.
+- [x] P6.4 Solve the downstream LP variant and emit `ws3_harvest_output`,
   `supply_offer`, `solution_flow`, `solution_summary`, and comparison tables.
-  Blocked by P6.3.
-- [ ] P6.5 Write a validation memo that clearly labels unresolved residue,
+  - [x] LP solve produces consistent results after graph rebuild:
+    objective_value=$2,350,244 CAD, total_supply_cost=$2,483,246 CAD (49,665 m³
+    × $50/m³ exact match).
+- [x] P6.5 Write a validation memo that clearly labels unresolved residue,
   cost, climate, NFI, and production-calibration assumptions.
   - [x] Create `planning/phase-6-validation-memo.md` skeleton with check
     tables and completion criteria.
+  - [x] Complete memo with findings: yield still diagnostic (0.75 m³/ha
+    placeholder), heuristic fixtures quarantined, no multi-rotation WS3, and
+    no species×grade disaggregation.
 
 ## Phase 7: Source Triage And Production Readiness Gates
 
@@ -452,8 +472,10 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 Goal: reconnect the model prototype to the broader source-discovery roadmap and
 decide what blocks production readiness after the conceptual alpha.
 
-- [ ] P7.1 Finish open source-triage issue `#1`, beginning with
-  `biomass_inventory_business`.
+- [ ] P7.1 Continue source triage under child issue `#28` and governing issue
+  `#1`, continuing from the local
+  queue after `biomass_inventory_business` was reviewed as not suitable for
+  forest biomass.
 - [ ] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only
   when license, provenance, and access status are clear.
 - [ ] P7.3 Add explicit readiness gates for NFI access, climate predictors,

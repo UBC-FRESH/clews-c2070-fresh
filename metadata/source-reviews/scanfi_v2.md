@@ -113,3 +113,17 @@ Defer until modelling requirements are explicit:
 - full 1985-2025 time series;
 - all species crown-closure rasters; and
 - `.ovr` overview files unless needed for desktop GIS review.
+
+## Acquisition Reconciliation — 2026-08-08
+
+The authorized five-file 2025 subset was downloaded, SHA-256 verified, added to
+the DataLad/git-annex data repository, and published to `arbutus-s3`. The
+durable acquisition record is
+`data/manifests/scanfi-v2-2025-acquisition.csv`; the payloads are under
+`data/raw/scanfi/v2/`.
+
+This does not authorize or imply acquisition of the remaining SCANFI package.
+The full 1985–2025 time series, species crown-closure layers, overview files,
+and north extrapolation mask remain outside the approved subset. The six
+heuristic diagnostic windows are software fixtures and must not be used as
+inferential evidence.

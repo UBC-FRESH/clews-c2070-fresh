@@ -1,5 +1,36 @@
 # Change Log
 
+## 2026-08-08
+
+- Completed P6.5 as a diagnostic-only validation memo. The six heuristic SCANFI
+  windows are explicitly quarantined as software fixtures and must not support
+  BC-scale inferential claims.
+- Recorded developer approval for G0/G1 in
+  `planning/scientific-model-recovery-plan.md`; G2–G8 remain unapproved.
+- Applied `SOFTWARE_FIXTURE_NOT_EVIDENCE` to all 30 rows in the six SCANFI
+  fixture manifests and set the six parent inventory rows to
+  `value_policy=quarantined` and `sampling_status=quarantined`.
+- Created and attached recovery task `#27` under Phase 7 parent issue `#26`.
+- Created and attached Phase 7 source-triage child task `#28` under parent
+  issue `#26`, linked to governing issue `#1`.
+- Reconciled CanLaD triage evidence: public raster access confirmed on
+  2026-08-05, so the queue and required-dataset registry now record `canlad` as
+  accepted while preserving the documented subset-first archive boundary.
+- Removed the stale BIMA registry entry; `biomass_inventory_business` remains
+  rejected because its inspected content is agricultural biomass and does not
+  provide forest facilities or mill-residue data.
+- Reconciled SCANFI v2 acquisition evidence across the Phase 6 plan, source
+  queue, inventory, registry, and source review: the authorized five-file 2025
+  subset is checksum-verified and archived, while all broader SCANFI expansion
+  remains separately gated.
+- Clarified Pre-CanLaD v2 semantics: the source is accepted, but mirroring its
+  four core rasters and documentation remains pending PI approval.
+- Added `canlabs_v2` to the curated registry with an explicit provenance gate:
+  the local BigTIFF/server Content-Length mismatch must be resolved by a fresh
+  transfer and checksum comparison before model use or DataLad archiving.
+- Validation: parent/data `git diff --check` passed; focused BC mini regression
+  passed with 21 tests.
+
 ## 2026-08-04
 
 - **SCANFI v2 2025 acquisition complete**: Downloaded all 5 authorized rasters
