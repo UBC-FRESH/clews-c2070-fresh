@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-06-25T00:00:00Z"
+updated_utc: "2026-08-08T00:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -317,15 +317,15 @@ datasets:
       other_layers:
         - "CanLaBS_salvageMask_1985_2024_v20260121.tif"
         - "NBAC_MRB_1972to2024_reproj.tif"
-      archive_status: "not_archived"
+      archive_status: "archived"
     checksum:
       algorithm: "sha256"
       value: "152ba33cca7c473ddc6c7d804d0855581f6d734b50f300637c8f2ee040ac5e8b"
       status: "verified_local_transfer_no_publisher_hash"
       target_artifact: "CanLaBS_1985_2024_v20260121.tif"
     datalad_mirror:
-      include: "archive_after_transfer_review"
-      rationale: "The fresh primary transfer matches the official Content-Length and has a recorded local SHA-256. Keep the verified copy in tmp until the transfer manifest is preserved and DataLad archive authorization is available; no publisher-attested checksum is advertised. Smaller companion layers remain deferred."
+      include: "archived"
+      rationale: "The fresh primary transfer matches the official Content-Length and has a recorded local SHA-256. The verified BigTIFF (1.75 GB, EPSG:3978, int16, 178400 x 119100, Deflate-compressed) is archived in the DataLad-backed data submodule. Smaller companion layers remain deferred pending modelling need."
 
   - id: nrn
     category: transport
