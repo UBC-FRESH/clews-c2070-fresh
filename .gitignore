@@ -17,3 +17,16 @@ tmp/
 *.env
 *.env.*
 config/credentials/
+
+# Reproducible diagnostic LP outputs; keep source fixtures and lightweight
+# contracts in the parent repository, but do not accumulate generated runs.
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled-lp-run/
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled-lp-test/
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled-variant/
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/generated/
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/diagnostic_yield_rules_real_sampled.csv
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/export_sink.csv
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/run_provenance.csv
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/supply_offer.csv
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/ws3_harvest_output.csv
+metadata/ffcm-archive/prototype-inputs/bc-mini-scanfi-real-sampled/ws3_supply_crosswalk.csv
