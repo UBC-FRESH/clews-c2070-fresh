@@ -4,7 +4,7 @@ Continue the model-development work in `/home/gep/projects/clews-c2070-fresh`.
 
 ## User intent
 
-The goal is to build an actual forestry/biomass model, not substitute governance or process language for implementation. Make concrete, testable engineering progress. Preserve the existing dirty worktree and generated artifacts. Do not claim completion without directly verifying files and command results. Do not invent scientific mappings, thresholds, classes, multipliers, calibration, or production readiness.
+The goal is to build an actual forestry/biomass model, not substitute governance or process language for implementation. Make concrete, testable engineering progress. The repository was cleaned and published on 2026-08-08; do not recreate generated-output spillover or claim completion without directly verifying files and command results. Do not invent scientific mappings, thresholds, classes, multipliers, calibration, or production readiness.
 
 ## Repository and runtime
 
@@ -14,6 +14,20 @@ The goal is to build an actual forestry/biomass model, not substitute governance
 - Do **not** run bare `pytest -q`; it recursively collects unrelated `.venv` tests.
 - Run `git diff --check` for the parent repository and, when relevant, `git -C data diff --check`.
 - Keep heavy raster payloads outside tracked parent-repository paths.
+
+## Repository state at handoff
+
+- Parent branch: `feature/p7-source-triage-and-production-readiness`
+- Parent HEAD: `5d2e8c4` (`Add CanLaBS signal and clean diagnostic outputs`)
+- Parent branch is pushed and tracks
+   `origin/feature/p7-source-triage-and-production-readiness`.
+- The parent worktree is clean and synchronized with its upstream.
+- The `data` submodule is on `main` at `87087b2`, clean, and synchronized with
+   `origin/main`.
+- No pull request has been opened or merged.
+- Reproducible LP/variant outputs are ignored under the narrowly scoped rules
+   in `.gitignore`; do not commit generated CSVs or run directories from the
+   real-sampled diagnostic lane.
 
 ## Completed context
 
@@ -40,15 +54,9 @@ The CanLaBS raster facts are:
 
 The existing SCANFI diagnostic fixture uses synthetic proxy values. Its `geometry_ref` values such as `data:diagnostic/scanfi_bc_coast_wet_forest_001` are symbolic references, not usable coordinates or polygons. Do not sample the national raster at fabricated centroids.
 
-## Current implementation handoff
+## Completed implementation
 
-A delegated implementation task was started with this bounded scope:
-
-- `fresh_fibre/canlabs_severity.py`
-- `fresh_fibre/scanfi_supply.py`
-- `tests/test_canlabs_severity.py`
-
-The intended implementation is:
+The implemented CanLaBS signal is bounded as follows:
 
 1. Add an isolated CanLaBS module with lazy `rasterio`/`numpy` imports.
 2. Provide a pure-array, nodata-aware dNBR summarizer.
@@ -60,29 +68,33 @@ The intended implementation is:
 8. Keep the signal diagnostic/provenance-only by default: no yield attenuation, no quantity changes, no cost changes, and no solver changes.
 9. Preserve all existing fixture outputs and objective values.
 
-The supervisor reported a completed implementation with these files:
+Implemented files include:
 
-- `fresh_fibre/canlabs_severity.py` — new module
-- `fresh_fibre/scanfi_supply.py` — integration
-- `tests/test_canlabs_severity.py` — focused tests
+- `fresh_fibre/canlabs_severity.py` — lazy-import raster/window summary module.
+- `fresh_fibre/scanfi_supply.py` — optional raw dNBR/provenance propagation.
+- `tests/test_canlabs_severity.py` — focused unit and integration tests.
+- `docs/validation-maps.md`, `scripts/render_validation_map.py`, and
+   `scripts/repair_scanfi_source_crs.py` — lightweight validation tooling.
+- `.gitignore` — scoped rules preventing generated real-sampled LP outputs from
+   accumulating in the parent worktree.
+- `HANDOFF_PROMPT.md` — this handoff.
 
-That report was truncated, so independently inspect the actual diff and files before accepting it.
+## Immediate next work
 
-## Immediate work
-
-1. Inspect `git diff --stat`, `git diff -- fresh_fibre/canlabs_severity.py fresh_fibre/scanfi_supply.py tests/test_canlabs_severity.py`, and the new module/tests.
-2. Confirm the implementation does not introduce arbitrary classes, thresholds, multipliers, yield attenuation, fake coordinates, or full-raster scanning by default.
-3. Confirm legacy `fresh_fibre.scanfi_supply` behavior and field compatibility.
-4. Run focused tests:
-   `.venv/bin/python -m pytest tests/test_canlabs_severity.py tests/test_bc_mini_prototype.py -q`
-5. Run:
-   `.venv/bin/python -m compileall -q fresh_fibre tests`
-6. Run:
-   `git diff --check`
-7. Then run the full scoped suite:
+1. Verify the pushed branch and clean tree before making further changes:
+   `git status --short --branch --untracked-files=all`
+2. Continue from the raw dNBR/provenance seam rather than adding arbitrary
+   severity classes or yield multipliers.
+3. Materialize and validate real cell geometry/window references before using
+   the verified CanLaBS raster for any cell-level model signal.
+4. If model behavior is changed, add a new explicit diagnostic variant and
+   preserve the existing synthetic, ws3-smoke, SCANFI, and Gauthier variants.
+5. Run focused tests after each change, then the full scoped suite:
    `.venv/bin/python -m pytest tests/ -q`
-8. Fix concrete defects directly, keeping changes minimal and within the intended files.
-9. Update the task checklist to reflect verified status.
+6. Run `.venv/bin/python -m compileall -q fresh_fibre tests` and both parent/data
+   `git diff --check` commands.
+7. Keep commits thematic, update the governing child issue/checklist, and open
+   a PR only when the branch-level implementation and documentation are ready.
 
 ## Scientific boundary
 
@@ -104,5 +116,9 @@ Report briefly:
 - whether the raw dNBR signal reaches harvest/supply provenance;
 - whether default quantities/objectives remain unchanged;
 - any concrete remaining blocker or caveat.
+
+Before reporting repository state, independently verify the branch, upstream
+tracking, clean worktree, and submodule synchronization. Do not say that work
+is pushed unless the remote comparison confirms it.
 
 Do not report production readiness.
