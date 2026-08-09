@@ -1,0 +1,5 @@
+province,commodity_id,quantity_unit,total_quantity,supply_cost_average,supply_count,source_model,ws3_run_id
+BC,log,m3,104700,51.278414,3,scanfi_v2_2025_diagnostic_inventory_fixture,scanfi_diagnostic_supply_001
+BC,logging_residue,odt,6600,23,1,scanfi_v2_2025_diagnostic_inventory_fixture,scanfi_diagnostic_supply_001
+QC,log,m3,3238,50.213712,3,qc_5e_ieqm_casfri_v5_diagnostic_mini_bc_mini_scanfi_mini,qc_casfri_diagnostic_supply_001
+QC,logging_residue,odt,720,22,1,qc_5e_ieqm_casfri_v5_diagnostic_mini_bc_mini_scanfi_mini,qc_casfri_diagnostic_supply_001

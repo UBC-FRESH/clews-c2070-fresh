@@ -59,7 +59,7 @@ gates:
   - id: species_composition
     name: "Species Composition Layers"
     description: "Wall-to-wall species composition (coniferous/deciduous, species group) for yield stratification and product allocation."
-    status: blocked
+    status: in_progress
     required_for:
       - "SCANFI species crown-closure layers"
       - "Gauthier coniferous/deciduous yield curves"
@@ -67,12 +67,12 @@ gates:
     blocking_datasets:
       - scanfi_v2
       - casfri_v5_schema
-    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total. CASFRI v5 schema integration proposed under governing issue #1 / proposed child #29; schema mapping documented in planning/casfri-v5-schema-integration-plan.md and source review at metadata/source-reviews/casfri_v5_schema.md (D1 §5). Status remains blocked until Tier-3 acquisition (>=1 openly-downloadable provincial FRI ingested through the CASFRI pipeline) and the ws3 supply-contract mapper is validated on a BC diagnostic fixture."
+    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total. CASFRI v5 schema integration under governing issue #1 / proposed child #29; schema mapping documented in planning/casfri-v5-schema-integration-plan.md and source review at metadata/source-reviews/casfri_v5_schema.md (D1 §5). Two openly-downloadable provincial FRIs ingested through the CASFRI pathway: BC mini (inherited via bc-mini-scanfi-gauthier-diagnostic) and QC mini (via bc-qc-mini-2prov with casfri_qc_reader + qc_ws3_export bridge). Jurisdictional-prefix policy (BC_*, QC_*) preserved per metadata/source-crosswalks/qc_casfri_v5_schema.md §3.1. Stale species codes (BC: FDC, AT, BL; QC: SAB, EPB, BOP, BOJ, MEH, PEU) surface in supply_provenance without flattening. Remaining blockers: SCANFI v2 spsCC_* species layers (123 GB) for national-scale wall-to-wall; CASFRI QC BOP gap recorded as qc_species_unmapped_unresolved. See planning/qc_two_province_incremental_memo.md §3.1."
 
   - id: national_scaling
     name: "National Scaling Beyond BC Mini"
     description: "Extension from BC diagnostic prototype to national wall-to-wall model with full spatial unit coverage."
-    status: blocked
+    status: in_progress
     required_for:
       - "national biomass supply modelling"
       - "inter-provincial trade flows"
@@ -81,7 +81,7 @@ gates:
       - scanfi_v2
       - provincial_forest_inventories
       - provincial_yield_curves
-    notes: "Requires accepted national inventory, provincial yield curves, full transport network, and facility layer. BC mini is diagnostic only."
+    notes: "BC + QC two-province diagnostic LP fixture solves `Optimal` end-to-end; inter-provincial pathway flows emitted; supply-comparison sep-of-BC vs QC artefacts present in metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/generated/. Real QC GeoPackage (feuille 21M 815 MB, CC-BY 4.0) archived in data/raw/qc_inventory/2023-ieqm-eighth/ via DataLad; provincial bulk GeoPackage (11.2 GB) URL pointer retained but not archived to keep this increment scope manageable. Remaining blockers: NS, PE, YT, NL02 provincial FRIs (also openly-downloadable per casfri_v5_schema.md §3.a) not yet wired; provincial yield curves remain uncalibrated (Gauthier et al. 2015 reproduction path stays at diagnostic-tier); facility layer gate remains blocked."
 
   - id: facility_layer
     name: "Forest Industry Facility Layer"

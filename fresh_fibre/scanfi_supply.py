@@ -41,6 +41,9 @@ INVENTORY_DIAGNOSTIC_POLICIES = {
     "synthetic_proxy_not_sampled_from_raster",
     "real_sampling_fixture_design_not_sampled",
     "real_sampled",
+    "qc_species_resolved_via_lookup",
+    "qc_species_unmapped_unresolved",
+    "qc_species_empty_skipped",
 }
 
 YIELD_RULE_COLUMNS = [
