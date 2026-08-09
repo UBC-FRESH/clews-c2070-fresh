@@ -1,0 +1,110 @@
+schema_version: 1
+updated_utc: "2026-08-08T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+notes:
+  - "Readiness gates define cross-cutting prerequisites for production model readiness."
+  - "Each gate must be resolved before the associated model capability can be considered production-ready."
+  - "Status values: blocked, in_progress, resolved"
+  - "Gates are independent of individual dataset acceptance; multiple datasets may satisfy one gate."
+
+gates:
+  - id: nfi_access
+    name: "NFI Ground Plot & Reference Pixel Access"
+    description: "Access to NFI ground plot data and reference pixels for calibration and validation of inventory-derived forest attributes (biomass, volume, age, species composition)."
+    status: blocked
+    required_for:
+      - "national biomass calibration"
+      - "forest composition validation"
+      - "age class distribution validation"
+    blocking_datasets:
+      - nfi_ground_plot_data
+    notes: "NFI data request process required; access subject to NFI approval. Standard reports (nfi_standard_reports) accepted for summary validation only."
+
+  - id: climate_predictors
+    name: "Climate Predictor Variables"
+    description: "Calibrated climate forcing variables (temperature, precipitation, climate normals) for growth/yield models and disturbance projections."
+    status: blocked
+    required_for:
+      - "Gauthier yield model climate response"
+      - "ws3 growth transitions"
+      - "disturbance-climate coupling"
+    blocking_datasets:
+      - era5_climate
+    notes: "ERA5 reanalysis identified as candidate; licensing and variable selection pending."
+
+  - id: residue_yield_policy
+    name: "Residue Yield Policy Calibration"
+    description: "Calibrated residue/harvest residue yield factors and economic availability for forest biomass supply chain."
+    status: blocked
+    required_for:
+      - "residue supply node quantities"
+      - "biomass availability for pellet/bioenergy"
+      - "harvest cost allocation between merchantable and residue"
+    blocking_datasets: []
+    notes: "Candidate policy paths documented in prototype-gap-register.csv. Requires provincial residue survey data and economic availability study."
+
+  - id: calibrated_cost_surfaces
+    name: "Calibrated Transport & Processing Cost Surfaces"
+    description: "Spatially explicit delivered-cost surfaces for log haul, residue transport, and processing costs by facility type."
+    status: blocked
+    required_for:
+      - "LP network-flow cost minimization"
+      - "delivered feedstock cost screening"
+      - "facility location optimization"
+    blocking_datasets:
+      - nrn
+      - forest_resource_roads
+    notes: "NRN accepted as coarse national baseline; jurisdiction-specific forest roads (10 new candidate sources) required for operational access modelling."
+
+  - id: species_composition
+    name: "Species Composition Layers"
+    description: "Wall-to-wall species composition (coniferous/deciduous, species group) for yield stratification and product allocation."
+    status: blocked
+    required_for:
+      - "SCANFI species crown-closure layers"
+      - "Gauthier coniferous/deciduous yield curves"
+      - "product-grade disaggregation (lumber, pulp, panel)"
+    blocking_datasets:
+      - scanfi_v2
+    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total."
+
+  - id: national_scaling
+    name: "National Scaling Beyond BC Mini"
+    description: "Extension from BC diagnostic prototype to national wall-to-wall model with full spatial unit coverage."
+    status: blocked
+    required_for:
+      - "national biomass supply modelling"
+      - "inter-provincial trade flows"
+      - "national carbon accounting integration"
+    blocking_datasets:
+      - scanfi_v2
+      - provincial_forest_inventories
+      - provincial_yield_curves
+    notes: "Requires accepted national inventory, provincial yield curves, full transport network, and facility layer. BC mini is diagnostic only."
+
+  - id: facility_layer
+    name: "Forest Industry Facility Layer"
+    description: "Authoritative national layer of sawmills, pulp mills, panel mills, pellet plants, and cogeneration facilities with capacity and location."
+    status: blocked
+    required_for:
+      - "demand node definition in LP network-flow"
+      - "processing capacity constraints"
+      - "commodity cascade routing"
+    blocking_datasets:
+      - forest_facilities_2013
+    notes: "Legacy 2013 database is candidate; requires update and license/provenance resolution. No current authoritative national source identified."
+
+  - id: disturbance_calibration
+    name: "Disturbance History Calibration"
+    description: "Validated disturbance history (harvest, fire, insect) for forest estate dynamics and age-class initialization."
+    status: in_progress
+    required_for:
+      - "ws3 forest estate initialization"
+      - "age class distribution validation"
+      - "disturbance return interval analysis"
+    blocking_datasets:
+      - canlad
+      - cwfis_nfdb_fire_polygons
+      - cwfis_nfdb_fire_points
+      - nbac
+    notes: "CanLaD, NFDB polygons/points, NBAC accepted and acquired. CanLaBS v2 archived with raw dNBR provenance. Calibration of harvest vs. fire vs. insect separation remains open."

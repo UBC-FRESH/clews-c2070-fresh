@@ -31,15 +31,15 @@ canonical inputs and what work is needed before archiving them in `data/`.
      heuristic windows as inferential evidence.
 
 2. `nfi_standard_reports`
-   - Public report links have been inventoried in
-     `metadata/source-file-manifests/nfi_standard_reports_links.csv`.
-   - Read `metadata/source-reviews/nfi_standard_reports.md`.
-   - Resolve license/re-hosting status before treating archived CSV snapshots
-     as open model inputs.
-   - Record reporting variables relevant to area, volume,
-     biomass, ownership, protection, age, and forest type.
-   - Decide whether exact report snapshots should be archived in `data/` or
-     used only as source-referenced validation summaries.
+    - Public report links have been inventoried in
+      `metadata/source-file-manifests/nfi_standard_reports_links.csv`.
+    - Read `metadata/source-reviews/nfi_standard_reports.md`.
+    - **Resolved 2026-08-08**: License/re-hosting status resolved. Source accepted
+      and promoted to `metadata/required-datasets.yaml`.
+    - Record reporting variables relevant to area, volume,
+      biomass, ownership, protection, age, and forest type.
+    - Decide whether exact report snapshots should be archived in `data/` or
+      used only as source-referenced validation summaries.
 
 3. `canlad`
    - Read `metadata/source-reviews/canlad_and_pre_canlad_v2.md`.
@@ -129,9 +129,8 @@ canonical inputs and what work is needed before archiving them in `data/`.
       for BC FADM layer as local mirror. Source review created.
 
 13. `nfdp_harvest_tables`
-    - **Open 2026-08-05**: Tableau-based with CSV export. License/redistribution
-      rights unclear. Download CSV exports manually and verify license before
-      promoting. Source review created.
+    - **Resolved 2026-08-08**: CSV export license verified. Source accepted and
+      promoted to `metadata/required-datasets.yaml`. Source review created.
 
 14. `eccc_forest_management_disturbances`
     - **Resolved 2026-08-05**: Small CSV summary files (~7.5 kB total) downloaded
@@ -153,8 +152,10 @@ canonical inputs and what work is needed before archiving them in `data/`.
   authorization.
 - `canlabs_v2`: source accepted with a provenance caveat; primary severity
   payload remains blocked pending a fresh transfer and checksum comparison.
-- `nfi_standard_reports`: first-pass review complete; license/re-hosting
-  decision remains open.
+- `nfi_standard_reports`: **accepted** — license/re-hosting resolved; promoted to
+  `metadata/required-datasets.yaml`.
+- `nfdp_harvest_tables`: **accepted** — CSV export license verified; promoted to
+  `metadata/required-datasets.yaml`.
 - `canlad`: first-pass review complete; raster payload access was confirmed on
   2026-08-05 and the source is accepted in the inventory. Archive or use only
   the documented payload subset; `pre_canlad_v2` remains the companion source

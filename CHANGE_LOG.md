@@ -2,6 +2,36 @@
 
 ## 2026-08-08
 
+- Archived verified CanLaBS v2 payload (1,751,083,497 bytes, SHA-256
+  152ba33cca7c473ddc6c7d804d0855581f6d734b50f300637c8f2ee040ac5e8b) to
+  DataLad at `data/raw/nrcan/canlabs_v2/` and pushed to arbutus-s3 remote.
+  Updated `required-datasets.yaml`: `archive_status=archived`,
+  `datalad_mirror.include=archived`.
+- Extracted CanLaBS raw dNBR provenance for all 6 SCANFI diagnostic fixture
+  windows and added 10 provenance columns to
+  `diagnostic_inventory_cells.csv`: `canlabs_dnbr_mean`, `canlabs_dnbr_min`,
+  `canlabs_dnbr_max`, `canlabs_dnbr_median`, `canlabs_valid_pixels`,
+  `canlabs_nodata_pixels`, `canlabs_total_pixels`, `canlabs_value_policy`,
+  `canlabs_window_bounds`, `canlabs_source_path`. All values are raw signed
+  dNBR integers; no severity classes, thresholds, or yield multipliers.
+- Resolved NFI standard reports license: NFI non-commercial reproduction notice
+  permits personal/public non-commercial use with attribution. Updated
+  `source-inventory.csv` status to `accepted` and promoted to
+  `required-datasets.yaml` with `datalad_mirror.include=yes`.
+- Confirmed NFDP harvest tables OGL Canada v2.0 license. Updated
+  `source-inventory.csv` status to `accepted` and added new entry to
+  `required-datasets.yaml`.
+- Added 10 jurisdiction-specific forest/resource road child sources to
+  `source-inventory.csv` (BC, AB, SK, MB, ON, QC, NB, NL, YT, NT) as follow-up
+  to NRN accepted baseline.
+- Created `metadata/readiness-gates.yaml` with 8 cross-cutting production
+  readiness gates: `nfi_access`, `climate_predictors`, `residue_yield_policy`,
+  `calibrated_cost_surfaces`, `species_composition`, `national_scaling`,
+  `facility_layer`, `disturbance_calibration` (7 blocked, 1 in_progress).
+- Verification: parent/data `git diff --check` passed; `pytest tests/ -q` 56
+  tests passed; git-annex confirms CanLaBS v2 present locally and on arbutus-s3.
+
+
 - Completed P6.5 as a diagnostic-only validation memo. The six heuristic SCANFI
   windows are explicitly quarantined as software fixtures and must not support
   BC-scale inferential claims.

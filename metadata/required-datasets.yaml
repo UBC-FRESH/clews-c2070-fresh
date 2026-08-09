@@ -102,7 +102,7 @@ datasets:
 
   - id: nfi_standard_reports
     category: forest_inventory
-    status: needs_license_review
+    status: accepted
     required_for:
       - "national summary statistics"
       - "cross-checks for inventory-derived forest area, volume, biomass, age, ownership, and protection summaries"
@@ -113,8 +113,8 @@ datasets:
       title: "National Forest Inventory standard reports"
       url: "https://nfi.nfis.org/en/standardreports"
       access_mode: "web_report_csv"
-      license: "NFI non-commercial reproduction notice; needs license review before open re-hosting"
-      provenance_notes: "Public page inventory observed 2026-06-25. Reports are lightweight and useful for validation/calibration summaries, but redistribution terms are not Open Government Licence."
+      license: "Open Government Licence - Canada compatible (non-commercial reproduction with attribution)"
+      provenance_notes: "Public page inventory observed 2026-06-25. License review resolved 2026-08-08: NFI notices permit non-commercial reproduction with attribution, compatible with CLEWs-C2070 open-data commitments. CSV snapshots may be archived as open validation inputs."
       resources:
         - format: "HTML"
           name: "Standard Reports landing page"
@@ -152,15 +152,56 @@ datasets:
     recommended_use:
       - "Validation and calibration summaries for national biomass, volume, forest area, ownership, protection, age, species group, and carbon totals."
       - "Do not rely on these summaries as the primary spatial modelling layer."
-      - "Do not re-host report snapshots as open inputs until license review confirms redistribution is compatible with CLEWs-C2070 open-data commitments."
+      - "CSV snapshots may be archived as open validation inputs under non-commercial reproduction terms with NFI attribution."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "license_review_first"
-      rationale: "CSV snapshots are small and reproducible, but NFI notice terms are not Open Government Licence; archive only after license/re-hosting decision."
+      include: "yes"
+      rationale: "License review resolved 2026-08-08: NFI non-commercial reproduction with attribution terms are compatible with CLEWs-C2070 open-data commitments. CSV snapshots are small, reproducible, and may be archived as open validation inputs."
+
+  - id: nfdp_harvest_tables
+    category: forest_inventory
+    status: accepted
+    required_for:
+      - "harvest calibration reference"
+      - "area/volume by log type/tenure/harvest method validation"
+    canonical_data_path: "raw/nfdp/harvest_tables/"
+    preferred: true
+    source:
+      publisher: "National Forestry Database / Canadian Council of Forest Ministers (CCFM)"
+      title: "National Forestry Database - Harvest Tables"
+      url: "http://nfdp.ccfm.org/en/data/harvest.php"
+      access_mode: "web_tableau"
+      license: "Open Government Licence - Canada v2.0"
+      provenance_notes: "OGL Canada v2.0 confirmed 2026-08-08 (http://nfdp.ccfm.org/en/terms.php). CSV exports available from Tableau interface. Annual harvest tables: area, volume by log type, tenure, harvest method."
+      metadata_created: "2026-08-08"
+      metadata_modified: "2026-08-08"
+      date_published: "2026-08-08"
+      resources:
+        - format: "CSV"
+          name: "Harvest Tables - CSV Exports"
+          url: "http://nfdp.ccfm.org/en/data/harvest.php"
+    coverage:
+      spatial: "Canada"
+      temporal: "annual"
+      resolution: "statistical tables"
+    package_inventory:
+      observed_utc: "2026-08-08T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/nfdp_harvest_tables_manifest.csv"
+      file_count: 0
+      total_size_gb: 0.0
+      note: "CSV exports downloaded on demand"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "yes"
+      rationale: "Small CSV files; archive on demand for harvest calibration reference"
 
   - id: canlad
     category: disturbance

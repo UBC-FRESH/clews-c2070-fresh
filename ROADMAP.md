@@ -472,17 +472,10 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 Goal: reconnect the model prototype to the broader source-discovery roadmap and
 decide what blocks production readiness after the conceptual alpha.
 
-- [ ] P7.1 Continue source triage under child issue `#28` and governing issue
-  `#1`, continuing from the local
-  queue after `biomass_inventory_business` was reviewed as not suitable for
-  forest biomass.
-- [ ] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only
-  when license, provenance, and access status are clear.
-- [ ] P7.3 Add explicit readiness gates for NFI access, climate predictors,
-  residue yield policy, calibrated cost surfaces, species composition, and
-  national scaling.
-- [ ] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and
-  production model states are visibly separate.
+- [x] P7.1 Continue source triage under child issue `#28` and governing issue `#1`, continuing from the local queue after `biomass_inventory_business` was reviewed as not suitable for forest biomass. Completed: NFI standard reports → `accepted`, NFDP harvest tables → `accepted`, 10 jurisdiction forest roads added as candidates.
+- [x] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only when license, provenance, and access status are clear. Completed: `nfi_standard_reports` and `nfdp_harvest_tables` promoted.
+- [x] P7.3 Add explicit readiness gates for NFI access, climate predictors, residue yield policy, calibrated cost surfaces, species composition, and national scaling. Completed: Created `metadata/readiness-gates.yaml` with 8 gates (7 blocked, 1 in_progress).
+- [x] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and production model states are visibly separate. Completed: Updated CHANGE_LOG.md and this ROADMAP.md.
 - [ ] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work.
 
 ## Phase 8: Conceptual Alpha Release Preparation
