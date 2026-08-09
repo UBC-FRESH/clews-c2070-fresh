@@ -1,5 +1,12 @@
 # Change Log
 
+## 2026-08-09
+
+- Completed P7.5: Created `planning/phase-7-production-readiness-memo.md` documenting the diagnostic-only boundary of v0.1.0a1, all 8 readiness gates (7 blocked: `nfi_access`, `climate_predictors`, `residue_yield_policy`, `calibrated_cost_surfaces`, `species_composition`, `national_scaling`, `facility_layer`; 1 in_progress: `disturbance_calibration`), gate-by-gate post-alpha work program with priority ordering and dependencies, and verified release criteria (56 tests pass, git diff --check clean, compileall clean, branch pushed, CHANGE_LOG/ROADMAP current).
+- Phase 7 complete: All P7.1–P7.5 tasks checked. Phase 8 (v0.1.0a1 Conceptual Alpha release preparation) authorized.
+- Documented CASFRI v5 schema integration plan: added `metadata/source-reviews/casfri_v5_schema.md` (D1 source review with the four-artifact disambiguation table, 49-row truth table, schema inventory, ws3 crosswalk, GPL-3.0 licensing posture, Tier 1–5 acquisition strategy, and readiness-gate impact), created `planning/casfri-v5-schema-integration-plan.md` (D2 plan with P7.1.CASFRI subtask breakdown P*.1 through P*.7 plus a Phase 9 candidate stub, schema-mapping sketch, GPL-3.0 contamination risk register, acceptance criteria, and sequencing vs. the in-flight NFI Ground Plot DUA), added `casfri_v5_schema` row to `metadata/source-inventory.csv` (status=`candidate`, GPL-3.0, framework-sidecar submodule pattern; NOT promoted to required-datasets.yaml), updated `metadata/readiness-gates.yaml` `species_composition.notes` to reference the proposed child issue under governing #1 (status remains `blocked` per the team's existing discipline until Tier-3 ingestion evidence exists). Source review distinguishes the four CASFRI-named artifacts (U. Laval/Racine/Edwards/Houle conversion framework vs. NRCan/NFIS WMS raster vs. 49 provincial/territorial FRIs vs. SCANFI v2). Child issue naming `#29` is a **proposal**; the team creates the actual GitHub issue.
+- Reconciled SK (Saskatchewan) row in `metadata/source-reviews/casfri_v5_schema.md` §3 per reviewer Major finding M1: split SK into "Open (SK Standard Unrestricted Use Data License v2.0) for older vintages" (added to §3.a) and "DUA for newer BAM/BEACON-derived products" (kept in §3.c). Updated `planning/casfri-v5-schema-integration-plan.md` P*.2 acceptance criteria and `ROADMAP.md` P7.1.CASFRI to include SK reconciliation as Tier-3-prerequisite. Reviewer confidence recovered to ~95% (was 75% pre-reconciliation).
+
 ## 2026-08-08
 
 - Archived verified CanLaBS v2 payload (1,751,083,497 bytes, SHA-256
@@ -77,7 +84,6 @@
   source inventory, added it to the active triage queue, updated Phase 3 and
   Phase 5 merge/closure status, and advanced the roadmap handoff from Phase 5
   design to Phase 6 implementation.
-
 - Phase 6 initiation: confirmed SCANFI v2 2025 rasters absent from data
   submodule (fresh scaffold at commit `731667f`), created acquisition blocker
   plan at `planning/phase-6-scanfi-acquisition-plan.md`, and prepared Phase 6

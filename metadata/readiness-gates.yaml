@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-08-08T00:00:00Z"
+updated_utc: "2026-08-09T00:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Readiness gates define cross-cutting prerequisites for production model readiness."
@@ -66,7 +66,8 @@ gates:
       - "product-grade disaggregation (lumber, pulp, panel)"
     blocking_datasets:
       - scanfi_v2
-    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total."
+      - casfri_v5_schema
+    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total. CASFRI v5 schema integration proposed under governing issue #1 / proposed child #29; schema mapping documented in planning/casfri-v5-schema-integration-plan.md and source review at metadata/source-reviews/casfri_v5_schema.md (D1 §5). Status remains blocked until Tier-3 acquisition (>=1 openly-downloadable provincial FRI ingested through the CASFRI pipeline) and the ws3 supply-contract mapper is validated on a BC diagnostic fixture."
 
   - id: national_scaling
     name: "National Scaling Beyond BC Mini"

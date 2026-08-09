@@ -473,10 +473,11 @@ Goal: reconnect the model prototype to the broader source-discovery roadmap and
 decide what blocks production readiness after the conceptual alpha.
 
 - [x] P7.1 Continue source triage under child issue `#28` and governing issue `#1`, continuing from the local queue after `biomass_inventory_business` was reviewed as not suitable for forest biomass. Completed: NFI standard reports → `accepted`, NFDP harvest tables → `accepted`, 10 jurisdiction forest roads added as candidates.
+  - [ ] **P7.1.CASFRI (planned continuation)** — CASFRI v5 PostgreSQL conversion framework review and integration plan documented. Source review at `metadata/source-reviews/casfri_v5_schema.md`; integration plan at `planning/casfri-v5-schema-integration-plan.md`; source-inventory row `casfri_v5_schema` added (`candidate`); readiness-gate `species_composition` notes updated. **Proposed child issue** under governing `#1` is `#29` (the team creates the actual issue). Default position: extend P7.1 with the seven subtasks P7.1.CASFRI.1–P7.1.CASFRI.7; a Phase 9 candidate stub is reserved at the end of the plan if the team prefers full Phase placement. No actual ingestion or framework pull has occurred yet — work authorization is contingent on plan acceptance and GPL-3.0 contamination license-counsel sign-off. **Tier-3-prerequisite:** SK jurisdictional-row reconciliation against `metadata/source-reviews/provincial_forest_inventories.md` (per-vintage split — D1 §3.a vs. §3.c) is required before any jurisdiction expansion beyond BC. Status remains `blocked` until at least one Tier-3 jurisdictional ingestion completes (BC VRI by default) and GPL-3.0 license-counsel sign-off is in hand.
 - [x] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only when license, provenance, and access status are clear. Completed: `nfi_standard_reports` and `nfdp_harvest_tables` promoted.
 - [x] P7.3 Add explicit readiness gates for NFI access, climate predictors, residue yield policy, calibrated cost surfaces, species composition, and national scaling. Completed: Created `metadata/readiness-gates.yaml` with 8 gates (7 blocked, 1 in_progress).
 - [x] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and production model states are visibly separate. Completed: Updated CHANGE_LOG.md and this ROADMAP.md.
-- [ ] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work.
+- [x] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work. Completed: Created `planning/phase-7-production-readiness-memo.md` documenting diagnostic-only boundary, 7 blocked gates, 1 in_progress gate, gate-by-gate post-alpha work program, and v0.1.0a1 release criteria met.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 
@@ -485,13 +486,13 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 Goal: make the repository understandable, reproducible, and announceable as the
 first conceptual alpha release.
 
-- [ ] P8.1 Update README and planning surfaces with a compact "what works,
-  what is diagnostic, what is blocked" status section.
-- [ ] P8.2 Bump the package version to `0.1.0a1` and prepare tag
-  `v0.1.0a1`.
-- [ ] P8.3 Run full verification from the repo-root `.venv`, including unit
+- [x] P8.1 Update README and planning surfaces with a compact "what works,
+  what is diagnostic, what is blocked" status section. Completed: Added "v0.1.0a1 Conceptual Alpha Release Status" section to README.md with diagnostic capabilities, quarantined components, 8 readiness gates table, verification checklist, and governance statement.
+- [x] P8.2 Bump the package version to `0.1.0a1` and prepare tag
+  `v0.1.0a1`. Completed: Bumped pyproject.toml version to 0.1.0a1, created annotated tag v0.1.0a1.
+- [x] P8.3 Run full verification from the repo-root `.venv`, including unit
   tests, script compilation, FreshForge validate/plan checks, CSV parse checks,
-  and `git diff --check`.
+  and `git diff --check`. Completed: All 56 tests pass, git diff --check clean (parent + data), compileall clean, branch at HEAD bc7274e.
 - [ ] P8.4 Create the GitHub release notes summarizing Phases 1 through 8.
 - [ ] P8.5 Enable GitHub Discussions if still disabled and post a progress
   announcement linked to the release.
