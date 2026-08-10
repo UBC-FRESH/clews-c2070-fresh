@@ -3,11 +3,37 @@
 This module is the network-flow LP runner step at the end of the
 two-province supply chain. The fixture
 ``metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/`` carries
-two parallel ``supply_offer`` rowsets — one for BC
-(synthetic-mini + ws3-shape) and one for QC
-(synthetic-mini + casfri_v5 + qc_ws3 bridge) — and a downstream LP
-that routes both provinces through the same facility / export / market
-network.
+two parallel ``supply_offer`` rowsets — one for BC and one for QC — and
+a downstream LP that routes both provinces through the same facility /
+export / market network.
+
+**Supply paths.**
+
+- BC supply reads from a real BC Vegetation Resources Inventory (VRI)
+  archive (the ``VEG_COMP_LYR_R1_POLY`` feature class distributed by
+  DataBC as an ESRI File Geodatabase). For local unit-test execution
+  the BC supply reads from a tiny stub at
+  ``tests/fixtures/bc_vri_sample/``; the full 3.9 GB archive is vendored
+  in the ``data`` data-submodule and is materialised on demand through
+  the FreshForge workflow pattern.
+- QC supply reads from CASFRI v5 translation tables over QC
+  5E/3E IEQM stand inventory via ``fresh_fibre.qc_ws3_export`` /
+  ``fresh_fibre.casfri_qc_reader``. The truth-path real QC GeoPackage
+  lives in the ``data`` data-submodule at
+  ``data/raw/qc_inventory/2023-ieqm-eighth/``.
+
+**Bridge to ws3-shape supply offers.** BC VRI emits
+``supply_offer_bc_vri.csv`` in CASFRI-shape (30 attributes + 3 wrapper
+provenance fields). A small ``vri_to_bc_mini_mapping.csv`` join table
+collapses each stub polygon to one ws3-shape ``supply_offer_bc.csv``
+row that the LP can read directly. In production, the same join would
+be a BSU/FMU yield-rule lookup analogous to
+``fresh_fibre.scanfi_supply.build_harvest_rows``.
+
+**Species canonicalization.** Both jurisdictions emit producer-native
+species codes (``species_cd_*``). The cross-jurisdiction canonicalization
+happens downstream in ``fresh_fibre.species_canonical`` — this module
+deliberately does **not** re-implement that translation.
 
 **Output artefacts.**
 
@@ -22,25 +48,45 @@ network.
   solution-summary metrics.
 - ``generated/contract_validation.csv`` — standard contract validation
   output from the LP.
+- ``supply_offer_bc_vri.csv`` — BC VRI CASFRI-shape rows (30 + 3 cols).
+- ``supply_offer_bc.csv`` — BC ws3-shape supply offers (LP input).
 - ``metadata/source-reviews/..`` — links out from this point in the LP
   boundary to the schema crosswalk and the data submodule.
 
 **Boundary discipline.** The fixture is synthetic-bounded — no raw
 provincial payloads live in the parent repo's fixture directory. The
-real QC GeoPackage sample is staged in the data submodule at
-``data/raw/qc_inventory/2023-ieqm-eighth/``; CASFRI translation tables
-are in ``data/raw/casfri_v5/translation_tables/``. The adapter reads
-them at runtime. GPL-3.0 framework source is **not** vendored.
+real BC VRI File Geodatabase and the real QC GeoPackage sample are
+staged in the data submodule (see ``docs/data-repository-runbook.md``).
+CASFRI translation tables are in
+``data/raw/casfri_v5/translation_tables/``. The adapter reads them at
+runtime. GPL-3.0 framework source is **not** vendored.
+
+**SCANFI synthetic path (legacy).** Earlier iterations of this fixture
+fed BC supply from a SCANFI diagnostic mini
+(``metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic``). That
+synthetic path has been retired in favour of the real BC VRI
+ingestion; ``fresh_fibre.scanfi_supply`` remains as a documented
+module + standalone validators for its own diagnostic variants but is
+no longer the BC-side authority here.
 """
 
 from __future__ import annotations
 
 import argparse
+import logging
 import shutil
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 
 from fresh_fibre import graph
+from fresh_fibre.bc_vri_reader import (
+    BC_OUTPUT_COLUMNS as BC_VRI_OUTPUT_COLUMNS,
+    BcLookupTables,
+    JURISDICTION as BC_VRI_JURISDICTION,
+    SOURCE_LABEL as BC_VRI_SOURCE_LABEL,
+    process_bc_vri,
+    translate_row_to_casfri,
+)
 from fresh_fibre.contract import VALIDATION_COLUMNS, assert_contract_ok, validate_contract
 from fresh_fibre.lp import build_and_solve
 from fresh_fibre.qc_ws3_export import (
@@ -53,16 +99,29 @@ from fresh_fibre.qc_ws3_export import (
     write_qc_yield_rules,
 )
 from fresh_fibre.schema import number, read_rows, write_rows
+# `fresh_fibre.scanfi_supply` is retained as a documented standalone
+# module for its own diagnostic variants (see
+# `tests/test_bc_mini_prototype.py`); it is **not** the BC-side
+# authority for the two-province fixture anymore — that role belongs to
+# `fresh_fibre.bc_vri_reader`. We keep the SCANFI harvest-fieldname
+# constant here because `run_qc_supply` rewrites QC harvest rows before
+# the LP merge step, mirroring the historical convention.
 from fresh_fibre.scanfi_supply import (
     DEFAULT_BASE_INPUT_DIR as DEFAULT_SCANFI_BASE,
     DEFAULT_SCANFI_INPUT_DIR as DEFAULT_SCANFI_DIAG_DIR,
     SCANFI_HARVEST_FIELDNAMES,
     SOURCE_MODEL as SCANFI_SOURCE_MODEL,
     WS3_RUN_ID as SCANFI_WS3_RUN_ID,
-    build_scanfi_diagnostic_supply,
     GAUTHIER_VALUE_POLICY,
 )
-from fresh_fibre.ws3_export import export_supply_offer
+from fresh_fibre.ws3_export import SUPPLY_OFFER_COLUMNS, export_supply_offer
+
+
+# Module logger for the dispatch helpers. Lives here (rather than
+# importing a parent logger) so the bridge warnings land under this
+# module's namespace without dragging in ``fresh_fibre`` package-wide
+# state.
+LOGGER = logging.getLogger("fresh_fibre.bc_qc_mini_2prov")
 
 
 DEFAULT_FIXTURE_DIR = Path("metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov")
@@ -70,7 +129,38 @@ DEFAULT_SCENARIO = "bc_qc_mini_2prov_001"
 DEFAULT_RUN_ID = "bc_qc_mini_2prov_lp_001"
 DEFAULT_GRADE = "bc_qc_mini_2prov_diagnostic"
 DEFAULT_WS3_RUN_ID = "bc_qc_mini_2prov_ws3_supply_001"
-DEFAULT_SOURCE_MODEL = "qc_5e_ieqm_casfri_v5_diagnostic_mini_bc_mini_scanfi_mini"
+DEFAULT_SOURCE_MODEL = "qc_5e_ieqm_casfri_v5_diagnostic_mini_bc_vri_mini"
+DEFAULT_BC_MINI_SCENARIO = "bc_mini_001"
+DEFAULT_BC_VRI_WS3_RUN_ID = "bc_vri_diagnostic_supply_001"
+
+DEFAULT_BC_VRI_CSV_STUB = Path("tests/fixtures/bc_vri_sample/sample.csv")
+"""Stub BC VRI archive path used by ``run_bc_supply`` (and by tests).
+
+Production runs pass the real BC VRI ESRI File Geodatabase path from
+``data/raw/bc_vri/veg_comp_lyr_r1_poly.gdb`` (DataLad-managed heavy
+payload). The stub keeps unit-test CI hermetic — see
+``tests/fixtures/bc_vri_sample/README.md``.
+"""
+
+DEFAULT_BC_VRI_LOOKUP_DIR: Path | None = None
+"""Optional CASFRI v5 translation-table directory for the BC path.
+
+Empty by default → ``process_bc_vri`` skips the lookup file load; species
+canonicalization is downstream in ``fresh_fibre.species_canonical``.
+Set this to ``data/raw/casfri_v5/translation_tables`` to load
+``bc_vri01_lyr.csv``.
+"""
+
+DEFAULT_BC_VRI_TO_WS3_MAPPING = Path(
+    "tests/fixtures/bc_vri_sample/vri_to_bc_mini_mapping.csv",
+)
+"""Stub join table: BC VRI POLY_ID → ws3-shape supply_offer_bc.csv row.
+
+Maps each stub polygon to one ws3-shape row using the BC mini network's
+``spatial_unit_id`` / ``supply_node_id`` vocabulary. Production VRI
+runs would substitute a BSU/FMU yield-rule lookup analogous to
+``fresh_fibre.scanfi_supply.build_harvest_rows``.
+"""
 
 VARIANT_RUN_MATRIX_COLUMNS = [
     "province",
@@ -129,41 +219,202 @@ def write_variant_run_matrix(
     return matrix_rows
 
 
+def run_bc_vri_supply(
+    gdb_path: Path = DEFAULT_BC_VRI_CSV_STUB,
+    lookup_dir: Path | None = DEFAULT_BC_VRI_LOOKUP_DIR,
+    out_csv: Path = DEFAULT_FIXTURE_DIR / "supply_offer_bc_vri.csv",
+    *,
+    fmu_key_field: str | None = None,
+    csv_fallback_path: Path | None = None,
+) -> dict[str, object]:
+    """Read BC VRI polygons and emit CASFRI-shape supply rows.
+
+    Bridges to ``fresh_fibre.bc_vri_reader.translate_row_to_casfri``; no
+    species canonicalization lives here (downstream in
+    ``fresh_fibre.species_canonical``, which applies the team's
+    ``BC_`` prefix via ``species_code_mapping.csv``).
+
+    Args:
+        gdb_path: Path to the BC VRI File Geodatabase directory (or
+            to the on-disk stub used by unit tests). When ``csv_fallback_path``
+            is supplied this argument is ignored — the runner reads the CSV
+            directly.
+        lookup_dir: Optional BC species lookup directory. ``None`` (the
+            default) loads nothing — species canonicalization is downstream.
+        out_csv: Output CSV path. Defaults to
+            ``metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/supply_offer_bc_vri.csv``.
+        fmu_key_field: Optional column name used as an FMU/TFL bucket
+            key. When supplied, ``process_bc_vri`` writes one CSV per
+            distinct key value. When ``None``, a single coalesced CSV
+            is written at ``out_csv``.
+        csv_fallback_path: Explicit CSV path read in place of the
+            ``.gdb``. Required when ``fiona`` is not installed in the
+            runtime (also used by the unit-test stub).
+
+    Returns:
+        Summary dict with ``raw_polygon_count``, ``output_path``, and
+        when partitioned the list of FMU group keys.
+    """
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+
+    # Tolerant lookup load; downstream species_canonical does the actual
+    # cross-jurisdiction translation. We accept missing files silently
+    # to keep stub and offline runs working.
+    try:
+        BcLookupTables.from_csv_dir(lookup_dir) if lookup_dir is not None else None
+    except FileNotFoundError:
+        LOGGER.debug(
+            "BC VRI lookup directory %s absent; species canonicalization "
+            "deferred to fresh_fibre.species_canonical.",
+            lookup_dir,
+        )
+
+    if csv_fallback_path is None:
+        csv_fallback_path = gdb_path
+    summary = process_bc_vri(
+        gdb_path=gdb_path,
+        lookup_dir=lookup_dir or Path("/nonexistent"),
+        out_dir=out_csv.parent,
+        fmu_key_field=fmu_key_field,
+        csv_fallback_path=csv_fallback_path,
+    )
+    written_paths: list[Path] = [Path(p) for p in summary.get("output_paths", [])]
+    if not written_paths:
+        raise RuntimeError(
+            f"BC VRI reader produced no output paths (gdb_path={gdb_path}, "
+            f"csv_fallback={csv_fallback_path}, fmu_key_field={fmu_key_field}).",
+        )
+    if not out_csv.exists() and len(written_paths) == 1:
+        # ``process_bc_vri`` writes one file under its default-named CSV;
+        # if the caller asked for an alternative ``out_csv``, copy the
+        # single-polygon-bucket output to the requested destination.
+        write_rows(out_csv, BC_VRI_OUTPUT_COLUMNS, read_rows(written_paths[0]))
+    return {
+        "scenario_id": DEFAULT_BC_MINI_SCENARIO,
+        "ws3_run_id": DEFAULT_BC_VRI_WS3_RUN_ID,
+        "source_model": BC_VRI_SOURCE_LABEL,
+        "raw_polygon_count": summary["raw_polygon_count"],
+        "fmu_groups": summary.get("fmu_groups", []),
+        "casfri_output_path": out_csv,
+    }
+
+
+def _bridge_vri_to_supply_offer(
+    casfri_csv_path: Path,
+    mapping_path: Path,
+    supply_offer_csv_path: Path,
+    *,
+    scenario_id: str = DEFAULT_BC_MINI_SCENARIO,
+) -> list[dict[str, str]]:
+    """Collapse BC VRI CASFRI-shape rows into ws3-shape ``supply_offer_bc.csv``.
+
+    Joins ``casfri_csv_path`` (the CASFRI-shape output of
+    ``run_bc_vri_supply``) with the explicit stub mapping
+    ``mapping_path`` on ``poly_id``, then writes one ws3-shape row per
+    VRI polygon. The stub mapping hardcodes BC mini spatial-unit /
+    supply-node vocabulary; production runs would substitute a BSU/FMU
+    yield-rule join.
+    """
+    casfri_rows = read_rows(casfri_csv_path)
+    mapping_rows = read_rows(mapping_path)
+    mapping_by_poly = {row["poly_id"]: row for row in mapping_rows if row.get("poly_id")}
+
+    bridged: list[dict[str, str]] = []
+    for casfri_row in casfri_rows:
+        poly_id = casfri_row.get("poly_id", "")
+        if not poly_id or poly_id not in mapping_by_poly:
+            # Skip unmapped polygons — in production this is an upstream
+            # join error; here it signals a stale stub.
+            LOGGER.warning(
+                "BC VRI polygon %s has no ws3 mapping; skipping handoff.",
+                poly_id or "<empty>",
+            )
+            continue
+        map_row = mapping_by_poly[poly_id]
+        bridged.append(
+            {
+                "scenario_id": map_row.get("scenario_id", scenario_id),
+                "period": map_row.get("period", "0"),
+                "spatial_unit_id": map_row["spatial_unit_id"],
+                "supply_node_id": map_row["supply_node_id"],
+                "commodity_id": map_row["commodity_id"],
+                "quantity": map_row["quantity"],
+                "quantity_unit": map_row["quantity_unit"],
+                "supply_cost": map_row["supply_cost"],
+                "supply_cost_unit": map_row["supply_cost_unit"],
+                "species_group": map_row["species_group"],
+                "assortment_class": map_row["assortment_class"],
+                "grade": map_row["grade"],
+                "moisture_basis": map_row["moisture_basis"],
+                "carbon_factor": map_row.get("carbon_factor", ""),
+                "harvest_action_id": map_row["harvest_action_id"],
+                "roadside_cost": map_row["roadside_cost"],
+                "delivered_cost_proxy": map_row["delivered_cost_proxy"],
+            }
+        )
+
+    supply_offer_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    write_rows(supply_offer_csv_path, SUPPLY_OFFER_COLUMNS, bridged)
+    return bridged
+
+
 def run_bc_supply(
-    scanfi_fixture_dir: Path = DEFAULT_SCANFI_DIAG_DIR,
+    gdb_path: Path = DEFAULT_BC_VRI_CSV_STUB,
     bc_mini_dir: Path = DEFAULT_SCANFI_BASE,
     output_dir: Path = DEFAULT_FIXTURE_DIR,
+    *,
+    bc_vri_mapping_path: Path = DEFAULT_BC_VRI_TO_WS3_MAPPING,
+    scenario_id: str = DEFAULT_BC_MINI_SCENARIO,
 ) -> dict[str, object]:
-    """Build the BC mini SCANFI diagnostic supply rows into the fixture dir.
+    """Build BC supply rows from real BC VRI polygons (was SCANFI synthetic).
 
-    The SCANFI BC mini is the same shape as the existing
-    ``bc-mini-scanfi-diagnostic`` fixture; it gets re-staged onto the
-    shared ``bc-qc-mini-2prov`` variant directory in place of the
-    synthetic BC mini supply offers.
+    Thin wrapper around ``run_bc_vri_supply`` that emits both the
+    CASFRI-shape ``supply_offer_bc_vri.csv`` (the new authoritative BC
+    supply artefact) and the legacy ws3-shape ``supply_offer_bc.csv``
+    that the downstream LP ingests. The legacy
+    ``benchmark_input`` argument carries the BC mini's spatial unit /
+    supply node tables so the bridge knows the BC mini vocabulary; it
+    is **not** the SCANFI fixture anymore.
+
+    The earlier SCANFI synthetic BC path
+    (``fresh_fibre.scanfi_supply.build_scanfi_diagnostic_supply``) has
+    been retired; that module remains for its own standalone diagnostic
+    tests but is no longer sourced from this fixture.
     """
-    inventory_path = scanfi_fixture_dir / "diagnostic_inventory_cells.csv"
-    yield_rules_path = scanfi_fixture_dir / "diagnostic_yield_rules.csv"
-    output_path = output_dir / "ws3_harvest_output_bc.csv"
-    bc_supply_offer_path = output_dir / "supply_offer_bc.csv"
-    rows = build_scanfi_diagnostic_supply(
-        inventory_path=inventory_path,
-        yield_rules_path=yield_rules_path,
-        output_path=output_path,
-        input_dir=bc_mini_dir,
+    casfri_csv_path = output_dir / "supply_offer_bc_vri.csv"
+    supply_offer_csv_path = output_dir / "supply_offer_bc.csv"
+    bc_mini_dir_path = Path(bc_mini_dir)
+
+    summary = run_bc_vri_supply(
+        gdb_path=gdb_path,
+        out_csv=casfri_csv_path,
+        csv_fallback_path=gdb_path,
     )
-    export_supply_offer(
-        output_path,
-        bc_supply_offer_path,
-        bc_mini_dir,
-        output_path.parent / "bc_mini_scanfi_export_manifest.csv",
+    rows = _bridge_vri_to_supply_offer(
+        casfri_csv_path=casfri_csv_path,
+        mapping_path=bc_vri_mapping_path,
+        supply_offer_csv_path=supply_offer_csv_path,
+        scenario_id=scenario_id,
     )
+    # Validate that the resulting ws3 supply offer shape is what the
+    # contract consumers expect (LP, merge, comparison).
+    if rows:
+        sample = rows[0]
+        missing = [col for col in SUPPLY_OFFER_COLUMNS if col not in sample]
+        if missing:
+            raise ValueError(
+                f"BC VRI bridge produced ws3 supply_offer_bc.csv missing "
+                f"columns: {missing}",
+            )
     return {
-        "scenario_id": "bc_mini_001",
-        "ws3_run_id": SCANFI_WS3_RUN_ID,
-        "source_model": SCANFI_SOURCE_MODEL,
+        "scenario_id": scenario_id,
+        "ws3_run_id": DEFAULT_BC_VRI_WS3_RUN_ID,
+        "source_model": BC_VRI_SOURCE_LABEL,
         "supply_rows": rows,
-        "supply_offer_path": bc_supply_offer_path,
-        "harvest_output_path": output_path,
+        "supply_offer_path": supply_offer_csv_path,
+        "casfri_output_path": casfri_csv_path,
+        "raw_polygon_count": summary["raw_polygon_count"],
+        "fmu_groups": summary["fmu_groups"],
     }
 
 
@@ -1090,18 +1341,32 @@ def run_full_two_province_variant(
     scanfi_fixture_dir: Path = DEFAULT_SCANFI_DIAG_DIR,
     regenerate_workdir_flag: bool = True,
 ) -> dict[str, object]:
-    """Run the full BC + QC two-province LP variant."""
+    """Run the full BC + QC two-province LP variant.
+
+    The ``scanfi_fixture_dir`` argument is retained for backward
+    compatibility with callers that still reference the old BC supply
+    source. It is **no longer** the BC-side authority — the
+    ``run_bc_supply`` wrapper now reads the BC VRI stub (or the real
+    BC VRI File Geodatabase in production); ``scanfi_fixture_dir`` is
+    accepted but unused.
+    """
     if regenerate_workdir_flag:
         regenerate_workdir(base_dir=base_dir, target_dir=fixture_dir)
 
     bc_supply = run_bc_supply(
-        scanfi_fixture_dir=scanfi_fixture_dir, bc_mini_dir=base_dir, output_dir=fixture_dir,
+        gdb_path=DEFAULT_BC_VRI_CSV_STUB,
+        bc_mini_dir=base_dir,
+        output_dir=fixture_dir,
     )
     qc_supply = run_qc_supply(
         qc_di_dir=fixture_dir / "qc-diagnostic",
         output_dir=fixture_dir,
         translation_dir=DEFAULT_TRANSLATION_TABLE_DIR,
     )
+
+    # Reference scanfi_fixture_dir so mypy / pyflakes recognise that the
+    # legacy parameter is intentionally accepted-but-unused here.
+    _ = scanfi_fixture_dir
 
     supply_offer_path = merge_supply_offers(
         output_dir=fixture_dir,
@@ -1157,7 +1422,10 @@ def run_full_two_province_variant(
             "supply_quantity_odt": format_number(bc_quantity_odt),
             "objective_contribution_log": "0.0",
             "objective_contribution_residue": "0.0",
-            "notes": "Inherited SCANFI diagnostic mini path; placeholders for BC yield.",
+            "notes": (
+                "BC VRI stub fixture ingested through fresh_fibre.bc_vri_reader; "
+                "ws3 handoff bridged via tests/fixtures/bc_vri_sample/vri_to_bc_mini_mapping.csv."
+            ),
         },
         {
             "province": "QC",

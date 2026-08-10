@@ -160,7 +160,13 @@ class TestTwoProvinceLPRunner(unittest.TestCase):
             and row["metric_id"] == "period_supply_quantity"
             and row["commodity_id"] == "logging_residue"
         )
-        self.assertEqual(bc_log_quantity, 104700)
+        # BC quantities are now sourced from the BC VRI stub fixture at
+        # ``tests/fixtures/bc_vri_sample/sample.csv`` (3 polygons), not
+        # the retired SCANFI synthetic mini. The stub emits one log row
+        # per species-bearing polygon via the explicit join in
+        # ``vri_to_bc_mini_mapping.csv``, with totals
+        # coast(36750) + interior_01(49750) = 86500 m3 log.
+        self.assertEqual(bc_log_quantity, 86500)
         self.assertEqual(bc_residue_quantity, 6600)
         # Both provinces contribute log and residue supply.
         self.assertGreater(qc_log_quantity, 0.0)
