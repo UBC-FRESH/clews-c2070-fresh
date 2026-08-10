@@ -1,0 +1,5 @@
+# This directory receives CSW harvest manifest CSVs from
+# scripts/discovery/saforah2_csw_harvest.py. Each invocation writes a single
+# file of the form saforah2_<YYYY-MM-DD>.csv containing one row per
+# (keyword, record) hit. Manuals for the harvest script live at
+# metadata/source-reviews/saforah2_csw_catalogue.md.
