@@ -54,7 +54,9 @@ gates:
     blocking_datasets:
       - nrn
       - forest_resource_roads
-    notes: "NRN accepted as coarse national baseline; jurisdiction-specific forest roads (10 new candidate sources) required for operational access modelling."
+      - nrn_vectors
+      - nrwn_vectors
+    notes: "NRN accepted as coarse national baseline; jurisdiction-specific forest roads (10 new candidate sources) required for operational access modelling. SAFORAH2 CSW discovery and GeoGratis catalogue walk (Phase 2b) added nrn_vectors and nrwn_vectors to the blocking set; Phase 3.10 acquisition plan will resolve these and the provincial SK/NWT/YT WMS rows reviewed under metadata/source-reviews/provincial_transport.md."
 
   - id: species_composition
     name: "Species Composition Layers"
