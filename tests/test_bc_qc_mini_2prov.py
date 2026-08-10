@@ -30,8 +30,10 @@ from fresh_fibre.bc_qc_mini_2prov import (
     PATHWAY_FLOW_COLUMNS,
     SOLUTION_SUMMARY_PER_PROVINCE_COLUMNS,
     SUPPLY_COMPARISON_COLUMNS,
+    compute_bc_qc_real_supply_quantities,
     run_full_two_province_variant,
 )
+from fresh_fibre.gauthier_yield import species_lookup
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -292,6 +294,104 @@ class TestSupplyTotals(unittest.TestCase):
             comparison_total = number(comp["total_quantity"])
             summary_total = summary_totals.get(province, {}).get((commodity, unit), 0.0)
             self.assertAlmostEqual(comparison_total, summary_total, places=5)
+
+
+class TestRealCoefficientSupplyPath(unittest.TestCase):
+    """``compute_bc_qc_real_supply_quantities`` substitution path.
+
+    P7.1.CASFRI.2 wires a real-coefficient surrogate into the BC + QC
+    fixture. The diagnostic checks below verify the substitution path:
+    - the documented quantity ranges (`80 000-95 000 m^3` BC log,
+      `2 800-3 800 m^3` QC log) hold against the BC VRI stub + QC
+      diagnostic inputs;
+    - the LP objective changes when the real-coefficient numbers
+      replace the placeholder-era values.
+    """
+
+    def setUp(self) -> None:
+        self.workdir = Path(tempfile.mkdtemp())
+        # Each test gets a fresh subdirectory so the LP solves are
+        # independent and the supply_offer.csv restoration inside the
+        # real-yield variant does not collide between tests.
+        self.fixture_dir = self.workdir / "bc_qc_mini_2prov"
+        self.bc_vri_stub_dir = REPO_ROOT / "tests" / "fixtures" / "bc_vri_sample"
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.workdir, ignore_errors=True)
+
+    def test_compute_bc_qc_real_supply_quantities(self) -> None:
+        """Real-coefficient totals land in the documented BC + QC ranges."""
+        from fresh_fibre.bc_qc_mini_2prov import regenerate_workdir
+        regenerate_workdir(
+            base_dir=REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini",
+            target_dir=self.fixture_dir,
+        )
+        bc_log, bc_residue, qc_log, qc_residue, yield_rule_count = (
+            compute_bc_qc_real_supply_quantities(
+                coef_lookup_fn=species_lookup,
+                qc_mini_dir=self.fixture_dir,
+                bc_mini_dir=self.bc_vri_stub_dir,
+            )
+        )
+        # BC log: 80 000 <= x <= 95 000 m^3 (was 86 500 with VRI stub).
+        self.assertGreaterEqual(bc_log, 80_000.0)
+        self.assertLessEqual(bc_log, 95_000.0)
+        # QC log: 2 800 <= x <= 3 800 m^3 (was 3 238 in the merged
+        # placeholder-era supply offer).
+        self.assertGreaterEqual(qc_log, 2_800.0)
+        self.assertLessEqual(qc_log, 3_800.0)
+        # Both residue streams are positive (the real-coefficient path
+        # produces residue from the log path *and* from the dedicated
+        # residue rule applied to QC residue-candidate cells).
+        self.assertGreater(bc_residue, 0.0)
+        self.assertGreater(qc_residue, 0.0)
+        # Yield rule count == 3 BC polygons + 5 QC diagnostic cells.
+        self.assertEqual(yield_rule_count, 8)
+
+    def test_lp_solve_uses_real_yields(self) -> None:
+        """LP objective after real-coefficient substitution differs from
+        the placeholder-era value.
+
+        The placeholder-era two-province LP runs first and captures its
+        objective; ``run_full_two_province_real_yield_variant`` then
+        substitutes real-coefficient quantities and re-solves. The two
+        LP objective values MUST differ because real-coefficient
+        substitution changed the supply side (BC + QC log m^3, residue
+        odt) that flows through the LP cost-minimising objective.
+        """
+        from fresh_fibre.bc_qc_mini_2prov import (
+            regenerate_workdir,
+            run_full_two_province_real_yield_variant,
+        )
+        regenerate_workdir(
+            base_dir=REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini",
+            target_dir=self.fixture_dir,
+        )
+        result = run_full_two_province_real_yield_variant(
+            fixture_dir=self.fixture_dir,
+            base_dir=REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini",
+            scanfi_fixture_dir=(
+                REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/scanfi-diagnostic"
+            ),
+            bc_vri_stub_dir=self.bc_vri_stub_dir,
+        )
+        placeholder_obj = float(result["placeholder"]["lp_objective_value"])
+        real_obj = float(result["real_yield"]["lp_objective_value"])
+        self.assertEqual(result["placeholder"]["lp_status"], "Optimal")
+        self.assertEqual(result["real_yield"]["lp_status"], "Optimal")
+        # Both LP runs are Optimal and produce non-negative objectives.
+        self.assertGreater(placeholder_obj, 0.0)
+        self.assertGreater(real_obj, 0.0)
+        # Crucial assertion: real-coefficient substitution CHANGED the
+        # LP objective from the placeholder-era value.
+        self.assertNotEqual(real_obj, placeholder_obj)
+        # And the substituted real-coefficient totals are in spec.
+        bc_log_real = float(result["real_yield"]["bc_log_real"])
+        qc_log_real = float(result["real_yield"]["qc_log_real"])
+        self.assertGreaterEqual(bc_log_real, 80_000.0)
+        self.assertLessEqual(bc_log_real, 95_000.0)
+        self.assertGreaterEqual(qc_log_real, 2_800.0)
+        self.assertLessEqual(qc_log_real, 3_800.0)
 
 
 if __name__ == "__main__":

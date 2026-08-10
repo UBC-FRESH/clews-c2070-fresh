@@ -88,6 +88,7 @@ from fresh_fibre.bc_vri_reader import (
     translate_row_to_casfri,
 )
 from fresh_fibre.contract import VALIDATION_COLUMNS, assert_contract_ok, validate_contract
+from fresh_fibre.gauthier_yield import species_lookup, volume_at_age_for_species
 from fresh_fibre.lp import build_and_solve
 from fresh_fibre.qc_ws3_export import (
     DEFAULT_QC_FIXTURE_DIR,
@@ -132,6 +133,14 @@ DEFAULT_WS3_RUN_ID = "bc_qc_mini_2prov_ws3_supply_001"
 DEFAULT_SOURCE_MODEL = "qc_5e_ieqm_casfri_v5_diagnostic_mini_bc_vri_mini"
 DEFAULT_BC_MINI_SCENARIO = "bc_mini_001"
 DEFAULT_BC_VRI_WS3_RUN_ID = "bc_vri_diagnostic_supply_001"
+
+REPO_ROOT_FOR_REAL_YIELD = Path(__file__).resolve().parents[1]
+"""Repository root for non-fixture path resolution.
+
+Used by ``_run_full_two_province_real_yield_skeleton`` to default the
+BC VRI sample fixture path when ``bc_vri_stub_dir`` is not supplied
+explicitly.
+"""
 
 DEFAULT_BC_VRI_CSV_STUB = Path("tests/fixtures/bc_vri_sample/sample.csv")
 """Stub BC VRI archive path used by ``run_bc_supply`` (and by tests).
@@ -1333,6 +1342,456 @@ def build_graph_tables(target_dir: Path) -> tuple[int, int]:
         output_dir / "graph_summary.csv", graph.SUMMARY_COLUMNS, graph.build_summary(nodes, arcs),
     )
     return len(nodes), len(arcs)
+
+
+# ---------------------------------------------------------------------------
+# Real-coefficient substitution path (P7.1.CASFRI.2)
+# ---------------------------------------------------------------------------
+
+REAL_BC_STAND_AREA_HA: dict[str, float] = {
+    "BC_coast": 440.0,
+    "BC_interior": 440.0,
+}
+REAL_QC_STAND_AREA_HA: float = 9.0
+REAL_QC_RESIDUE_STAND_AREA_HA: float = 90.0
+REAL_BC_RESIDUE_ODT_PER_HA: float = 7.7
+REAL_QC_RESIDUE_ODT_PER_HA: float = 7.2
+REAL_RESIDUE_ODT_PER_M3_LOG: float = 0.05
+
+SPECIES_CODE_ALIASES: dict[str, str] = {
+    "PEU": "PET",
+    "PE": "PET",
+    "PEG": "PET",
+    "PEB": "PET",
+    "PED": "PET",
+    "PLI": "Pl",
+    "PL": "Pl",
+    "PLi": "Pl",
+    "SxS": "Sx",
+    "SXS": "Sx",
+    "Sx": "Sx",
+    "SW": "Sx",
+}
+
+RESIDUE_INVENTORY_CELL_SUFFIXES: tuple[str, ...] = ("_residue_candidate_001",)
+
+
+def _resolve_species_alias(species_code: str) -> str:
+    """Map a producer-native species code to the canonical code in
+    ``REAL_COEFFICIENT_ROWS``.
+
+    The lookup is permissive (case-insensitive on the key side) but
+    conservative on output — unknown codes pass through unchanged so
+    downstream ``species_lookup`` call sites still surface the
+    unmapped status through a ``None`` row.
+    """
+    if not species_code:
+        return ""
+    code = species_code.strip()
+    if code in SPECIES_CODE_ALIASES:
+        return SPECIES_CODE_ALIASES[code]
+    if code.upper() in SPECIES_CODE_ALIASES:
+        return SPECIES_CODE_ALIASES[code.upper()]
+    return code
+
+
+def _bc_region_for_bec_zone(bec_zone: str) -> str:
+    """Classify a BC VRI polygon into ``BC_coast`` or ``BC_interior``."""
+    zone = (bec_zone or "").strip().upper()
+    if zone in ("CWH", "CDF", "MH"):
+        return "BC_coast"
+    return "BC_interior"
+
+
+def _bc_region_lookup_chain(bec_region: str) -> tuple[str, ...]:
+    """Yield the candidate ``region`` keys to try against ``species_lookup``.
+
+    The chain is ``(bec_region, "BC")`` — the latter is a fallback for
+    species whose single-jurisdiction real-coefficient row is keyed
+    against the plain ``"BC"`` region rather than the split sub-region
+    (e.g. ``AT`` / ``BL`` are keyed as ``"BC"`` because their vol80
+    proxy does not split across BEC-zone categories).
+    """
+    return (bec_region, "BC")
+
+
+def _is_residue_inventory_cell(cell_id: str) -> bool:
+    """Return True if the QC inventory cell should be classified as residue-only."""
+    cell_name = (cell_id or "").strip()
+    return any(cell_name.endswith(suffix) for suffix in RESIDUE_INVENTORY_CELL_SUFFIXES)
+
+
+def _safe_float(value: str | float | int | None, default: float | None = None) -> float | None:
+    """Coerce a raw CSV cell to a float, returning ``default`` on failure."""
+    if value is None:
+        return default
+    try:
+        return float(str(value).strip())
+    except (ValueError, TypeError):
+        return default
+
+
+def compute_bc_qc_real_supply_quantities(
+    coef_lookup_fn,
+    qc_mini_dir: Path,
+    bc_mini_dir: Path,
+    *,
+    age_curve_k: float = 0.022,
+) -> tuple[float, float, float, float, int]:
+    """Compute BC + QC supply quantities via the real-coefficient path.
+
+    Reads the BC VRI stub at ``bc_mini_dir / "sample.csv"`` (3 polygons)
+    and the QC diagnostic inventory cells at
+    ``qc_mini_dir / "qc-diagnostic" / "qc_diagnostic_inventory_cells.csv"``
+    (5 cells: 4 log + 1 residue). For each polygon/cell, applies
+    per-species volume-at-age from ``coef_lookup_fn`` plus a Chapman-
+    Richards saturating curve, then aggregates by commodity (log m³ or
+    logging-residue odt).
+
+    The function is the **substitution target** for
+    ``run_full_two_province_variant`` (P7.1.CASFRI.2): instead of
+    reading stub quantities (VRI area → LP quantity at 1 m³/ha and
+    placeholder residue rules), it derives the same totals from
+    ``fresh_fibre.gauthier_yield.REAL_COEFFICIENT_ROWS` so the LP
+    sees real-coefficient-defined numbers rather than hard-coded
+    placeholders.
+
+    Args:
+        coef_lookup_fn: callable accepting ``(species_code, region)``
+            and returning a coefficient dict (or ``None``). The
+            function ``fresh_fibre.gauthier_yield.species_lookup``
+            is the canonical implementation; tests inject custom
+            callables to keep the unit test hermetic.
+        qc_mini_dir: path to the BC + QC mini-2prov fixture root (the
+            directory that contains ``qc-diagnostic/``).
+        bc_mini_dir: path to the BC VRI sample fixture directory
+            (defaults to ``tests/fixtures/bc_vri_sample`` in P7.1).
+        age_curve_k: optional Chapman-Richards rate forwarded to
+            ``volume_at_age_for_species``; default ``0.022``.
+
+    Returns:
+        ``(bc_log_m3, bc_residue_odt, qc_log_m3, qc_residue_odt,
+        yield_rule_count)`` where the first four are aggregate totals
+        in the documented unit and ``yield_rule_count`` is the number
+        of distinct per-polygon / per-cell yield rules applied.
+
+    Raises:
+        FileNotFoundError: when ``bc_vri_csv`` or ``qc_cells_csv`` is
+            absent.
+        ValueError: when either file yields zero rows.
+    """
+    bc_vri_csv = Path(bc_mini_dir) / "sample.csv"
+    qc_cells_csv = Path(qc_mini_dir) / "qc-diagnostic" / "qc_diagnostic_inventory_cells.csv"
+
+    if not bc_vri_csv.exists():
+        raise FileNotFoundError(f"BC VRI stub CSV not found: {bc_vri_csv}")
+    if not qc_cells_csv.exists():
+        raise FileNotFoundError(f"QC diagnostic cells CSV not found: {qc_cells_csv}")
+
+    bc_rows = read_rows(bc_vri_csv)
+    if not bc_rows:
+        raise ValueError(f"BC VRI stub {bc_vri_csv} produced zero polygons")
+
+    bc_log_total = 0.0
+    bc_residue_total = 0.0
+    bc_yield_rules = 0
+    for row in bc_rows:
+        bc_yield_rules += 1
+        region = _bc_region_for_bec_zone(row.get("BEC_ZONE", ""))
+        stand_area = REAL_BC_STAND_AREA_HA[region]
+        age = _safe_float(row.get("AGE_YR"), default=80.0) or 80.0
+        weighted_log_per_ha = 0.0
+        for rank in range(1, 7):
+            raw_code = (row.get(f"SPECIES_CD_{rank}", "") or "").strip()
+            pct = _safe_float(row.get(f"SPECIES_PCT_{rank}"))
+            if not raw_code or pct is None or pct <= 0.0:
+                continue
+            code_canonical = _resolve_species_alias(raw_code)
+            resolved_region = ""
+            for candidate_region in _bc_region_lookup_chain(region):
+                if coef_lookup_fn(code_canonical, candidate_region) is not None:
+                    resolved_region = candidate_region
+                    break
+            if not resolved_region:
+                continue
+            yield_at_age = volume_at_age_for_species(
+                code_canonical, resolved_region, age, age_curve_k=age_curve_k,
+            )
+            weighted_log_per_ha += yield_at_age * pct / 100.0
+        log_volume = weighted_log_per_ha * stand_area
+        bc_log_total += log_volume
+        bc_residue_total += log_volume * REAL_RESIDUE_ODT_PER_M3_LOG
+
+    qc_rows = read_rows(qc_cells_csv)
+    if not qc_rows:
+        raise ValueError(f"QC diagnostic cells {qc_cells_csv} produced zero rows")
+
+    qc_log_total = 0.0
+    qc_residue_total = 0.0
+    qc_yield_rules = 0
+    for cell in qc_rows:
+        qc_yield_rules += 1
+        cell_id = cell.get("inventory_cell_id", "")
+        age_bucket_raw = _safe_float(cell.get("cl_age"))
+        age = float(int(age_bucket_raw // 10)) if age_bucket_raw and age_bucket_raw > 0 else 80.0
+        weighted_log_per_ha = 0.0
+        for slot in (1, 2, 3):
+            raw_code = (cell.get(f"essence_{slot}", "") or "").strip()
+            pct = _safe_float(cell.get(f"essence_pct_{slot}"))
+            if not raw_code or pct is None or pct <= 0.0:
+                continue
+            code_canonical = _resolve_species_alias(raw_code)
+            if coef_lookup_fn(code_canonical, "QC") is None:
+                continue
+            yield_at_age = volume_at_age_for_species(
+                code_canonical, "QC", age, age_curve_k=age_curve_k,
+            )
+            weighted_log_per_ha += yield_at_age * pct / 100.0
+        if _is_residue_inventory_cell(cell_id):
+            qc_residue_total += REAL_QC_RESIDUE_ODT_PER_HA * REAL_QC_RESIDUE_STAND_AREA_HA
+        else:
+            log_volume = weighted_log_per_ha * REAL_QC_STAND_AREA_HA
+            qc_log_total += log_volume
+            qc_residue_total += log_volume * REAL_RESIDUE_ODT_PER_M3_LOG
+
+    yield_rule_count = bc_yield_rules + qc_yield_rules
+    return (
+        bc_log_total,
+        bc_residue_total,
+        qc_log_total,
+        qc_residue_total,
+        yield_rule_count,
+    )
+
+
+def _run_full_two_province_real_yield_skeleton(
+    base_dir: Path = DEFAULT_SCANFI_BASE,
+    fixture_dir: Path = DEFAULT_FIXTURE_DIR,
+    bc_vri_stub_dir: Path | None = None,
+) -> dict[str, object]:
+    """Lightweight scaffold that exercises ``compute_bc_qc_real_supply_quantities``
+    against the BC VRI stub and the regenerated QC mini fixture.
+
+    Used by ``tests/test_bc_qc_mini_2prov.py`` to assert the real-coefficient
+    path changes the LP objective from the placeholder-era value. The full
+    two-province synthetic-bounded LP run is intentionally NOT invoked here;
+    this scaffold reads the diagnostic-real-supply quantities only and
+    reports them so the test can compare against the documented ranges.
+
+    Args:
+        base_dir: path to the BC mini base fixture.
+        fixture_dir: path to the BC + QC mini-2prov fixture root.
+        bc_vri_stub_dir: optional explicit path to the BC VRI sample
+            fixture; defaults to ``tests/fixtures/bc_vri_sample``.
+
+    Returns:
+        Summary dict with the five aggregate totals from
+        ``compute_bc_qc_real_supply_quantities`` plus their
+        ``yield_rule_count``.
+    """
+    if bc_vri_stub_dir is None:
+        bc_vri_stub_dir = REPO_ROOT_FOR_REAL_YIELD / "tests" / "fixtures" / "bc_vri_sample"
+    if not fixture_dir.exists():
+        regenerate_workdir(base_dir=base_dir, target_dir=fixture_dir)
+    bc_log, bc_residue, qc_log, qc_residue, yield_rule_count = (
+        compute_bc_qc_real_supply_quantities(
+            coef_lookup_fn=species_lookup,
+            qc_mini_dir=fixture_dir,
+            bc_mini_dir=bc_vri_stub_dir,
+        )
+    )
+    return {
+        "fixture_dir": str(fixture_dir),
+        "bc_log_m3": bc_log,
+        "bc_residue_odt": bc_residue,
+        "qc_log_m3": qc_log,
+        "qc_residue_odt": qc_residue,
+        "yield_rule_count": yield_rule_count,
+    }
+
+
+def _substitute_real_yields_into_supply_offer(
+    fixture_dir: Path,
+    bc_vri_stub_dir: Path,
+    *,
+    coef_lookup_fn=None,
+) -> dict[str, float]:
+    """Rewrite ``fixture_dir/supply_offer.csv`` with real-coefficient quantities.
+
+    Reads the placeholder-era ``supply_offer.csv`` produced by
+    ``run_full_two_province_variant``, scales each row's quantity by the
+    ratio (real_total / placeholder_total) per (province, commodity)
+    bucket, and writes a side-by-side real-yield ``supply_offer.csv``
+    to ``fixture_dir/supply_offer_real.csv``. The original
+    ``supply_offer.csv`` is untouched; the real-yield path reads its
+    own copy.
+
+    Args:
+        fixture_dir: BC + QC mini-2prov fixture root (must already
+            contain ``supply_offer.csv`` from a prior placeholder run).
+        bc_vri_stub_dir: BC VRI sample fixture directory.
+        coef_lookup_fn: optional override for the species-coefficient
+            lookup; defaults to ``fresh_fibre.gauthier_yield.species_lookup``.
+
+    Returns:
+        Summary dict with the per-bucket placeholder-vs-real totals and
+        the aggregate delta the LP sees once the real-yield table is
+        consumed.
+    """
+    if coef_lookup_fn is None:
+        from fresh_fibre.gauthier_yield import species_lookup as default_lookup_fn
+        coef_lookup_fn = default_lookup_fn
+
+    supply_offer_path = fixture_dir / "supply_offer.csv"
+    if not supply_offer_path.exists():
+        raise FileNotFoundError(
+            f"Placeholder supply_offer.csv missing for substitution: {supply_offer_path}",
+        )
+
+    bc_log_real, bc_residue_real, qc_log_real, qc_residue_real, _yield_rule_count = (
+        compute_bc_qc_real_supply_quantities(
+            coef_lookup_fn=coef_lookup_fn,
+            qc_mini_dir=fixture_dir,
+            bc_mini_dir=bc_vri_stub_dir,
+        )
+    )
+
+    placeholder_rows = read_rows(supply_offer_path)
+    placeholder_totals: dict[tuple[str, str], float] = defaultdict(float)
+    for row in placeholder_rows:
+        province = "BC" if row["spatial_unit_id"].startswith("bc_") else (
+            "QC" if row["spatial_unit_id"].startswith("qc_") else "shared"
+        )
+        key = (province, row["commodity_id"])
+        placeholder_totals[key] += number(row["quantity"])
+
+    real_targets: dict[tuple[str, str], float] = {
+        ("BC", "log"): bc_log_real,
+        ("BC", "logging_residue"): bc_residue_real,
+        ("QC", "log"): qc_log_real,
+        ("QC", "logging_residue"): qc_residue_real,
+    }
+
+    scaled_rows: list[dict[str, object]] = []
+    for row in placeholder_rows:
+        province = "BC" if row["spatial_unit_id"].startswith("bc_") else (
+            "QC" if row["spatial_unit_id"].startswith("qc_") else "shared"
+        )
+        new_row = dict(row)
+        bucket = (province, row["commodity_id"])
+        placeholder_total = placeholder_totals.get(bucket, 0.0)
+        target_total = real_targets.get(bucket)
+        if (
+            placeholder_total > 0.0
+            and target_total is not None
+            and row["commodity_id"] in {"log", "logging_residue"}
+        ):
+            ratio = target_total / placeholder_total
+            original_quantity = number(row["quantity"])
+            new_row["quantity"] = format_number(original_quantity * ratio)
+        scaled_rows.append(new_row)
+
+    real_supply_offer_path = fixture_dir / "supply_offer_real.csv"
+    fieldnames = list(placeholder_rows[0].keys()) if placeholder_rows else SUPPLY_OFFER_COLUMNS
+    write_rows(real_supply_offer_path, fieldnames, scaled_rows)
+    shifted_quantity = sum(
+        number(row["quantity"]) for row in scaled_rows
+    ) - sum(number(row["quantity"]) for row in placeholder_rows)
+    return {
+        "bc_log_real": bc_log_real,
+        "bc_residue_real": bc_residue_real,
+        "qc_log_real": qc_log_real,
+        "qc_residue_real": qc_residue_real,
+        "shifted_quantity_total_m3_odt": shifted_quantity,
+        "real_supply_offer_path": str(real_supply_offer_path),
+    }
+
+
+def run_full_two_province_real_yield_variant(
+    fixture_dir: Path = DEFAULT_FIXTURE_DIR,
+    base_dir: Path = DEFAULT_SCANFI_BASE,
+    scanfi_fixture_dir: Path = DEFAULT_SCANFI_DIAG_DIR,
+    bc_vri_stub_dir: Path | None = None,
+) -> dict[str, object]:
+    """Run the BC + QC two-province LP variant with real-coefficient yields.
+
+    The variant is layered on top of ``run_full_two_province_variant``:
+
+    1. Bootstrap with a placeholder-era run (writes ``supply_offer.csv``).
+    2. Substitute real-coefficient quantities into ``supply_offer_real.csv``
+       via ``_substitute_real_yields_into_supply_offer``.
+    3. Re-validate the contract and re-run the LP solve against the
+       real-yield copy of the supply_offer table.
+
+    The function returns both runs' objective values and the
+    placeholder-vs-real totals so ``tests/test_bc_qc_mini_2prov.py``
+    can assert that real-coefficient substitution changed the LP
+    outcome.
+
+    Args:
+        fixture_dir: BC + QC mini-2prov fixture root.
+        base_dir: BC mini base fixture path (default the SCANFI base).
+        scanfi_fixture_dir: legacy argument retained for backward
+            compatibility; no longer the BC-side authority.
+        bc_vri_stub_dir: optional explicit BC VRI sample fixture
+            directory (defaults to ``tests/fixtures/bc_vri_sample``).
+
+    Returns:
+        Dict with both LP runs' status / objective / quantity totals
+        and the substitution summary.
+    """
+    if bc_vri_stub_dir is None:
+        bc_vri_stub_dir = REPO_ROOT_FOR_REAL_YIELD / "tests" / "fixtures" / "bc_vri_sample"
+    placeholder_result = run_full_two_province_variant(
+        fixture_dir=fixture_dir,
+        base_dir=base_dir,
+        scanfi_fixture_dir=scanfi_fixture_dir,
+        regenerate_workdir_flag=True,
+    )
+    substitution = _substitute_real_yields_into_supply_offer(
+        fixture_dir=fixture_dir,
+        bc_vri_stub_dir=bc_vri_stub_dir,
+    )
+    real_supply_offer_path = Path(substitution["real_supply_offer_path"])
+    placeholder_supply_offer = fixture_dir / "supply_offer.csv"
+    try:
+        if placeholder_supply_offer.exists():
+            backup_path = fixture_dir / "supply_offer_placeholder.csv"
+            shutil.copyfile(placeholder_supply_offer, backup_path)
+        shutil.copyfile(real_supply_offer_path, placeholder_supply_offer)
+        node_count, arc_count = build_graph_tables(fixture_dir)
+        lp_result = build_and_solve(fixture_dir, fixture_dir / "generated")
+        contract_rows = validate_contract(fixture_dir)
+        assert_contract_ok(contract_rows)
+    finally:
+        # Restore the placeholder supply_offer.csv so subsequent
+        # regression tests can repeat the bootstrap path.
+        backup_path = fixture_dir / "supply_offer_placeholder.csv"
+        if backup_path.exists():
+            shutil.copyfile(backup_path, placeholder_supply_offer)
+            backup_path.unlink()
+    real_bc_supply_rows = read_rows(real_supply_offer_path)
+    return {
+        "fixture_dir": str(fixture_dir),
+        "placeholder": {
+            "lp_status": placeholder_result["lp_status"],
+            "lp_objective_value": placeholder_result["lp_objective_value"],
+            "bc_quantity_m3": placeholder_result["bc_quantity_m3"],
+            "qc_quantity_m3": placeholder_result["qc_quantity_m3"],
+        },
+        "real_yield": {
+            "lp_status": lp_result["status"],
+            "lp_objective_value": lp_result["objective_value"],
+            "bc_log_real": substitution["bc_log_real"],
+            "qc_log_real": substitution["qc_log_real"],
+            "bc_residue_real": substitution["bc_residue_real"],
+            "qc_residue_real": substitution["qc_residue_real"],
+            "supply_rows": real_bc_supply_rows,
+            "graph_nodes": node_count,
+            "graph_arcs": arc_count,
+        },
+        "substitution": substitution,
+    }
 
 
 def run_full_two_province_variant(
