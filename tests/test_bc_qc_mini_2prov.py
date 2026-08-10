@@ -394,5 +394,58 @@ class TestRealCoefficientSupplyPath(unittest.TestCase):
         self.assertLessEqual(qc_log_real, 3_800.0)
 
 
+class TestPhase3TransportCostWiring(unittest.TestCase):
+    """``recompute_transport_link_costs_using_phase3_costs`` helper.
+
+    The Phase 3 transport cost surface (see
+    ``fresh_fibre.transport_cost``) gets wired into the BC + QC
+    mini-2prov fixture via ``transport_link_phase3_costed.csv``
+    (side-by-side comparison). The helper writes the file and returns
+    the row count.
+    """
+
+    def setUp(self) -> None:
+        self.workdir = Path(tempfile.mkdtemp())
+        # Each test gets a fresh subdirectory so the LP solves are
+        # independent and the transport_link.csv restoration inside the
+        # real-yield variant does not collide between tests.
+        self.fixture_dir = self.workdir / "bc_qc_mini_2prov"
+        self.bc_vri_stub_dir = REPO_ROOT / "tests" / "fixtures" / "bc_vri_sample"
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.workdir, ignore_errors=True)
+
+    def test_recompute_transport_link_costs_using_phase3_costs_returns_int(self) -> None:
+        """Phase 3 Transport cost wiring: recompute helper returns row count."""
+        from fresh_fibre.bc_qc_mini_2prov import (
+            recompute_transport_link_costs_using_phase3_costs,
+            regenerate_workdir,
+        )
+        regenerate_workdir(
+            base_dir=REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini",
+            target_dir=self.fixture_dir,
+        )
+        result = recompute_transport_link_costs_using_phase3_costs(
+            fixture_dir=self.fixture_dir,
+            bc_qc_mini_dir=self.bc_vri_stub_dir,
+        )
+        self.assertIsInstance(result, int)
+        self.assertGreater(result, 0)
+        # Side-by-side CSV must land at the documented path.
+        out_csv = self.fixture_dir / "transport_link_phase3_costed.csv"
+        self.assertTrue(out_csv.exists())
+        out_rows = read_csv(out_csv)
+        self.assertEqual(len(out_rows), result)
+        # Schema includes the documented old / new / delta columns.
+        sample = out_rows[0]
+        for required in (
+            "old_cost_per_tonne_km",
+            "new_cost_per_tonne_km",
+            "delta",
+            "segment_class",
+        ):
+            self.assertIn(required, sample.keys())
+
+
 if __name__ == "__main__":
     unittest.main()

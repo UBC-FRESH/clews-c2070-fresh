@@ -115,6 +115,7 @@ from fresh_fibre.scanfi_supply import (
     WS3_RUN_ID as SCANFI_WS3_RUN_ID,
     GAUTHIER_VALUE_POLICY,
 )
+from fresh_fibre.transport_cost import rail_segment_cost, road_segment_cost
 from fresh_fibre.ws3_export import SUPPLY_OFFER_COLUMNS, export_supply_offer
 
 
@@ -1925,6 +1926,154 @@ def run_full_two_province_variant(
         "contract_rows": len(contract_rows),
         "supply_offer_path": str(supply_offer_path),
     }
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 transport-cost wiring helper.
+# ---------------------------------------------------------------------------
+
+_TRANSPORT_LINK_PHASE3_COSTED_COLUMNS: list[str] = [
+    "scenario_id", "period", "origin_node_id", "destination_node_id",
+    "route_id", "transport_mode", "distance_km", "legacy_transport_cost",
+    "legacy_transport_cost_unit", "old_cost_per_tonne_km",
+    "segment_class", "new_cost_per_tonne_km", "delta",
+]
+"""Schema for ``transport_link_phase3_costed.csv``.
+
+Side-by-side comparison of legacy cost surface vs
+``fresh_fibre.transport_cost`` Phase 3 carriers per row.
+"""
+
+
+def _phase3_segment_class(transport_mode: str) -> str:
+    """Map a ``transport_link.transport_mode`` value to a Phase 3 segment class.
+
+    ``road`` / ``truck`` → ``pipeline`` (the default class for trunk-haul
+    road segments; arterial / local require operator-provided
+    ``segment_class`` extensions on the input row). ``rail`` → ``main``.
+    """
+    normalised = (transport_mode or "").strip().lower()
+    if normalised in {"rail", "train"}:
+        return "main"
+    return "pipeline"
+
+
+def recompute_transport_link_costs_using_phase3_costs(
+    fixture_dir: Path,
+    bc_qc_mini_dir: Path,
+    use_phase3: bool = True,
+) -> int:
+    """Recompute ``transport_link.csv`` costs via Phase 3 ``fresh_fibre.transport_cost``.
+
+    Reads the merged-fixture ``transport_link.csv`` at ``fixture_dir``,
+    computes the Phase 3 per-tonne-km cost for each row via
+    :func:`fresh_fibre.transport_cost.road_segment_cost` or
+    :func:`fresh_fibre.transport_cost.rail_segment_cost`, and writes
+    ``transport_link_phase3_costed.csv`` next to the input.
+
+    The output schema is :data:`_TRANSPORT_LINK_PHASE3_COSTED_COLUMNS`.
+    Legacy ``old_cost_per_tonne_km`` is computed as
+    ``legacy_transport_cost ÷ distance_km`` (best-effort back-conversion,
+    indifferent to the original unit suffix; see notes).
+
+    Args:
+        fixture_dir: BC + QC mini-2prov fixture root (must contain
+            ``transport_link.csv``).
+        bc_qc_mini_dir: BC mini base fixture path; the signature
+            accepts this for symmetry with the other LP runners but is
+            not consumed by the cost wiring (the Phase 3 surface reads
+            its parameters from ``fresh_fibre.transport_cost``).
+        use_phase3: when ``False``, the function still writes the
+            side-by-side CSV but reuses the legacy cost in the
+            ``new_cost_per_tonne_km`` column. Useful for diffing the
+            Phase 3 surface against the synthetic cost baseline.
+
+    Returns:
+        Count of rows updated and written to the side-by-side CSV.
+    """
+    transport_link_path = Path(fixture_dir) / "transport_link.csv"
+    if not transport_link_path.exists():
+        raise FileNotFoundError(
+            f"transport_link.csv missing for Phase 3 cost wiring: "
+            f"{transport_link_path}"
+        )
+    _ = bc_qc_mini_dir  # explicit discard; documented above.
+
+    rows = read_rows(transport_link_path)
+    output_rows: list[dict[str, str]] = []
+    for row in rows:
+        distance_km_raw = row.get("distance", "")
+        try:
+            distance_km = float(distance_km_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"recompute_transport_link_costs_using_phase3_costs: "
+                f"row transport_mode={row.get('transport_mode')!r} "
+                f"route_id={row.get('route_id')!r} has non-numeric "
+                f"distance={distance_km_raw!r}"
+            ) from exc
+
+        try:
+            legacy_cost = float(row.get("transport_cost", "") or 0.0)
+        except (TypeError, ValueError):
+            legacy_cost = 0.0
+        legacy_unit = row.get("transport_cost_unit", "")
+        old_cost_per_tonne_km = (legacy_cost / distance_km) if distance_km > 0 else 0.0
+
+        transport_mode = row.get("transport_mode", "truck")
+        segment_class = _phase3_segment_class(transport_mode)
+        if use_phase3:
+            if segment_class == "main":
+                new_cost_per_tonne_km = rail_haul_per_tonne_km_with_phase3(
+                    distance_km, transport_mode
+                )
+            else:
+                new_cost_per_tonne_km = road_segment_cost(distance_km, segment_class) / (
+                    distance_km if distance_km > 0 else 1.0
+                )
+        else:
+            new_cost_per_tonne_km = old_cost_per_tonne_km
+
+        delta = new_cost_per_tonne_km - old_cost_per_tonne_km
+        output_rows.append(
+            {
+                "scenario_id": row.get("scenario_id", DEFAULT_SCENARIO),
+                "period": row.get("period", "0"),
+                "origin_node_id": row.get("origin_node_id", ""),
+                "destination_node_id": row.get("destination_node_id", ""),
+                "route_id": row.get("route_id", ""),
+                "transport_mode": transport_mode,
+                "distance_km": str(distance_km),
+                "legacy_transport_cost": str(legacy_cost),
+                "legacy_transport_cost_unit": legacy_unit,
+                "old_cost_per_tonne_km": f"{old_cost_per_tonne_km:.6f}",
+                "segment_class": segment_class,
+                "new_cost_per_tonne_km": f"{new_cost_per_tonne_km:.6f}",
+                "delta": f"{delta:.6f}",
+            }
+        )
+
+    output_path = Path(fixture_dir) / "transport_link_phase3_costed.csv"
+    output_rows_path = output_path.parent
+    output_rows_path.mkdir(parents=True, exist_ok=True)
+    write_rows(
+        output_path,
+        _TRANSPORT_LINK_PHASE3_COSTED_COLUMNS,
+        output_rows,
+    )
+    LOGGER.debug(
+        "Phase 3 cost wiring wrote %d rows to %s",
+        len(output_rows),
+        output_path,
+    )
+    return len(output_rows)
+
+
+def rail_haul_per_tonne_km_with_phase3(distance_km: float, transport_mode: str) -> float:
+    """Wrap rail_segment_cost to extract per·km value (used by Phase 3 wiring)."""
+    if distance_km <= 0:
+        return 0.0
+    return rail_segment_cost(distance_km, "main") / distance_km
 
 
 def main() -> None:
