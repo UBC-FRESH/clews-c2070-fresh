@@ -135,18 +135,18 @@ Metadata surfaces:
 
 ### P2.2 Bird's-Eye Architecture Reconstruction
 
-- [ ] Use Ghafghazi et al. 2017, "Estimating Mill Residue Surplus in Canada: A
+- [x] Use Ghafghazi et al. 2017, "Estimating Mill Residue Surplus in Canada: A
   Spatial Forest Fiber Cascade Modeling Approach", as the high-level model
   narrative and guardrail.
-- [ ] Extract the FFCM conceptual modules: forest estate/log supply, facility
+- [x] Extract the FFCM conceptual modules: forest estate/log supply, facility
   network, processing technologies, transport routes, commodity cascade, market
   demand, residue surplus, scenarios, and calibration/validation workflow.
 - [x] Draft an initial conceptual-module crosswalk to archive evidence and
   candidate FRESH replacement components.
-- [ ] Refine each conceptual module against archive evidence, including publications,
+- [x] Refine each conceptual module against archive evidence, including publications,
   presentations, configuration files, spreadsheets, GIS layers, logs, and
   generated LP files.
-- [ ] Record assumptions, unknowns, and likely black-box/proprietary boundaries.
+- [x] Record assumptions, unknowns, and likely black-box/proprietary boundaries.
 
 ### P2.3 FFCM Implementation Evidence Index
 

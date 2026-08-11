@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-08-09T00:00:00Z"
+updated_utc: "2026-08-11T00:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Readiness gates define cross-cutting prerequisites for production model readiness."
@@ -88,14 +88,14 @@ gates:
   - id: facility_layer
     name: "Forest Industry Facility Layer"
     description: "Authoritative national layer of sawmills, pulp mills, panel mills, pellet plants, and cogeneration facilities with capacity and location."
-    status: blocked
+    status: resolved_pending_provenance_review
     required_for:
       - "demand node definition in LP network-flow"
       - "processing capacity constraints"
       - "commodity cascade routing"
     blocking_datasets:
-      - forest_facilities_2013
-    notes: "Legacy 2013 database is candidate; requires update and license/provenance resolution. No current authoritative national source identified."
+      - ghafghazi_et_al_2017_ffcm_payload
+    notes: "Canonical national facility-layer source is metadata/ffcm-archive/parsed/ (facilities.csv = 1371 facilities, processing_lines.csv = 957 lines, routes.csv = 38390 routes). Raw archive tmp/Saeed_data.zip sha256-pinned via metadata/ffcm-archive/archive-manifest.csv row 1683; architecture paper at tmp/fpro-article-p205.pdf (Ghafghazi et al. 2017 Forest Products Journal). Raw archive stays ignored under tmp/ per planning/ffcm-archive-analysis.md §Data Boundary. Upstream-archive provenance review still pending; treat parsed CSVs as canonical for current model use."
 
   - id: disturbance_calibration
     name: "Disturbance History Calibration"

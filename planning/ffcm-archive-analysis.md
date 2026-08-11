@@ -1,5 +1,30 @@
 # FFCM Archive Analysis Plan
 
+## Resolution Note (2026-08-11)
+
+Per the user directive at project start, the Ghafghazi et al. 2017 facility-layer
+payload is the canonical national facility-layer source for CLEWs-C2070:
+
+- Archive: `tmp/Saeed_data.zip`, sha256 `d59d6ac34458fd9f4e49c92accc4b9299414d7465e7fd9bdb9c7cbb218b335d2`
+  (6.77 GB; catalogued at `metadata/ffcm-archive/archive-manifest.csv` row 1683).
+- Parsed CSVs (compressed `tmp/FCM/Carbon/01-Basecase/*.cfg`):
+  `metadata/ffcm-archive/parsed/facilities.csv` (1371 facilities),
+  `processing_lines.csv` (957), `routes.csv` (38390),
+  plus 11 supporting CSV tables (markets, commodities, transporters, imports,
+  and others). Aggregate metric rollup at
+  `metadata/ffcm-archive/parsed/parse-summary.csv`.
+- Architecture anchor: `tmp/fpro-article-p205.pdf`
+  (Ghafghazi et al. 2017, *Forest Products Journal*).
+- Acceptance closed at commit `P7.1.CASFRI.11`, including:
+  - new source-inventory row `ghafghazi_et_al_2017_ffcm_payload`;
+  - readiness-gate `facility_layer` flipped to `resolved_pending_provenance_review`;
+  - `prototype-gap-register.csv` `gap_003` status closed;
+  - `data-source-disposition.csv` row 12 rewritten to accept.
+
+Raw archive stays ignored under `tmp/` per §Data Boundary. Gap_010 (BC Fibre
+Database reuse rights) and gap_011 (Saeed_data.zip cold-storage) remain
+independent follow-ups.
+
 ## Purpose
 
 This phase is dedicated to unpacking the transferred Forest Fibre Cascade Model
