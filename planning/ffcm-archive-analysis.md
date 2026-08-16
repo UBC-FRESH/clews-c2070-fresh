@@ -25,6 +25,32 @@ Raw archive stays ignored under `tmp/` per §Data Boundary. Gap_010 (BC Fibre
 Database reuse rights) and gap_011 (Saeed_data.zip cold-storage) remain
 independent follow-ups.
 
+## Geographic Crosswalk Note (2026-08-11)
+
+Commit `P7.1.CASFRI.12` produced the geographic crosswalk artefacts for the FCM
+facility-layer dataset:
+
+- `metadata/facility_geocoding.csv`: 1,371 FCM facilities joined to ISED Mills DB
+  (738 lat/lon records) and CFS suppliers.dbf (622 lat/lon records) via
+  `(province, facility_class, numeric_id)` join key. Match status: MATCHED_BOTH /
+  MATCHED_MILLS_DB_ONLY / MATCHED_SUPPLIERS_ONLY / MATCHED_BOTH_CONFLICT /
+  NO_MATCH (synthetic FCM facilities like AB-BIO-4000 have no real-world
+  counterpart).
+- `metadata/fmu_tl_anchors.csv`: 733 FMU -> TL hub transport-graph anchors from
+  `tmp/FMU.xlsm` (FMU sheet + Routes_FMUs sheet). FMUs have NO polygon geometry;
+  spatial identity is relational (FMU -> TL -> km-distance chain).
+- `metadata/tenure_area_rollup.csv`: per-province + national area subtotals for
+  GFW tenures (3,680 polygons, 4,438,087.73 km^2, 11 jurisdictions, no NU) and
+  Data Basin tenures (10,222 polygons, 2,100,451.56 km^2, 9 provinces, no
+  YT/NT/NU). GFW covers concession/agreement polygons; Data Basin covers
+  finer-grained licensee-level FMAs.
+- `metadata/databasin_tenure_provenance.csv`: 10,222 rows with per-record
+  provincial source attribution (9 unique source_agency values).
+
+The FCM LP itself does not require lat/lon to solve -- it uses internal
+km-distances between TL/W transload nodes. This crosswalk is the
+wall-to-wall visualisation layer on top, not a solver requirement.
+
 ## Purpose
 
 This phase is dedicated to unpacking the transferred Forest Fibre Cascade Model

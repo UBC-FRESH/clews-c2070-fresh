@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-08-11T00:00:00Z"
+updated_utc: "2026-08-11T12:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Readiness gates define cross-cutting prerequisites for production model readiness."
@@ -95,7 +95,7 @@ gates:
       - "commodity cascade routing"
     blocking_datasets:
       - ghafghazi_et_al_2017_ffcm_payload
-    notes: "Canonical national facility-layer source is metadata/ffcm-archive/parsed/ (facilities.csv = 1371 facilities, processing_lines.csv = 957 lines, routes.csv = 38390 routes). Raw archive tmp/Saeed_data.zip sha256-pinned via metadata/ffcm-archive/archive-manifest.csv row 1683; architecture paper at tmp/fpro-article-p205.pdf (Ghafghazi et al. 2017 Forest Products Journal). Raw archive stays ignored under tmp/ per planning/ffcm-archive-analysis.md §Data Boundary. Upstream-archive provenance review still pending; treat parsed CSVs as canonical for current model use."
+    notes: "Canonical national facility-layer source is metadata/ffcm-archive/parsed/ (facilities.csv = 1371 facilities, processing_lines.csv = 957 lines, routes.csv = 38390 routes). Raw archive tmp/Saeed_data.zip sha256-pinned via metadata/ffcm-archive/archive-manifest.csv row 1683; architecture paper at tmp/fpro-article-p205.pdf (Ghafghazi et al. 2017 Forest Products Journal). Raw archive stays ignored under tmp/ per planning/ffcm-archive-analysis.md §Data Boundary. Upstream-archive provenance review still pending; treat parsed CSVs as canonical for current model use. Geographic crosswalk layer produced at P7.1.CASFRI.12 (metadata/facility_geocoding.csv + metadata/fmu_tl_anchors.csv + metadata/tenure_area_rollup.csv). FMUs have NO polygon geometry - transport-graph anchored only. Mill-level lat/lon coverage: ~1,360 unique mills across Mills DB + suppliers.dbf sources."
 
   - id: disturbance_calibration
     name: "Disturbance History Calibration"
