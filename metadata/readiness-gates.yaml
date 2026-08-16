@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-08-11T12:00:00Z"
+updated_utc: "2026-08-11T18:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Readiness gates define cross-cutting prerequisites for production model readiness."
@@ -69,7 +69,7 @@ gates:
     blocking_datasets:
       - scanfi_v2
       - casfri_v5_schema
-    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total. CASFRI v5 schema integration under governing issue #1 / proposed child #29; schema mapping documented in planning/casfri-v5-schema-integration-plan.md and source review at metadata/source-reviews/casfri_v5_schema.md (D1 §5). Two openly-downloadable provincial FRIs ingested through the CASFRI pathway: BC mini (inherited via bc-mini-scanfi-gauthier-diagnostic) and QC mini (via bc-qc-mini-2prov with casfri_qc_reader + qc_ws3_export bridge). Jurisdictional-prefix policy (BC_*, QC_*) preserved per metadata/source-crosswalks/qc_casfri_v5_schema.md §3.1. Stale species codes (BC: FDC, AT, BL; QC: SAB, EPB, BOP, BOJ, MEH, PEU) surface in supply_provenance without flattening. Remaining blockers: SCANFI v2 spsCC_* species layers (123 GB) for national-scale wall-to-wall; CASFRI QC BOP gap recorded as qc_species_unmapped_unresolved. See planning/qc_two_province_incremental_memo.md §3.1."
+    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total. CASFRI v5 schema integration under governing issue #1 / proposed child #29; schema mapping documented in planning/casfri-v5-schema-integration-plan.md and source review at metadata/source-reviews/casfri_v5_schema.md (D1 §5). Two openly-downloadable provincial FRIs ingested through the CASFRI pathway: BC mini (inherited via bc-mini-scanfi-gauthier-diagnostic) and QC mini (via bc-qc-mini-2prov with casfri_qc_reader + qc_ws3_export bridge). Jurisdictional-prefix policy (BC_*, QC_*) preserved per metadata/source-crosswalks/qc_casfri_v5_schema.md §3.1. Stale species codes (BC: FDC, AT, BL; QC: SAB, EPB, BOP, BOJ, MEH, PEU) surface in supply_provenance without flattening. Remaining blockers: SCANFI v2 spsCC_* species layers (123 GB) for national-scale wall-to-wall; CASFRI QC BOP gap recorded as qc_species_unmapped_unresolved. See planning/qc_two_province_incremental_memo.md §3.1. SCANFI v2 2025 species crown-closure layers acquired at P7.1.CASFRI.13 (10 species, ~14.6 GB). CASFRI v5 schema integration complete (BC+QC diagnostic LP). Remaining: full time series, .ovr files, northern extrapolation mask application."
 
   - id: national_scaling
     name: "National Scaling Beyond BC Mini"
