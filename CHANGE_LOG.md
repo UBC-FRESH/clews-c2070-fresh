@@ -30,6 +30,156 @@
   `run_full_two_province_real_yield_variant`). Added the fail-closed
   "unexpected deletions" collateral rule to `AGENTS.md`: any unexpected ` D`
   entries in `git status --porcelain` halt the session pending investigation.
+- **P7.1.CASFRI.13/14 support tooling: FreshForge materialization workflow
+  for ERA5 normals + SCANFI species downloads.** Registered two provider node
+  contracts in `fresh_fibre/freshforge_materialization.py`
+  (`download_era5_normals`, `download_scanfi_species_bc`) with command
+  builders that dispatch to the repo scripts through the overlay venv; added
+  the workflow/overlay pair
+  `examples/freshforge/era5_scanfi_species_materialization_workflow.yaml` +
+  `examples/freshforge/era5_scanfi_species_overlay.yaml`; added
+  `scripts/download_scanfi_species_bc.py` (BC-relevant SCANFI v2 `spsCC_*`
+  layers from the NRCan FTP with SHA-256 sidecar verification into
+  `raw/nrcan/scanfi_v2/species/`). ROADMAP.md P7.1.CASFRI.14 checkbox marked
+  [x] (commit `d5f3f69`).
+
+## 2026-08-16
+
+- **P7.1.CASFRI.12: Geographic crosswalk for the Ghafghazi 2017 facility
+  layer.** The FCM LP solves on internal km-distances between TL/W transload
+  nodes and does not require lat/lon; this crosswalk is the wall-to-wall
+  visualisation and spatial-join layer on top.
+  - `metadata/facility_geocoding.csv` — 1,371 FCM facilities joined to the
+    ISED Mills DB (738) and CFS `suppliers.dbf` (622) via (province,
+    facility_class, numeric_id); match statuses MATCHED_BOTH,
+    MATCHED_MILLS_DB_ONLY, MATCHED_SUPPLIERS_ONLY, MATCHED_BOTH_CONFLICT,
+    NO_MATCH (~1,360 unique mills).
+  - `metadata/fmu_tl_anchors.csv` — 733 FMU → TL hub transport-graph anchors
+    from `tmp/FMU.xlsm`; FMUs carry no polygon geometry (transport-graph
+    anchored only).
+  - `metadata/tenure_area_rollup.csv` — per-province + national subtotals:
+    GFW tenures 3,680 polys / 4,438,087.73 km^2 / 11 jurisdictions (no NU);
+    Data Basin tenures 10,222 polys / 2,100,451.56 km^2 / 9 provinces (no
+    YT/NT/NU).
+  - `metadata/databasin_tenure_provenance.csv` — 10,222 rows with per-record
+    provincial source attribution (9 unique source_agency values).
+  - `metadata/source-inventory.csv` row 55 appended
+    (`ghafghazi_et_al_2017_geographic_crosswalk`; row 32 notes amended);
+    `facility_layer` gate notes appended; Geographic Crosswalk Note added to
+    `planning/ffcm-archive-analysis.md`; ROADMAP.md P7.1.CASFRI.12 marked
+    [x]. No data-submodule changes.
+- **P7.1.CASFRI.13: SCANFI v2 2025 species crown-closure layers acquired.**
+  10 `spsCC_*` rasters (2025 time step, ~14.6 GB) downloaded, SHA-256
+  verified, annexed into the data submodule, and published to arbutus-s3:
+  balsamFir (1.16 GB), blackSpruce (3.31 GB), broadleaf (2.68 GB), douglasFir
+  (242 MB), jackPine (1.62 GB), lodgepolePine (752 MB), otherConiferous
+  (2.58 GB), ponderosaPine (82.4 MB), tamarack (1.87 GB), whiteRedPine
+  (275 MB). `data/raw/scanfi/v2/` now holds 25 GeoTIFFs (5 att_* + 10
+  spsCC_* + 10 .aux.xml); acquisition manifest at
+  `data/manifests/scanfi-v2-2025-species-acquisition.csv`. The layers provide
+  the wall-to-wall species crown-closure percentages the FCM LP needs for
+  yield stratification and product allocation.
+  - `metadata/source-inventory.csv` scanfi_v2 status →
+    `accepted_expanded_subset`; `species_composition` gate notes appended
+    (remaining: full 1985-2025 time series, .ovr overviews, northern
+    extrapolation mask); acquisition reconciliation section appended to
+    `metadata/source-reviews/scanfi_v2.md`; ROADMAP.md P7.1.CASFRI.13 marked
+    [x]. The remaining SCANFI package stays outside the approved subset.
+- **P7.1.CASFRI.14: ERA5 1991-2020 climate normals acquired — 9 NetCDF + 48
+  derived bioclim COGs.** Downloaded from the Copernicus CDS
+  `reanalysis-era5-single-levels-monthly-means` dataset (CC-BY +
+  licence-to-use-copernicus-products accepted programmatically 2026-08-16):
+  2 m temperature, total precipitation, and 2 m dewpoint temperature, each in
+  three decade chunks (1991-2000 / 2001-2010 / 2011-2020; 360 months; ~95 MB
+  total), Canada bbox 41-84°N / 141-52°W at 0.25° in EPSG:4326; annexed in
+  data submodule `c346518` under `raw/ecmwf/era5/normals/` with
+  ACQUISITION.md, download logs, and the 58-row manifest
+  `manifests/ecmwf-era5-normals-acquisition.csv`.
+  - `scripts/download_era5_normals.py` — resume-safe CDS API fetch (3
+    variables × 3 decade chunks; NetCDF magic validated on every chunk).
+  - `scripts/compute_era5_normals.py` — 30-year monthly normals, annual
+    summaries (MAT, MAP, d2m_annual), 9 bioclim variables (GDD5, FFP, VPD,
+    Twarm, Tcold, Pwarm, Pcold, Pseas, continentality), unit conversion
+    (K→°C; m/day → mm/month via 365-day climatology), Canada-boundary clip.
+  - `scripts/validate_era5_normals.py` — GeoTIFF / EPSG:4326 / nodata checks
+    plus physical sanity bounds on the annual and bioclim rasters.
+  - 48 derived COGs at `derived/era5-normals/` (36 monthly normals + MAT /
+    MAP / d2m_annual + 9 bioclim), 173×357 grid, nodata=-9999. Known
+    limitations recorded in ACQUISITION.md: t2m min/max not offered by the
+    ERA5 monthly-means product; FFP approximated from monthly means; VPD from
+    monthly mean T/Td underestimates peaks. ROADMAP.md P7.1.CASFRI.14 marked
+    [x] (commit `d5f3f69`); the `climate_predictors` gate is not yet flipped
+    — remains `blocked` in `metadata/readiness-gates.yaml` pending gate
+    bookkeeping.
+
+## 2026-08-11
+
+- **P7.1.CASFRI.8: Dataset ingest batch 2 to arbutus-s3 (18 archives).**
+  19 attempted / 18 archived / 1 deferred under the m0331 directive to
+  datalad-stash listed-but-unmaterialized datasets; per-archive sha256
+  sidecars + PROVENANCE.csv; all 18 confirmed 2-copy (here + arbutus-s3) via
+  `git annex whereis`. Batch aggregate ~11.34 GiB; combined annex ~39.45 GiB.
+  - Beaudoin kNN archives → `data/raw/beaudoin_knn/` (PROVENANCE.csv 212
+    rows): kNN-StructureStandVolume.tar (1.69 GiB), kNN-SpeciesGroups.tar
+    (1.93 GiB), kNN-SpeciesDominant.tar (1.26 GiB), kNN-Genus.tar (1.54 GiB),
+    kNN-LandCover.tar (620 MB), kNN-Soils.tar (2.81 GiB). kNN-Dominant.tar
+    deferred — the upstream URL 302-redirects to a placeholder page;
+    rationale at `data/raw/beaudoin_knn/DOWNLOAD_DEFERRED_kNN-Dominant.txt`.
+  - NRN per-province GeoPackage ZIPs for the 12 remaining jurisdictions →
+    `data/raw/nrn/` (PROVENANCE.csv 40 rows): AB 253 MB, SK 147 MB, ON
+    484 MB, QC 384 MB, NB 63 MB, MB 42 MB, NS 124 MB, NL 23 MB, PE 14 MB,
+    NT 10 MB, YT 6 MB, NU 4 MB.
+  - `metadata/source-inventory.csv` notes updated on 5 rows (nrn_vectors,
+    nrwn_vectors, beaudoin_knn_attribute_archives_2014_2017,
+    yk_forest_resource_roads_50k, provincial_forest_resource_roads_themes).
+- **P7.1.CASFRI.9: SAFORAH 2.0 fallback resolves the kNN-Dominant
+  pseudogap.** "kNN-Dominant" is not a real upstream tarball — dominant
+  species per pixel is derivable as argmax across the 109 per-species layers
+  in the already-archived kNN-Species.tar; the historical kNN-Dominant.tar
+  URL is a persistent 302 placeholder for a derived product that was never
+  packaged separately. Captured the SAFORAH 2.0 `ca_kNN_DominantGenus_250m_r`
+  WMS layer as visual confirmation into `data/raw/beaudoin_knn_v2/`: WMS
+  GetCapabilities XML (81 KB), GeoNetwork catalogue JSON (15 KB; record UUID
+  `de39ef283de2d96e7bfabf0a789b5f95458d5a5a`), 3 WMS GetMap PNGs (PNG magic +
+  IHDR verified; arbutus-s3 confirmed), PROVENANCE.csv, and the
+  PROXY_REPLACEMENT_kNN-Dominant.txt lineage doc. WFS/WCS endpoints are
+  disabled upstream (OWS probe) and the bulk GeoTIFF is not publicly
+  downloadable, so raw dominant-genus values require CFS Data Manager
+  engagement — the argmax derivation remains the operational path.
+  `metadata/source-inventory.csv` rows 45-46 notes updated.
+- **P7.1.CASFRI.10: kNN-Dominant cleanup + derivation smoke test.** Cleanup
+  option (c) executed on `data/raw/beaudoin_knn_v2/`: the 3 WMS PNG snapshots
+  unannexed (74 KB); GeoNetwork catalogue JSON, PROXY_REPLACEMENT lineage
+  doc, and PROVENANCE.csv retained as durable research artefacts. Added
+  `tests/test_knn_dominant_derived.py` (3 tests) anchoring in code the argmax
+  derivation formula over kNN-Species.tar and locking the known-unavailable
+  status of kNN-Dominant.tar at SAFORAH 1.0 (302 placeholder), the NRCan
+  mirror (no per-layer category), and SAFORAH 2.0 (WMS-only).
+  `metadata/source-inventory.csv` row 46 notes + next_action updated.
+- **P7.1.CASFRI.11: NRWN per-province batch 3 archived; Ghafghazi 2017
+  facility layer accepted and `facility_layer` gate resolved.**
+  - NRWN: 33 of 39 attempted files archived to `data/raw/nrwn/` (~109 MB) —
+    GML EN/FR + KML EN for BC + AB/SK/MB/ON/QC/NB/NS/NL/NT/YT (GML EN
+    31.45 MB / GML FR 31.48 MB / KML EN 45.92 MB; KML files are .kmz, caught
+    by probe correction); PE + NU deferred (no per-province directory on the
+    ftp.maps.canada.ca mirror). PROVENANCE.csv now 49 rows; ACQUISITION.md
+    updated; `nrwn_vectors` notes record the expansion and the PE/NU
+    deferral.
+  - Facility layer: the national Ghafghazi et al. 2017 FFCM payload
+    (`tmp/Saeed_data.zip`, sha256 `d59d6ac3…b335d2`) accepted as the
+    canonical facility-layer source per the project-start user directive —
+    `metadata/source-inventory.csv` row 54 appended
+    (`ghafghazi_et_al_2017_ffcm_payload`) and row 32 (forest_facilities_2013)
+    marked superseded; `metadata/readiness-gates.yaml` facility_layer →
+    `resolved_pending_provenance_review` (blocking_datasets swapped to the
+    new row); `metadata/ffcm-archive/data-source-disposition.csv` row 12
+    rewritten "Accepted per user directive";
+    `metadata/ffcm-archive/prototype-gap-register.csv` gap_003 closed;
+    Resolution Note prepended to `planning/ffcm-archive-analysis.md`;
+    ROADMAP.md P2.2 items marked [x]. Canonical parsed CSVs:
+    `metadata/ffcm-archive/parsed/facilities.csv` (1,371 facilities),
+    `processing_lines.csv` (957), `routes.csv` (38,390); the raw archive
+    stays ignored under `tmp/` per the Data Boundary.
 
 ## 2026-08-09
 
