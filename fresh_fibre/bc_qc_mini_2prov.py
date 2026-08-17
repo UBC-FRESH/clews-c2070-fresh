@@ -75,6 +75,8 @@ from __future__ import annotations
 import argparse
 import logging
 import shutil
+import subprocess
+import tempfile
 from collections import OrderedDict, defaultdict
 from pathlib import Path
 
@@ -661,17 +663,77 @@ def format_number(value: float) -> str:
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
+def directory_contains_tracked_files(target_dir: Path) -> bool:
+    """Return True when ``target_dir`` contains any git-tracked files.
+
+    Runs ``git ls-files`` from inside ``target_dir`` so the check is
+    independent of the caller's working directory. A missing directory,
+    a directory outside any git work tree, or a missing git executable
+    all return False — in those cases there are no tracked files for a
+    destructive rebuild to erase.
+    """
+    if not target_dir.exists():
+        return False
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--", "."],
+            cwd=target_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except OSError:
+        LOGGER.warning(
+            "git executable not found; skipping tracked-file safety check for %s",
+            target_dir,
+        )
+        return False
+    if result.returncode != 0:
+        return False
+    return bool(result.stdout.strip())
+
+
 def regenerate_workdir(
     base_dir: Path = DEFAULT_SCANFI_BASE,
-    target_dir: Path = DEFAULT_FIXTURE_DIR,
-) -> None:
-    """Copy ``bc-mini`` fixture tables (minus generated/) to ``bc-qc-mini-2prov`` and add QC tables."""
+    target_dir: Path | None = None,
+    *,
+    force: bool = False,
+) -> Path:
+    """Copy ``bc-mini`` fixture tables (minus generated/) to the workdir and add QC tables.
+
+    The workdir defaults to a fresh temporary directory. Rebuilding a
+    directory that contains git-tracked files (such as the committed
+    ``bc-qc-mini-2prov`` fixture) is destructive: the rebuild runs
+    ``shutil.rmtree`` + ``copytree`` over versioned content, so any
+    tracked file the generator no longer writes would vanish silently.
+    That path therefore fails fast with ``RuntimeError`` unless the
+    caller explicitly passes ``force=True`` (or
+    ``--force-regenerate-workdir`` on the CLI).
+
+    Returns the resolved workdir path so callers that accept the
+    temporary-directory default can locate the generated tables.
+    """
+    if target_dir is None:
+        target_dir = Path(tempfile.mkdtemp(prefix="bc-qc-mini-2prov-"))
+        LOGGER.info("regenerate_workdir: using temporary workdir %s", target_dir)
+    if directory_contains_tracked_files(target_dir) and not force:
+        raise RuntimeError(
+            f"Refusing to regenerate workdir over git-tracked files: {target_dir}. "
+            "Regeneration deletes the directory (shutil.rmtree) before copying "
+            "fresh tables, so any tracked file the generator no longer writes "
+            "would be silently lost. Pass force=True "
+            "(--force-regenerate-workdir on the CLI) only when the destructive "
+            "rebuild of versioned fixture content is intentional, or choose an "
+            "untracked scratch directory instead."
+        )
     if target_dir.exists():
         shutil.rmtree(target_dir)
     shutil.copytree(base_dir, target_dir, ignore=shutil.ignore_patterns("generated"))
     # Append QC rows onto the relevant tables.
     append_qc_rows_to_fixture_tables(target_dir)
     create_qc_diagnostic_subdir(target_dir)
+    return target_dir
 
 
 def append_qc_rows_to_fixture_tables(target_dir: Path) -> None:
@@ -1713,6 +1775,7 @@ def run_full_two_province_real_yield_variant(
     base_dir: Path = DEFAULT_SCANFI_BASE,
     scanfi_fixture_dir: Path = DEFAULT_SCANFI_DIAG_DIR,
     bc_vri_stub_dir: Path | None = None,
+    force_regenerate: bool = False,
 ) -> dict[str, object]:
     """Run the BC + QC two-province LP variant with real-coefficient yields.
 
@@ -1736,6 +1799,9 @@ def run_full_two_province_real_yield_variant(
             compatibility; no longer the BC-side authority.
         bc_vri_stub_dir: optional explicit BC VRI sample fixture
             directory (defaults to ``tests/fixtures/bc_vri_sample``).
+        force_regenerate: explicit opt-in that lets the placeholder
+            bootstrap rebuild a ``fixture_dir`` containing git-tracked
+            files (forwarded to ``regenerate_workdir`` as ``force``).
 
     Returns:
         Dict with both LP runs' status / objective / quantity totals
@@ -1748,6 +1814,7 @@ def run_full_two_province_real_yield_variant(
         base_dir=base_dir,
         scanfi_fixture_dir=scanfi_fixture_dir,
         regenerate_workdir_flag=True,
+        force_regenerate=force_regenerate,
     )
     substitution = _substitute_real_yields_into_supply_offer(
         fixture_dir=fixture_dir,
@@ -1800,6 +1867,7 @@ def run_full_two_province_variant(
     base_dir: Path = DEFAULT_SCANFI_BASE,
     scanfi_fixture_dir: Path = DEFAULT_SCANFI_DIAG_DIR,
     regenerate_workdir_flag: bool = True,
+    force_regenerate: bool = False,
 ) -> dict[str, object]:
     """Run the full BC + QC two-province LP variant.
 
@@ -1809,9 +1877,15 @@ def run_full_two_province_variant(
     ``run_bc_supply`` wrapper now reads the BC VRI stub (or the real
     BC VRI File Geodatabase in production); ``scanfi_fixture_dir`` is
     accepted but unused.
+
+    When ``regenerate_workdir_flag`` is set and ``fixture_dir`` contains
+    git-tracked files (e.g. the committed fixture directory), the
+    regeneration step fails fast with ``RuntimeError`` unless
+    ``force_regenerate`` is passed — rebuilding tracked fixture content
+    in place can silently delete files the generator no longer writes.
     """
     if regenerate_workdir_flag:
-        regenerate_workdir(base_dir=base_dir, target_dir=fixture_dir)
+        regenerate_workdir(base_dir=base_dir, target_dir=fixture_dir, force=force_regenerate)
 
     bc_supply = run_bc_supply(
         gdb_path=DEFAULT_BC_VRI_CSV_STUB,
@@ -2095,6 +2169,16 @@ def main() -> None:
         help="Do not rebuild the fixture directory; re-use the existing tables.",
     )
     parser.add_argument(
+        "--force-regenerate-workdir",
+        action="store_true",
+        help=(
+            "Allow workdir regeneration to delete and rebuild a directory "
+            "containing git-tracked files (e.g. the committed fixture). "
+            "Without this flag the regeneration step fails fast instead of "
+            "silently erasing versioned content."
+        ),
+    )
+    parser.add_argument(
         "--translation-table-dir",
         type=Path,
         default=DEFAULT_TRANSLATION_TABLE_DIR,
@@ -2106,6 +2190,7 @@ def main() -> None:
         base_dir=args.base_dir,
         scanfi_fixture_dir=args.scanfi_fixture_dir,
         regenerate_workdir_flag=not args.skip_regenerate_workdir,
+        force_regenerate=args.force_regenerate_workdir,
     )
     print(
         f"solved bc-qc-mini-2prov {result['lp_status']} objective={float(result['lp_objective_value']):.6f}; "

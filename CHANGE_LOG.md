@@ -1,5 +1,21 @@
 # Change Log
 
+## 2026-08-17
+
+- Hardened `fresh_fibre.bc_qc_mini_2prov.regenerate_workdir` after a forensic
+  review found silent data loss: the helper defaulted to the git-tracked
+  fixture directory (`metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/`)
+  and ran `shutil.rmtree` + `shutil.copytree` directly over versioned content,
+  so any committed fixture file the generator no longer writes would vanish
+  without a trace. The workdir target now defaults to a fresh temporary
+  directory, and regeneration over a directory containing git-tracked files
+  (detected via `git ls-files`) fails fast with a `RuntimeError` unless the
+  caller passes the new explicit `force` opt-in (`--force-regenerate-workdir`
+  on the CLI; `force_regenerate` on `run_full_two_province_variant` /
+  `run_full_two_province_real_yield_variant`). Added the fail-closed
+  "unexpected deletions" collateral rule to `AGENTS.md`: any unexpected ` D`
+  entries in `git status --porcelain` halt the session pending investigation.
+
 ## 2026-08-09
 
 - **P7.1.CASFRI.1 + P7.1.CASFRI.3–7: First concrete implementation increment after the source-review / planning cycle.** QC inventory openly-downloadable from MFFP / Données Québec (CC-BY 4.0, no DUA) registered in `data/raw/qc_inventory/2023-ieqm-eighth/`: provenance layer (LISEZ-MOI 1.3 MB, per-feuillet index 31 KB, per-agence index 8 KB) plus a real-leaf sample (feuille 21M, 815 MB). CASFRI v5.3.1 (commit `c09a70cc1f90894a1d32c2f20606430b49ae274f`, 2021-08-17) translation-table sidecar vendored into `data/raw/casfri_v5/translation_tables/` (129 CSV files); GPL-3.0 framework source (conversion/, workflow/, helperfunctions/, summary_statistics/, translation/test/) intentionally **NOT** vendored.
