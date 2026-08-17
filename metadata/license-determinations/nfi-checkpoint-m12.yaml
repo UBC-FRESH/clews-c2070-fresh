@@ -1,0 +1,62 @@
+schema_version: 1
+updated_utc: "2026-08-09T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+checkpoint: "M12"
+label: "12-Month NFI Access Finalization"
+description: "Final checkpoint to confirm calibration/validation source stack is production-ready for national modelling."
+target_date_utc: "2027-08-09T00:00:00Z"
+status: scheduled
+criteria:
+  - id: primary_calibration_stack_locked
+    description: "Primary calibration source stack (NFI ground plots and/or MAGPlot + PSPs) fully documented and version-controlled."
+    required: true
+    evidence: "Data manifests in metadata/source-file-manifests/; DataLad mirror complete; schema crosswalks archived."
+    status: pending
+  - id: validation_layer_production
+    description: "Reference pixel / validation layer operational for national model evaluation (SCANFI, Gauthier, ws3)."
+    required: true
+    evidence: "Validation layer in data/derived/validation_layers/; evaluation scripts in scripts/validation/; CI tests pass."
+    status: pending
+  - id: cross_source_consistency_verified
+    description: "Cross-source consistency analysis complete: NFI vs. MAGPlot vs. PSPs agree within acceptable tolerances for key attributes."
+    required: true
+    evidence: "Consistency report with quantitative metrics; bias/correction factors documented if needed."
+    status: pending
+  - id: license_compliance_audit
+    description: "Full license compliance audit for all calibration/validation sources in production stack."
+    required: true
+    evidence: "Audit checklist completed; DUA terms honored; attribution metadata embedded in all derived products."
+    status: pending
+  - id: documentation_complete
+    description: "Complete documentation package for calibration/validation sources: provenance, license, schema, usage notes."
+    required: true
+    evidence: "README in each data/raw/ source directory; metadata/calibration/ documentation; CHANGE_LOG.md updated."
+    status: pending
+  - id: handoff_ready
+    description: "Source stack ready for handoff to modelling team (ws3, SCANFI, Gauthier, network flow) with no access blockers."
+    required: true
+    evidence: "Modelling team sign-off; access credentials documented; no pending DUAs or access requests."
+    status: pending
+decisions:
+  - if all_criteria_met:
+      action: "Calibration/validation source stack FINALIZED. Archive all checkpoint YAMLs as project records."
+      status: "complete"
+      notes: "Update nfi-access.yaml with final production statuses. Close NFI access work package."
+  - if primary_stack_locked but validation_layer_not_ready:
+      action: "Extend timeline for validation layer; calibration stack is usable for model development."
+      status: "partial"
+      next_review: "M12+1month"
+  - if license_compliance_issues:
+      action: "HALT: Resolve compliance issues before any model outputs are published or shared."
+      status: "blocked"
+      escalation: "PI and legal counsel"
+  - if handoff_not_ready:
+      action: "Identify specific blockers; assign owners; weekly standups until resolved."
+      status: "in_progress"
+      next_review: "M12+2weeks"
+notes:
+  - "M12 represents the end of the NFI access contingency plan. All sources must be production-ready."
+  - "License compliance audit (criterion 4) is non-negotiable — any gap blocks publication."
+  - "Cross-source consistency (criterion 3) ensures scientific defensibility of national model outputs."
+  - "Final nfi-access.yaml becomes the authoritative license record for the project."
+  - "Archive all checkpoint YAMLs (M3, M6, M12) in planning/archive/nfi-access-checkpoints/"
