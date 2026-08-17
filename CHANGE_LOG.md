@@ -2,6 +2,21 @@
 
 ## 2026-08-17
 
+- Closed the fail-open hole in `directory_contains_tracked_files` found in
+  code review of the workdir hardening: `git ls-files` nonzero exits now log
+  stderr at WARNING level, return `False` only for the expected
+  "not a git repository" / "must be run in a work tree" refusals, and fail
+  closed (treat the directory as tracked, blocking the destructive rebuild)
+  for any other error — `safe.directory` dubious-ownership protection,
+  corrupt index, or leaked `GIT_DIR`/`GIT_WORK_TREE` can no longer silently
+  bypass the guard. `subprocess.TimeoutExpired` is now re-raised as
+  `RuntimeError` with the target directory attached. Added
+  `TestRegenerateWorkdirTrackedFileGuard` (6 tests) covering the tracked-file
+  block, the `force=True` opt-in, untracked-only and non-repo free rebuilds,
+  corrupt-index fail-closed behaviour, and the timeout path. Broadened the
+  `AGENTS.md` fail-closed collateral rule to halt on any `D` in either
+  status column of `git status --porcelain` (staged `D ` as well as
+  unstaged ` D`).
 - Hardened `fresh_fibre.bc_qc_mini_2prov.regenerate_workdir` after a forensic
   review found silent data loss: the helper defaulted to the git-tracked
   fixture directory (`metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/`)

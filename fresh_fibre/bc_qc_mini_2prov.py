@@ -663,6 +663,25 @@ def format_number(value: float) -> str:
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
+#: Stderr fragments ``git ls-files`` emits when ``target_dir`` is simply
+#: outside any git work tree. These are the *only* benign nonzero exits —
+#: any other error (dubious-ownership protection, corrupt index, leaked
+#: ``GIT_DIR``/``GIT_WORK_TREE``) must fail closed.
+_EXPECTED_NON_REPO_STDERR_FRAGMENTS = (
+    "not a git repository",
+    "must be run in a work tree",
+)
+
+
+def is_expected_non_repo_error(stderr: str) -> bool:
+    """Return True when ``stderr`` is git's ordinary "not a repo" refusal."""
+    lowered_stderr = stderr.lower()
+    return any(
+        fragment in lowered_stderr
+        for fragment in _EXPECTED_NON_REPO_STDERR_FRAGMENTS
+    )
+
+
 def directory_contains_tracked_files(target_dir: Path) -> bool:
     """Return True when ``target_dir`` contains any git-tracked files.
 
@@ -671,6 +690,20 @@ def directory_contains_tracked_files(target_dir: Path) -> bool:
     a directory outside any git work tree, or a missing git executable
     all return False — in those cases there are no tracked files for a
     destructive rebuild to erase.
+
+    The guard **fails closed**: when ``git ls-files`` exits nonzero for
+    any reason other than the expected "not a git repository" /
+    "must be run in a work tree" refusals (for example git's
+    ``safe.directory`` dubious-ownership protection, a corrupt index, or
+    a leaked ``GIT_DIR``/``GIT_WORK_TREE`` environment), the stderr is
+    logged at WARNING level and the directory is treated as tracked so
+    the destructive operation is blocked rather than silently allowed.
+
+    Raises:
+        RuntimeError: if ``git ls-files`` exceeds its timeout; the
+            ``subprocess.TimeoutExpired`` is re-raised with the target
+            directory attached so the caller never has to guess which
+            repository stalled.
     """
     if not target_dir.exists():
         return False
@@ -689,8 +722,24 @@ def directory_contains_tracked_files(target_dir: Path) -> bool:
             target_dir,
         )
         return False
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"Timed out running 'git ls-files' inside {target_dir} while "
+            "checking for tracked files before a destructive rebuild; "
+            "refusing to guess — investigate the repository state and retry."
+        ) from exc
     if result.returncode != 0:
-        return False
+        if is_expected_non_repo_error(result.stderr):
+            return False
+        LOGGER.warning(
+            "git ls-files failed unexpectedly in %s (exit %d); treating the "
+            "directory as tracked and blocking the destructive rebuild. "
+            "stderr: %s",
+            target_dir,
+            result.returncode,
+            result.stderr.strip(),
+        )
+        return True
     return bool(result.stdout.strip())
 
 

@@ -91,8 +91,9 @@ FEMIC and FreshForge:
 
 ## Fail-Closed Collateral Rule
 
-- **Unexpected deletions**: Any unexpected ` D` (deleted) entries in
-  `git status --porcelain` output must halt the current session immediately.
+- **Unexpected deletions**: Any unexpected `D` in either status column of
+  `git status --porcelain` output — unstaged ` D` (worktree deletion) or
+  staged `D ` (index deletion) — must halt the current session immediately.
   Do NOT catalog them as "pre-existing collateral" or "untouched by me".
   Investigate the cause before proceeding.
 

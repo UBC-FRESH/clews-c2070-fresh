@@ -20,9 +20,11 @@ from __future__ import annotations
 import csv
 import io
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from fresh_fibre.bc_qc_mini_2prov import (
     DEFAULT_FIXTURE_DIR,
@@ -31,6 +33,8 @@ from fresh_fibre.bc_qc_mini_2prov import (
     SOLUTION_SUMMARY_PER_PROVINCE_COLUMNS,
     SUPPLY_COMPARISON_COLUMNS,
     compute_bc_qc_real_supply_quantities,
+    directory_contains_tracked_files,
+    regenerate_workdir,
     run_full_two_province_variant,
 )
 from fresh_fibre.gauthier_yield import species_lookup
@@ -789,6 +793,100 @@ class TestPhase4RegistryPromotion(unittest.TestCase):
         # source vendoring remains a separate load-bearing question
         # per the AGENTS.md disclosure path.
         self.assertIn("Tier-3", next_action)
+
+
+class TestRegenerateWorkdirTrackedFileGuard(unittest.TestCase):
+    """``regenerate_workdir`` must never silently rmtree git-tracked content.
+
+    The guard in ``directory_contains_tracked_files`` is expected to:
+    - raise ``RuntimeError`` when the target holds git-tracked files
+      (unless the caller passes ``force=True``);
+    - rebuild freely over untracked-only and non-repo directories;
+    - fail *closed* (treat the directory as tracked) when
+      ``git ls-files`` errors for any reason other than the benign
+      "not a git repository" refusal — e.g. a corrupt index;
+    - re-raise ``subprocess.TimeoutExpired`` as ``RuntimeError`` with
+      the target directory attached for context.
+    """
+
+    BASE_DIR = REPO_ROOT / "metadata/ffcm-archive/prototype-inputs/bc-mini"
+
+    def setUp(self) -> None:
+        self.workdir = Path(tempfile.mkdtemp())
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.workdir, ignore_errors=True)
+
+    def _git(self, repo: Path, *args: str) -> None:
+        subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def _make_repo_with_tracked_file(self, name: str = "tracked_repo") -> Path:
+        repo = self.workdir / name
+        repo.mkdir()
+        self._git(repo, "init", "-q")
+        (repo / "committed_fixture.txt").write_text("precious\n", encoding="utf-8")
+        self._git(repo, "add", "committed_fixture.txt")
+        return repo
+
+    def test_tracked_files_block_rebuild_without_force(self) -> None:
+        repo = self._make_repo_with_tracked_file()
+        with self.assertRaises(RuntimeError):
+            regenerate_workdir(base_dir=self.BASE_DIR, target_dir=repo)
+        # The refused rebuild left the tracked file untouched.
+        self.assertTrue((repo / "committed_fixture.txt").exists())
+
+    def test_tracked_files_rebuild_with_force(self) -> None:
+        repo = self._make_repo_with_tracked_file()
+        result = regenerate_workdir(base_dir=self.BASE_DIR, target_dir=repo, force=True)
+        self.assertEqual(result, repo)
+        # The explicit opt-in ran the destructive rebuild: rmtree removed
+        # the tracked file and the fresh fixture tables landed.
+        self.assertFalse((repo / "committed_fixture.txt").exists())
+        self.assertTrue((repo / "network_node.csv").exists())
+
+    def test_untracked_only_directory_rebuilds_freely(self) -> None:
+        repo = self.workdir / "untracked_repo"
+        repo.mkdir()
+        self._git(repo, "init", "-q")
+        (repo / "scratch.txt").write_text("not tracked\n", encoding="utf-8")
+        result = regenerate_workdir(base_dir=self.BASE_DIR, target_dir=repo)
+        self.assertEqual(result, repo)
+        self.assertTrue((repo / "network_node.csv").exists())
+
+    def test_non_repo_directory_rebuilds_freely(self) -> None:
+        plain = self.workdir / "plain_dir"
+        plain.mkdir()
+        (plain / "scratch.txt").write_text("no repo here\n", encoding="utf-8")
+        result = regenerate_workdir(base_dir=self.BASE_DIR, target_dir=plain)
+        self.assertEqual(result, plain)
+        self.assertTrue((plain / "network_node.csv").exists())
+
+    def test_unexpected_git_error_fails_closed(self) -> None:
+        repo = self._make_repo_with_tracked_file("corrupt_repo")
+        # Corrupt the index so `git ls-files` fails with an error that is
+        # NOT the benign "not a git repository" refusal.
+        (repo / ".git" / "index").write_bytes(b"not-a-valid-git-index")
+        with self.assertLogs("fresh_fibre.bc_qc_mini_2prov", level="WARNING"):
+            self.assertTrue(directory_contains_tracked_files(repo))
+        with self.assertRaises(RuntimeError):
+            regenerate_workdir(base_dir=self.BASE_DIR, target_dir=repo)
+
+    def test_git_timeout_raises_runtime_error(self) -> None:
+        target = self.workdir / "timeout_dir"
+        target.mkdir()
+        with mock.patch(
+            "fresh_fibre.bc_qc_mini_2prov.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd=["git", "ls-files"], timeout=30),
+        ):
+            with self.assertRaises(RuntimeError) as caught:
+                directory_contains_tracked_files(target)
+        self.assertIn(str(target), str(caught.exception))
 
 
 if __name__ == "__main__":
