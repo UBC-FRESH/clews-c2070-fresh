@@ -1,0 +1,136 @@
+{
+  "type": "FeatureCollection",
+  "name": "bc_vri_sample",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "POLY_ID": "100001",
+        "MAP_ID": "092J07",
+        "PROJ_OPEN_YEAR": "2019",
+        "PROJ_CLOSE_YEAR": "2024",
+        "BEC_ZONE": "CWH",
+        "BEC_SUBZONE": "vm",
+        "NUTRIENT_MOISTURE": "M",
+        "SLOPE_POSITION": "B",
+        "CROWN_CLOSURE_PCT": "72",
+        "BASAL_AREA_M2_HA": "38.0",
+        "STEMS_HA": "540",
+        "SPECIES_CD_1": "SAB",
+        "SPECIES_PCT_1": "90",
+        "SPECIES_CD_2": "FDC",
+        "SPECIES_PCT_2": "10",
+        "SPECIES_CD_3": "",
+        "SPECIES_CD_4": "",
+        "SPECIES_CD_5": "",
+        "SPECIES_CD_6": "",
+        "HEIGHT_M": "28.0",
+        "AGE_YR": "140",
+        "SITE_INDEX_M": "28",
+        "STAND_TYPE": "REGEN",
+        "LAND_COVER_CLASS_CD": "TC",
+        "FRI_KEY": "BC_VEG_COMP_LYR_R1_POLY:_2024_2025_092J07_100001",
+        "OBJECTID": "1"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [920000.0, 1100000.0],
+            [930000.0, 1100000.0],
+            [930000.0, 1110000.0],
+            [920000.0, 1110000.0],
+            [920000.0, 1100000.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "POLY_ID": "100002",
+        "MAP_ID": "093A12",
+        "PROJ_OPEN_YEAR": "2018",
+        "PROJ_CLOSE_YEAR": "2023",
+        "BEC_ZONE": "IDF",
+        "BEC_SUBZONE": "dk",
+        "NUTRIENT_MOISTURE": "A",
+        "SLOPE_POSITION": "M",
+        "CROWN_CLOSURE_PCT": "55",
+        "BASAL_AREA_M2_HA": "28.5",
+        "STEMS_HA": "420",
+        "SPECIES_CD_1": "FDC",
+        "SPECIES_PCT_1": "70",
+        "SPECIES_CD_2": "PLI",
+        "SPECIES_PCT_2": "30",
+        "SPECIES_CD_3": "",
+        "SPECIES_CD_4": "",
+        "SPECIES_CD_5": "",
+        "SPECIES_CD_6": "",
+        "HEIGHT_M": "22.0",
+        "AGE_YR": "110",
+        "SITE_INDEX_M": "22",
+        "STAND_TYPE": "REGEN",
+        "LAND_COVER_CLASS_CD": "DE",
+        "FRI_KEY": "BC_VEG_COMP_LYR_R1_POLY:_2024_2025_093A12_100002",
+        "OBJECTID": "2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [950000.0, 1300000.0],
+            [970000.0, 1300000.0],
+            [970000.0, 1320000.0],
+            [950000.0, 1320000.0],
+            [950000.0, 1300000.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "POLY_ID": "100003",
+        "MAP_ID": "093H04",
+        "PROJ_OPEN_YEAR": "2017",
+        "PROJ_CLOSE_YEAR": "2022",
+        "BEC_ZONE": "SBS",
+        "BEC_SUBZONE": "mk",
+        "NUTRIENT_MOISTURE": "B",
+        "SLOPE_POSITION": "L",
+        "CROWN_CLOSURE_PCT": "38",
+        "BASAL_AREA_M2_HA": "15.0",
+        "STEMS_HA": "260",
+        "SPECIES_CD_1": "AT",
+        "SPECIES_PCT_1": "50",
+        "SPECIES_CD_2": "BL",
+        "SPECIES_PCT_2": "30",
+        "SPECIES_CD_3": "SXS",
+        "SPECIES_PCT_3": "20",
+        "SPECIES_CD_4": "",
+        "SPECIES_CD_5": "",
+        "SPECIES_CD_6": "",
+        "HEIGHT_M": "14.0",
+        "AGE_YR": "90",
+        "SITE_INDEX_M": "15",
+        "STAND_TYPE": "SALVAGE",
+        "LAND_COVER_CLASS_CD": "SR",
+        "FRI_KEY": "BC_VEG_COMP_LYR_R1_POLY:_2024_2025_093H04_100003",
+        "OBJECTID": "3"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [980000.0, 1400000.0],
+            [983000.0, 1400000.0],
+            [983000.0, 1403000.0],
+            [980000.0, 1403000.0],
+            [980000.0, 1400000.0]
+          ]
+        ]
+      }
+    }
+  ]
+}

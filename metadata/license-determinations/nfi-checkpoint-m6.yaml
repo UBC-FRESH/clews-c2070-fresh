@@ -1,0 +1,64 @@
+schema_version: 1
+updated_utc: "2026-08-09T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+checkpoint: "M6"
+label: "6-Month NFI Access Decision Gate"
+description: "Mid-project checkpoint to determine primary calibration source strategy based on NFI DUA outcome."
+target_date_utc: "2027-02-09T00:00:00Z"
+status: scheduled
+criteria:
+  - id: nfi_dua_resolved
+    description: "NFI Data Use Agreement decision received (approved, rejected, or conditional)."
+    required: true
+    evidence: "Signed DUA or formal rejection letter from NFI Data Access Office."
+    status: pending
+  - id: nfi_ground_access_operational
+    description: "If approved: NFI ground plot data downloaded, validated, and integrated into calibration workflow."
+    required: false
+    evidence: "Data in data/raw/nfi/ground_plots/; checksum verified; schema crosswalk complete."
+    status: pending
+  - id: magplot_production_ready
+    description: "MAGPlot fully integrated as calibration source: downloaded, schema-mapped, validation-tested."
+    required: true
+    evidence: "MAGPlot in data/raw/magplot/; calibration test runs pass; documentation in metadata/calibration/"
+    status: pending
+  - id: provincial_psp_production_ready
+    description: "At least 3 of 4 provincial PSP sources (BC VRI, AB PSP, ON FRI, QC MRNF) integrated and validated."
+    required: true
+    evidence: "PSP data in data/raw/<jurisdiction>/psp/; cross-provincial yield calibration tests documented."
+    status: pending
+  - id: calibration_comparison_complete
+    description: "Comparative calibration results: NFI ground plots vs. MAGPlot vs. provincial PSPs for key attributes (biomass, volume, age, species)."
+    required: true
+    evidence: "Technical report with RMSE, bias, and coverage comparisons; archived in planning/calibration-comparison/"
+    status: pending
+  - id: validation_layer_defined
+    description: "Reference pixel / validation layer strategy finalized (NFI plots, MAGPlot locations, or PSP locations)."
+    required: true
+    evidence: "Validation layer specification document; spatial coverage maps for each source."
+    status: pending
+decisions:
+  - if nfi_dua_approved and nfi_operational:
+      action: "Adopt NFI ground plots as primary calibration source; MAGPlot/PSP as validation supplements."
+      primary_source: "nfi_ground"
+      validation_sources: ["magplot", "bc_vri", "ab_psp", "on_fri", "qc_mrnf"]
+      next_checkpoint: "M12"
+  - if nfi_dua_approved but not nfi_operational:
+      action: "Use MAGPlot + PSPs as interim primary; transition to NFI when operational."
+      primary_source: "magplot"
+      validation_sources: ["bc_vri", "ab_psp", "on_fri", "qc_mrnf", "nfi_ground"]
+      next_checkpoint: "M12"
+  - if nfi_dua_rejected or nfi_dua_conditional_unacceptable:
+      action: "Formally adopt MAGPlot + provincial PSPs as primary calibration stack."
+      primary_source: "magplot"
+      validation_sources: ["bc_vri", "ab_psp", "on_fri", "qc_mrnf"]
+      next_checkpoint: "M12"
+      notes: "Document NFI gap in CHANGE_LOG.md and update nfi-access.yaml status to 'rejected' or 'conditional'."
+  - if magplot_or_psp_not_ready:
+      action: "CRITICAL: Escalate immediately. No viable calibration path without fallback sources."
+      next_checkpoint: "Immediate"
+notes:
+  - "M6 is the primary decision gate. By this point, the project must have a production-ready calibration source stack."
+  - "Calibration comparison (criterion 5) is mandatory regardless of NFI outcome — documents scientific defensibility."
+  - "Validation layer (criterion 6) must be spatially explicit for model evaluation workflows."
+  - "Update nfi-access.yaml with final statuses and any conditional terms."

@@ -11,9 +11,19 @@ FRESH workspace for the forestry and biomass supply component of CLEWs-C2070.
 
 ## Current Repository State
 
-- Current branch: `main`.
-- Current commit: `f283c1a`.
-- `main` is pushed to `origin/main` and the worktree was clean at handoff.
+- Current branch: `feature/p7-source-triage-and-production-readiness`.
+- Current committed base: `717a969`; the branch currently has preserved
+  uncommitted Phase 6/Phase 7 work and is intentionally not clean.
+- Phase 7 parent issue `#26` is active; recovery task `#27` is attached under
+  it, and source triage remains governed by issue `#1`.
+- P6.0–P6.5 are complete for the diagnostic lane. The six heuristic SCANFI
+  windows are quarantined as `SOFTWARE_FIXTURE_NOT_EVIDENCE` and must not be
+  used as inferential evidence.
+- G0/G1 of `planning/scientific-model-recovery-plan.md` were approved on
+  2026-08-08 and completed. G2–G8 remain unapproved; no new heavy computation
+  is authorized without a later explicit gate decision.
+- The repository uses a root-local `.venv` for Python, DataLad, FreshForge, and
+  tests. Prefer explicit `.venv/bin/...` commands.
 - The repository uses a root-local `.venv` for Python, DataLad, FreshForge, and
   tests. Prefer explicit `.venv/bin/...` commands.
 - At handoff, the `data` submodule is a fresh scaffold containing only its

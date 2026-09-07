@@ -1,0 +1,16 @@
+metric,value
+node_count,56
+arc_count,73
+node_layer:cdt,10
+node_layer:dsp,8
+node_layer:prc,11
+node_layer:snk,19
+node_layer:src,8
+arc_family:cdt_to_prc_feedstock_allocation,11
+arc_family:cdt_to_prc_secondary_allocation,7
+arc_family:cdt_to_snk_market_demand,8
+arc_family:dsp_to_cdt_commodity_release,8
+arc_family:prc_to_cdt_byproduct,9
+arc_family:prc_to_cdt_output,11
+arc_family:prc_to_snk_capacity,11
+arc_family:src_to_dsp_supply_bound,8

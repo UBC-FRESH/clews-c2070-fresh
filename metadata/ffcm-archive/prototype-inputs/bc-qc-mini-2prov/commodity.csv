@@ -1,0 +1,10 @@
+commodity_id,commodity_group,matter_state,canonical_unit,density_value,density_unit,energy_density_value,energy_density_unit,price_unit_type,default_price
+log,roundwood,solid,m3,,,,,volume,90
+woodchips,residue,solid,odt,,,,,mass,75
+sawdust_shavings,residue,solid,odt,,,,,mass,45
+hogfuel,residue,solid,odt,,,,,mass,28
+logging_residue,residue,solid,odt,,,,,mass,20
+lumber,primary_product,solid,m3,,,,,volume,210
+pulp,secondary_product,solid,odt,,,,,mass,160
+pellets,energy_product,solid,odt,,,,,mass,140
+bioenergy,energy,energy,GJ,,,,,energy,18

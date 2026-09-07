@@ -1,5 +1,269 @@
 # Change Log
 
+## 2026-08-17
+
+- Closed the fail-open hole in `directory_contains_tracked_files` found in
+  code review of the workdir hardening: `git ls-files` nonzero exits now log
+  stderr at WARNING level, return `False` only for the expected
+  "not a git repository" / "must be run in a work tree" refusals, and fail
+  closed (treat the directory as tracked, blocking the destructive rebuild)
+  for any other error — `safe.directory` dubious-ownership protection,
+  corrupt index, or leaked `GIT_DIR`/`GIT_WORK_TREE` can no longer silently
+  bypass the guard. `subprocess.TimeoutExpired` is now re-raised as
+  `RuntimeError` with the target directory attached. Added
+  `TestRegenerateWorkdirTrackedFileGuard` (6 tests) covering the tracked-file
+  block, the `force=True` opt-in, untracked-only and non-repo free rebuilds,
+  corrupt-index fail-closed behaviour, and the timeout path. Broadened the
+  `AGENTS.md` fail-closed collateral rule to halt on any `D` in either
+  status column of `git status --porcelain` (staged `D ` as well as
+  unstaged ` D`).
+- Hardened `fresh_fibre.bc_qc_mini_2prov.regenerate_workdir` after a forensic
+  review found silent data loss: the helper defaulted to the git-tracked
+  fixture directory (`metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/`)
+  and ran `shutil.rmtree` + `shutil.copytree` directly over versioned content,
+  so any committed fixture file the generator no longer writes would vanish
+  without a trace. The workdir target now defaults to a fresh temporary
+  directory, and regeneration over a directory containing git-tracked files
+  (detected via `git ls-files`) fails fast with a `RuntimeError` unless the
+  caller passes the new explicit `force` opt-in (`--force-regenerate-workdir`
+  on the CLI; `force_regenerate` on `run_full_two_province_variant` /
+  `run_full_two_province_real_yield_variant`). Added the fail-closed
+  "unexpected deletions" collateral rule to `AGENTS.md`: any unexpected ` D`
+  entries in `git status --porcelain` halt the session pending investigation.
+- **P7.1.CASFRI.13/14 support tooling: FreshForge materialization workflow
+  for ERA5 normals + SCANFI species downloads.** Registered two provider node
+  contracts in `fresh_fibre/freshforge_materialization.py`
+  (`download_era5_normals`, `download_scanfi_species_bc`) with command
+  builders that dispatch to the repo scripts through the overlay venv; added
+  the workflow/overlay pair
+  `examples/freshforge/era5_scanfi_species_materialization_workflow.yaml` +
+  `examples/freshforge/era5_scanfi_species_overlay.yaml`; added
+  `scripts/download_scanfi_species_bc.py` (BC-relevant SCANFI v2 `spsCC_*`
+  layers from the NRCan FTP with SHA-256 sidecar verification into
+  `raw/nrcan/scanfi_v2/species/`). ROADMAP.md P7.1.CASFRI.14 checkbox marked
+  [x] (commit `d5f3f69`).
+
+## 2026-08-16
+
+- **P7.1.CASFRI.12: Geographic crosswalk for the Ghafghazi 2017 facility
+  layer.** The FCM LP solves on internal km-distances between TL/W transload
+  nodes and does not require lat/lon; this crosswalk is the wall-to-wall
+  visualisation and spatial-join layer on top.
+  - `metadata/facility_geocoding.csv` — 1,371 FCM facilities joined to the
+    ISED Mills DB (738) and CFS `suppliers.dbf` (622) via (province,
+    facility_class, numeric_id); match statuses MATCHED_BOTH,
+    MATCHED_MILLS_DB_ONLY, MATCHED_SUPPLIERS_ONLY, MATCHED_BOTH_CONFLICT,
+    NO_MATCH (~1,360 unique mills).
+  - `metadata/fmu_tl_anchors.csv` — 733 FMU → TL hub transport-graph anchors
+    from `tmp/FMU.xlsm`; FMUs carry no polygon geometry (transport-graph
+    anchored only).
+  - `metadata/tenure_area_rollup.csv` — per-province + national subtotals:
+    GFW tenures 3,680 polys / 4,438,087.73 km^2 / 11 jurisdictions (no NU);
+    Data Basin tenures 10,222 polys / 2,100,451.56 km^2 / 9 provinces (no
+    YT/NT/NU).
+  - `metadata/databasin_tenure_provenance.csv` — 10,222 rows with per-record
+    provincial source attribution (9 unique source_agency values).
+  - `metadata/source-inventory.csv` row 55 appended
+    (`ghafghazi_et_al_2017_geographic_crosswalk`; row 32 notes amended);
+    `facility_layer` gate notes appended; Geographic Crosswalk Note added to
+    `planning/ffcm-archive-analysis.md`; ROADMAP.md P7.1.CASFRI.12 marked
+    [x]. No data-submodule changes.
+- **P7.1.CASFRI.13: SCANFI v2 2025 species crown-closure layers acquired.**
+  10 `spsCC_*` rasters (2025 time step, ~14.6 GB) downloaded, SHA-256
+  verified, annexed into the data submodule, and published to arbutus-s3:
+  balsamFir (1.16 GB), blackSpruce (3.31 GB), broadleaf (2.68 GB), douglasFir
+  (242 MB), jackPine (1.62 GB), lodgepolePine (752 MB), otherConiferous
+  (2.58 GB), ponderosaPine (82.4 MB), tamarack (1.87 GB), whiteRedPine
+  (275 MB). `data/raw/scanfi/v2/` now holds 25 GeoTIFFs (5 att_* + 10
+  spsCC_* + 10 .aux.xml); acquisition manifest at
+  `data/manifests/scanfi-v2-2025-species-acquisition.csv`. The layers provide
+  the wall-to-wall species crown-closure percentages the FCM LP needs for
+  yield stratification and product allocation.
+  - `metadata/source-inventory.csv` scanfi_v2 status →
+    `accepted_expanded_subset`; `species_composition` gate notes appended
+    (remaining: full 1985-2025 time series, .ovr overviews, northern
+    extrapolation mask); acquisition reconciliation section appended to
+    `metadata/source-reviews/scanfi_v2.md`; ROADMAP.md P7.1.CASFRI.13 marked
+    [x]. The remaining SCANFI package stays outside the approved subset.
+- **P7.1.CASFRI.14: ERA5 1991-2020 climate normals acquired — 9 NetCDF + 48
+  derived bioclim COGs.** Downloaded from the Copernicus CDS
+  `reanalysis-era5-single-levels-monthly-means` dataset (CC-BY +
+  licence-to-use-copernicus-products accepted programmatically 2026-08-16):
+  2 m temperature, total precipitation, and 2 m dewpoint temperature, each in
+  three decade chunks (1991-2000 / 2001-2010 / 2011-2020; 360 months; ~95 MB
+  total), Canada bbox 41-84°N / 141-52°W at 0.25° in EPSG:4326; annexed in
+  data submodule `c346518` under `raw/ecmwf/era5/normals/` with
+  ACQUISITION.md, download logs, and the 58-row manifest
+  `manifests/ecmwf-era5-normals-acquisition.csv`.
+  - `scripts/download_era5_normals.py` — resume-safe CDS API fetch (3
+    variables × 3 decade chunks; NetCDF magic validated on every chunk).
+  - `scripts/compute_era5_normals.py` — 30-year monthly normals, annual
+    summaries (MAT, MAP, d2m_annual), 9 bioclim variables (GDD5, FFP, VPD,
+    Twarm, Tcold, Pwarm, Pcold, Pseas, continentality), unit conversion
+    (K→°C; m/day → mm/month via 365-day climatology), Canada-boundary clip.
+  - `scripts/validate_era5_normals.py` — GeoTIFF / EPSG:4326 / nodata checks
+    plus physical sanity bounds on the annual and bioclim rasters.
+  - 48 derived COGs at `derived/era5-normals/` (36 monthly normals + MAT /
+    MAP / d2m_annual + 9 bioclim), 173×357 grid, nodata=-9999. Known
+    limitations recorded in ACQUISITION.md: t2m min/max not offered by the
+    ERA5 monthly-means product; FFP approximated from monthly means; VPD from
+    monthly mean T/Td underestimates peaks. ROADMAP.md P7.1.CASFRI.14 marked
+    [x] (commit `d5f3f69`); the `climate_predictors` gate is not yet flipped
+    — remains `blocked` in `metadata/readiness-gates.yaml` pending gate
+    bookkeeping.
+
+## 2026-08-11
+
+- **P7.1.CASFRI.8: Dataset ingest batch 2 to arbutus-s3 (18 archives).**
+  19 attempted / 18 archived / 1 deferred under the m0331 directive to
+  datalad-stash listed-but-unmaterialized datasets; per-archive sha256
+  sidecars + PROVENANCE.csv; all 18 confirmed 2-copy (here + arbutus-s3) via
+  `git annex whereis`. Batch aggregate ~11.34 GiB; combined annex ~39.45 GiB.
+  - Beaudoin kNN archives → `data/raw/beaudoin_knn/` (PROVENANCE.csv 212
+    rows): kNN-StructureStandVolume.tar (1.69 GiB), kNN-SpeciesGroups.tar
+    (1.93 GiB), kNN-SpeciesDominant.tar (1.26 GiB), kNN-Genus.tar (1.54 GiB),
+    kNN-LandCover.tar (620 MB), kNN-Soils.tar (2.81 GiB). kNN-Dominant.tar
+    deferred — the upstream URL 302-redirects to a placeholder page;
+    rationale at `data/raw/beaudoin_knn/DOWNLOAD_DEFERRED_kNN-Dominant.txt`.
+  - NRN per-province GeoPackage ZIPs for the 12 remaining jurisdictions →
+    `data/raw/nrn/` (PROVENANCE.csv 40 rows): AB 253 MB, SK 147 MB, ON
+    484 MB, QC 384 MB, NB 63 MB, MB 42 MB, NS 124 MB, NL 23 MB, PE 14 MB,
+    NT 10 MB, YT 6 MB, NU 4 MB.
+  - `metadata/source-inventory.csv` notes updated on 5 rows (nrn_vectors,
+    nrwn_vectors, beaudoin_knn_attribute_archives_2014_2017,
+    yk_forest_resource_roads_50k, provincial_forest_resource_roads_themes).
+- **P7.1.CASFRI.9: SAFORAH 2.0 fallback resolves the kNN-Dominant
+  pseudogap.** "kNN-Dominant" is not a real upstream tarball — dominant
+  species per pixel is derivable as argmax across the 109 per-species layers
+  in the already-archived kNN-Species.tar; the historical kNN-Dominant.tar
+  URL is a persistent 302 placeholder for a derived product that was never
+  packaged separately. Captured the SAFORAH 2.0 `ca_kNN_DominantGenus_250m_r`
+  WMS layer as visual confirmation into `data/raw/beaudoin_knn_v2/`: WMS
+  GetCapabilities XML (81 KB), GeoNetwork catalogue JSON (15 KB; record UUID
+  `de39ef283de2d96e7bfabf0a789b5f95458d5a5a`), 3 WMS GetMap PNGs (PNG magic +
+  IHDR verified; arbutus-s3 confirmed), PROVENANCE.csv, and the
+  PROXY_REPLACEMENT_kNN-Dominant.txt lineage doc. WFS/WCS endpoints are
+  disabled upstream (OWS probe) and the bulk GeoTIFF is not publicly
+  downloadable, so raw dominant-genus values require CFS Data Manager
+  engagement — the argmax derivation remains the operational path.
+  `metadata/source-inventory.csv` rows 45-46 notes updated.
+- **P7.1.CASFRI.10: kNN-Dominant cleanup + derivation smoke test.** Cleanup
+  option (c) executed on `data/raw/beaudoin_knn_v2/`: the 3 WMS PNG snapshots
+  unannexed (74 KB); GeoNetwork catalogue JSON, PROXY_REPLACEMENT lineage
+  doc, and PROVENANCE.csv retained as durable research artefacts. Added
+  `tests/test_knn_dominant_derived.py` (3 tests) anchoring in code the argmax
+  derivation formula over kNN-Species.tar and locking the known-unavailable
+  status of kNN-Dominant.tar at SAFORAH 1.0 (302 placeholder), the NRCan
+  mirror (no per-layer category), and SAFORAH 2.0 (WMS-only).
+  `metadata/source-inventory.csv` row 46 notes + next_action updated.
+- **P7.1.CASFRI.11: NRWN per-province batch 3 archived; Ghafghazi 2017
+  facility layer accepted and `facility_layer` gate resolved.**
+  - NRWN: 33 of 39 attempted files archived to `data/raw/nrwn/` (~109 MB) —
+    GML EN/FR + KML EN for BC + AB/SK/MB/ON/QC/NB/NS/NL/NT/YT (GML EN
+    31.45 MB / GML FR 31.48 MB / KML EN 45.92 MB; KML files are .kmz, caught
+    by probe correction); PE + NU deferred (no per-province directory on the
+    ftp.maps.canada.ca mirror). PROVENANCE.csv now 49 rows; ACQUISITION.md
+    updated; `nrwn_vectors` notes record the expansion and the PE/NU
+    deferral.
+  - Facility layer: the national Ghafghazi et al. 2017 FFCM payload
+    (`tmp/Saeed_data.zip`, sha256 `d59d6ac3…b335d2`) accepted as the
+    canonical facility-layer source per the project-start user directive —
+    `metadata/source-inventory.csv` row 54 appended
+    (`ghafghazi_et_al_2017_ffcm_payload`) and row 32 (forest_facilities_2013)
+    marked superseded; `metadata/readiness-gates.yaml` facility_layer →
+    `resolved_pending_provenance_review` (blocking_datasets swapped to the
+    new row); `metadata/ffcm-archive/data-source-disposition.csv` row 12
+    rewritten "Accepted per user directive";
+    `metadata/ffcm-archive/prototype-gap-register.csv` gap_003 closed;
+    Resolution Note prepended to `planning/ffcm-archive-analysis.md`;
+    ROADMAP.md P2.2 items marked [x]. Canonical parsed CSVs:
+    `metadata/ffcm-archive/parsed/facilities.csv` (1,371 facilities),
+    `processing_lines.csv` (957), `routes.csv` (38,390); the raw archive
+    stays ignored under `tmp/` per the Data Boundary.
+
+## 2026-08-09
+
+- **P7.1.CASFRI.1 + P7.1.CASFRI.3–7: First concrete implementation increment after the source-review / planning cycle.** QC inventory openly-downloadable from MFFP / Données Québec (CC-BY 4.0, no DUA) registered in `data/raw/qc_inventory/2023-ieqm-eighth/`: provenance layer (LISEZ-MOI 1.3 MB, per-feuillet index 31 KB, per-agence index 8 KB) plus a real-leaf sample (feuille 21M, 815 MB). CASFRI v5.3.1 (commit `c09a70cc1f90894a1d32c2f20606430b49ae274f`, 2021-08-17) translation-table sidecar vendored into `data/raw/casfri_v5/translation_tables/` (129 CSV files); GPL-3.0 framework source (conversion/, workflow/, helperfunctions/, summary_statistics/, translation/test/) intentionally **NOT** vendored.
+  - `fresh_fibre/casfri_qc_reader.py` — QC inventory → CASFRI-shape 30-column row adapter. Reads translation tables at runtime; tolerant of QC producer-naming drift via multi-alias column dispatch; surfaces BC+FDC, AT, BL; QC+ SAB, EPB, BOP, BOJ, MEH, PEU producer codes via `qc_ini03_species_lookup.csv` and cross-jurisdiction `species_code_mapping.csv`.
+  - `fresh_fibre/species_canonical.py` — cross-jurisdiction species canonicalisation with provenance prefix policy (BC_*, QC_*) preserved alongside CASFRI canonical (`PICE_MAR_###`, `POPU_TRE_###`, `BETU_ALL_###`, …). Deterministic `decision_id` indexed via `hashlib.sha256`.
+  - `fresh_fibre/qc_ws3_export.py` — QC inventory → ws3-shaped harvest-output bridge. Mirrors `fresh_fibre.scanfi_supply` but sources cells through the QC mini fixture and CASFRI translation.
+  - `fresh_fibre/bc_qc_mini_2prov.py` — two-province LP fixture runner. Builds merged fixture (BC mini base + QC mini), regenerates the graph, runs the LP, emits `bc_qc_mini_supply_comparison.csv`, `bc_qc_mini_pathway_flow.csv`, `bc_qc_mini_solution_summary.csv`, `bc_qc_mini_variant_run_matrix.csv`.
+  - `metadata/source-crosswalks/qc_casfri_v5_schema.md` — schema crosswalk mirroring `nfi_variable-crosswalk.md` style with explicit gap register (10 named gaps including QC `CODE_DEN` A-E bucket-to-percent translation, height layer-2 defaulting, residue-policy gap, station-join gap, NFL split pending, disturbance 5E IEQM un-resolved).
+  - `metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/` — fixture directory; LP solves `Optimal` (objective `~6.1 M CAD`) on a fresh generation.
+  - `tests/test_casfri_qc_reader.py` (24 tests), `tests/test_species_canonical.py` (23 tests), `tests/test_bc_qc_mini_2prov.py` (8 tests) — all green.
+  - `planning/qc_two_province_incremental_memo.md` — implementation memo recording motivation, sources, schema crosswalk, supply lane design, solution summary, readiness-gate impact, and next-step sequencing.
+  - `metadata/readiness-gates.yaml` — two gates (`species_composition`, `national_scaling`) advance from `blocked` to `in_progress` with explicit evidence notes citing the new QC inventory acquisition, the BC + QC LP solve, and the jurisdictional-prefix policy.
+  - `ROADMAP.md` P7.1.CASFRI sub-step statuses updated (5 of 7 subtasks completed this increment; P*.2 and P*.6 deferred pending license counsel).
+  - `fresh_fibre/scanfi_supply.py` — `INVENTORY_DIAGNOSTIC_POLICIES` set extended to include QC-specific value policies (`qc_species_resolved_via_lookup`, `qc_species_unmapped_unresolved`, `qc_species_empty_skipped`) so that the existing post-LP validation accepts the new QC supply rows.
+- Completed P7.5: Created `planning/phase-7-production-readiness-memo.md` documenting the diagnostic-only boundary of v0.1.0a1, all 8 readiness gates (7 blocked: `nfi_access`, `climate_predictors`, `residue_yield_policy`, `calibrated_cost_surfaces`, `species_composition`, `national_scaling`, `facility_layer`; 1 in_progress: `disturbance_calibration`), gate-by-gate post-alpha work program with priority ordering and dependencies, and verified release criteria (56 tests pass, git diff --check clean, compileall clean, branch pushed, CHANGE_LOG/ROADMAP current).
+- Phase 7 complete: All P7.1–P7.5 tasks checked. Phase 8 (v0.1.0a1 Conceptual Alpha release preparation) authorized.
+- Documented CASFRI v5 schema integration plan: added `metadata/source-reviews/casfri_v5_schema.md` (D1 source review with the four-artifact disambiguation table, 49-row truth table, schema inventory, ws3 crosswalk, GPL-3.0 licensing posture, Tier 1–5 acquisition strategy, and readiness-gate impact), created `planning/casfri-v5-schema-integration-plan.md` (D2 plan with P7.1.CASFRI subtask breakdown P*.1 through P*.7 plus a Phase 9 candidate stub, schema-mapping sketch, GPL-3.0 contamination risk register, acceptance criteria, and sequencing vs. the in-flight NFI Ground Plot DUA), added `casfri_v5_schema` row to `metadata/source-inventory.csv` (status=`candidate`, GPL-3.0, framework-sidecar submodule pattern; NOT promoted to required-datasets.yaml), updated `metadata/readiness-gates.yaml` `species_composition.notes` to reference the proposed child issue under governing #1 (status remains `blocked` per the team's existing discipline until Tier-3 ingestion evidence exists). Source review distinguishes the four CASFRI-named artifacts (U. Laval/Racine/Edwards/Houle conversion framework vs. NRCan/NFIS WMS raster vs. 49 provincial/territorial FRIs vs. SCANFI v2). Child issue naming `#29` is a **proposal**; the team creates the actual GitHub issue.
+- Reconciled SK (Saskatchewan) row in `metadata/source-reviews/casfri_v5_schema.md` §3 per reviewer Major finding M1: split SK into "Open (SK Standard Unrestricted Use Data License v2.0) for older vintages" (added to §3.a) and "DUA for newer BAM/BEACON-derived products" (kept in §3.c). Updated `planning/casfri-v5-schema-integration-plan.md` P*.2 acceptance criteria and `ROADMAP.md` P7.1.CASFRI to include SK reconciliation as Tier-3-prerequisite. Reviewer confidence recovered to ~95% (was 75% pre-reconciliation).
+- Registered candidate source `nlcc_landcover_2005_250m` (NRCan/CCRS Land Cover of Canada 2005 V1.4 at 250 m) in `metadata/source-inventory.csv` as a complement to SCANFI for land-cover-class diagnostics. `license_status=TO_VERIFY` pending source review.
+- Registered candidate source `beaudoin_knn_attribute_archives_2014_2017` (Beaudoin et al. 2014/2017 SAFORAH 2.0 kNN national forest attribute archives) in `metadata/source-inventory.csv`; reviewed in `metadata/source-reviews/beaudoin_knn_archives.md`. Closes `species_composition` and `residue_yield_policy` readiness gates once ingested via DataLad into `data/external/nrcan_saforah/`.
+- Registered candidate source `saforah2_csw_catalogue` (NRCan/CFS federated forestry CSW 2.0.2 catalogue) in `metadata/source-inventory.csv`; reviewed in `metadata/source-reviews/saforah2_csw_catalogue.md`. Discovery-only layer; harvest automation written at `scripts/discovery/saforah2_csw_harvest.py`.
+
+## 2026-08-08
+
+- Archived verified CanLaBS v2 payload (1,751,083,497 bytes, SHA-256
+  152ba33cca7c473ddc6c7d804d0855581f6d734b50f300637c8f2ee040ac5e8b) to
+  DataLad at `data/raw/nrcan/canlabs_v2/` and pushed to arbutus-s3 remote.
+  Updated `required-datasets.yaml`: `archive_status=archived`,
+  `datalad_mirror.include=archived`.
+- Extracted CanLaBS raw dNBR provenance for all 6 SCANFI diagnostic fixture
+  windows and added 10 provenance columns to
+  `diagnostic_inventory_cells.csv`: `canlabs_dnbr_mean`, `canlabs_dnbr_min`,
+  `canlabs_dnbr_max`, `canlabs_dnbr_median`, `canlabs_valid_pixels`,
+  `canlabs_nodata_pixels`, `canlabs_total_pixels`, `canlabs_value_policy`,
+  `canlabs_window_bounds`, `canlabs_source_path`. All values are raw signed
+  dNBR integers; no severity classes, thresholds, or yield multipliers.
+- Resolved NFI standard reports license: NFI non-commercial reproduction notice
+  permits personal/public non-commercial use with attribution. Updated
+  `source-inventory.csv` status to `accepted` and promoted to
+  `required-datasets.yaml` with `datalad_mirror.include=yes`.
+- Confirmed NFDP harvest tables OGL Canada v2.0 license. Updated
+  `source-inventory.csv` status to `accepted` and added new entry to
+  `required-datasets.yaml`.
+- Added 10 jurisdiction-specific forest/resource road child sources to
+  `source-inventory.csv` (BC, AB, SK, MB, ON, QC, NB, NL, YT, NT) as follow-up
+  to NRN accepted baseline.
+- Created `metadata/readiness-gates.yaml` with 8 cross-cutting production
+  readiness gates: `nfi_access`, `climate_predictors`, `residue_yield_policy`,
+  `calibrated_cost_surfaces`, `species_composition`, `national_scaling`,
+  `facility_layer`, `disturbance_calibration` (7 blocked, 1 in_progress).
+- Verification: parent/data `git diff --check` passed; `pytest tests/ -q` 56
+  tests passed; git-annex confirms CanLaBS v2 present locally and on arbutus-s3.
+
+
+- Completed P6.5 as a diagnostic-only validation memo. The six heuristic SCANFI
+  windows are explicitly quarantined as software fixtures and must not support
+  BC-scale inferential claims.
+- Recorded developer approval for G0/G1 in
+  `planning/scientific-model-recovery-plan.md`; G2–G8 remain unapproved.
+- Applied `SOFTWARE_FIXTURE_NOT_EVIDENCE` to all 30 rows in the six SCANFI
+  fixture manifests and set the six parent inventory rows to
+  `value_policy=quarantined` and `sampling_status=quarantined`.
+- Created and attached recovery task `#27` under Phase 7 parent issue `#26`.
+- Created and attached Phase 7 source-triage child task `#28` under parent
+  issue `#26`, linked to governing issue `#1`.
+- Reconciled CanLaD triage evidence: public raster access confirmed on
+  2026-08-05, so the queue and required-dataset registry now record `canlad` as
+  accepted while preserving the documented subset-first archive boundary.
+- Removed the stale BIMA registry entry; `biomass_inventory_business` remains
+  rejected because its inspected content is agricultural biomass and does not
+  provide forest facilities or mill-residue data.
+- Reconciled SCANFI v2 acquisition evidence across the Phase 6 plan, source
+  queue, inventory, registry, and source review: the authorized five-file 2025
+  subset is checksum-verified and archived, while all broader SCANFI expansion
+  remains separately gated.
+- Clarified Pre-CanLaD v2 semantics: the source is accepted, but mirroring its
+  four core rasters and documentation remains pending PI approval.
+- Added `canlabs_v2` to the curated registry with an explicit provenance gate:
+  the local BigTIFF/server Content-Length mismatch must be resolved by a fresh
+  transfer and checksum comparison before model use or DataLad archiving.
+- Validation: parent/data `git diff --check` passed; focused BC mini regression
+  passed with 21 tests.
+
 ## 2026-08-04
 
 - **SCANFI v2 2025 acquisition complete**: Downloaded all 5 authorized rasters
@@ -16,7 +280,6 @@
   source inventory, added it to the active triage queue, updated Phase 3 and
   Phase 5 merge/closure status, and advanced the roadmap handoff from Phase 5
   design to Phase 6 implementation.
-
 - Phase 6 initiation: confirmed SCANFI v2 2025 rasters absent from data
   submodule (fresh scaffold at commit `731667f`), created acquisition blocker
   plan at `planning/phase-6-scanfi-acquisition-plan.md`, and prepared Phase 6

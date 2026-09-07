@@ -1,0 +1,9 @@
+market_id,product_commodity_id,seller_group,buyer_group,minimum_demand,maximum_demand,price,price_unit,report_group,sankey_group
+market_lumber_bc,lumber,sawmill,construction,0,90000,210,CAD_per_m3,primary_products,lumber
+market_pulp_bc,pulp,pulp_mill,paper,0,36000,160,CAD_per_odt,secondary_products,pulp
+market_pellets_bc,pellets,pellet_mill,export_energy,0,18000,140,CAD_per_odt,energy_products,pellets
+market_bioenergy_bc,bioenergy,bioenergy,local_energy,0,196000,18,CAD_per_GJ,energy_products,bioenergy
+market_log_export,log,export,export_market,0,12000,104,CAD_per_m3,exports,log_export
+market_lumber_qc,lumber,sawmill,construction,0,50000,200,CAD_per_m3,primary_products,lumber
+market_bioenergy_qc,bioenergy,bioenergy,local_energy,0,120000,16,CAD_per_GJ,energy_products,bioenergy
+market_log_export_qc,log,export,export_market,0,8000,98,CAD_per_m3,exports,log_export

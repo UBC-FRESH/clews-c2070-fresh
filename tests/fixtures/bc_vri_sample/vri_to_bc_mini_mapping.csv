@@ -1,0 +1,4 @@
+poly_id,spatial_unit_id,supply_node_id,commodity_id,quantity,quantity_unit,supply_cost,supply_cost_unit,species_group,assortment_class,grade,moisture_basis,harvest_action_id,roadside_cost,delivered_cost_proxy,scenario_id,period,scenario_label
+100001,bc_fmu_coast_01,supply_coast_01,log,36750,m3,56.238095,CAD_per_m3,softwood,sawlog,bc_vri_diagnostic,green,vri_bc_diag_harvest_001,40.238095,71.857143,bc_qc_mini_2prov_001,0,coast_sawlog
+100002,bc_fmu_interior_01,supply_interior_01,log,49750,m3,50.643216,CAD_per_m3,softwood,sawlog,bc_vri_diagnostic,green,vri_bc_diag_harvest_002,36.643216,67.643216,bc_qc_mini_2prov_001,0,interior_sawlog
+100003,bc_fmu_interior_02,supply_residue_02,logging_residue,6600,odt,23,CAD_per_odt,mixed,residue,bc_vri_diagnostic,dry,vri_bc_diag_harvest_003,17,33,bc_qc_mini_2prov_001,0,interior_residue

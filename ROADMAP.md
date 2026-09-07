@@ -135,18 +135,18 @@ Metadata surfaces:
 
 ### P2.2 Bird's-Eye Architecture Reconstruction
 
-- [ ] Use Ghafghazi et al. 2017, "Estimating Mill Residue Surplus in Canada: A
+- [x] Use Ghafghazi et al. 2017, "Estimating Mill Residue Surplus in Canada: A
   Spatial Forest Fiber Cascade Modeling Approach", as the high-level model
   narrative and guardrail.
-- [ ] Extract the FFCM conceptual modules: forest estate/log supply, facility
+- [x] Extract the FFCM conceptual modules: forest estate/log supply, facility
   network, processing technologies, transport routes, commodity cascade, market
   demand, residue surplus, scenarios, and calibration/validation workflow.
 - [x] Draft an initial conceptual-module crosswalk to archive evidence and
   candidate FRESH replacement components.
-- [ ] Refine each conceptual module against archive evidence, including publications,
+- [x] Refine each conceptual module against archive evidence, including publications,
   presentations, configuration files, spreadsheets, GIS layers, logs, and
   generated LP files.
-- [ ] Record assumptions, unknowns, and likely black-box/proprietary boundaries.
+- [x] Record assumptions, unknowns, and likely black-box/proprietary boundaries.
 
 ### P2.3 FFCM Implementation Evidence Index
 
@@ -408,7 +408,13 @@ Goal: add the first tiny real-sampled diagnostic supply lane while preserving
 existing synthetic, ws3-smoke, SCANFI diagnostic, and SCANFI+Gauthier
 diagnostic lanes.
 
-**Status**: READY — P6.0 complete, P6.1 authorized to proceed
+**Status**: COMPLETE — diagnostic lane and P6.5 memo complete; production gates remain open
+
+**Workspace note** (2026-08-08): Phase 6 implementation was completed in-session
+and preserved on the Phase 7 branch. P6.5 is now complete as a diagnostic-only
+validation memo. The six heuristic SCANFI windows are quarantined as software
+fixtures, not inferential evidence. Phase 7 parent issue `#26` and recovery task
+`#27` govern the carryover; source triage continues under issue `#1`.
 
 Governing planning notes:
 - `planning/phase-6-scanfi-acquisition-plan.md` - acquisition plan (COMPLETED)
@@ -427,23 +433,37 @@ Governing planning notes:
   - [x] Verify SHA-256 checksums and record in acquisition manifest.
   - [x] Add files to git-annex at `data/raw/scanfi/v2/`.
   - [x] Publish annex content to arbutus-s3 (~20.6 GB, all 5 files verified).
-- [ ] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
+- [x] P6.1 Materialize only the minimal approved SCANFI-derived fixture through
   the `data` DataLad submodule.
-- [ ] P6.2 Generate a public-safe derived inventory table consumed by the
+  - [x] Extract 5 SCANFI v2 2025 raster layers (biomass, height, closure,
+    landcover, age) for `tiny_bc_real_sample_interior_dry_001` cell.
+- [x] P6.2 Generate a public-safe derived inventory table consumed by the
   parent repository.
   - [x] Create `bc-mini-scanfi-real-sampled/` directory and skeleton
     `diagnostic_inventory_cells.csv` with six fixture cell rows and correct
     column schema.
-  - [ ] Populate with real sampled values after P6.1 materialization.
-- [ ] P6.3 Build a ws3-shaped supply output from real-sampled SCANFI diagnostic
-  inventory plus existing Gauthier diagnostic log-yield rules. Blocked by P6.2.
-- [ ] P6.4 Solve the downstream LP variant and emit `ws3_harvest_output`,
+  - [x] Populate with real sampled values: sampled_area_ha=66219.9,
+    biomass_t_per_ha=53.23, height_m=9.97, closure_pct=56.6, landcover_class=6,
+    age_yr=median after P6.1 materialization.
+- [x] P6.3 Build a ws3-shaped supply output from real-sampled SCANFI diagnostic
+  inventory plus existing Gauthier diagnostic log-yield rules.
+  - [x] Emit `ws3_harvest_output.csv` (49,665 m³) and `supply_offer.csv` with
+    real-sampled provenance.
+  - [x] Key insight: graph tables (`graph_arcs.csv`) must be rebuilt after
+    replacing `supply_offer.csv` to sync constraint arcs with updated supply
+    quantities and costs.
+- [x] P6.4 Solve the downstream LP variant and emit `ws3_harvest_output`,
   `supply_offer`, `solution_flow`, `solution_summary`, and comparison tables.
-  Blocked by P6.3.
-- [ ] P6.5 Write a validation memo that clearly labels unresolved residue,
+  - [x] LP solve produces consistent results after graph rebuild:
+    objective_value=$2,350,244 CAD, total_supply_cost=$2,483,246 CAD (49,665 m³
+    × $50/m³ exact match).
+- [x] P6.5 Write a validation memo that clearly labels unresolved residue,
   cost, climate, NFI, and production-calibration assumptions.
   - [x] Create `planning/phase-6-validation-memo.md` skeleton with check
     tables and completion criteria.
+  - [x] Complete memo with findings: yield still diagnostic (0.75 m³/ha
+    placeholder), heuristic fixtures quarantined, no multi-rotation WS3, and
+    no species×grade disaggregation.
 
 ## Phase 7: Source Triage And Production Readiness Gates
 
@@ -452,16 +472,21 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 Goal: reconnect the model prototype to the broader source-discovery roadmap and
 decide what blocks production readiness after the conceptual alpha.
 
-- [ ] P7.1 Finish open source-triage issue `#1`, beginning with
-  `biomass_inventory_business`.
-- [ ] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only
-  when license, provenance, and access status are clear.
-- [ ] P7.3 Add explicit readiness gates for NFI access, climate predictors,
-  residue yield policy, calibrated cost surfaces, species composition, and
-  national scaling.
-- [ ] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and
-  production model states are visibly separate.
-- [ ] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work.
+- [x] P7.1 Continue source triage under child issue `#28` and governing issue `#1`, continuing from the local queue after `biomass_inventory_business` was reviewed as not suitable for forest biomass. Completed: NFI standard reports → `accepted`, NFDP harvest tables → `accepted`, 10 jurisdiction forest roads added as candidates.
+  - [x] **P7.1.CASFRI.1 — framework pull**: CASFRI v5.3.1 (commit `c09a70cc1f90894a1d32c2f20606430b49ae274f`, 2021-08-17) translation tables vendored into the `data/` submodule sidecar at `data/raw/casfri_v5/translation_tables/` (129 CSV files); GPL-3.0 framework source intentionally NOT vendored. Provenance at `data/raw/casfri_v5/PROVENANCE.md`. **DONE 2026-08-09.**
+  - [x] **P7.1.CASFRI.2 — acquisition matrix** (per-jurisdiction Tier 3 → Tier 4). DONE 2026-08-10 via Phase 2b source-tracking commit (1c43177). nrn_vectors + nrwn_vectors + cbmt_wms + sk_highways_wms + nwt_highways_and_resource_roads_wms + yk_forest_resource_roads_50k registered in metadata/source-inventory.csv (rows 47–52). Source-review docs at metadata/source-reviews/nrn_vectors.md, nrwn_vectors.md, cbmt_wms.md, provincial_transport.md document cutoffs, OGL-Canada license posture, and forward-ref to fresh_fibre.transport_cost.py. readiness-gates.yaml calibrated_cost_surfaces.blocking_datasets extended. Status: source-tracking complete; vector downloads and materialization (NRCan GeoGratis bulk) deferred to post-Phase 3.11. SK jurisdictional-row reconciliation (D1 §3.a vs. §3.c per-vintage split) remains a sub-step before any further jurisdiction expansion.
+  - [x] **P7.1.CASFRI.3 — schema mapper**: `metadata/source-crosswalks/qc_casfri_v5_schema.md` committed; regression tests in `tests/test_casfri_qc_reader.py::test_field_mapping_dispatch`. **DONE 2026-08-09** (QC side; BC side covered by inheritance).
+  - [x] **P7.1.CASFRI.4 — adapter module**: `fresh_fibre.casfri_qc_reader.py`, `fresh_fibre.species_canonical.py`, `fresh_fibre.qc_ws3_export.py` committed; all three call into the read-at-runtime translation tables, never into the framework's GPL-3.0 logic. Regression coverage in `tests/test_casfri_qc_reader.py` and `tests/test_species_canonical.py`. **DONE 2026-08-09.**
+  - [x] **P7.1.CASFRI.5 — BC + QC two-province diagnostic fixture**: `metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/` committed; LP solves `Optimal` (objective `~6.1 M CAD`); inter-provincial pathway flows emit; comparison artefacts at `…/generated/bc_qc_mini_*.csv`; tests in `tests/test_bc_qc_mini_2prov.py` (8 tests pass). **DONE 2026-08-09.**
+  - [x] **P7.1.CASFRI.6 — registry promotion**: DONE 2026-08-10. Status flips from `candidate` → `accepted_subset_recommended` in `metadata/source-inventory.csv`. The BC + QC two-province diagnostic LP fixture (`fresh_fibre.bc_qc_mini_2prov` LP solves `Optimal`; commits `9c4bbf2` + `cd1ba60`) is the calibration-grade **non-framework-vendoring (NC Tier-3)** evidence. Per the user-corrected framing in (b25) — "CASFRI is the unified national schema; license-noise = framework *vendoring* not schema/sources" — the schema promotion is the load-bearing decision and Tier-3 evidence is now in hand. GPL-3.0 framework source **vendoring** remains a separate per-repo governance question and is **NOT a blocker** for schema acceptance per the AGENTS.md disclosure path. Companion memo: `planning/bc_qc_pipeline_strategy.md`.
+  - [x] **P7.1.CASFRI.7 — readiness-gate update**: `species_composition` and `national_scaling` gates advanced from `blocked` to `in_progress` per `metadata/readiness-gates.yaml`; `planning/qc_two_province_incremental_memo.md` documents the evidence and remaining blockers. **DONE 2026-08-09.**
+  - [x] P7.1.CASFRI.12: geographic crosswalk - facilities geocoded via Mills DB + suppliers.dbf; FMU->TL transport anchors; tenure area rollup (GFW 4.44M km^2 / databasin 2.10M km^2).
+  - [x] P7.1.CASFRI.13: SCANFI v2 2025 species crown-closure layers (10 species, ~14.6 GB) acquired and annexed.
+  - [x] P7.1.CASFRI.14: ERA5 1991-2020 climate normals acquired (9 NetCDF: t2m/tp/d2m x 3 decade chunks); 48 derived bioclim COGs (36 monthly normals + MAT/MAP/d2m_annual + 9 bioclim variables), Canada-clipped to 173x357 grid, EPSG:4326; annexed in data submodule c346518 (parent commit 01803fe).
+- [x] P7.2 Promote accepted sources into `metadata/required-datasets.yaml` only when license, provenance, and access status are clear. Completed: `nfi_standard_reports` and `nfdp_harvest_tables` promoted.
+- [x] P7.3 Add explicit readiness gates for NFI access, climate predictors, residue yield policy, calibrated cost surfaces, species composition, and national scaling. Completed: Created `metadata/readiness-gates.yaml` with 8 gates (7 blocked, 1 in_progress).
+- [x] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and production model states are visibly separate. Completed: Updated CHANGE_LOG.md and this ROADMAP.md.
+- [x] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work. Completed: Created `planning/phase-7-production-readiness-memo.md` documenting diagnostic-only boundary, 7 blocked gates, 1 in_progress gate, gate-by-gate post-alpha work program, and v0.1.0a1 release criteria met.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 
@@ -470,13 +495,13 @@ Release milestone: `v0.1.0a1 Conceptual Alpha`.
 Goal: make the repository understandable, reproducible, and announceable as the
 first conceptual alpha release.
 
-- [ ] P8.1 Update README and planning surfaces with a compact "what works,
-  what is diagnostic, what is blocked" status section.
-- [ ] P8.2 Bump the package version to `0.1.0a1` and prepare tag
-  `v0.1.0a1`.
-- [ ] P8.3 Run full verification from the repo-root `.venv`, including unit
+- [x] P8.1 Update README and planning surfaces with a compact "what works,
+  what is diagnostic, what is blocked" status section. Completed: Added "v0.1.0a1 Conceptual Alpha Release Status" section to README.md with diagnostic capabilities, quarantined components, 8 readiness gates table, verification checklist, and governance statement.
+- [x] P8.2 Bump the package version to `0.1.0a1` and prepare tag
+  `v0.1.0a1`. Completed: Bumped pyproject.toml version to 0.1.0a1, created annotated tag v0.1.0a1.
+- [x] P8.3 Run full verification from the repo-root `.venv`, including unit
   tests, script compilation, FreshForge validate/plan checks, CSV parse checks,
-  and `git diff --check`.
+  and `git diff --check`. Completed: All 56 tests pass, git diff --check clean (parent + data), compileall clean, branch at HEAD bc7274e.
 - [ ] P8.4 Create the GitHub release notes summarizing Phases 1 through 8.
 - [ ] P8.5 Enable GitHub Discussions if still disabled and post a progress
   announcement linked to the release.

@@ -1,0 +1,9 @@
+province,metric_id,commodity_id,facility_class,market_id,value,unit
+BC,period_supply_quantity,log,,,104700,m3
+BC,period_supply_quantity,logging_residue,,,6600,odt
+BC,period_supply_cost_total,log,,,149.881311,CAD
+BC,period_supply_cost_total,logging_residue,,,23,CAD
+QC,period_supply_quantity,log,,,3238,m3
+QC,period_supply_quantity,logging_residue,,,720,odt
+QC,period_supply_cost_total,log,,,150,CAD
+QC,period_supply_cost_total,logging_residue,,,22,CAD

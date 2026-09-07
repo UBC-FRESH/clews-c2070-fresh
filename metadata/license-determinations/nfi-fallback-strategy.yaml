@@ -1,0 +1,138 @@
+schema_version: 1
+updated_utc: "2026-08-09T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+description: "Fallback strategy for NFI ground plot access delays or denial. Defines tiered fallback sources, activation triggers, and integration requirements."
+strategy_name: "NFI Ground Plot Access Fallback Strategy"
+version: 1.0
+status: active
+trigger_conditions:
+  - condition: "NFI DUA not initiated by M3"
+    severity: "warning"
+    action: "Activate MAGPlot fallback track; escalate provincial PSP access."
+  - condition: "NFI DUA timeline exceeds 6 months (beyond M6)"
+    severity: "critical"
+    action: "Formally adopt MAGPlot + PSPs as primary; document NFI as validation-only."
+  - condition: "NFI DUA rejected or conditional terms unacceptable"
+    severity: "critical"
+    action: "Formally adopt MAGPlot + PSPs as primary; update nfi-access.yaml status to 'rejected'."
+  - condition: "NFI DUA approved but data delivery delayed > 3 months"
+    severity: "warning"
+    action: "Use MAGPlot + PSPs as interim; transition when NFI data arrives."
+
+fallback_tiers:
+  - tier: 1
+    name: "MAGPlot (Primary Fallback)"
+    source_ids: ["magplot"]
+    description: "Harmonized national plot compilation from CFS/NRCan. Open licence (OGL Canada). Immediate access."
+    advantages:
+      - "Open Government Licence - Canada: no DUA required"
+      - "Already harmonized across jurisdictions"
+      - "Includes subset of NFI plots + provincial PSPs"
+      - "Direct download from Open Canada"
+    limitations:
+      - "May lag provincial PSP refreshes by 1-2 years"
+      - "Schema standardization may lose jurisdiction-specific attributes"
+      - "NFI plot subset may not match full NFI ground plot coverage"
+    integration_requirements:
+      - "Download and archive to data/raw/magplot/"
+      - "Schema crosswalk to calibration workflow variables"
+      - "Validation test: reproduce key calibration results from prototype"
+      - "Document version and acquisition date"
+    readiness_target: "M3"
+    status: "pending_activation"
+
+  - tier: 2
+    name: "Provincial PSP Network (Secondary Fallback)"
+    source_ids: ["bc_vri", "ab_psp", "on_fri", "qc_mrnf"]
+    description: "Direct provincial permanent sample plot sources. Open licences (BC, AB, ON, QC). Jurisdiction-specific detail."
+    advantages:
+      - "Most current provincial data (refresh cycles vary)"
+      - "Full jurisdictional attribute richness"
+      - "Direct relationship with data custodians"
+      - "Open licences permit redistribution with attribution"
+    limitations:
+      - "Four separate access processes (registration, agreements)"
+      - "Schema heterogeneity requires per-province crosswalks"
+      - "Coordinate access restrictions for sensitive sites (SAR, cultural)"
+      - "French documentation for QC (translation needed)"
+    integration_requirements:
+      - "Per-province download to data/raw/<jurisdiction>/psp/"
+      - "Per-province schema crosswalk to calibration variables"
+      - "Cross-provincial harmonization for national calibration"
+      - "Sensitive site filtering documented"
+    readiness_target: "M6"
+    status: "pending_activation"
+
+  - tier: 3
+    name: "NFI Standard Reports (Validation-Only Baseline)"
+    source_ids: ["nfi_standard_reports"]
+    description: "Aggregated NFI summary statistics (CSV). Already accepted in required-datasets.yaml. Non-commercial with attribution."
+    advantages:
+      - "Already accepted and licence-resolved"
+      - "National coverage summaries for area, volume, biomass, age, ownership"
+      - "Small file size; easy to archive and version"
+    limitations:
+      - "Statistical summaries only — no plot-level data"
+      - "Cannot support plot-level calibration or spatial validation"
+      - "Temporal lag (reports typically 2-3 years behind)"
+    integration_requirements:
+      - "Already integrated (see required-datasets.yaml)"
+      - "Use for cross-checks only, not primary calibration"
+    readiness_target: "Complete"
+    status: "active"
+
+  - tier: 4
+    name: "SCANFI v2 Reference Pixels (Spatial Validation Proxy)"
+    source_ids: ["scanfi_v2"]
+    description: "SCANFI v2 raster layers (biomass, height, age, landcover). Authorized 5-file subset accepted."
+    advantages:
+      - "Wall-to-wall spatial coverage at 30m"
+      - "Already accepted subset in data/raw/scanfi/v2/"
+      - "Directly usable for spatial validation of model outputs"
+    limitations:
+      - "Model-derived, not ground truth — circularity risk if used for calibration"
+      - "Species layers (123 GB) not yet authorized"
+      - "Time series limited to authorized years"
+    integration_requirements:
+      - "Use only for validation, never for calibration"
+      - "Document circularity risk in model evaluation reports"
+    readiness_target: "Complete"
+    status: "active"
+
+activation_protocol:
+  step_1: "Project lead declares fallback trigger (email to team + GitHub issue)."
+  step_2: "Update nfi-access.yaml: set NFI ground status to 'blocked' or 'fallback_active'."
+  step_3: "Activate Tier 1 (MAGPlot): assign owner, begin download/integration."
+  step_4: "Activate Tier 2 (Provincial PSPs): initiate all four access processes in parallel."
+  step_5: "Weekly fallback standup until Tier 1 + at least 3/4 Tier 2 sources production-ready."
+  step_6: "At M6: formal decision gate (see nfi-checkpoint-m6.yaml)."
+  step_7: "Document all decisions in CHANGE_LOG.md and planning/fallback-activation-log.md"
+
+risk_mitigation:
+  - risk: "MAGPlot version lag causes calibration bias"
+    mitigation: "Quantify bias via cross-calibration with available PSPs; apply correction factors if systematic."
+  - risk: "Provincial PSP access delays (registration, agreements)"
+    mitigation: "Initiate all four in parallel at M3; assign dedicated owner per province; escalate to PI if > 30 days no response."
+  - risk: "Schema heterogeneity across PSPs breaks national calibration"
+    mitigation: "Invest in crosswalk development at M3; use MAGPlot schema as common target; validate with synthetic data."
+  - risk: "Sensitive site filtering reduces PSP coverage in key regions"
+    mitigation: "Document filtering rules; quantify coverage loss; supplement with SCANFI validation layers."
+  - risk: "NFI DUA approved late — dual-stack integration complexity"
+    mitigation: "Design calibration workflow to accept multiple source stacks; parameterize source selection."
+
+governance:
+  decision_authority: "Project PI (final), Data Lead (operational)"
+  review_cadence: "Monthly at M3, M6, M9, M12; ad-hoc on trigger events"
+  documentation_required:
+    - "Fallback activation log (planning/fallback-activation-log.md)"
+    - "Updated nfi-access.yaml statuses"
+    - "CHANGE_LOG.md entries for each tier activation"
+    - "Calibration comparison reports at M6 and M12"
+  escalation_path:
+    - "Data Lead -> Project PI -> Steering Committee -> FRESH Director"
+
+notes:
+  - "This strategy assumes MAGPlot + provincial PSPs collectively provide sufficient coverage for national calibration."
+  - "If Tier 1 + Tier 2 fail to achieve coverage targets, escalate to Steering Committee for scope reduction (e.g., BC-only model)."
+  - "NFI ground plots remain the scientific gold standard; fallback is pragmatic, not preferential."
+  - "All fallback sources use open licences compatible with CLEWs-C2070 open-data commitments."

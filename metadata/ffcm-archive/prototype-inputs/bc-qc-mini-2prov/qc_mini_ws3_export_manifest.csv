@@ -1,0 +1,4 @@
+artifact_role,table_path,row_count,sha256,ws3_run_ids,source_models,notes
+normalized_ws3_harvest_output,metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/ws3_harvest_output_qc.csv,4,f28611ef5ec8d1a49b50ab1687dd28bbc73e16c43e58240231b0885d936c102d,bc_qc_mini_2prov_ws3_supply_001,qc_5e_ieqm_casfri_v5_diagnostic_mini,Input table emitted by the upstream ws3 normalization boundary.
+exported_supply_offer,metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/supply_offer_qc.csv,4,21f4cd789d5719f90d0ea5e93cf97209bc1e3055d7b18b559d7dd4cd93b7d009,bc_qc_mini_2prov_ws3_supply_001,fresh_fibre.ws3_export,Adapter output written in the FRESH supply_offer contract shape.
+downstream_supply_offer_contract,metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/supply_offer.csv,4,46a03427ad8cb0e6eebfc0b96b66a6ff01cc6ada22a4b6529fde1a8f7f7868a8,bc_qc_mini_2prov_ws3_supply_001,fixture_contract,Current downstream LP input contract table used by the prototype.
