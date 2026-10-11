@@ -49,8 +49,8 @@ git annex initremote arbutus-s3 \
   encryption=none \
   bucket=<bucket-name> \
   public=yes \
-  publicurl=https://object-arbutus.cloud.computecanada.ca/<bucket-name> \
-  host=object-arbutus.cloud.computecanada.ca \
+  publicurl=https://object-arbutus.alliancecan.ca/a0d141b801c74d0a819c09b4bde9c3fb:<bucket-name> \
+  host=object-arbutus.alliancecan.ca \
   protocol=https \
   port=80 \
   requeststyle=path \
