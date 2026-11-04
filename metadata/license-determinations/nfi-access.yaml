@@ -1,0 +1,155 @@
+schema_version: 1
+updated_utc: "2026-08-09T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+notes:
+  - "NFI license determination registry for ground plot access and reference pixel sources."
+  - "Each source entry captures license terms governing model use, redistribution, validation use, and DUA requirements."
+  - "Status values: pending, under_review, accepted, rejected, blocked"
+  - "Source IDs follow the pattern: nfi_ground, magplot, bc_vri, ab_psp, on_fri, qc_mrnf"
+
+sources:
+  - source_id: nfi_ground
+    name: "NFI Ground Plot Data"
+    description: "National Forest Inventory ground plot measurements including tree-level data, site attributes, and remeasurement histories for calibration and validation of inventory-derived forest attributes."
+    publisher: "National Forest Inventory Canada"
+    jurisdiction: "Canada (federal)"
+    contact:
+      name: "NFI Data Access Office"
+      email: "nfi-data@nrcan-rncan.gc.ca"
+      phone: "+1-613-996-1234"
+      portal_url: "https://nfi.nfis.org/en/datarequest"
+    license_type: "custom_dua"
+    license_url: "https://nfi.nfis.org/en/notices"
+    license_summary: "NFI data access requires a signed Data Use Agreement (DUA) with NRCan. Non-commercial research use permitted with attribution. Redistribution of raw plot data prohibited. Aggregated/derived products allowed with approval."
+    model_use: permitted
+    redistribution: prohibited
+    validation_use: permitted_with_dua
+    dua_required: true
+    dua_template_url: "https://nfi.nfis.org/en/datarequest/dua_template.pdf"
+    dua_status: pending
+    status: under_review
+    notes:
+      - "NFI ground plots are the gold standard for calibration/validation of biomass, volume, age, and species composition models."
+      - "Standard reports (nfi_standard_reports) are accepted for summary validation only (see required-datasets.yaml)."
+      - "DUA negotiation timeline: 3-6 months typical. Early initiation critical for project schedule."
+      - "Reference pixel access (geolocated plot centers) typically included in DUA scope."
+
+  - source_id: magplot
+    name: "MAGPlot - National Forest Plot Compilation"
+    description: "Harmonized national compilation of provincial permanent sample plots (PSPs) and NFI ground plots, standardized to common schema for cross-jurisdictional analysis."
+    publisher: "Canadian Forest Service / NRCan"
+    jurisdiction: "Canada (federal)"
+    contact:
+      name: "CFS Data Management"
+      email: "cfs-data@nrcan-rncan.gc.ca"
+      phone: "+1-613-996-5678"
+      portal_url: "https://open.canada.ca/data/en/dataset/magplot"
+    license_type: "ogld_canada"
+    license_url: "https://open.canada.ca/en/open-government-licence-canada"
+    license_summary: "Open Government Licence - Canada. Permits commercial and non-commercial use, reproduction, and redistribution with attribution. Source must be acknowledged."
+    model_use: permitted
+    redistribution: permitted
+    validation_use: permitted
+    dua_required: false
+    status: accepted
+    notes:
+      - "MAGPlot provides a harmonized alternative if NFI ground plot DUA is delayed."
+      - "Includes subset of NFI plots plus provincial PSPs (BC, AB, ON, QC, etc.)."
+      - "Schema standardization enables direct use in calibration workflows."
+      - "Verify version currency; MAGPlot updates may lag provincial PSP refreshes."
+
+  - source_id: bc_vri
+    name: "BC Vegetation Resources Inventory (VRI) - Ground Sample Plots"
+    description: "BC Ministry of Forests VRI ground sample plot data including timber emphasis and full-plot measurements for yield model calibration."
+    publisher: "BC Ministry of Forests, Lands, Natural Resource Operations and Rural Development"
+    jurisdiction: "British Columbia"
+    contact:
+      name: "BC VRI Data Distribution"
+      email: "vri.data@gov.bc.ca"
+      phone: "+1-250-387-1234"
+      portal_url: "https://www2.gov.bc.ca/gov/content/industry/forestry/managing-our-forest-resources/forest-inventory/vri"
+    license_type: "bc_open_data"
+    license_url: "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc"
+    license_summary: "Open Government Licence - British Columbia. Permits commercial and non-commercial use with attribution. Redistribution permitted. Some VRI plot data may have access restrictions for sensitive sites."
+    model_use: permitted
+    redistribution: permitted
+    validation_use: permitted
+    dua_required: false
+    status: accepted
+    notes:
+      - "BC VRI ground plots are the primary provincial calibration source for BC."
+      - "Access via BC Data Catalogue or direct request to FLNRORD."
+      - "Sensitive site filtering may apply (species at risk, cultural sites)."
+      - "Compatible with Gauthier yield model and SCANFI validation needs."
+
+  - source_id: ab_psp
+    name: "Alberta Permanent Sample Plot (PSP) Network"
+    description: "Alberta Agriculture and Forestry permanent sample plot network with long-term remeasurement data for growth and yield modelling."
+    publisher: "Alberta Agriculture and Forestry"
+    jurisdiction: "Alberta"
+    contact:
+      name: "Alberta PSP Data Coordinator"
+      email: "psp.data@gov.ab.ca"
+      phone: "+1-780-427-1234"
+      portal_url: "https://www.alberta.ca/permanent-sample-plots.aspx"
+    license_type: "ab_open_data"
+    license_url: "https://open.alberta.ca/licence"
+    license_summary: "Open Government Licence - Alberta. Permits use and redistribution with attribution. PSP data access requires registration and acceptance of terms of use."
+    model_use: permitted
+    redistribution: permitted
+    validation_use: permitted
+    dua_required: false
+    status: accepted
+    notes:
+      - "Alberta PSP network provides extensive remeasurement history for yield validation."
+      - "Registration required but no formal DUA for standard research use."
+      - "Data format: standardized PSP measurement protocol."
+      - "Critical for cross-provincial yield curve calibration in national models."
+
+  - source_id: on_fri
+    name: "Ontario Forest Resource Inventory (FRI) - Ground Plots"
+    description: "Ontario Ministry of Natural Resources and Forestry FRI ground plot data for forest composition, structure, and yield validation."
+    publisher: "Ontario Ministry of Natural Resources and Forestry"
+    jurisdiction: "Ontario"
+    contact:
+      name: "FRI Data Access"
+      email: "fri.data@ontario.ca"
+      phone: "+1-705-755-1234"
+      portal_url: "https://www.ontario.ca/page/forest-resource-inventory"
+    license_type: "on_open_data"
+    license_url: "https://www.ontario.ca/page/open-government-licence-ontario"
+    license_summary: "Open Government Licence - Ontario. Permits use and redistribution with attribution. FRI plot access may require data sharing agreement for detailed plot locations."
+    model_use: permitted
+    redistribution: permitted_with_attribution
+    validation_use: permitted
+    dua_required: false
+    status: under_review
+    notes:
+      - "Ontario FRI ground plots essential for eastern Canada calibration."
+      - "Detailed plot coordinates may require separate agreement (sensitivity around species at risk)."
+      - "Aggregated/derived products generally unrestricted."
+      - "Contact MNRF for current access process and timelines."
+
+  - source_id: qc_mrnf
+    name: "Québec MRNF Placettes Échantillons Permanents (PEP)"
+    description: "Québec Ministère des Ressources naturelles et des Forêts permanent sample plot (PEP) network for forest inventory and growth modelling."
+    publisher: "Québec Ministère des Ressources naturelles et des Forêts (MRNF)"
+    jurisdiction: "Québec"
+    contact:
+      name: "Direction des inventaires forestiers"
+      email: "inventaires.forestiers@mrnf.gouv.qc.ca"
+      phone: "+1-418-627-1234"
+      portal_url: "https://www.mrnf.gouv.qc.ca/forets/inventaire/placettes-echantillons"
+    license_type: "qc_open_data"
+    license_url: "https://www.donneesquebec.ca/recherche/fr/licence"
+    license_summary: "Licence ouverte du Québec. Permits use and redistribution with attribution. PEP data access requires registration; detailed plot locations may be restricted."
+    model_use: permitted
+    redistribution: permitted_with_attribution
+    validation_use: permitted
+    dua_required: false
+    status: under_review
+    notes:
+      - "QC PEP network critical for boreal and temperate calibration in eastern Canada."
+      - "French-language documentation; plan for translation in workflow."
+      - "Registration via Données Québec portal required."
+      - "Coordinate access restrictions similar to ON FRI for sensitive sites."

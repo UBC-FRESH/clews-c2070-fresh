@@ -89,6 +89,14 @@ FEMIC and FreshForge:
 - Keep new file and directory names lowercase unless mirroring an upstream
   source name or archival payload.
 
+## Fail-Closed Collateral Rule
+
+- **Unexpected deletions**: Any unexpected `D` in either status column of
+  `git status --porcelain` output — unstaged ` D` (worktree deletion) or
+  staged `D ` (index deletion) — must halt the current session immediately.
+  Do NOT catalog them as "pre-existing collateral" or "untouched by me".
+  Investigate the cause before proceeding.
+
 ## Planning Surfaces
 
 - [ROADMAP.md](ROADMAP.md): phase plan and active project tasks.

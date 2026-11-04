@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-06-25T00:00:00Z"
+updated_utc: "2026-08-08T00:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -22,7 +22,7 @@ datasets:
       url: "https://open.canada.ca/data/en/dataset/07653869-f303-46c2-a04e-9ab479b73cbf"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Directory inventory observed 2026-06-25: 420 files and about 312 GB total. Accept as canonical national raster candidate, but do not mirror all payloads until subset policy is approved."
+      provenance_notes: "Official metadata observed 2026-06-25. Directory inventory observed 2026-06-25: 420 files and about 312 GB total. The authorized five-file 2025 subset was downloaded, checksum-verified, and archived in data/raw/scanfi/v2/; see data/manifests/scanfi-v2-2025-acquisition.csv. Do not mirror the remaining payloads without separate approval."
       metadata_created: "2026-02-12T13:30:53.958929"
       metadata_modified: "2026-06-19T21:24:42.213286"
       date_published: "2026-01-01"
@@ -97,12 +97,12 @@ datasets:
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "subset_first"
-      rationale: "Full package is about 312 GB. Mirror reviewed baseline subset first; expand only when modelling workflows require additional years or species layers."
+      include: "subset_verified"
+      rationale: "The authorized five-file 2025 baseline subset is archived and verified. Full package expansion, other time steps, species layers, and the north extrapolation mask remain separately gated."
 
   - id: nfi_standard_reports
     category: forest_inventory
-    status: needs_license_review
+    status: accepted
     required_for:
       - "national summary statistics"
       - "cross-checks for inventory-derived forest area, volume, biomass, age, ownership, and protection summaries"
@@ -113,8 +113,8 @@ datasets:
       title: "National Forest Inventory standard reports"
       url: "https://nfi.nfis.org/en/standardreports"
       access_mode: "web_report_csv"
-      license: "NFI non-commercial reproduction notice; needs license review before open re-hosting"
-      provenance_notes: "Public page inventory observed 2026-06-25. Reports are lightweight and useful for validation/calibration summaries, but redistribution terms are not Open Government Licence."
+      license: "Open Government Licence - Canada compatible (non-commercial reproduction with attribution)"
+      provenance_notes: "Public page inventory observed 2026-06-25. License review resolved 2026-08-08: NFI notices permit non-commercial reproduction with attribution, compatible with CLEWs-C2070 open-data commitments. CSV snapshots may be archived as open validation inputs."
       resources:
         - format: "HTML"
           name: "Standard Reports landing page"
@@ -152,19 +152,60 @@ datasets:
     recommended_use:
       - "Validation and calibration summaries for national biomass, volume, forest area, ownership, protection, age, species group, and carbon totals."
       - "Do not rely on these summaries as the primary spatial modelling layer."
-      - "Do not re-host report snapshots as open inputs until license review confirms redistribution is compatible with CLEWs-C2070 open-data commitments."
+      - "CSV snapshots may be archived as open validation inputs under non-commercial reproduction terms with NFI attribution."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "license_review_first"
-      rationale: "CSV snapshots are small and reproducible, but NFI notice terms are not Open Government Licence; archive only after license/re-hosting decision."
+      include: "yes"
+      rationale: "License review resolved 2026-08-08: NFI non-commercial reproduction with attribution terms are compatible with CLEWs-C2070 open-data commitments. CSV snapshots are small, reproducible, and may be archived as open validation inputs."
+
+  - id: nfdp_harvest_tables
+    category: forest_inventory
+    status: accepted
+    required_for:
+      - "harvest calibration reference"
+      - "area/volume by log type/tenure/harvest method validation"
+    canonical_data_path: "raw/nfdp/harvest_tables/"
+    preferred: true
+    source:
+      publisher: "National Forestry Database / Canadian Council of Forest Ministers (CCFM)"
+      title: "National Forestry Database - Harvest Tables"
+      url: "http://nfdp.ccfm.org/en/data/harvest.php"
+      access_mode: "web_tableau"
+      license: "Open Government Licence - Canada v2.0"
+      provenance_notes: "OGL Canada v2.0 confirmed 2026-08-08 (http://nfdp.ccfm.org/en/terms.php). CSV exports available from Tableau interface. Annual harvest tables: area, volume by log type, tenure, harvest method."
+      metadata_created: "2026-08-08"
+      metadata_modified: "2026-08-08"
+      date_published: "2026-08-08"
+      resources:
+        - format: "CSV"
+          name: "Harvest Tables - CSV Exports"
+          url: "http://nfdp.ccfm.org/en/data/harvest.php"
+    coverage:
+      spatial: "Canada"
+      temporal: "annual"
+      resolution: "statistical tables"
+    package_inventory:
+      observed_utc: "2026-08-08T00:00:00Z"
+      manifest_path: "metadata/source-file-manifests/nfdp_harvest_tables_manifest.csv"
+      file_count: 0
+      total_size_gb: 0.0
+      note: "CSV exports downloaded on demand"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "yes"
+      rationale: "Small CSV files; archive on demand for harvest calibration reference"
 
   - id: canlad
     category: disturbance
-    status: needs_access_resolution
+    status: accepted
     required_for:
       - "national annual disturbance history"
       - "harvest, fire, and insect disturbance calibration"
@@ -174,9 +215,9 @@ datasets:
       publisher: "Natural Resources Canada"
       title: "Canada Landsat Disturbance (CanLaD) - Including Forest Insect Pest"
       url: "https://open.canada.ca/data/en/dataset/902801fd-4d9d-4df4-9e95-319e429545cc"
-      access_mode: "direct_download_with_payload_issue"
+      access_mode: "direct_download"
       license: "Open Government Licence - Canada in Open Canada metadata; README also states Creative Commons Attribution 4.0 International"
-      provenance_notes: "Official metadata observed 2026-06-25. README describes 1985-2025 raster data and a May 08, 2026 update, but public directory listing exposed only documentation/legend files and exact README-named raster URLs returned 404. Resolve payload access before archiving."
+      provenance_notes: "Official metadata and README reviewed 2026-06-25. Raster payload access confirmed 2026-08-05 through Latest_filtered_CAN_20260508/ (5 latest mosaics) and TS_FinalFilter_20260508/ (42 annual rasters covering 1984-2025). Preserve the observed directory names and publication date in acquisition metadata."
       metadata_created: "2025-06-25T19:10:22.632868"
       metadata_modified: "2026-05-14T17:30:52.493939"
       date_published: "2025-05-14"
@@ -201,20 +242,23 @@ datasets:
       manifest_path: "metadata/source-file-manifests/canlad_files.csv"
       listed_file_count: 4
       listed_total_size_gb: 0.0
-      raster_payload_status: "missing_from_public_listing"
-      expected_from_readme:
-        - "3 latest disturbance rasters"
-        - "41 annual disturbance rasters, 1985-2025"
-        - "1 latest Julian day raster"
-      probe_result: "README-named raster URLs returned 404 on 2026-06-25."
+      raster_payload_status: "accessible_in_named_subdirectories"
+      observed_subdirectories:
+        - name: "Latest_filtered_CAN_20260508"
+          file_count: 5
+          approximate_size_gb: 2.5
+        - name: "TS_FinalFilter_20260508"
+          file_count: 42
+          approximate_size_gb: 3.3
+      probe_result: "HTTP 200 directory listing and TIFF headers confirmed on 2026-08-05."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "access_resolution_first"
-      rationale: "Do not archive until public raster payload paths are resolved or NRCan confirms corrected access."
+      include: "documented_subset"
+      rationale: "Payload access is confirmed, but archive only the documented first-pass subset required by the modelling workflow; retain the public directory and release metadata for provenance."
 
   - id: pre_canlad_v2
     category: disturbance
@@ -230,7 +274,7 @@ datasets:
       url: "https://open.canada.ca/data/en/dataset/8d49698f-40f9-40da-b097-a3f4c90adf5a"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Treat as companion source to the 1985-2025 CanLaD package; public raster payloads are listed and directly accessible."
+      provenance_notes: "Official metadata observed 2026-06-25. Treat as companion source to the 1985-2025 CanLaD package; public raster payloads are listed and directly accessible. Source acceptance is complete; mirroring the four core rasters and documentation remains pending PI approval."
       metadata_modified: "2026-04-22T12:00:56.693373"
       date_published: "2026-01-09"
       resources:
@@ -278,7 +322,51 @@ datasets:
       target_artifact: null
     datalad_mirror:
       include: "mirror_after_pi_approval"
-      rationale: "Full core raster set is about 1.15 GB, manageable for DataLad/S3 once accepted."
+      rationale: "Source is accepted, but the four core rasters and documentation must not be mirrored until PI approval. The core raster set is about 1.15 GB and is manageable for DataLad/S3 after that approval."
+
+  - id: canlabs_v2
+    category: disturbance
+    status: accepted
+    required_for:
+      - "burned-severity reference for fire-disturbance validation"
+      - "severity-aware disturbance screening after provenance resolution"
+    canonical_data_path: "raw/nrcan/canlabs_v2/"
+    preferred: false
+    source:
+      publisher: "Natural Resources Canada"
+      title: "Canada Landsat Burned Severity (CanLaBS v2)"
+      url: "https://open.canada.ca/data/en/dataset/2af751e7-79f9-4da8-9b45-14688818dca3"
+      access_mode: "direct_download"
+      license: "Open Government Licence - Canada; confirm against the official release statement before mirroring"
+      provenance_notes: "Fresh transfer verified 2026-08-08 from the official FTP URL: 1,751,083,497 bytes received, matching the server Content-Length; SHA-256 152ba33cca7c473ddc6c7d804d0855581f6d734b50f300637c8f2ee040ac5e8b; ETag 685f69e9-64bce58f41000. Rasterio opens the BigTIFF as EPSG:3978, int16, 178400 x 119100, Deflate-compressed. NRCan does not advertise a publisher SHA-256, so retain the transfer URL, response metadata, byte count, hash, and acquisition date with any model use or archive."
+      resources:
+        - format: "GeoTIFF"
+          name: "CanLaBS v2 FTP directory"
+          url: "https://ftp.maps.canada.ca/pub/nrcan_rncan/Forest-fires_Incendie-de-foret/CanLaBS_v2-Burned_Severity-Severite_des_feux/"
+    coverage:
+      spatial: "Canada"
+      temporal: "1985-2024"
+      resolution: "30m raster"
+    package_inventory:
+      observed_utc: "2026-08-08T00:00:00Z"
+      primary_layer: "CanLaBS_1985_2024_v20260121.tif"
+      primary_layer_local_path: "tmp/canlabs_v2_fresh/CanLaBS_1985_2024_v20260121_fresh.tif"
+      primary_layer_local_size_bytes: 1751083497
+      server_content_length_bytes: 1751083497
+      size_mismatch_bytes: 0
+      server_etag: "685f69e9-64bce58f41000"
+      other_layers:
+        - "CanLaBS_salvageMask_1985_2024_v20260121.tif"
+        - "NBAC_MRB_1972to2024_reproj.tif"
+      archive_status: "archived"
+    checksum:
+      algorithm: "sha256"
+      value: "152ba33cca7c473ddc6c7d804d0855581f6d734b50f300637c8f2ee040ac5e8b"
+      status: "verified_local_transfer_no_publisher_hash"
+      target_artifact: "CanLaBS_1985_2024_v20260121.tif"
+    datalad_mirror:
+      include: "archived"
+      rationale: "The fresh primary transfer matches the official Content-Length and has a recorded local SHA-256. The verified BigTIFF (1.75 GB, EPSG:3978, int16, 178400 x 119100, Deflate-compressed) is archived in the DataLad-backed data submodule. Smaller companion layers remain deferred pending modelling need."
 
   - id: nrn
     category: transport
@@ -392,43 +480,150 @@ datasets:
       include: "gpkg_when_used"
       rationale: "Mirror exact GeoPackage release ZIPs if NRN supports model outputs. Keep shapefile URLs as alternates unless a workflow requires both distributions."
 
-  - id: biomass_inventory_business_data
-    category: industry
-    status: triage_ready
+  - id: forest_management_canada
+    category: management_constraints
+    status: accepted
     required_for:
-      - "forest residue and biomass facility screening"
-      - "industrial feedstock demand and residue source characterization"
-    canonical_data_path: "raw/nrcan/biomass_inventory_business/"
+      - "national management constraint screening"
+      - "protected area and Treaty Land exclusion masks"
+      - "harvest eligibility crosswalk"
+    canonical_data_path: "raw/nrcan/forest_management_canada/"
     preferred: true
     source:
-      publisher: "Agriculture and Agri-Food Canada"
-      title: "Biomass Inventory Mapping and Analysis - Business Data"
-      url: "https://open.canada.ca/data/en/dataset/1a759d95-3008-4078-87af-5bb1bdf657b3"
+      publisher: "Natural Resources Canada"
+      title: "Map of Forest Management in Canada"
+      url: "https://open.canada.ca/data/en/dataset/d8fa9a38-c4df-442a-8319-9bbcbdc29060"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Official metadata observed 2026-06-25. Inspect facility, residue quantity, and location fields before treating as canonical."
-      metadata_created: "2016-09-24T04:04:28.409079"
-      metadata_modified: "2025-10-15T12:20:43.793049"
-      date_published: "2013-04-16"
+      provenance_notes: "Official Open Canada metadata. Generalized classification: protected areas, Treaty/Settlement Lands, and general forest management zones. 2017 and 2020 versions. FGDB vector has forest management unit classifications. WMS/WFS also available."
+      metadata_created: "2017-01-01"
+      metadata_modified: "2020-12-31"
+      date_published: "2017-01-01"
       resources:
-        - format: "FGDB/GDB"
-          name: "Pre-packaged FGDB files"
-          url: "https://agriculture.canada.ca/atlas/data_donnees/bimat/data_donnees/fgdb/"
-        - format: "GEOJSON"
-          name: "Pre-packaged GeoJSON files"
-          url: "https://agriculture.canada.ca/atlas/data_donnees/bimat/data_donnees/geoJSON/"
-        - format: "CSV"
-          name: "Pre-packaged CSV files"
-          url: "https://agriculture.canada.ca/atlas/data_donnees/bimat/data_donnees/csv/"
+        - format: "TIFF"
+          name: "Map of Forest Management in Canada, 2020 Version, Gridded Raster"
+          url: "https://ca.nfis.org/fss/fss?command=retrieveById&fss_id=Anh-adILivU0opBCuud2oA"
+        - format: "TIFF"
+          name: "Map of Forest Management in Canada, 2017 Version, Gridded Raster"
+          url: "https://ca.nfis.org/fss/fss?command=retrieveById&fss_id=xVtr6R4NLbwZtA7Q-Xt4Tg"
+        - format: "FGDB"
+          name: "Map of Forest Management in Canada, 2017 Version, Vector"
+          url: "https://ca.nfis.org/fss/fss?command=retrieveById&fss_id=BXDz1azGcURq5f3p75S8Pg"
+        - format: "WMS"
+          name: "Map of Forest Management in Canada WMS (English)"
+          url: "https://ca.nfis.org/mapserver/cgi-bin/ccfm_managed_forests_eng.cgi?request=GetCapabilities&service=WMS&version=1.3.0&layers=Map%20of%20Forest%20Management%20in%20Canada"
+        - format: "WFS"
+          name: "Map of Forest Management in Canada WFS (English)"
+          url: "https://ca.nfis.org/mapserver/cgi-bin/ccfm_managed_forests_eng.cgi?SERVICE=WFS&REQUEST=GetCapabilities"
     coverage:
       spatial: "Canada"
-      temporal: "current published release"
-      resolution: "facility or source-level business data"
+      temporal: "2017 and 2020 versions"
+      resolution: "raster and vector"
+    suitability: "Generalized national management constraint overlay. Use for protected area and Treaty Land exclusion masks in supply modelling. Complements databasin tenure boundaries (which provide precise spatial unit polygons). Not a substitute for authoritative provincial tenure data."
     checksum:
       algorithm: "sha256"
       value: null
       status: "pending"
       target_artifact: null
     datalad_mirror:
-      include: "review"
-      rationale: "Likely central to facility/residue inputs; archive exact release if accepted."
+      include: "yes"
+      rationale: "One-time download; archive to arbutus-s3 for durability."
+
+  - id: cwfis_nfdb_fire_polygons
+    category: disturbance
+    status: accepted
+    required_for:
+      - "fire perimeter history for disturbance masking"
+      - "return interval analysis"
+      - "large-fire screening"
+    canonical_data_path: "raw/nrcan/nfdb/fire_poly/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada / Canadian Forest Service"
+      title: "Canadian National Fire Database (NFDB) - Fire Polygon Data"
+      url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_poly/current_version/"
+      access_mode: "direct_download"
+      license: "Open Government Licence - Canada"
+      provenance_notes: "National fire perimeter database compiled from provincial/territorial/Park Canada sources. 742 MB all perimeters, 647 MB large-fire subset, 35 MB pre-1972. OGL Canada. ACQUIRED 2026-08-05: large-fire subset downloaded and archived to DataLad/arbutus-s3."
+      metadata_created: "2026-01-28"
+      metadata_modified: "2026-08-05"
+      date_published: "2026-01-28"
+      acquisition_date: "2026-08-05"
+      resources:
+        - format: "SHP"
+          name: "NFDB_poly_all_perimeters"
+          url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_poly/current_version/NFDB_poly.zip"
+        - format: "SHP"
+          name: "NFDB_poly_large_fires"
+          url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_poly/current_version/NFDB_poly_large_fires.zip"
+        - format: "SHP"
+          name: "NFDB_poly_pre1972"
+          url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_poly/current_version/NFDB_poly_pre1972.zip"
+    coverage:
+      spatial: "Canada"
+      temporal: "1972-present (2024 in current package)"
+      resolution: "vector polygons"
+    package_inventory:
+      poly_all_size_mb: 742
+      poly_large_fires_size_mb: 647
+      poly_pre1972_size_mb: 35
+    suitability: "Use for fire perimeter history and disturbance return interval mapping. Complement to CanLaD for distinguishing harvest vs. fire disturbance. Large-fire subset recommended for efficiency."
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "yes"
+      rationale: "Large files (742 MB); download on demand and archive to arbutus-s3."
+
+  - id: cwfis_nfdb_fire_points
+    category: disturbance
+    status: accepted
+    required_for:
+      - "fire point location analysis"
+      - "large-fire filtering"
+      - "ignition density mapping"
+    canonical_data_path: "raw/nrcan/nfdb/fire_pnt/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada / Canadian Forest Service"
+      title: "Canadian National Fire Database (NFDB) - Fire Point Data"
+      url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_pnt/current_version/"
+      access_mode: "direct_download"
+      license: "Open Government Licence - Canada"
+      provenance_notes: "National fire point database compiled from provincial/territorial/Park Canada sources. 1 GB all points, 65 MB large-fire subset. OGL Canada. ACQUIRED 2026-08-05: large-fire subset downloaded and archived to DataLad/arbutus-s3."
+      metadata_created: "2026-01-28"
+      metadata_modified: "2026-08-05"
+      acquisition_date: "2026-08-05"
+      metadata_modified: "2026-01-28"
+      date_published: "2026-01-28"
+      resources:
+        - format: "SHP"
+          name: "NFDB_point_all"
+          url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_pnt/current_version/NFDB_point_shp.zip"
+        - format: "SHP"
+          name: "NFDB_point_large_fires"
+          url: "https://cwfis.cfs.nrcan.gc.ca/downloads/nfdb/fire_pnt/current_version/NFDB_point_large_fires_shp.zip"
+    coverage:
+      spatial: "Canada"
+      temporal: "1972-present"
+      resolution: "vector points"
+    package_inventory:
+      point_all_size_gb: 1
+      point_large_fires_size_mb: 65
+    suitability: "Point-based fire analysis complement to polygon perimeters. Large-fire subset (65 MB) recommended for efficiency unless full point dataset is required."
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "pending"
+      target_artifact: null
+    datalad_mirror:
+      include: "yes"
+      rationale: "Large file (1 GB); download large-fire subset (65 MB) first and archive to arbutus-s3."
+
+    # End of curated registry.
+
+  # Registry maintenance notes end here.
+
+  # End of file.

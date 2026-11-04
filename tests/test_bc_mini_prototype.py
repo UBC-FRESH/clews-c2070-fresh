@@ -16,11 +16,13 @@ from fresh_fibre.gauthier_yield import build_gauthier_diagnostic_fixture
 from fresh_fibre.lp import build_and_solve
 from fresh_fibre.scanfi_supply import (
     GAUTHIER_VALUE_POLICY,
+    INVENTORY_DIAGNOSTIC_POLICIES,
     RESIDUE_VALUE_POLICY,
     build_gauthier_scanfi_yield_rules,
     build_scanfi_diagnostic_supply,
     run_scanfi_diagnostic_variant,
     run_scanfi_gauthier_diagnostic_variant,
+    validate_harvest_rows,
 )
 from fresh_fibre.units import UnitValidationError, load_unit_registry
 from fresh_fibre.validation import validate
@@ -200,6 +202,45 @@ class BcMiniPrototypeTest(unittest.TestCase):
         })
         self.assertTrue(all(row["biomass_source_file"].startswith("SCANFI_att_biomass_2025") for row in harvest_rows))
         self.assertTrue(any("; " in row["inventory_cell_id"] for row in harvest_rows))
+
+    def test_validate_harvest_rows_accepts_real_sampled_inventory_policy(self) -> None:
+        real_sampled_row = {
+            "source_record_id": "test_real_sampled_001",
+            "quantity": 100.0,
+            "inventory_value_policy": "real_sampling_fixture_design_not_sampled",
+            "yield_value_policy": "synthetic_placeholder_yield_not_calibrated",
+        }
+        validate_harvest_rows([real_sampled_row])
+
+        legacy_row = {
+            "source_record_id": "test_legacy_001",
+            "quantity": 200.0,
+            "inventory_value_policy": "synthetic_proxy_not_sampled_from_raster",
+            "yield_value_policy": "synthetic_placeholder_yield_not_calibrated",
+        }
+        validate_harvest_rows([legacy_row])
+
+        mixed_rows = [real_sampled_row, legacy_row]
+        validate_harvest_rows(mixed_rows)
+
+        self.assertIn(
+            "real_sampling_fixture_design_not_sampled",
+            INVENTORY_DIAGNOSTIC_POLICIES,
+        )
+        self.assertIn(
+            "synthetic_proxy_not_sampled_from_raster",
+            INVENTORY_DIAGNOSTIC_POLICIES,
+        )
+        self.assertNotIn("production_calibrated_yield", INVENTORY_DIAGNOSTIC_POLICIES)
+
+        with self.assertRaises(ValueError) as ctx:
+            validate_harvest_rows([{
+                "source_record_id": "test_prod_001",
+                "quantity": 300.0,
+                "inventory_value_policy": "production_calibrated_yield",
+                "yield_value_policy": "synthetic_placeholder_yield_not_calibrated",
+            }])
+        self.assertIn("production_calibrated_yield", str(ctx.exception))
 
     def test_scanfi_diagnostic_lp_variant_solves_with_replaced_supply(self) -> None:
         scanfi_dir = Path(self.tmp.name) / "scanfi-diagnostic"

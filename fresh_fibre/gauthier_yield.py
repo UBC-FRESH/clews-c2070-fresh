@@ -121,6 +121,169 @@ COEFFICIENT_ROWS = [
     },
 ]
 
+REAL_COEFFICIENT_ROWS: list[dict[str, object]] = [
+    # --- QC species (Pothier & Savard 1998 / Auger 2017 seed band) -------------
+    # Seeds target ~age 80 mid-rotation proxy values; Phase 4 calibration
+    # replaces these with direct Pothier & Savard RN98-3054 lookups.
+    {
+        "species_code": "SAB",
+        "species_group": "QC_softwood_balsam_fir",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 110,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Balsam fir QC mid-rotation; PMS RN98-3054.",
+    },
+    {
+        "species_code": "EPN",
+        "species_group": "QC_softwood_black_spruce",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 120,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Black spruce; PMS RN98-3054 (38.1 % QC merchantable share).",
+    },
+    {
+        "species_code": "EPB",
+        "species_group": "QC_softwood_white_spruce",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 95,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "White spruce; PMS RN98-3054; Memoire 118 planted supplement.",
+    },
+    {
+        "species_code": "BOP",
+        "species_group": "QC_hardwood_paper_birch",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 110,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Paper birch; PMS RN98-3054.",
+    },
+    {
+        "species_code": "BOJ",
+        "species_group": "QC_hardwood_yellow_birch",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 115,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Yellow birch; PMS RN98-3054.",
+    },
+    {
+        "species_code": "PET",
+        "species_group": "QC_hardwood_trembling_aspen",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 110,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Trembling aspen; PMS RN98-3054.",
+    },
+    {
+        "species_code": "ERS",
+        "species_group": "QC_hardwood_sugar_maple",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 120,
+        "source_method": "pothier_savard_1998_rn98_3054_ontario_conversion",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Sugar maple; PMS RN98-3054 has no ERS row; ON-table conversion proxy.",
+    },
+    {
+        "species_code": "ERR",
+        "species_group": "QC_hardwood_red_maple",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 110,
+        "source_method": "pothier_savard_1998_rn98_3054_ontario_conversion",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Red maple; ON-table conversion proxy.",
+    },
+    {
+        "species_code": "THO",
+        "species_group": "QC_softwood_eastern_white_cedar",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 85,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Eastern white cedar; PMS RN98-3054.",
+    },
+    {
+        "species_code": "PIG",
+        "species_group": "QC_softwood_jack_pine",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 100,
+        "source_method": "pothier_savard_1998_rn98_3054_table_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Jack pine; PMS RN98-3054.",
+    },
+    {
+        "species_code": "MEH",
+        "species_group": "QC_softwood_tamarack_ari_subgroup",
+        "region": "QC",
+        "vol80_proxy_m3_per_ha": 95,
+        "source_method": "pothier_savard_1998_rn98_3054_ari_subgroup_proxy",
+        "value_policy": "real_pothier_savard_auger_seeded_vol80_proxy",
+        "notes": "Tamarack; PMS RN98-3054 ARi softwood subgroup proxy.",
+    },
+    # --- BC species (BCMFR / Philip / TIPSY / VDYP seed band) -----------------
+    # Seeds target ~age 80 mid-rotation proxy values for BC interior BEC
+    # groups (SBS, IDF, ICH); Phase 4 calibration replaces these with direct
+    # BCMFR / TIPSY lookups.
+    {
+        "species_code": "FDC",
+        "species_group": "BC_coniferous_doug_fir",
+        "region": "BC_coast",
+        "vol80_proxy_m3_per_ha": 145,
+        "source_method": "bcmfr_philip_tipsy_coastal_table_proxy",
+        "value_policy": "real_bcmfr_philip_tipsy_seeded_vol80_proxy",
+        "notes": "Douglas-fir coastal BEC proxy at rotation.",
+    },
+    {
+        "species_code": "FDC",
+        "species_group": "BC_coniferous_doug_fir",
+        "region": "BC_interior",
+        "vol80_proxy_m3_per_ha": 105,
+        "source_method": "bcmfr_philip_tipsy_interior_idf_table_proxy",
+        "value_policy": "real_bcmfr_philip_tipsy_seeded_vol80_proxy",
+        "notes": "Douglas-fir interior BEC (IDF dk typical SI 22).",
+    },
+    {
+        "species_code": "AT",
+        "species_group": "BC_deciduous_aspen",
+        "region": "BC",
+        "vol80_proxy_m3_per_ha": 110,
+        "source_method": "bcmfr_philip_nigh_sibec_table_proxy",
+        "value_policy": "real_bcmfr_philip_tipsy_seeded_vol80_proxy",
+        "notes": "Trembling aspen; Nigh interior yield extension proxy.",
+    },
+    {
+        "species_code": "BL",
+        "species_group": "BC_coniferous_subalpine_fir",
+        "region": "BC",
+        "vol80_proxy_m3_per_ha": 95,
+        "source_method": "bcmfr_philip_essf_table_proxy",
+        "value_policy": "real_bcmfr_philip_tipsy_seeded_vol80_proxy",
+        "notes": "Subalpine fir; ESSF mp CW analog proxy.",
+    },
+    {
+        "species_code": "Pl",
+        "species_group": "BC_coniferous_lodgepole_pine",
+        "region": "BC_interior",
+        "vol80_proxy_m3_per_ha": 90,
+        "source_method": "bcmfr_philip_tipsy_sbs_mk_table_proxy",
+        "value_policy": "real_bcmfr_philip_tipsy_seeded_vol80_proxy",
+        "notes": "Lodgepole pine; SBS mk typical proxy.",
+    },
+    {
+        "species_code": "Sx",
+        "species_group": "BC_coniferous_spruce_hybrid",
+        "region": "BC_interior",
+        "vol80_proxy_m3_per_ha": 115,
+        "source_method": "bcmfr_philip_tipsy_ich_dk_table_proxy",
+        "value_policy": "real_bcmfr_philip_tipsy_seeded_vol80_proxy",
+        "notes": "Interior spruce (Sx = Sxw + Sxs hybrid); ICH dk typical proxy.",
+    },
+]
+
 SYNTHETIC_INPUT_ROWS = [
     {
         "inventory_cell_id": "gauthier_bc_coast_wet_forest_001",
@@ -221,6 +384,87 @@ def format_number(value: float) -> str:
 
 def coefficient_rows() -> list[dict[str, object]]:
     return COEFFICIENT_ROWS
+
+
+def real_coefficient_rows() -> list[dict[str, object]]:
+    """Return a deep-ish copy of ``REAL_COEFFICIENT_ROWS``.
+
+    The shallow ``return COEFFICIENT_ROWS`` pattern is preserved for
+    ``COEFFICIENT_ROWS``; here we return a list copy so callers cannot
+    accidentally mutate the module-level constant when extending it
+    downstream.
+    """
+    return [dict(row) for row in REAL_COEFFICIENT_ROWS]
+
+
+def species_lookup(species_code: str, region: str) -> dict[str, object] | None:
+    """Return the per-species real-coefficient row for ``(species_code, region)``.
+
+    The lookup is exact on both keys; ``None`` is returned when no
+    matching row exists so callers can fall back explicitly. The exact
+    match policy keeps the diagnostic deterministic: a caller with an
+    unknown (species, region) pair must surface it via ``None`` rather
+    than receiving an unsupported default.
+
+    Args:
+        species_code: producer-native species code (e.g. ``"EPN"``, ``"FDC"``).
+        region: jurisdiction × sub-region key (e.g. ``"QC"``, ``"BC"``,
+            ``"BC_coast"``, ``"BC_interior"``).
+
+    Returns:
+        The matching ``REAL_COEFFICIENT_ROWS[i]`` dict, or ``None``.
+    """
+    if not species_code or not region:
+        return None
+    for row in REAL_COEFFICIENT_ROWS:
+        if row["species_code"] == species_code and row["region"] == region:
+            return dict(row)
+    return None
+
+
+def volume_at_age_for_species(
+    species_code: str,
+    region: str,
+    age: float,
+    *,
+    age_curve_k: float = 0.022,
+) -> float:
+    """Per-species proxy volume in m³/ha at ``age`` via a Chapman-Richards
+    saturating curve.
+
+    The volume is computed as ``vol80 * (1 - exp(-k * age))`` against the
+    per-species ``vol80_proxy_m3_per_ha`` in ``species_lookup``. The
+    functional form saturates asymptotically at ``vol80_proxy_m3_per_ha``;
+    the default ``k=0.022`` reaches ~63 % of the asymptote by age 50
+    and ~80 % by age 100.
+
+    This is a **proxy** — the real implementation will use age-indexed
+    yield tables from Pothier & Savard (QC) or BCMFR / Philip / TIPSY
+    (BC) directly. The current behaviour is sufficient for the BC + QC
+    fixture substitution and explicitly disclaims calibrated accuracy.
+
+    Args:
+        species_code: producer-native species code (e.g. ``"EPN"``).
+        region: jurisdiction × sub-region key.
+        age: stand age in years (years).
+        age_curve_k: optional Chapman-Richards rate; default ``0.022``.
+
+    Returns:
+        Per-ha volume in m³/ha at the requested age, or ``0.0`` if the
+        species/region pair is not in ``REAL_COEFFICIENT_ROWS``.
+
+    Raises:
+        ValueError: if ``age`` is negative or ``age_curve_k`` is non-positive.
+    """
+    if age < 0:
+        raise ValueError(f"Age must be non-negative for species-yield evaluation: {age}")
+    if age_curve_k <= 0:
+        raise ValueError(f"age_curve_k must be positive for species-yield: {age_curve_k}")
+    coef = species_lookup(species_code, region)
+    if coef is None:
+        return 0.0
+    vol80 = number(coef["vol80_proxy_m3_per_ha"])
+    return vol80 * (1.0 - math.exp(-age_curve_k * age))
 
 
 def input_rows() -> list[dict[str, object]]:

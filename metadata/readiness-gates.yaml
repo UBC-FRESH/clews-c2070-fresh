@@ -1,0 +1,113 @@
+schema_version: 1
+updated_utc: "2026-08-11T18:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+notes:
+  - "Readiness gates define cross-cutting prerequisites for production model readiness."
+  - "Each gate must be resolved before the associated model capability can be considered production-ready."
+  - "Status values: blocked, in_progress, resolved"
+  - "Gates are independent of individual dataset acceptance; multiple datasets may satisfy one gate."
+
+gates:
+  - id: nfi_access
+    name: "NFI Ground Plot & Reference Pixel Access"
+    description: "Access to NFI ground plot data and reference pixels for calibration and validation of inventory-derived forest attributes (biomass, volume, age, species composition)."
+    status: blocked
+    required_for:
+      - "national biomass calibration"
+      - "forest composition validation"
+      - "age class distribution validation"
+    blocking_datasets:
+      - nfi_ground_plot_data
+    notes: "NFI data request process required; access subject to NFI approval. Standard reports (nfi_standard_reports) accepted for summary validation only."
+
+  - id: climate_predictors
+    name: "Climate Predictor Variables"
+    description: "Calibrated climate forcing variables (temperature, precipitation, climate normals) for growth/yield models and disturbance projections."
+    status: blocked
+    required_for:
+      - "Gauthier yield model climate response"
+      - "ws3 growth transitions"
+      - "disturbance-climate coupling"
+    blocking_datasets:
+      - era5_climate
+    notes: "ERA5 reanalysis identified as candidate; licensing and variable selection pending."
+
+  - id: residue_yield_policy
+    name: "Residue Yield Policy Calibration"
+    description: "Calibrated residue/harvest residue yield factors and economic availability for forest biomass supply chain."
+    status: blocked
+    required_for:
+      - "residue supply node quantities"
+      - "biomass availability for pellet/bioenergy"
+      - "harvest cost allocation between merchantable and residue"
+    blocking_datasets: []
+    notes: "Candidate policy paths documented in prototype-gap-register.csv. Requires provincial residue survey data and economic availability study."
+
+  - id: calibrated_cost_surfaces
+    name: "Calibrated Transport & Processing Cost Surfaces"
+    description: "Spatially explicit delivered-cost surfaces for log haul, residue transport, and processing costs by facility type."
+    status: blocked
+    required_for:
+      - "LP network-flow cost minimization"
+      - "delivered feedstock cost screening"
+      - "facility location optimization"
+    blocking_datasets:
+      - nrn
+      - forest_resource_roads
+      - nrn_vectors
+      - nrwn_vectors
+    notes: "NRN accepted as coarse national baseline; jurisdiction-specific forest roads (10 new candidate sources) required for operational access modelling. SAFORAH2 CSW discovery and GeoGratis catalogue walk (Phase 2b) added nrn_vectors and nrwn_vectors to the blocking set; Phase 3.10 acquisition plan will resolve these and the provincial SK/NWT/YT WMS rows reviewed under metadata/source-reviews/provincial_transport.md."
+
+  - id: species_composition
+    name: "Species Composition Layers"
+    description: "Wall-to-wall species composition (coniferous/deciduous, species group) for yield stratification and product allocation."
+    status: in_progress
+    required_for:
+      - "SCANFI species crown-closure layers"
+      - "Gauthier coniferous/deciduous yield curves"
+      - "product-grade disaggregation (lumber, pulp, panel)"
+    blocking_datasets:
+      - scanfi_v2
+      - casfri_v5_schema
+    notes: "SCANFI v2 species layers (spsCC_*) identified but deferred pending authorization. 123 GB total. CASFRI v5 schema integration under governing issue #1 / proposed child #29; schema mapping documented in planning/casfri-v5-schema-integration-plan.md and source review at metadata/source-reviews/casfri_v5_schema.md (D1 §5). Two openly-downloadable provincial FRIs ingested through the CASFRI pathway: BC mini (inherited via bc-mini-scanfi-gauthier-diagnostic) and QC mini (via bc-qc-mini-2prov with casfri_qc_reader + qc_ws3_export bridge). Jurisdictional-prefix policy (BC_*, QC_*) preserved per metadata/source-crosswalks/qc_casfri_v5_schema.md §3.1. Stale species codes (BC: FDC, AT, BL; QC: SAB, EPB, BOP, BOJ, MEH, PEU) surface in supply_provenance without flattening. Remaining blockers: SCANFI v2 spsCC_* species layers (123 GB) for national-scale wall-to-wall; CASFRI QC BOP gap recorded as qc_species_unmapped_unresolved. See planning/qc_two_province_incremental_memo.md §3.1. SCANFI v2 2025 species crown-closure layers acquired at P7.1.CASFRI.13 (10 species, ~14.6 GB). CASFRI v5 schema integration complete (BC+QC diagnostic LP). Remaining: full time series, .ovr files, northern extrapolation mask application."
+
+  - id: national_scaling
+    name: "National Scaling Beyond BC Mini"
+    description: "Extension from BC diagnostic prototype to national wall-to-wall model with full spatial unit coverage."
+    status: in_progress
+    required_for:
+      - "national biomass supply modelling"
+      - "inter-provincial trade flows"
+      - "national carbon accounting integration"
+    blocking_datasets:
+      - scanfi_v2
+      - provincial_forest_inventories
+      - provincial_yield_curves
+    notes: "BC + QC two-province diagnostic LP fixture solves `Optimal` end-to-end; inter-provincial pathway flows emitted; supply-comparison sep-of-BC vs QC artefacts present in metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/generated/. Real QC GeoPackage (feuille 21M 815 MB, CC-BY 4.0) archived in data/raw/qc_inventory/2023-ieqm-eighth/ via DataLad; provincial bulk GeoPackage (11.2 GB) URL pointer retained but not archived to keep this increment scope manageable. Remaining blockers: NS, PE, YT, NL02 provincial FRIs (also openly-downloadable per casfri_v5_schema.md §3.a) not yet wired; provincial yield curves remain uncalibrated (Gauthier et al. 2015 reproduction path stays at diagnostic-tier); facility layer gate remains blocked."
+
+  - id: facility_layer
+    name: "Forest Industry Facility Layer"
+    description: "Authoritative national layer of sawmills, pulp mills, panel mills, pellet plants, and cogeneration facilities with capacity and location."
+    status: resolved_pending_provenance_review
+    required_for:
+      - "demand node definition in LP network-flow"
+      - "processing capacity constraints"
+      - "commodity cascade routing"
+    blocking_datasets:
+      - ghafghazi_et_al_2017_ffcm_payload
+    notes: "Canonical national facility-layer source is metadata/ffcm-archive/parsed/ (facilities.csv = 1371 facilities, processing_lines.csv = 957 lines, routes.csv = 38390 routes). Raw archive tmp/Saeed_data.zip sha256-pinned via metadata/ffcm-archive/archive-manifest.csv row 1683; architecture paper at tmp/fpro-article-p205.pdf (Ghafghazi et al. 2017 Forest Products Journal). Raw archive stays ignored under tmp/ per planning/ffcm-archive-analysis.md §Data Boundary. Upstream-archive provenance review still pending; treat parsed CSVs as canonical for current model use. Geographic crosswalk layer produced at P7.1.CASFRI.12 (metadata/facility_geocoding.csv + metadata/fmu_tl_anchors.csv + metadata/tenure_area_rollup.csv). FMUs have NO polygon geometry - transport-graph anchored only. Mill-level lat/lon coverage: ~1,360 unique mills across Mills DB + suppliers.dbf sources."
+
+  - id: disturbance_calibration
+    name: "Disturbance History Calibration"
+    description: "Validated disturbance history (harvest, fire, insect) for forest estate dynamics and age-class initialization."
+    status: in_progress
+    required_for:
+      - "ws3 forest estate initialization"
+      - "age class distribution validation"
+      - "disturbance return interval analysis"
+    blocking_datasets:
+      - canlad
+      - cwfis_nfdb_fire_polygons
+      - cwfis_nfdb_fire_points
+      - nbac
+    notes: "CanLaD, NFDB polygons/points, NBAC accepted and acquired. CanLaBS v2 archived with raw dNBR provenance. Calibration of harvest vs. fire vs. insect separation remains open."

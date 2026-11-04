@@ -84,17 +84,21 @@ Manifest:
 
 ## Recommendation
 
-CanLaD should remain high priority, but set status to
-`needs_access_resolution` until NRCan's public raster payload access is
-confirmed or corrected. Do not archive the 1985-2025 CanLaD support files alone
-as if the dataset were complete.
+CanLaD is accepted for the documented 1985-2025 disturbance baseline. Raster
+payload access was confirmed on 2026-08-05 through the two public subdirectories
+listed above. Preserve the observed directory names and publication date in
+the acquisition metadata; do not treat support files alone as the complete
+dataset.
 
-Pre-CanLaD v2 should be accepted as the pre-1985 companion disturbance source.
-The full core raster payload is manageable for DataLad/S3 after PI approval.
+Pre-CanLaD v2 is accepted as the pre-1985 companion disturbance source. This
+source acceptance does not authorize mirroring: the full core raster payload
+and documentation remain pending PI approval. The payload is manageable for
+DataLad/S3 after that approval.
 
 For the first national disturbance baseline:
 
-- use CanLaD once the 1985-2025 raster payloads are reachable;
+- use CanLaD for the 1985-2025 disturbance baseline using the documented
+  payload directories;
 - use Pre-CanLaD v2 for pre-1985 disturbance history and age/carbon context;
 - keep NBAC/NFDB in the queue for fire-specific validation and year adjustment;
   and

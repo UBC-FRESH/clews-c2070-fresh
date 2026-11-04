@@ -1,7 +1,7 @@
 # Source Review: nbac
 
-**Reviewed:** 2026-08-05
-**Status:** candidate
+**Reviewed:** 2026-08-05 (initial), 2026-08-06 (validation)
+**Status:** accepted
 **Priority:** high
 
 ## Publisher & License
@@ -26,8 +26,30 @@
 - **Format:** Shapefile
 
 ## Acquisition
-- Download attempted 2026-08-05; composite ZIP (261 MB) in progress
-- Will archive to DataLad upon completion
+
+### 2020 Annual Sample (ARCHIVED)
+- **File:** `NBAC_2020_20260513.zip`
+- **Size:** 7.2 MB
+- **Path:** `data/raw/nrcan/nbac/NBAC_2020_20260513.zip`
+- **Status:** Validated and archived
+- **Contents:** Shapefile (.shp, .dbf, .prj, .shx, .sbn, .sbx, .cpg) + ISO 19115 XML metadata + PDF documentation
+- **Validation:** ZIP integrity confirmed; all required components present
+
+### Composite (1972–2025)
+- **File:** `NBAC_1972to2025_20260513_shp.zip` (261 MB)
+- **Status:** Not yet acquired (lower priority than annual samples for Phase 7)
+
+## Validation Results (2026-08-06)
+- [x] ZIP archive valid (Python zipfile module)
+- [x] All shapefile components present
+- [x] ISO 19115 metadata XML present
+- [x] Character encoding: UTF-8
+- [x] Projection file present (.prj)
+
+## Integration with CanLaBS v2
+- CanLaBS v2 severity layer is built upon NBAC fire perimeters (1985–2024)
+- NBAC 2020 sample provides ground-truth validation for CanLaBS 2020 severity values
+- Spatial reference should match CanLaBS v2 (NAD83 Canada Lambert)
 
 ## Modelled Use
 - Annual burned-area polygons — best-available national BAU product
@@ -44,3 +66,8 @@
 - Annual ZIPs allow time-series analysis by year
 - Metadata PDF describes classification methodology
 - Recommend downloading composite first, then annual subsets as needed
+
+## Risks and Limitations
+1. **Annual vs. Composite:** 2020 sample is one year; composite covers 1972–2025
+2. **License:** Open Government Licence - Canada assumed; verify against official metadata
+3. **Temporal Match:** Ensure NBAC 2020 aligns with CanLaBS 2020 severity layer for validation

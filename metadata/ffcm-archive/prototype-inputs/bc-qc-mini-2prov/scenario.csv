@@ -1,0 +1,2 @@
+scenario_id,scenario_name,base_year,start_period,end_period,period_length_years,description,policy_assumptions,price_case,climate_case,harvest_case
+bc_qc_mini_2prov_001,BC + QC synthetic 2-province mini-network (P7.1.CASFRI extension),2020,0,0,5,Synthetic one-period diagnostic fixture for FRESH soft-link testing,none,diagnostic,diagnostic,diagnostic

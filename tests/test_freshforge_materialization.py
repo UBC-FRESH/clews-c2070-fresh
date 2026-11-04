@@ -124,6 +124,8 @@ class FreshForgeMaterializationTest(unittest.TestCase):
                 "materialize_paths",
                 "audit_annex_availability",
                 "write_materialization_report",
+                "download_era5_normals",
+                "download_scanfi_species_bc",
             ],
         )
         self.assertTrue(

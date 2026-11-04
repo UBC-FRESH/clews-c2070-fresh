@@ -1,15 +1,18 @@
 # Phase 6 SCANFI Acquisition Plan
 
-**Status**: BLOCKED - awaiting explicit authorization before CDN download
+**Status**: COMPLETED for the authorized five-file 2025 subset; full-package
+expansion remains blocked
 **Date**: 2026-08-04
 **Phase**: P6.0 / P6.1
 
 ## Blocker Summary
 
-The five authorized SCANFI v2 2025 source rasters are not present in the `data`
-submodule. Phase 5 authorization permits their use but does not automatically
-authorize the ~21 GB download or create the annexed content. The data submodule
-is a fresh scaffold at commit `731667f`.
+The five authorized SCANFI v2 2025 source rasters were downloaded, checksum
+verified, added to `data/raw/scanfi/v2/`, and published to the DataLad/git-annex
+remote. The acquisition record is
+`data/manifests/scanfi-v2-2025-acquisition.csv`; the five files total about
+20.6 GB. The six heuristic windows derived from these rasters remain software
+fixtures and are quarantined from inferential use.
 
 ## Authorized Source Files
 
@@ -32,18 +35,15 @@ Verify exact sizes from `metadata/source-file-manifests/scanfi_v2_files.csv`.
 Open Government Licence - Canada. Permits use, reproduction, and
 distribution without restriction. No additional license review required.
 
-## Acquisition Steps (Pending Authorization)
+## Acquisition Record
 
-1. **Verify CDN accessibility** - confirm all five URLs return HTTP 200 before
-   attempting download
-2. **Create target directory** - `data/raw/scanfi/v2/` in the data submodule
-3. **Download with checksum verification** - compute SHA-256 during download
-4. **Add to DataLad/git-annex** - `git annex add` each file to create annex keys
-5. **Publish to arbutus-s3** - `git annex copy --to arbutus-s3` for each file
-6. **Record checksums** - update `metadata/source-file-manifests/scanfi_v2_files.csv`
-   with actual SHA-256 values and download dates
-7. **Commit to data submodule** - push to `origin/main` in data repo
-8. **Update parent repo** - commit submodule pointer update
+- CDN access, download, SHA-256 verification, annex registration, and
+   `arbutus-s3` publication are complete for all five authorized files.
+- Exact checksums, byte sizes, source URLs, acquisition dates, and
+   `downloaded_verified` statuses are recorded in
+   `data/manifests/scanfi-v2-2025-acquisition.csv`.
+- The archived payloads are limited to `data/raw/scanfi/v2/` and do not include
+   other SCANFI time steps, species layers, or the north extrapolation mask.
 
 ## NOT Authorized
 
@@ -54,7 +54,7 @@ distribution without restriction. No additional license review required.
 - Private NFI data
 - Climate payloads
 
-## Continue Without Raster Content
+## Continue Without Additional Raster Content
 
 The following Phase 6 tasks can proceed without raster acquisition:
 - P6.2: Draft derived inventory table contract and validation checks
@@ -65,8 +65,6 @@ The following Phase 6 tasks can proceed without raster acquisition:
 
 ## Resumption Triggers
 
-Resume P6.1 materialization when:
-1. User explicitly authorizes the ~21 GB SCANFI acquisition
-2. Runbook prerequisites satisfied (git config, credentials if needed)
-3. CDN URLs confirmed accessible
-4. Target directory `data/raw/scanfi/v2/` created in data submodule
+Further SCANFI acquisition requires a new explicit authorization. The current
+record does not authorize the full 312 GB package, other time steps, species
+composition layers, or the north extrapolation mask.

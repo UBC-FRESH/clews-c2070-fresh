@@ -1,0 +1,6 @@
+spatial_unit_id,spatial_unit_type,parent_unit_id,province,geometry_ref,area_ha,management_regime,access_class,ownership_or_tenure,source_dataset_id
+bc_fmu_coast_01,diagnostic_fmu,bc,BC,data:diagnostic/bc_fmu_coast_01,120000,synthetic_even_flow,roaded,public,synthetic_bc_mini
+bc_fmu_interior_01,diagnostic_fmu,bc,BC,data:diagnostic/bc_fmu_interior_01,180000,synthetic_even_flow,roaded,public,synthetic_bc_mini
+bc_fmu_interior_02,diagnostic_fmu,bc,BC,data:diagnostic/bc_fmu_interior_02,95000,synthetic_salvage_mix,mixed_access,public,synthetic_bc_mini
+qc_fmu_saguenay_01,diagnostic_fmu,qc,QC,data:diagnostic/qc_fmu_saguenay_01,85000,synthetic_even_flow,roaded,public,qc_5e_ieqm_casfri_v5_mini
+qc_fmu_saguenay_02,diagnostic_fmu,qc,QC,data:diagnostic/qc_fmu_saguenay_02,55000,synthetic_disturbance_mix,mixed_access,public,qc_5e_ieqm_casfri_v5_mini

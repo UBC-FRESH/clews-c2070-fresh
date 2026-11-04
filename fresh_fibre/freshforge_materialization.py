@@ -131,6 +131,20 @@ _NODE_CONTRACTS: tuple[_NodeContract, ...] = (
         outputs=("materialization_report",),
         artifacts=("report",),
     ),
+    _NodeContract(
+        id="download_era5_normals",
+        name="Download ERA5 climate normals",
+        description="Download ERA5 monthly climate normals (1991-2020) via CDS API.",
+        inputs=("special_remote",),
+        outputs=("era5_download",),
+    ),
+    _NodeContract(
+        id="download_scanfi_species_bc",
+        name="Download SCANFI species layers for BC",
+        description="Download SCANFI v2 species crown-closure layers for BC from NRCan FTP.",
+        inputs=("special_remote",),
+        outputs=("scanfi_species_download",),
+    ),
 )
 
 
@@ -414,6 +428,8 @@ def _commands_for_node(
         "enable_special_remote": _enable_remote_commands,
         "materialize_paths": _materialize_path_commands,
         "audit_annex_availability": _audit_annex_commands,
+        "download_era5_normals": _download_era5_normals_commands,
+        "download_scanfi_species_bc": _download_scanfi_species_bc_commands,
     }
     builder = builders.get(node_type_id)
     return None if builder is None else builder(overlay)
@@ -543,6 +559,46 @@ def _audit_annex_commands(
             str(path),
         )
         for path in overlay.audit_paths
+    )
+
+
+def _download_era5_normals_commands(
+    overlay: MaterializationOverlay,
+) -> tuple[tuple[str, ...], ...]:
+    """Run ERA5 climate normals download script."""
+    script_path = overlay.instance_root.parent / "scripts" / "download_era5_normals.py"
+    if not script_path.exists():
+        # Fallback to relative path from repo root
+        script_path = Path("scripts/download_era5_normals.py")
+    python = _venv_python(overlay.venv_path)
+    output_dir = _instance_path(overlay, Path("raw/ecmwf/era5/normals"))
+    return (
+        (
+            python,
+            str(script_path),
+            "--output-dir",
+            str(output_dir),
+        ),
+    )
+
+
+def _download_scanfi_species_bc_commands(
+    overlay: MaterializationOverlay,
+) -> tuple[tuple[str, ...], ...]:
+    """Run SCANFI species layers download script."""
+    script_path = overlay.instance_root.parent / "scripts" / "download_scanfi_species_bc.py"
+    if not script_path.exists():
+        # Fallback to relative path from repo root
+        script_path = Path("scripts/download_scanfi_species_bc.py")
+    python = _venv_python(overlay.venv_path)
+    output_dir = _instance_path(overlay, Path("raw/nrcan/scanfi_v2/species"))
+    return (
+        (
+            python,
+            str(script_path),
+            "--output-dir",
+            str(output_dir),
+        ),
     )
 
 

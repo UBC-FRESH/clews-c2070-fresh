@@ -1,0 +1,23 @@
+dataset,province,polygon_count,area_subtotal_km2,share_pct_of_national,notes
+gfw_tenures,Yukon,88,1439875.42,32.44,gfw_area_km_precomputed_by_provider
+gfw_tenures,British Columbia,3308,1310301.89,29.52,gfw_area_km_precomputed_by_provider
+gfw_tenures,Alberta,66,466732.80,10.52,gfw_area_km_precomputed_by_provider
+gfw_tenures,Quebec,32,484138.85,10.91,gfw_area_km_precomputed_by_provider
+gfw_tenures,Ontario,41,439440.28,9.90,gfw_area_km_precomputed_by_provider
+gfw_tenures,Manitoba,2,113158.64,2.55,gfw_area_km_precomputed_by_provider
+gfw_tenures,Saskatchewan,20,105618.80,2.38,gfw_area_km_precomputed_by_provider
+gfw_tenures,New Brunswick,11,33242.38,0.75,gfw_area_km_precomputed_by_provider
+gfw_tenures,Northwest Territories,2,15534.28,0.35,gfw_area_km_precomputed_by_provider
+gfw_tenures,Newfoundland and Labrador,92,15280.35,0.34,gfw_area_km_precomputed_by_provider
+gfw_tenures,Nova Scotia,18,14764.05,0.33,gfw_area_km_precomputed_by_provider
+gfw_tenures,NATIONAL_TOTAL,3680,4438087.73,100.00,gfw_area_km_precomputed_by_provider
+databasin,BC,2501,700110.64,33.33,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,ON,247,431851.67,20.56,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,QC,5224,381872.94,18.18,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,AB,86,200670.95,9.55,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,MB,14,144197.85,6.87,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,SK,189,119864.47,5.71,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,NS,76,51659.73,2.46,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,NF,193,36878.78,1.76,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,NB,1692,33344.54,1.59,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS
+databasin,NATIONAL_TOTAL,10222,2100451.56,100.00,databasin_area_computed_from_Canada_Lambert_Conformal_Conic_METERS

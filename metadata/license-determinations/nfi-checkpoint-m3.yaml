@@ -1,0 +1,51 @@
+schema_version: 1
+updated_utc: "2026-08-09T00:00:00Z"
+owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
+checkpoint: "M3"
+label: "3-Month NFI Access Review"
+description: "First checkpoint to assess NFI ground plot DUA progress and confirm fallback source readiness."
+target_date_utc: "2026-11-09T00:00:00Z"
+status: scheduled
+criteria:
+  - id: nfi_dua_initiated
+    description: "NFI Data Use Agreement request formally submitted to NRCan with project scope and timeline."
+    required: true
+    evidence: "Email confirmation or portal submission receipt from NFI Data Access Office."
+    status: pending
+  - id: nfi_dua_timeline_confirmed
+    description: "NRCan provides estimated DUA review timeline (target: 3-6 months)."
+    required: true
+    evidence: "Written response from NFI office with expected decision date."
+    status: pending
+  - id: magplot_access_verified
+    description: "MAGPlot dataset access confirmed; download and schema validation complete."
+    required: true
+    evidence: "MAGPlot files downloaded to data/raw/magplot/; schema crosswalk documented."
+    status: pending
+  - id: provincial_psp_inventory
+    description: "Inventory of available provincial PSP datasets (BC VRI, AB PSP, ON FRI, QC MRNF) completed with access contacts."
+    required: true
+    evidence: "Updated source-inventory.csv with PSP entries; contact emails confirmed responsive."
+    status: pending
+  - id: fallback_readiness_assessment
+    description: "Assessment of whether MAGPlot + provincial PSPs can substitute for NFI ground plots in calibration/validation workflows."
+    required: true
+    evidence: "Technical memo documenting coverage gaps, schema differences, and modelling impact."
+    status: pending
+decisions:
+  - if nfi_dua_on_track and fallback_ready:
+      action: "Proceed with dual-track: continue NFI DUA; advance MAGPlot/PSP integration."
+      next_checkpoint: "M6"
+  - if nfi_dua_blocked and fallback_ready:
+      action: "Formally adopt MAGPlot + provincial PSPs as primary calibration sources; document NFI gap."
+      next_checkpoint: "M6"
+  - if nfi_dua_on_track and not fallback_ready:
+      action: "Escalate PSP access; allocate resources to accelerate fallback readiness."
+      next_checkpoint: "M6"
+  - if nfi_dua_blocked and not fallback_ready:
+      action: "CRITICAL: Escalate to PI and steering committee; project schedule at risk."
+      next_checkpoint: "Immediate"
+notes:
+  - "M3 is a go/no-go for fallback strategy activation. If NFI DUA timeline exceeds 6 months, fallback must be production-ready."
+  - "MAGPlot is the highest-priority fallback; provincial PSPs provide jurisdictional coverage."
+  - "Document all decisions in CHANGE_LOG.md and update nfi-access.yaml status fields."

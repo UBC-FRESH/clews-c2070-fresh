@@ -1,0 +1,91 @@
+workflow:
+  id: clews_era5_scanfi_species_materialization
+  name: CLEWS ERA5 + SCANFI species materialization workflow
+  description: Initialize data submodule and materialize ERA5 climate normals and SCANFI species crown-closure layers for BC.
+nodes:
+  - id: check_toolchain
+    provider: clews.materialization.check_toolchain
+    outputs:
+      toolchain: toolchain
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: check_python_environment
+    provider: clews.materialization.check_python_environment
+    inputs:
+      toolchain: toolchain
+    outputs:
+      python_environment: python_environment
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: install_packages
+    provider: clews.materialization.install_packages
+    inputs:
+      python_environment: python_environment
+    outputs:
+      packages: packages
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: init_submodules
+    provider: clews.materialization.init_submodules
+    inputs:
+      packages: packages
+    outputs:
+      submodules: submodules
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: init_annex
+    provider: clews.materialization.init_annex
+    inputs:
+      submodules: submodules
+    outputs:
+      annex_repository: annex_repository
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: enable_special_remote
+    provider: clews.materialization.enable_special_remote
+    inputs:
+      annex_repository: annex_repository
+    outputs:
+      special_remote: special_remote
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: download_era5_normals
+    provider: clews.materialization.download_era5_normals
+    inputs:
+      special_remote: special_remote
+    outputs:
+      era5_download: era5_download
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: download_scanfi_species_bc
+    provider: clews.materialization.download_scanfi_species_bc
+    inputs:
+      special_remote: special_remote
+    outputs:
+      scanfi_species_download: scanfi_species_download
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: materialize_paths
+    provider: clews.materialization.materialize_paths
+    inputs:
+      special_remote: special_remote
+    outputs:
+      materialized_paths: materialized_paths
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: audit_annex_availability
+    provider: clews.materialization.audit_annex_availability
+    inputs:
+      materialized_paths: materialized_paths
+    outputs:
+      annex_audit: annex_audit
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+  - id: write_materialization_report
+    provider: clews.materialization.write_materialization_report
+    outputs:
+      materialization_report: materialization_report
+    parameters:
+      overlay: examples/freshforge/era5_scanfi_species_overlay.yaml
+    artifacts:
+      report: runtime/freshforge/era5_scanfi_species_materialization_report.json

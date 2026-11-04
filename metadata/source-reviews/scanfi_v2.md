@@ -113,3 +113,40 @@ Defer until modelling requirements are explicit:
 - full 1985-2025 time series;
 - all species crown-closure rasters; and
 - `.ovr` overview files unless needed for desktop GIS review.
+
+## Acquisition Reconciliation — 2026-08-08
+
+The authorized five-file 2025 subset was downloaded, SHA-256 verified, added to
+the DataLad/git-annex data repository, and published to `arbutus-s3`. The
+durable acquisition record is
+`data/manifests/scanfi-v2-2025-acquisition.csv`; the payloads are under
+`data/raw/scanfi/v2/`.
+
+This does not authorize or imply acquisition of the remaining SCANFI package.
+The full 1985–2025 time series, species crown-closure layers, overview files,
+and north extrapolation mask remain outside the approved subset. The six
+heuristic diagnostic windows are software fixtures and must not be used as
+inferential evidence.
+
+## Acquisition Reconciliation — 2026-08-11 (species layers)
+
+The 2025 species crown-closure subset was downloaded, SHA-256 verified, added to
+the DataLad/git-annex data repository, and published to `arbutus-s3`. The durable
+acquisition record is `data/manifests/scanfi-v2-2025-species-acquisition.csv`;
+the payloads are under `data/raw/scanfi/v2/`.
+
+Acquired species layers (2025 time step):
+- SCANFI_spsCC_balsamFir_2025_v2_20260119.tif (1.16 GB)
+- SCANFI_spsCC_blackSpruce_2025_v2_20260119.tif (3.31 GB)
+- SCANFI_spsCC_broadleaf_2025_v2_20260119.tif (2.68 GB)
+- SCANFI_spsCC_douglasFir_2025_v2_20260119.tif (242 MB)
+- SCANFI_spsCC_jackPine_2025_v2_20260119.tif (1.62 GB)
+- SCANFI_spsCC_lodgepolePine_2025_v2_20260119.tif (752 MB)
+- SCANFI_spsCC_otherConiferous_2025_v2_20260119.tif (2.58 GB)
+- SCANFI_spsCC_ponderosaPine_2025_v2_20260119.tif (82.4 MB)
+- SCANFI_spsCC_tamarack_2025_v2_20260119.tif (1.87 GB)
+- SCANFI_spsCC_whiteRedPine_2025_v2_20260119.tif (275 MB)
+
+This does not authorize or imply acquisition of the remaining SCANFI package.
+The full 1985-2025 time series, overview files (.ovr), and additional
+auxiliary files remain outside the approved subset.

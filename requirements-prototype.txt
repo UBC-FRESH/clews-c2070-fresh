@@ -1,1 +1,7 @@
 PuLP>=2.8,<3
+# Quick human-inspection maps; Natural Earth layers are cached outside the repo.
+geopandas>=1.0,<2
+matplotlib>=3.8,<4
+pyproj>=3.6,<4
+# Optional only, for detailed OpenStreetMap tile backgrounds.
+# contextily>=1.6,<2

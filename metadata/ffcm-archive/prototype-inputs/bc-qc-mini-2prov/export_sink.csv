@@ -1,0 +1,3 @@
+scenario_id,period,export_node_id,commodity_id,price_or_netback,price_unit,maximum_export,destination_region,trade_case
+bc_qc_mini_2prov_001,0,export_vancouver,log,104,CAD_per_m3,12000,Pacific Rim,diagnostic
+bc_qc_mini_2prov_001,0,export_montreal,log,98,CAD_per_m3,8000,Atlantic Rim,diagnostic

@@ -1,0 +1,5 @@
+scenario_id,period,spatial_unit_id,supply_node_id,commodity_id,quantity,quantity_unit,supply_cost,supply_cost_unit,species_group,assortment_class,grade,moisture_basis,carbon_factor,harvest_action_id,roadside_cost,delivered_cost_proxy
+bc_qc_mini_2prov_001,0,qc_fmu_saguenay_01,supply_qc_saguenay_01,log,2295,m3,50,CAD_per_m3,softwood,sawlog,qc_casfri_diagnostic,green,,scanfi_diag_supply_001,36,67
+bc_qc_mini_2prov_001,0,qc_fmu_saguenay_02,supply_qc_disturbance_02,log,385,m3,46,CAD_per_m3,mixed,smallwood,qc_casfri_diagnostic,green,,scanfi_diag_supply_002,32,64
+bc_qc_mini_2prov_001,0,qc_fmu_saguenay_02,supply_qc_mixedwood_02,log,558,m3,54,CAD_per_m3,mixed,sawlog,qc_casfri_diagnostic,green,,scanfi_diag_supply_003,38,70
+bc_qc_mini_2prov_001,0,qc_fmu_saguenay_02,supply_qc_residue_01,logging_residue,720,odt,22,CAD_per_odt,mixed,residue,qc_casfri_diagnostic,dry,,scanfi_diag_supply_004,16,32

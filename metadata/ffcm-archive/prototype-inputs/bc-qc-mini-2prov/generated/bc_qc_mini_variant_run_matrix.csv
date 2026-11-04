@@ -1,0 +1,3 @@
+province,scanfi_ws3_run_id,qc_ws3_run_id,scenario_id,supply_rows,supply_quantity_m3,supply_quantity_odt,objective_contribution_log,objective_contribution_residue,notes
+BC,scanfi_diagnostic_supply_001,,bc_mini_001,4,104700,6600,0.0,0.0,Inherited SCANFI diagnostic mini path; placeholders for BC yield.
+QC,,qc_casfri_diagnostic_supply_001,qc_mini_001,4,3238,720,0.0,0.0,QC diagnostic mini path through casfri_qc_reader + qc_ws3_export bridge.
