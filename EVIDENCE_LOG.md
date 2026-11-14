@@ -463,6 +463,74 @@ No `D` entries appeared in either status column. The commit is local only; no Gi
 
 ---
 
+### Entry: EL-20261114-008
+**Claim**: The MAGPlot WFS supplement was downloaded from the public NFIS WFS, every layer returned exactly the `numberMatched` feature count, and all seven archived gzip payloads decompress to the recorded row counts.
+**Status Symbol**: ✅
+**Evidence Type**: Command output + file audit
+**Command**: `curl -G https://ca.nfis.org/mapserver/cgi-bin/magplot_trees_eng.cgi` with `request=GetFeature`, `outputFormat=text/csv`, `count=100000`, `startIndex=N`, `sortBy=magp_web_key`; `gzip -t data/raw/magplot/wfs/*.gz`; Python CSV row counts; `sha256sum`.
+**Exit Code**: 0
+**Output Summary**:
+```
+Sites_Summary: 41,840 rows (numberMatched 41,840)
+SK_Trees_Measure_Num_0: 403,953; SK_Trees_Measure_Num_1: 269,189; SK_Trees_Measure_Num_2_8: 339,429
+PEI_Trees_Measure_Num_0_11: 275,204
+NL_Trees_Measure_Num_0_2: 313,531; NL_Trees_Measure_Num_3_9: 298,786
+Tree-layer total: 1,900,092
+All 7 gzip payloads passed `gzip -t`; all decompressed row counts match.
+```
+Unsorted paging produced 717 duplicate rows crossing page boundaries in the first SK layer attempt; re-fetching with `sortBy=magp_web_key` produced disjoint pages and exact counts. Site reconciliation: ZIP 39,130 vs WFS 41,840; BC/QC/NB/YT/NT/MB identical; SK +2,048; PE +691; NL net −29 (1,282 common, 68 ZIP-only, 39 WFS-only).
+**Verification Timestamp**: 2026-11-14T18:45:00Z
+**Verified By**: curl 8.x / Python 3.12.3 / gzip 1.12
+**Artifact Reference**: `data/raw/magplot/wfs/ACQUISITION.md`, `data/raw/magplot/wfs/PROVENANCE.csv`, `data/manifests/magplot-wfs-acquisition.csv`
+
+---
+
+### Entry: EL-20261114-009
+**Claim**: The complete BC FAIB PSP compilation was downloaded via anonymous FTP, contains exactly 7,341 sites and 23,956 visits, and the archived tables pass SHA-256 and gzip integrity checks.
+**Status Symbol**: ✅
+**Evidence Type**: Command output + file audit
+**Command**: `wget -c 'ftp://ftp.for.gov.bc.ca/HTS/external/!publish/ground_plot_compilations/psp/<file>'`; `gzip -9 -n`; `gzip -t`; decompressed SHA-256 comparison; `python3 compute_stats.py`.
+**Exit Code**: 0
+**Output Summary**:
+```
+faib_header: 7,341 sites
+faib_sample_byvisit: 23,956 visits; 5,735 sites with >1 visit
+faib_tree_detail: 740,181,676 bytes; 3,217,648 rows; 1,138,768 unique trees; 803,868 remeasured trees
+Years: 1921-2025; 12 BEC zones; 45 species
+DBH cm: min 0.5, median 12.4, max 401.7 (3,217,462 non-null)
+Height: 99.99% populated (788,305 field measured; 2,429,152 DBH-estimated)
+Site index: 21,639/23,956 visits; age: 21,976/23,956 visits
+All 10 decompressed CSV SHA-256 values match the originals; all gzip files pass `gzip -t`.
+```
+The catalogue's HTTPS FTP URL returned HTTP 401 (IIS Negotiate/NTLM); the `ftp://` scheme logged in anonymously and served the same publication tree. No credentials were used. The 10 CSVs plus dictionary total 841,636,204 bytes uncompressed and 131,056,666 bytes gzipped.
+**Verification Timestamp**: 2026-11-14T19:00:00Z
+**Verified By**: wget 1.21.4 / Python 3.12.3 / gzip 1.12
+**Artifact Reference**: `data/raw/bc_faib_ground_plots/ACQUISITION.md`, `data/raw/bc_faib_ground_plots/CONTENTS.md`, `data/raw/bc_faib_ground_plots/PROVENANCE.csv`
+
+---
+
+### Entry: EL-20261114-010
+**Claim**: The WFS supplement and FAIB PSP payloads were committed to the data submodule as git-annex objects without deletions; the `arbutus-s3` publication was attempted and blocked by HTTP 403, with no credential retry.
+**Status Symbol**: ⚠️
+**Evidence Type**: Git status/log + failed remote command
+**Command**: `git -C data add raw/magplot/wfs raw/bc_faib_ground_plots raw/magplot/MAGPlot_CONTENTS.md manifests/magplot-wfs-acquisition.csv manifests/bc-faib-ground-plots-acquisition.csv`; `git -C data commit -m "Acquire MAGPlot WFS supplement and BC FAIB PSP compilations"`; `~/bin/git-annex-s3 copy --to arbutus-s3 raw/magplot raw/nfi raw/casfri_v5/documentation`; `git -C data status --porcelain`.
+**Exit Code**: commit 0; S3 copy 1
+**Output Summary**:
+```
+f58d2ca Acquire MAGPlot WFS supplement and BC FAIB PSP compilations
+34 files changed, 2626 insertions(+)
+19 new git-annex objects (7 WFS gz + 12 FAIB binaries)
+git -C data status --porcelain: (clean)
+S3 copy: 11 failed; HEAD requests returned HTTP 403 Forbidden
+No D entries appeared in either status column.
+```
+The S3 failure affected the prior MAGPlot/NFI/CASFRI annex paths. Per the acquisition instruction, the phase stopped after the 403 and was not retried with credentials. GitHub pushes and S3 publication remain pending.
+**Verification Timestamp**: 2026-11-14T19:05:00Z
+**Verified By**: git 2.45.2 / git-annex 10.20240129
+**Artifact Reference**: data-submodule commit `f58d2ca`; parent metadata commits follow
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

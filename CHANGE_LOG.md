@@ -37,9 +37,38 @@
   with counts and adds nfi_photo; `readiness-gates.yaml` records the dated
   evidence without flipping `nfi_access` or `national_scaling`; new
   `metadata/national-plot-data-inventory.csv` (10 candidates).
-- Local commits only; `arbutus-s3` copy and GitHub push remain pending
-  maintainer approval. Data-submodule commit `d45a047` ("Archive MAGPlot and
-  NFI plot documentation") contains 31 files and 11 git-annex objects.
+- **MAGPlot WFS supplement archived.** Queried the NFIS MAGPlot WFS
+  (`https://ca.nfis.org/mapserver/cgi-bin/magplot_trees_eng.cgi`, WFS 2.0.0)
+  and archived `Sites_Summary` plus all SK/PEI/NL tree layers under
+  `data/raw/magplot/wfs/` (7 gzip payloads; 1,900,092 tree features; 41,840
+  sites). Paging required `sortBy=magp_web_key`; unsorted paging duplicated
+  rows across page boundaries. Reconciliation: ZIP 39,130 sites vs WFS 41,840
+  (+2,048 SK, +691 PE, +39 WFS-only NL; 68 ZIP-only NL; net NL -29). Schemas
+  differ: WFS trees use `magp_web_key`/`meas_year` and lack ZIP `meas_num`
+  and flag columns.
+- **BC FAIB PSP compilations archived.** Resolved BC Data Catalogue
+  `824e684b-4114-4a05-a490-aa56332b57f4`; the catalogue HTTPS FTP link returns
+  401, but the same tree is anonymously readable over `ftp://` and yielded the
+  complete PSP compilation (10 CSV tables + dictionary; 841,636,204 bytes
+  uncompressed, 131,056,666 bytes gzipped). Exact `fresh-fvsbc` corpus:
+  7,341 sites / 23,956 visits / 5,735 remeasured sites; 3,217,648 tree
+  measurements; 1,138,768 unique trees; 803,868 remeasured trees; 1921-2025;
+  12 BEC zones; 45 species; DBH 0.5/12.4/401.7 cm; height 99.99% populated
+  (75.5% DBH-estimated); site index/age present for ~90-92% of visits. The
+  non-PSP companion was not acquired.
+- **Metadata registries updated.** `national-plot-data-inventory.csv` gains
+  the WFS supplement row and updates BC FAIB to archived with counts;
+  `source-inventory.csv` gains `bc_faib_ground_plots` and links it from
+  `fvs_calibration`; `required-datasets.yaml` gains
+  `bc_faib_ground_plots` (archived, checksum, 7,341/23,956). Acquisition
+  manifests added at `data/manifests/magplot-wfs-acquisition.csv` and
+  `data/manifests/bc-faib-ground-plots-acquisition.csv`.
+- **Publish status.** Data-submodule commit `f58d2ca` contains the new
+  payloads and documentation (19 new git-annex objects). The `arbutus-s3`
+  copy for the prior annex (`d45a047`/`f2fbaa5` paths) was attempted on
+  2026-11-14 with the `git-annex-s3` wrapper but returned HTTP 403 Forbidden;
+  no retry with credentials was made. GitHub pushes and S3 publication remain
+  pending. Parent repo commit follows.
 
 ## 2026-08-17
 

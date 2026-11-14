@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-11-14T00:00:00Z"
+updated_utc: "2026-11-14T19:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -176,7 +176,7 @@ datasets:
       url: "https://open.canada.ca/data/en/dataset/8824392d-464e-413d-8bde-eaed61c79743"
       access_mode: "direct_download"
       license: "Open Government Licence - Canada"
-      provenance_notes: "Downloaded 2026-11-14. Package sha256 270055bb9eeed6ccd6cbd75f6a2026b54e340c5a4938af18ad06e479792888db; data dictionary sha256 36915d70fbac64a2d2b07272e0eabbb3c4dddbe36ea81a839e240e8df8666525; supplementary material sha256 11d4f3ab4151d41f352e6fe071fe2196d61d0a61bd6a9db55f5bf8714ea8147a. Open Tier-1 package only; published coordinates are approximate within +/-10 km. See data/raw/magplot/ACQUISITION.md and data/raw/magplot/MAGPlot_CONTENTS.md."
+      provenance_notes: "Downloaded 2026-11-14. Package sha256 270055bb9eeed6ccd6cbd75f6a2026b54e340c5a4938af18ad06e479792888db; data dictionary sha256 36915d70fbac64a2d2b07272e0eabbb3c4dddbe36ea81a839e240e8df8666525; supplementary material sha256 11d4f3ab4151d41f352e6fe071fe2196d61d0a61bd6a9db55f5bf8714ea8147a. Open Tier-1 package only; published coordinates are approximate within +/-10 km. See data/raw/magplot/ACQUISITION.md and data/raw/magplot/MAGPlot_CONTENTS.md. WFS supplement archived 2026-11-14 at data/raw/magplot/wfs/ (41,840 sites; 1,900,092 tree features)."
       resources:
         - format: "ZIP"
           name: "MAGPlot latest data package"
@@ -216,6 +216,69 @@ datasets:
     datalad_mirror:
       include: "yes"
       rationale: "Open Government Licence - Canada permits use, adaptation, and redistribution with attribution. Payload is archived in the data submodule; arbutus-s3 publication awaits maintainer approval."
+
+  - id: bc_faib_ground_plots
+    category: forest_inventory
+    status: archived
+    required_for:
+      - "BC calibration and validation of individual-tree growth, mortality, and yield"
+      - "primary calibration corpus for fresh-fvsca / FVS-BC"
+    canonical_data_path: "raw/bc_faib_ground_plots/"
+    preferred: true
+    source:
+      publisher: "BC Ministry of Forests - Forest Analysis and Inventory Branch"
+      title: "Forest Inventory Ground Plot Data and Interactive Map - PSP compilations"
+      url: "https://catalogue.data.gov.bc.ca/dataset/824e684b-4114-4a05-a490-aa56332b57f4"
+      access_mode: "anonymous_ftp"
+      license: "Open Government Licence - British Columbia"
+      provenance_notes: "Downloaded 2026-11-14 via anonymous FTP from ftp://ftp.for.gov.bc.ca/HTS/external/!publish/ground_plot_compilations/psp/. The catalogue's HTTPS link returns HTTP 401 (Negotiate/NTLM); the FTP scheme is anonymously readable. PSP dictionary 2026Apr20. Exact fresh-fvsbc corpus: 7,341 sites / 23,956 visits. See data/raw/bc_faib_ground_plots/ACQUISITION.md and CONTENTS.md."
+      metadata_created: "2020-07-23T17:58:28.606884"
+      metadata_modified: "2026-04-21T23:21:34.162986"
+      resources:
+        - format: "FTP"
+          name: "Ground Plot Data FTP Download"
+          url: "ftp://ftp.for.gov.bc.ca/HTS/external/!publish/ground_plot_compilations/psp/"
+        - format: "HTML"
+          name: "Interactive Mapping App"
+          url: "https://bcgov-env.shinyapps.io/FAIB_GROUND_SAMPLE/"
+    coverage:
+      spatial: "British Columbia"
+      temporal: "1921-2025 measurements; PSP compilation dated 2026-04-16/20"
+      resolution: "ground plot and individual tree"
+    package_inventory:
+      observed_utc: "2026-11-14T18:56:22Z"
+      file_count: 11
+      table_count: 10
+      total_size_bytes: 841636204
+      total_size_gb: 0.84
+      gzip_size_bytes: 131056666
+      site_count: 7341
+      visit_count: 23956
+      remeasured_site_count: 5735
+      tree_measurement_count: 3217648
+      unique_tree_count: 1138768
+      remeasured_tree_count: 803868
+      species_code_count: 45
+      bec_zone_count: 12
+      year_min: 1921
+      year_max: 2025
+      dbh_cm_min: 0.5
+      dbh_cm_median: 12.4
+      dbh_cm_max: 401.7
+      height_available_pct: 99.99
+      height_field_measured_rows: 788305
+      height_estimated_rows: 2429152
+      visits_with_site_index: 21639
+      visits_with_age: 21976
+      archive_path: "raw/bc_faib_ground_plots/"
+    checksum:
+      algorithm: "sha256"
+      value: "9ed7b0a23dd74686173ee45fddfcb71a7bbddd7995230c7de2696b7c76d614e8"
+      status: "verified"
+      target_artifact: "raw/bc_faib_ground_plots/psp/faib_tree_detail.csv.gz"
+    datalad_mirror:
+      include: "yes"
+      rationale: "Open Government Licence - British Columbia permits use, adaptation, and redistribution with attribution. Payloads are archived in the data submodule; arbutus-s3 publication is pending credential resolution."
 
   - id: nfi_photo_plots
     category: forest_inventory
