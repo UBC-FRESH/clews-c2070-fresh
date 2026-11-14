@@ -340,6 +340,132 @@ datasets:
       include: "yes"
       rationale: "Open Government Licence - British Columbia permits use, adaptation, and redistribution with attribution. Payloads are archived in the data submodule; arbutus-s3 publication is pending credential resolution."
 
+  - id: qc_pep
+    category: forest_inventory
+    status: archived
+    required_for:
+      - "Québec calibration and validation of individual-tree growth, mortality, and yield"
+      - "mixedwood and boreal calibration supplement to MAGPlot"
+    canonical_data_path: "raw/qc_pep/"
+    preferred: true
+    source:
+      publisher: "Ministère des Ressources naturelles et des Forêts du Québec - Direction des inventaires forestiers"
+      title: "Placettes-échantillons permanentes, 1970 à aujourd'hui"
+      url: "https://www.donneesquebec.ca/recherche/dataset/placettes-echantillons-permanentes-1970-a-aujourd-hui"
+      access_mode: "direct_download"
+      license: "CC BY 4.0"
+      provenance_notes: "Downloaded 2026-11-14. ZIP sha256 a5deb82b8e05c3226f83eb8daa4842900b6564e31b30915d9215f8a031faa5e5; 128,568,617 bytes; one member PEP.gpkg (739,045,376 bytes; sha256 6d53e90a23799d681d050e13a433bc6e7ede6549b0733c8cc9c01fc8f94348c9). The server returns HTTP 404 to HEAD but HTTP 200 to GET. See data/raw/qc_pep/ACQUISITION.md and CONTENTS.md. Cleaner intervalized access path: CWFC-CCFB/QcPSP and QcPSPIntervals R packages (not vendored)."
+      metadata_modified: "2026-11-11T19:53:33Z"
+      resources:
+        - format: "ZIP"
+          name: "Placette-échantillon permanente (GeoPackage)"
+          url: "https://diffusion.mffp.gouv.qc.ca/Diffusion/DonneeGratuite/Foret/DONNEES_FOR_ECO_SUD/Placettes_permanentes/02-Donnees/PROV/PEP_GPKG.zip"
+        - format: "XLSX"
+          name: "Dictionnaire des codes des données"
+          url: "https://diffusion.mffp.gouv.qc.ca/Diffusion/DonneeGratuite/Foret/DONNEES_FOR_ECO_SUD/Placettes_permanentes/01-Documentation/DICTIONNAIRE_PLACETTE.xlsx"
+        - format: "PDF"
+          name: "LISEZ-MOI — description du jeu de données"
+          url: "https://diffusion.mffp.gouv.qc.ca/Diffusion/DonneeGratuite/Foret/DONNEES_FOR_ECO_SUD/Placettes_permanentes/01-Documentation/LISEZ-MOI_pep.pdf"
+    coverage:
+      spatial: "Québec méridional; 7 networks (BAS1, BAS2, SPIM, FEDE, UNLA, SCOF, PACA)"
+      temporal: "1970-2025 measurements; snapshot acquired 2026-11-14"
+      resolution: "permanent ground plot and individual tree"
+    package_inventory:
+      observed_utc: "2026-11-14T19:29:23Z"
+      manifest_path: "manifests/qc-pep-acquisition.csv"
+      file_count: 5
+      table_count: 24
+      total_size_bytes: 128568617
+      total_size_gb: 0.12
+      site_count: 12834
+      visit_count: 53632
+      remeasured_site_count: 12611
+      tree_measurement_count: 2210417
+      unique_tree_count: 843175
+      remeasured_tree_count: 683328
+      sapling_measurement_count: 235455
+      study_tree_count: 193463
+      species_code_count: 64
+      species_code_count_including_saplings: 86
+      year_min: 1970
+      year_max: 2025
+      dbh_mm_median: 133
+      dbh_mm_median_live: 136
+      height_available_pct_of_unique_trees: 49.23
+      age_tree_count: 157394
+      visit_interval_median_years: 11.05
+      archive_path: "raw/qc_pep/"
+    checksum:
+      algorithm: "sha256"
+      value: "a5deb82b8e05c3226f83eb8daa4842900b6564e31b30915d9215f8a031faa5e5"
+      status: "verified"
+      target_artifact: "raw/qc_pep/PEP_GPKG.zip"
+    datalad_mirror:
+      include: "yes"
+      rationale: "CC BY 4.0 permits use, adaptation, and redistribution with attribution. Payload is archived in the data submodule; arbutus-s3 publication is pending new-cloud credentials."
+
+  - id: nl_fal_psp
+    category: forest_inventory
+    status: archived
+    required_for:
+      - "Newfoundland and Labrador calibration and validation of individual-tree growth, mortality, and yield"
+      - "Atlantic maritime and boreal calibration supplement to MAGPlot"
+    canonical_data_path: "raw/nl_fal_psp/"
+    preferred: true
+    source:
+      publisher: "Newfoundland and Labrador Department of Fisheries, Forestry and Agriculture"
+      title: "FAL Permanent Sample Plots"
+      url: "https://services8.arcgis.com/aCyQID5qQcyrJMm2/arcgis/rest/services/FAL_-_Permanent_Sample_Plots/FeatureServer"
+      access_mode: "arcgis_rest"
+      license: "Open Government Licence - Newfoundland and Labrador"
+      provenance_notes: "Downloaded 2026-11-14 from the public ArcGIS FeatureServer (service item 6672099533d34409b7c221cc0a5b803d, currentVersion 12). 14 layers exported by paged query with orderByFields=OBJECTID and resultRecordCount=2000; every file verified against returnCountOnly. Point layers are GeoJSON; tables are CSV. All payloads gzip -9 -n. One remeasurement row has a null PLOTKEY; one immature plot has no visit. Dates are local-midnight epoch milliseconds. See data/raw/nl_fal_psp/ACQUISITION.md and CONTENTS.md."
+    coverage:
+      spatial: "Newfoundland and Labrador; 412 mature + 968 immature plots"
+      temporal: "visits 1985-2026; plot origin years 1680-2015 as recorded; snapshot acquired 2026-11-14"
+      resolution: "permanent ground plot and individual tree"
+    package_inventory:
+      observed_utc: "2026-11-14T19:39:00Z"
+      manifest_path: "manifests/nl-fal-psp-acquisition.csv"
+      file_count: 30
+      payload_file_count: 14
+      table_count: 12
+      feature_layer_count: 2
+      total_size_bytes: 31795357
+      total_size_gb: 0.03
+      site_count: 1380
+      mature_site_count: 412
+      immature_site_count: 968
+      visit_count: 7659
+      remeasurement_row_count: 7660
+      remeasured_site_count: 1242
+      single_visit_site_count: 138
+      tree_measurement_count: 775648
+      mature_tree_measurement_count: 186783
+      immature_tree_measurement_count: 588865
+      permanent_tree_count: 143285
+      unique_tree_count: 143589
+      species_code_count: 14
+      interpreted_species_code_count_mature: 25
+      interpreted_species_code_count_immature: 39
+      year_min: 1985
+      year_max: 2026
+      dbh_cm_median_mature: 13.1
+      dbh_cm_median_immature: 6.0
+      height_available_pct_mature: 20.2
+      height_available_pct_immature: 75.76
+      disturbance_row_count: 470
+      silviculture_row_count: 430
+      age_group_row_count: 592
+      archive_path: "raw/nl_fal_psp/"
+    checksum:
+      algorithm: "sha256"
+      value: "85250c34d7fbea07cac908396fafbd63c0cbb349ebc0519af3683954289a143f"
+      status: "verified"
+      target_artifact: "raw/nl_fal_psp/immature_trees_remeasurement.csv.gz"
+    datalad_mirror:
+      include: "yes"
+      rationale: "Open Government Licence - Newfoundland and Labrador permits use, adaptation, and redistribution with attribution. Payload is archived in the data submodule; arbutus-s3 publication is pending new-cloud credentials."
+
   - id: nfi_photo_plots
     category: forest_inventory
     status: request_pending_dua

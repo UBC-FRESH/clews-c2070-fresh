@@ -49,15 +49,26 @@ git annex initremote arbutus-s3 \
   encryption=none \
   bucket=<bucket-name> \
   public=yes \
-  publicurl=https://object-arbutus.cloud.computecanada.ca/<bucket-name> \
-  host=object-arbutus.cloud.computecanada.ca \
+  publicurl=https://object-arbutus.alliancecan.ca/<project-id>:<bucket-name> \
+  host=object-arbutus.alliancecan.ca \
   protocol=https \
-  port=80 \
+  port=443 \
   requeststyle=path \
   autoenable=true \
   chunk=1GiB \
   storageclass=STANDARD
 ```
+
+> **New Arbutus cloud addressing.** The current cloud addresses an object store
+> as `<project-id>:<bucket>`, so `publicurl` carries the project prefix while the
+> git-annex `bucket` value stays the plain bucket name (for example,
+> `bucket=clews-c2070-fresh-data`). The working remote configuration is
+> `host=object-arbutus.alliancecan.ca`, `port=443`, `protocol=https`,
+> `requeststyle=path`, and
+> `publicurl=https://object-arbutus.alliancecan.ca/a0d141b801c74d0a819c09b4bde9c3fb:clews-c2070-fresh-data`.
+> The old host (`object-arbutus.cloud.computecanada.ca`, port 80) returns 403.
+> Credentials must be new-cloud access keys: old-cloud keys return
+> `InvalidAccessKeyId` on the new host.
 
 Publish metadata to GitHub and annex objects to Arbutus:
 

@@ -2,6 +2,42 @@
 
 ## 2026-11-14
 
+- **Québec PEP and NL FAL permanent sample plots archived.** Added two open
+  provincial corpora to the data submodule in commit `72da747`.
+  Québec PEP (`data/raw/qc_pep/`): `PEP_GPKG.zip` 128,568,617 bytes, SHA-256
+  `a5deb82b8e05c3226f83eb8daa4842900b6564e31b30915d9215f8a031faa5e5`;
+  the ZIP contains `PEP.gpkg` (739,045,376 bytes; integrity check `ok`),
+  12,834 plots, 53,632 visits, 12,611 remeasured plots, 2,210,417 tree
+  measurements, 843,175 unique trees, 683,328 remeasured trees, 235,455
+  sapling rows, 64 tally species (86 with saplings), 1970–2025, median
+  interval 11.05 years, DBH median 133 mm (live 136 mm), no explicit site
+  index, fixed-area plots 4/40/400/625 m² with no BAF. Licence CC BY 4.0.
+  Documentation (`LISEZ-MOI_pep.pdf`, `DICTIONNAIRE_PLACETTE.xlsx`) and the
+  CKAN package snapshot are archived alongside; manifest at
+  `data/manifests/qc-pep-acquisition.csv`. The direct URL returns 404 to HEAD
+  but 200 to GET; acquisition used GET.
+- **NL FAL PSP archived.** Exported all 14 layers of the public
+  `FAL_-_Permanent_Sample_Plots` FeatureServer into gzipped GeoJSON (2 point
+  layers) and CSV (12 tables): 1,380 plots (412 mature, 968 immature),
+  7,659 usable visits, 1,242 remeasured plots, 775,648 tree measurement rows,
+  143,285 permanent-tree rows, 14 simplified species codes, visits
+  1985–2026, DBH median 13.1 cm mature / 6.0 cm immature, height populated
+  20.2% mature / 75.8% immature, 470 disturbance rows, 430 silviculture rows,
+  no numeric site index. Every file was verified against the layer
+  `returnCountOnly` count and hashed; total gzipped payload 31,795,357 bytes.
+  One remeasurement row has a null `PLOTKEY`; one immature plot has no visit.
+  Files under `data/raw/nl_fal_psp/`; manifest at
+  `data/manifests/nl-fal-psp-acquisition.csv`. Licence Open Government
+  Licence — Newfoundland and Labrador.
+- **National landscape document and data runbook corrected.** Updated
+  `planning/national-gy-data-landscape.md` to record the archived MAGPlot WFS
+  supplement (41,840 sites; 1,900,092 tree-measurement features in seven
+  gzipped layers at `data/raw/magplot/wfs/`) instead of describing it as
+  in progress. Updated `docs/data-repository-runbook.md` to the working
+  Arbutus remote (`object-arbutus.alliancecan.ca`, port 443, project-prefixed
+  `publicurl`, plain `bucket`) and documented the new-cloud
+  `<project-id>:<bucket>` addressing plus the `InvalidAccessKeyId` failure
+  mode for old-cloud keys.
 - **Arbutus S3 publication blocked by stale cloud credentials, not remote
   configuration.** The local `data` clone's git-annex branch was stale; after
   fetching `origin/git-annex`, `remote.log` already carries the 2026-10-11

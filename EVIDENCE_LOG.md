@@ -562,6 +562,49 @@ The mirrored files were checked against the saved FTP `SIZE` listing after decom
 
 ---
 
+### Entry: EL-20261114-012
+**Claim**: Québec PEP and NL FAL permanent sample plot payloads were archived with verified checksums and exact counts in data-submodule commit `72da747`; all 17 new annex objects are local-only pending S3 credentials.
+**Status Symbol**: ✅
+**Evidence Type**: ZIP/SQLite integrity + SHA-256 file audit + per-layer count reconciliation + git-annex status
+**Command**: `curl -sS -L -o PEP_GPKG.zip <Données Québec URL>`; `python3 -c "zipfile.ZipFile(...).testzip()"`; `sqlite3`/`PRAGMA integrity_check`; `.venv/bin/python nl_export.py`; `.venv/bin/python nl_stats.py`; `python3 verify hash/row counts`; `git -C data annex add raw/qc_pep raw/nl_fal_psp`; `git -C data commit -m "Acquire Quebec PEP and NL FAL permanent sample plots"`; `git -C data annex find --in=here --not --in=arbutus-s3`.
+**Exit Code**: 0
+**Output Summary**:
+```
+QC PEP: PEP_GPKG.zip 128,568,617 bytes
+  sha256 a5deb82b8e05c3226f83eb8daa4842900b6564e31b30915d9215f8a031faa5e5
+  ZIP testzip None; 1 member PEP.gpkg 739,045,376 bytes
+  PEP.gpkg sha256 6d53e90a23799d681d050e13a433bc6e7ede6549b0733c8cc9c01fc8f94348c9
+  PRAGMA integrity_check = ok; 46 SQLite tables, 24 content layers
+  12,834 plots; 53,632 visits; 12,611 remeasured plots (98.26%)
+  2,210,417 tree measurements; 843,175 unique trees; 683,328 remeasured trees (81.04%)
+  235,455 sapling rows; 442,560 study-tree rows; 64 tally species (86 with saplings)
+  1970-05-10 to 2025-10-02; median interval 11.05 years
+  DBH 0-1,089 mm, median 133 mm; live DBH median 136 mm
+  height: 43,559 tally rows + 372,225 study rows; 415,108 trees with any height (49.23%)
+  age: 157,394 trees; no explicit site index; areas 4/40/400/625 m2, no BAF
+
+NL FAL: 14 layers, 997,754 total features/rows including support tables
+  mature 412; immature 968; age_group 592; disturbance 470; remeasurement 7,660
+  immature trees remeasurement 588,865; immature sample trees 52,651
+  immature permanent 107,785; mature permanent 35,500; mature remeasurement 186,783
+  plot_layout 6,628; plot_location 1,351; crew_date 7,659; silviculture 430
+  every file count == returnCountOnly and SHA-256 == export_manifest.json
+  775,648 tree measurement rows; 143,589 unique trees; 143,285 permanent-tree rows
+  1,242 remeasured plots; 138 single-visit plots; visits 1985-2026
+  DBH median 13.1 cm mature / 6.0 cm immature
+  height populated 20.20% mature / 75.76% immature
+  14 simplified species codes; 470 disturbance rows; 430 silviculture rows
+
+git annex: 17 new objects (QC 3 binaries + NL 14 gz), all "1 copy [here]"
+cumulative local-only pending-S3 objects: 504
+```
+One NL `remeasurement` row has a null `PLOTKEY`; one immature plot (`5_119019`) has no visit. No S3 copy was attempted; publication remains blocked by new-cloud credentials.
+**Verification Timestamp**: 2026-11-14T19:50:00Z
+**Verified By**: Python 3.12.3 (zipfile, sqlite3, pandas, pyogrio 0.13.0/GDAL 3.12.4), git-annex 10.20240129
+**Artifact Reference**: data-submodule commit `72da747`; `data/raw/qc_pep/{ACQUISITION.md,CONTENTS.md,PROVENANCE.csv}`; `data/raw/nl_fal_psp/{ACQUISITION.md,CONTENTS.md,PROVENANCE.csv,metadata/export_manifest.json}`; manifests `data/manifests/{qc-pep,nl-fal-psp}-acquisition.csv`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

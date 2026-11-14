@@ -13,7 +13,7 @@
 - CLEWS-c2070 has a BC forestry component built on BC VRI vector inventory plus VDYP/TIPSY/FVS-BC through FEMIC (`planning/qc_bc_yield_curves_extraction.md`; `fresh-fvsbc` README, https://github.com/UBC-FRESH/fresh-fvsbc). The next step is an all-BC mini-model, one WS4 instance per TSA.
 - The national step is not an extension of that path. It requires replacing BC VRI with SCANFI raster inventory and replacing BC-specific growth-and-yield with a national system. That replacement is the unsolved part (`metadata/readiness-gates.yaml`, gate `national_scaling`).
 - `fresh-fvsca` cannot be one new FVS variant. FVS ships regional variants, not a Canada-wide variant; CFS's response is a multi-model API and meta-model framework, not a single national FVS (`https://github.com/USDAForestService/ForestVegetationSimulator`; `https://github.com/CWFC-CCFB/CFSStandGrowthAPI`).
-- MAGPlot v1.2, archived on 2026-11-14, is the only new open plot archive. It provides 1.57 million remeasured trees but no Alberta, Ontario, or Nova Scotia records and no age or site-index tables (`data/raw/magplot/MAGPlot_CONTENTS.md`).
+- MAGPlot v1.2, archived on 2026-11-14, is the only new open plot archive. It provides 1.57 million remeasured trees but no Alberta, Ontario, or Nova Scotia records and no age or site-index tables (`data/raw/magplot/MAGPlot_CONTENTS.md`). The WFS supplement is also archived: 41,840 sites including PEI, and 1,900,092 tree-measurement features (`data/raw/magplot/wfs/ACQUISITION.md`).
 - NFI ground plots remain essential and request-only. The DUA package is pre-submission ready but unsubmitted (`metadata/license-determinations/nfi-targeted-request.md`).
 - Recommended architecture: a multi-variant orchestrator with a plot adapter and calibration bundles, using CFS-style meta-models as the fallback for regions no FVS variant represents.
 - This document records data holdings and contracts. It does not claim a validated national model.
@@ -59,7 +59,7 @@ MAGPlot v1.2 is archived at `data/raw/magplot/`. The ZIP is 127,123,248 bytes, S
 | Measurement years | 1921–2024 |
 | Median remeasurement interval | 10 years |
 
-Province coverage in the ZIP is BC 16,517; QC 12,892; NB 7,609; NL 1,350; YT 327; NT 262; SK 171; MB 2 (`data/raw/magplot/MAGPlot_CONTENTS.md` §4). The open package is Tier 1, about 70.7% of sites. A WFS supplement is in progress and is not archived locally, so PEI and additional SK/NL records are not yet counted; do not report PEI coverage until it lands.
+Province coverage in the ZIP is BC 16,517; QC 12,892; NB 7,609; NL 1,350; YT 327; NT 262; SK 171; MB 2 (`data/raw/magplot/MAGPlot_CONTENTS.md` §4). The open package is Tier 1, about 70.7% of sites. The WFS supplement is archived at `data/raw/magplot/wfs/`: 41,840 sites in `sites_summary.csv.gz` (BC 16,517; QC 12,892; NB 7,609; SK 2,219; NL 1,321; PE 691; YT 327; NT 262; MB 2) and 1,900,092 tree-measurement features in seven gzipped layers (`data/raw/magplot/wfs/ACQUISITION.md`). Relative to the ZIP, the supplement adds 2,048 SK sites and 691 PE sites. NL is not a strict superset: 68 ZIP NL site IDs are absent from the WFS and 39 WFS-only IDs appear (net −29).
 
 Limitations are material: no age, site-index, soil, or ecological tables; height missing for 39.3% of tree rows; coordinates fuzzed ±5–10 km (±10 km documented); variable-radius BC plots lack BAF/plot area; 1,027 BC sites lack coordinates (`data/raw/magplot/MAGPlot_CONTENTS.md` §§9–11; `data/raw/magplot/ACQUISITION.md`).
 
@@ -104,7 +104,7 @@ Option (a) keeps the individual-tree outputs WS4 and FEMIC consume, keeps the BC
 
 | Phase | Dataset | Route | Owner | Notes |
 |---|---|---|---|---|
-| A | MAGPlot ZIP + WFS supplement | ZIP archived at `data/raw/magplot/`; pull WFS and reconcile PEI/SK/NL | CLEWS data | Do not count PEI until the supplement is archived. |
+| A | MAGPlot ZIP + WFS supplement | ZIP archived at `data/raw/magplot/`; WFS supplement archived at `data/raw/magplot/wfs/` (41,840 sites; 1,900,092 tree features) | CLEWS data | ZIP and WFS archived 2026-11-14; PEI/SK/NL reconciliation documented in `wfs/ACQUISITION.md`. |
 | A | BC FAIB ground plots | BC Data Catalogue dataset `824e684b-4114-4a05-a490-aa56332b57f4`; FAIB FTP and `bcgov/FAIBCompiler` | CLEWS data | Standalone archive; do not rely on MAGPlot’s BC subset. |
 | A | Québec PEP | Données Québec `PEP_GPKG.zip`; `CWFC-CCFB/QcPSP` | CLEWS data | 12,000+ plots; CC BY 4.0. |
 | A | NL FAL PSP | ArcGIS FeatureServer (URL above) | CLEWS data | 1,380 plots; mature and immature layers. |
@@ -136,7 +136,7 @@ Named contacts:
 | # | Action | Owner | Done when |
 |---:|---|---|---|
 | 1 | Publish MAGPlot to Arbutus (`arbutus-s3`) with manifest and checksum | CLEWS data | Object and manifest pushed and verified. |
-| 2 | Pull the MAGPlot WFS supplement; reconcile PEI/SK/NL counts | CLEWS data | Supplement archived; province table updated. |
+| 2 | Re-check the archived MAGPlot WFS snapshot against the live service; reconcile PEI/SK/NL counts | CLEWS data | Supplement archived at `data/raw/magplot/wfs/` (41,840 sites; 1,900,092 tree features); reconciliation recorded in `wfs/ACQUISITION.md`. |
 | 3 | Acquire BC FAIB, Québec PEP, NL FAL; acquire SCANFI v3 if published | CLEWS data | Archives plus provenance; SCANFI status recorded. |
 | 4 | Fill the three DUA placeholder lines; submit the NFI request with exact-coordinate justification | PI | Request submitted; acknowledgement logged. |
 | 5 | Send Alberta, Ontario, Nova Scotia, Manitoba, and NWT requests | PI + collaborator | Requests sent; tracker updated. |
