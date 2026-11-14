@@ -306,6 +306,163 @@ This section records corrections applied 2026-08-17 per [docs/agent-integrity-pr
 
 ---
 
+## 2026-11-14 — MAGPlot and NFI Plot Documentation Acquisition
+
+### Entry: EL-20261114-001
+**Claim**: MAGPlot v1.2 open data package, English data dictionary, and supplementary material were downloaded with HTTP 200, checksummed, and the ZIP archives pass integrity testing.
+**Status Symbol**: ✅
+**Evidence Type**: HTTP response + SHA-256 checksum + archive integrity test
+**Command**: `curl -sSIL <url>` for each source; `curl -fL --retry 3 -o <file> <url>`; `sha256sum MAGPlot_latest_data_package.zip MAGPlot_DB_Data_Dictionary_En.pdf MAGPlot_Supplementary_Material.zip`; `unzip -t MAGPlot_latest_data_package.zip`; `unzip -t MAGPlot_Supplementary_Material.zip`
+**Exit Code**: 0
+**Output Summary**:
+```
+data package:  HTTP 200 application/x-zip-compressed 127,123,248 bytes  sha256 270055bb9eeed6ccd6cbd75f6a2026b54e340c5a4938af18ad06e479792888db
+dictionary:    HTTP 200 application/pdf               933,385 bytes  sha256 36915d70fbac64a2d2b07272e0eabbb3c4dddbe36ea81a839e240e8df8666525
+supplementary: HTTP 200 application/x-zip-compressed   288,487 bytes  sha256 11d4f3ab4151d41f352e6fe071fe2196d61d0a61bd6a9db55f5bf8714ea8147a
+unzip -t data package: "No errors detected"; 9 members; 1,720,730,897 bytes uncompressed
+unzip -t supplementary: "No errors detected"; 7 members; 315,537 bytes uncompressed
+```
+The prior scratch ZIP at `tmp/magplot_triage/MAGPlot_latest_data_package.zip` is 2,957,065 bytes (sha256 `df55c5c9…`) and is not the current package; the fresh download was used. The scratch data dictionary PDF is byte-identical (sha256 `36915d70…`).
+**Verification Timestamp**: 2026-11-14T17:34:19Z
+**Verified By**: curl 8.5.0, sha256sum (GNU coreutils 9.4), UnZip 6.00
+**Artifact Reference**: `data/raw/magplot/MAGPlot_latest_data_package.zip`, `data/raw/magplot/MAGPlot_DB_Data_Dictionary_En.pdf`, `data/raw/magplot/MAGPlot_Supplementary_Material.zip`, `data/raw/magplot/ACQUISITION.md`, `data/raw/magplot/PROVENANCE.csv`, `data/manifests/magplot-acquisition.csv`
+
+---
+
+### Entry: EL-20261114-002
+**Claim**: The eight MAGPlot v1.2 tables contain 39,130 sites, 257,031 plot visits, 20,890 remeasured sites, 7,771,041 tree measurement rows, 2,866,168 tracked trees, 1,573,761 tracked trees with repeat measurements, 140 species codes, and measurement years 1921-2024.
+**Status Symbol**: ✅
+**Evidence Type**: pandas profiling of the eight extracted CSVs
+**Command**: `.venv/bin/python /tmp/profile_magplot.py` and `.venv/bin/python /tmp/profile_magplot2.py` (pandas 3.0.3; scripts scratch-only; durable profile is the committed `MAGPlot_CONTENTS.md`)
+**Exit Code**: 0
+**Output Summary**:
+```
+magp_sites:          39,130 rows x 10 cols
+magp_site_sources:   39,130 rows x 3 cols
+magp_tree_header:   257,031 rows x 10 cols (38,910 sites with a header)
+magp_trees:       7,771,041 rows x 29 cols
+magp_tree_condition: 1,383,908 rows x 11 cols
+magp_tree_removed:    382,012 rows x 9 cols
+magp_treatment:        14,362 rows x 6 cols
+magp_disturbance:       5,378 rows x 8 cols
+sites remeasured:      20,890
+tracked trees:      2,866,168
+tracked trees remeasured: 1,573,761
+distinct species_gsv: 140
+measurement years: 1921-2024
+```
+Province distribution: BC 16,517; QC 12,892; NB 7,609; NL 1,350; YT 327; NT 262; SK 171; MB 2. No AB/ON/PE/NS records. Full tables, interval distribution, DBH/height/status breakdown, plot-design availability, and disturbance/treatment codings are in `MAGPlot_CONTENTS.md`.
+**Verification Timestamp**: 2026-11-14T18:02:00Z
+**Verified By**: Python 3.12.3 / pandas 3.0.3
+**Artifact Reference**: `data/raw/magplot/MAGPlot_CONTENTS.md`, `data/raw/magplot/MAGPlot_latest_data_package.zip`
+
+---
+
+### Entry: EL-20261114-003
+**Claim**: Three NFI ground plot PDFs were downloaded from nfi.nfis.org with HTTP 200 and verified as valid PDFs with the recorded SHA-256 values.
+**Status Symbol**: ✅
+**Evidence Type**: HTTP response + checksum + PDF metadata
+**Command**: `curl -sSIL <url>`; `curl -fL --retry 3 -o <file> <url>`; `sha256sum *.pdf`; `pdfinfo <file>`
+**Exit Code**: 0
+**Output Summary**:
+```
+4a-GPDataDictionary5.2.pdf:          200 application/pdf 3,676,384 bytes sha256 70d00a78200428bb931822069f59511bdceda4232da1946ca89ec1e18ee944d8 (180 pages)
+Gp_guidelines_v5.0.pdf:              200 application/pdf 3,737,514 bytes sha256 6adfc5c6573861b323748f044496ded8ca99a222d894605026e6b059eec4b106 (274 pages)
+GP_compilation_procedures_2.4.pdf:   200 application/pdf 1,586,599 bytes sha256 28b1cacf3f97a35fb96dc087417f061360ecf727cb25f3dd127301cba61f3f99 (92 pages)
+total archived documentation: 9,002,441 bytes
+```
+No ground plot data payload was downloaded.
+**Verification Timestamp**: 2026-11-14T18:12:00Z
+**Verified By**: curl 8.5.0, sha256sum (GNU coreutils 9.4), pdfinfo
+**Artifact Reference**: `data/raw/nfi/ground_plots/documentation/ACQUISITION.md`, `data/raw/nfi/ground_plots/documentation/PROVENANCE.csv`
+
+---
+
+### Entry: EL-20261114-004
+**Claim**: NFI photo-plot documentation was archived from the NFI documentation index after the nominal `/en/photo_plot` page was found to return an HTTP 200 response containing a 404-error body.
+**Status Symbol**: ⚠️
+**Evidence Type**: HTTP response audit + file audit
+**Command**: `curl -sSL https://nfi.nfis.org/en/photo_plot -o photo_plot_page.html`; `grep -i "404 error" photo_plot_page.html`; `curl -sSL https://nfi.nfis.org/en/documentation -o nfi_documentation_page.html`; `grep -o 'https://nfi.nfis.org/resources/photoplot/[^"]*' nfi_documentation_page.html`; `sha256sum *.pdf`
+**Exit Code**: 0
+**Output Summary**:
+```
+/en/photo_plot -> HTTP 200, 23,418 bytes, body contains "404 error / Page not found"
+/en/documentation -> HTTP 200, 29,234 bytes; photo-plot section lists 5 PDFs + 1 XLSX
+archived PDFs: PP_Data_Dictionary_6.1.pdf (1,912,721), Pp_data_dictionary_5.2.pdf (2,115,017),
+  Pp_data_dictionary_4.2.4.pdf (303,061), Land_cover_classification_v4.0.1.pdf (211,954),
+  Pp_compilation_v1.4.pdf (174,306)
+linked but not archived: Photoplot_interpretation_examples_English_version.xlsx (239,672,490 bytes)
+total archived files: 4,796,400 bytes (5 PDFs + 3 HTML snapshots + header transcript)
+```
+Gap: the specified photo-plot page is a source-side defect; the archive records the 404 body and recovers links from the documentation index rather than fabricating content. The 239.7 MB XLSX is linked only. No photo-plot data payload was downloaded.
+**Verification Timestamp**: 2026-11-14T18:13:00Z
+**Verified By**: curl 8.5.0, sha256sum (GNU coreutils 9.4)
+**Artifact Reference**: `data/raw/nfi/photo_plots/documentation/ACQUISITION.md`, `LINKS.md`, `PROVENANCE.csv`, `photo_plot_page.html`, `nfi_documentation_page.html`
+
+---
+
+### Entry: EL-20261114-005
+**Claim**: CASFRI upstream project page and data-dictionary pointer are live; CASFRI is a polygon inventory framework, not plot remeasurement, and the NRCan CASFRIv5 CKAN record is WMS-only.
+**Status Symbol**: ✅
+**Evidence Type**: HTTP response + upstream review audit
+**Command**: `curl -sSIL https://casfri.github.io/CASFRI/index.html`; `curl -sSIL https://github.com/CASFRI/CASFRI/blob/master/documentation/specifications/README.md`; `sed -n '55,130p' metadata/source-reviews/casfri_v5_schema.md`
+**Exit Code**: 0
+**Output Summary**:
+```
+https://casfri.github.io/CASFRI/index.html -> HTTP 200 (HTTP/2), content-type text/html
+https://github.com/CASFRI/CASFRI/blob/master/documentation/specifications/README.md -> HTTP 200
+source review §2: CASFRI framework is GPL-3.0 code/schema; repository does not bundle source FRIs;
+NRCan/NFIS "CASFRIv5" record 0177f4ed-... is two 50 m raster layers, WMS-only, no WFS/bulk payload.
+```
+No CASFRI database payload was downloaded.
+**Verification Timestamp**: 2026-11-14T18:14:00Z
+**Verified By**: curl 8.5.0; parent-repo source review `metadata/source-reviews/casfri_v5_schema.md`
+**Artifact Reference**: `data/raw/casfri_v5/documentation/UPSTREAM_DATA.md`, `data/raw/casfri_v5/PROVENANCE.md`
+
+---
+
+### Entry: EL-20261114-006
+**Claim**: Metadata registries were updated without schema breakage: MAGPlot archived, NFI ground/photo DUA-pending, readiness gates not flipped, and the national plot inventory has 10 candidate rows.
+**Status Symbol**: ✅
+**Evidence Type**: CSV/YAML schema validation
+**Command**: `.venv/bin/python -c "import yaml; [yaml.safe_load(open(p)) for p in [...]]"`; `python3 -c "import csv; ... column-count checks"`
+**Exit Code**: 0
+**Output Summary**:
+```
+required-datasets.yaml: parsed; 12 datasets; magplot status=archived path=raw/magplot/; nfi_photo_plots status=request_pending_dua
+license-determinations/nfi-access.yaml: parsed; 7 sources; magplot status=acquired/archived (39,130 sites); nfi_ground/nfi_photo dua_status=pending
+readiness-gates.yaml: parsed; nfi_access=blocked; national_scaling=in_progress (no status flips)
+source-inventory.csv: 57 rows (header + 56); new magplot/nfi_ground_plot_data/nfi_photo_plots/fvs_calibration rows have 14 columns
+national-plot-data-inventory.csv: 10 data rows x 14 columns
+```
+Note: `source-inventory.csv` contains seven pre-existing rows with extra unquoted commas (rows 7, 8, 9, 38, 42, 43, 46); these predate this session and were not modified.
+**Verification Timestamp**: 2026-11-14T18:30:00Z
+**Verified By**: Python 3.12.3 / PyYAML 6.0.3 / csv module
+**Artifact Reference**: `metadata/source-inventory.csv`, `metadata/required-datasets.yaml`, `metadata/license-determinations/nfi-access.yaml`, `metadata/readiness-gates.yaml`, `metadata/national-plot-data-inventory.csv`
+
+---
+
+### Entry: EL-20261114-007
+**Claim**: The MAGPlot, NFI documentation, CASFRI pointer, and acquisition manifest were committed locally to the DataLad data repository without deletions, with binary payloads stored as git-annex objects.
+**Status Symbol**: ✅
+**Evidence Type**: Git commit + annex status
+**Command**: `git -C data add raw/magplot raw/nfi raw/casfri_v5/documentation manifests/magplot-acquisition.csv`; `git -C data commit -m "Archive MAGPlot and NFI plot documentation"`; `git -C data log -1 --oneline`; `git -C data status --short`; `git -C data annex whereis raw/magplot/MAGPlot_latest_data_package.zip`
+**Exit Code**: 0
+**Output Summary**:
+```
+d45a047 Archive MAGPlot and NFI plot documentation
+31 files changed, 2148 insertions(+)
+git -C data status --short: (clean)
+annex pointers: 11 (3 MAGPlot binaries + 3 ground-plot PDFs + 5 photo-plot PDFs)
+whereis raw/magplot/MAGPlot_latest_data_package.zip: 1 copy (here); arbutus-s3 not yet populated
+```
+No `D` entries appeared in either status column. The commit is local only; no GitHub push or `arbutus-s3` copy was performed.
+**Verification Timestamp**: 2026-11-14T18:45:00Z
+**Verified By**: git 2.45.2 / git-annex 10.20240129
+**Artifact Reference**: data-submodule commit `d45a047`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

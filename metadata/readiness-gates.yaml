@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-08-11T18:00:00Z"
+updated_utc: "2026-11-14T18:30:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Readiness gates define cross-cutting prerequisites for production model readiness."
@@ -18,7 +18,7 @@ gates:
       - "age class distribution validation"
     blocking_datasets:
       - nfi_ground_plot_data
-    notes: "NFI data request process required; access subject to NFI approval. Standard reports (nfi_standard_reports) accepted for summary validation only."
+    notes: "NFI data request process required; access subject to NFI approval. Standard reports (nfi_standard_reports) accepted for summary validation only. 2026-11-14: MAGPlot Tier-1 open package archived at data/raw/magplot/ (39,130 sites; 20,890 remeasured sites; 1,573,761 tracked trees with repeat measurements; 140 species codes). NFI ground and photo plot data remain DUA-pending; their public documentation is archived but no data payload was downloaded. Gate remains blocked."
 
   - id: climate_predictors
     name: "Climate Predictor Variables"
@@ -83,7 +83,7 @@ gates:
       - scanfi_v2
       - provincial_forest_inventories
       - provincial_yield_curves
-    notes: "BC + QC two-province diagnostic LP fixture solves `Optimal` end-to-end; inter-provincial pathway flows emitted; supply-comparison sep-of-BC vs QC artefacts present in metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/generated/. Real QC GeoPackage (feuille 21M 815 MB, CC-BY 4.0) archived in data/raw/qc_inventory/2023-ieqm-eighth/ via DataLad; provincial bulk GeoPackage (11.2 GB) URL pointer retained but not archived to keep this increment scope manageable. Remaining blockers: NS, PE, YT, NL02 provincial FRIs (also openly-downloadable per casfri_v5_schema.md §3.a) not yet wired; provincial yield curves remain uncalibrated (Gauthier et al. 2015 reproduction path stays at diagnostic-tier); facility layer gate remains blocked."
+    notes: "BC + QC two-province diagnostic LP fixture solves `Optimal` end-to-end; inter-provincial pathway flows emitted; supply-comparison sep-of-BC vs QC artefacts present in metadata/ffcm-archive/prototype-inputs/bc-qc-mini-2prov/generated/. Real QC GeoPackage (feuille 21M 815 MB, CC-BY 4.0) archived in data/raw/qc_inventory/2023-ieqm-eighth/ via DataLad; provincial bulk GeoPackage (11.2 GB) URL pointer retained but not archived to keep this increment scope manageable. Remaining blockers: NS, PE, YT, NL02 provincial FRIs (also openly-downloadable per casfri_v5_schema.md §3.a) not yet wired; provincial yield curves remain uncalibrated (Gauthier et al. 2015 reproduction path stays at diagnostic-tier); facility layer gate remains blocked. 2026-11-14: MAGPlot Tier-1 open package archived (39,130 sites / 20,890 remeasured / 1,573,761 remeasured tracked trees); its open coverage is BC, QC, NB, NL, YT, NT, SK, MB only and it has no AB/ON/PE/NS records, so national scaling remains in_progress."
 
   - id: facility_layer
     name: "Forest Industry Facility Layer"

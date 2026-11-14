@@ -1,5 +1,46 @@
 # Change Log
 
+## 2026-11-14
+
+- **MAGPlot v1.2 archived (Tier-1).** Downloaded the open MAGPlot data
+  package, data dictionary, and supplementary material from ca.nfis.org
+  (HTTP 200; 127,123,248 / 933,385 / 288,487 bytes). Data package SHA-256
+  `270055bb9eeed6ccd6cbd75f6a2026b54e340c5a4938af18ad06e479792888db`; ZIP
+  integrity verified (9 members, 1,720,730,897 bytes uncompressed). Archived
+  under `data/raw/magplot/` with ACQUISITION.md, PROVENANCE.csv, and
+  MAGPlot_CONTENTS.md; manifest at `data/manifests/magplot-acquisition.csv`.
+  The eight tables contain 39,130 sites; 257,031 plot visits; 20,890
+  remeasured sites; 7,771,041 tree measurements; 2,866,168 tracked trees;
+  1,573,761 tracked trees with repeat measurements; 140 species codes;
+  1921-2024. Open coverage is BC, QC, NB, NL, YT, NT, SK, MB only (no
+  AB/ON/PE/NS); published coordinates are approximate within +/-10 km;
+  v1.2 lacks age/site-index/soil tables. The prior scratch ZIP (2,957,065
+  bytes) is not the current package and was not used.
+- **NFI plot documentation archived; data remains DUA-pending.** Ground plot
+  docs (data dictionary 5.2, guidelines 5.0, compilation procedures 2.4;
+  9,002,441 bytes) and photo-plot docs (5 PDFs; 4,796,400 bytes including
+  HTML snapshots) archived under `data/raw/nfi/`. The nominal
+  `/en/photo_plot` page returns HTTP 200 with a 404-error body; links were
+  recovered from `/en/documentation` and recorded in LINKS.md. No NFI plot
+  data payload was downloaded. Request route recorded:
+  `https://nfi.nfis.org/en/datarequestform`; pre-submission package
+  `metadata/license-determinations/nfi-targeted-request.md` unchanged.
+- **CASFRI upstream pointer added.** `data/raw/casfri_v5/documentation/
+  UPSTREAM_DATA.md` records the project page, data-dictionary pointer, and
+  the fact that CASFRI is polygon inventory (not plot remeasurement) and
+  the NRCan CKAN record is WMS-only. No CASFRI database payload downloaded.
+- **Metadata registries updated.** `metadata/source-inventory.csv` magplot
+  -> `archived`, nfi_ground_plot_data -> `request_pending_dua`, new
+  `nfi_photo_plots` and `fvs_calibration` rows; `required-datasets.yaml`
+  gains `magplot` (archived) and `nfi_photo_plots` (DUA-pending);
+  `license-determinations/nfi-access.yaml` magplot -> `acquired/archived`
+  with counts and adds nfi_photo; `readiness-gates.yaml` records the dated
+  evidence without flipping `nfi_access` or `national_scaling`; new
+  `metadata/national-plot-data-inventory.csv` (10 candidates).
+- Local commits only; `arbutus-s3` copy and GitHub push remain pending
+  maintainer approval. Data-submodule commit `d45a047` ("Archive MAGPlot and
+  NFI plot documentation") contains 31 files and 11 git-annex objects.
+
 ## 2026-08-17
 
 - Closed the fail-open hole in `directory_contains_tracked_files` found in

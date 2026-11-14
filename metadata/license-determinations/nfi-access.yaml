@@ -1,11 +1,11 @@
 schema_version: 1
-updated_utc: "2026-08-09T00:00:00Z"
+updated_utc: "2026-11-14T00:00:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "NFI license determination registry for ground plot access and reference pixel sources."
   - "Each source entry captures license terms governing model use, redistribution, validation use, and DUA requirements."
-  - "Status values: pending, under_review, accepted, rejected, blocked"
-  - "Source IDs follow the pattern: nfi_ground, magplot, bc_vri, ab_psp, on_fri, qc_mrnf"
+  - "Status values: pending, under_review, accepted, rejected, blocked, acquired/archived"
+  - "Source IDs follow the pattern: nfi_ground, magplot, nfi_photo, bc_vri, ab_psp, on_fri, qc_mrnf"
 
 sources:
   - source_id: nfi_ground
@@ -28,11 +28,14 @@ sources:
     dua_template_url: "https://nfi.nfis.org/en/datarequest/dua_template.pdf"
     dua_status: pending
     status: under_review
+    documentation_archive: "data/raw/nfi/ground_plots/documentation/ (data dictionary 5.2, guidelines 5.0, compilation procedures 2.4; 9,002,441 bytes; acquired 2026-11-14)"
+    request_form_url: "https://nfi.nfis.org/en/datarequestform"
     notes:
       - "NFI ground plots are the gold standard for calibration/validation of biomass, volume, age, and species composition models."
       - "Standard reports (nfi_standard_reports) are accepted for summary validation only (see required-datasets.yaml)."
       - "DUA negotiation timeline: 3-6 months typical. Early initiation critical for project schedule."
       - "Reference pixel access (geolocated plot centers) typically included in DUA scope."
+      - "2026-11-14: public documentation archived; plot data NOT downloaded. Request route is https://nfi.nfis.org/en/datarequestform (embeds https://nfi.nfis.org/NFIDataRequest/User_Form.jsp?lang=en); pre-submission package at metadata/license-determinations/nfi-targeted-request.md with placeholder contact lines unchanged."
 
   - source_id: magplot
     name: "MAGPlot - National Forest Plot Compilation"
@@ -40,10 +43,10 @@ sources:
     publisher: "Canadian Forest Service / NRCan"
     jurisdiction: "Canada (federal)"
     contact:
-      name: "CFS Data Management"
-      email: "cfs-data@nrcan-rncan.gc.ca"
-      phone: "+1-613-996-5678"
-      portal_url: "https://open.canada.ca/data/en/dataset/magplot"
+      name: "NFI / MAGPlot data support"
+      email: "support@nfis.org"
+      phone: "+1-250-363-0600"
+      portal_url: "https://open.canada.ca/data/en/dataset/8824392d-464e-413d-8bde-eaed61c79743"
     license_type: "ogld_canada"
     license_url: "https://open.canada.ca/en/open-government-licence-canada"
     license_summary: "Open Government Licence - Canada. Permits commercial and non-commercial use, reproduction, and redistribution with attribution. Source must be acknowledged."
@@ -51,12 +54,54 @@ sources:
     redistribution: permitted
     validation_use: permitted
     dua_required: false
-    status: accepted
+    acquisition:
+      archive_date: "2026-11-14"
+      local_path: "data/raw/magplot/"
+      package_sha256: "270055bb9eeed6ccd6cbd75f6a2026b54e340c5a4938af18ad06e479792888db"
+      package_bytes: 127123248
+      sites: 39130
+      remeasured_sites: 20890
+      plot_visits: 257031
+      tree_measurements: 7771041
+      tracked_trees: 2866168
+      remeasured_tracked_trees: 1573761
+      species_codes: 140
+      year_min: 1921
+      year_max: 2024
+      coverage_note: "Open Tier-1 package: BC, QC, NB, NL, YT, NT, SK, MB only; no AB, ON, PE or NS."
+    status: acquired/archived
     notes:
       - "MAGPlot provides a harmonized alternative if NFI ground plot DUA is delayed."
-      - "Includes subset of NFI plots plus provincial PSPs (BC, AB, ON, QC, etc.)."
-      - "Schema standardization enables direct use in calibration workflows."
+      - "2026-11-14: acquired and archived at data/raw/magplot/. The open Tier-1 package contains BC_FAIBGP, QC_PSP, NB_CLI, NL_PSP, YT_PSP and NFM_GP; there are no AB, ON, PE or NS records."
+      - "Schema standardization enables direct use in calibration workflows; 1,573,761 tracked trees have repeat measurements."
+      - "Limitations: published coordinates are approximate (+/-10 km); 1,027 BC sites have no coordinates; v1.2 has no age/site-index/soil tables; variable-radius BC plots lack BAF/plot area."
       - "Verify version currency; MAGPlot updates may lag provincial PSP refreshes."
+
+  - source_id: nfi_photo
+    name: "NFI Photo Plot Data"
+    description: "National Forest Inventory photo-plot interpretation data and documentation for land-cover and forest-attribute validation."
+    publisher: "National Forest Inventory Canada"
+    jurisdiction: "Canada (federal)"
+    contact:
+      name: "NFI Data Access Office"
+      email: "nfisupport@nfis.org"
+      phone: "+1-250-363-0600"
+      portal_url: "https://nfi.nfis.org/en/photo_plot"
+    license_type: "custom_dua"
+    license_url: "https://nfi.nfis.org/en/notices"
+    license_summary: "NFI data access requires a signed Data Use Agreement (DUA) with NRCan. Non-commercial research use permitted with attribution. Redistribution of raw plot data prohibited. Aggregated/derived products allowed with approval."
+    model_use: permitted
+    redistribution: prohibited
+    validation_use: permitted_with_dua
+    dua_required: true
+    dua_status: pending
+    status: under_review
+    documentation_archive: "data/raw/nfi/photo_plots/documentation/ (5 PDFs + HTML snapshots; 4,796,400 bytes; acquired 2026-11-14)"
+    request_form_url: "https://nfi.nfis.org/en/datarequestform"
+    notes:
+      - "Photo-plot data are NOT openly downloadable; access requires the NFI Data Request Form and a signed DUA."
+      - "2026-11-14: documentation archived. The nominal /en/photo_plot page returns HTTP 200 with a 404-error body; links were recovered from https://nfi.nfis.org/en/documentation and recorded in LINKS.md."
+      - "Pre-submission package at metadata/license-determinations/nfi-targeted-request.md; placeholder contact lines unchanged."
 
   - source_id: bc_vri
     name: "BC Vegetation Resources Inventory (VRI) - Ground Sample Plots"
