@@ -976,6 +976,50 @@ datasets:
       include: "yes"
       rationale: "Large file (1 GB); download large-fire subset (65 MB) first and archive to arbutus-s3."
 
+  - id: fvsca_calibration_v0
+    category: derived_product
+    status: generated
+    required_for:
+      - "input dataset for fresh-fvsca individual-tree growth and mortality calibration"
+      - "cross-jurisdictional calibration coverage for BC, QC, NL, and MAGPlot provinces"
+    canonical_data_path: "derived/fvsca_calibration/v0/"
+    preferred: true
+    source:
+      publisher: "UBC FRESH / CLEWs-C2070"
+      title: "FVSCA calibration v0 harmonized ground-plot extract"
+      url: null
+      access_mode: "derived_product"
+      license: "inherited from input sources; see the source dataset registry rows"
+      provenance_notes: "Generated 2026-11-14 by workflows/national/plot_harmonization/build.py (data submodule commits 0654864 and e22dc2f) from archived BC FAIB PSP/non-PSP, MAGPlot v1.2 plus WFS-only supplement, Quebec PEP, and NL FAL. Raw inputs unchanged. See data/derived/fvsca_calibration/v0/manifest.json and QA.md. No S3 publication in this build."
+    coverage:
+      spatial: "BC, QC, NL, plus MAGPlot coverage (BC, QC, NB, NL, YT, NT, SK, MB, PE)"
+      temporal: "1921-2026"
+      resolution: "ground plot and individual tree"
+    package_inventory:
+      observed_utc: "2026-11-14T21:51:57Z"
+      manifest_path: "derived/fvsca_calibration/v0/manifest.json"
+      site_count: 72975
+      visit_count: 368133
+      tree_measurement_count: 15639840
+      interval_count: 7011326
+      species_crosswalk_rows: 355
+      source_labels:
+        - faib_psp
+        - faib_non_psp
+        - magplot
+        - magplot_wfs
+        - qc_pep
+        - nl_fal
+      archive_path: "derived/fvsca_calibration/v0/"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "recorded per output in manifest.json"
+      target_artifact: "derived/fvsca_calibration/v0/manifest.json"
+    datalad_mirror:
+      include: "yes"
+      rationale: "Derived calibration payload is about 183 MB uncompressed/gzip; keep it in the data submodule and annex large CSV.GZ outputs. Publication awaits new-cloud credentials."
+
     # End of curated registry.
 
   # Registry maintenance notes end here.

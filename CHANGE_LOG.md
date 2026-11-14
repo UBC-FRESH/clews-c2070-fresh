@@ -2,6 +2,22 @@
 
 ## 2026-11-14
 
+- **FVSCA calibration v0 harmonized plot extract built and committed.** Added
+  `workflows/national/plot_harmonization/` with a schema, FAIB/MAGPlot/QC
+  PEP/NL FAL adapters, a streaming `build.py`, and a hard `validate.py`.
+  The full build produced 72,975 sites, 368,133 visits, 15,639,840 tree
+  measurement rows, 7,011,326 intervals, 355 species-crosswalk rows, and
+  52/52 passing validation checks in
+  `data/derived/fvsca_calibration/v0/` (data submodule commits `0654864` and `e22dc2f`).
+  Output SHA-256: `sites.csv` `a88e6891...b128b6c8`, `visits.csv`
+  `bd07dc11...f2dcbb61534c`, `trees.csv.gz` `a0b540f4...e3afffe`,
+  `intervals.csv.gz` `bf2781a3...c87b4c10`, `species_crosswalk.csv`
+  `40748824...36f182e35c`. The extract preserves source IDs, maps QC DBH
+  mm→cm, keeps source expansion factors, leaves absent BAF/site index blank,
+  and documents MAGPlot WFS overlap, NL sentinel/duplicate/plot-key drops, and
+  FAIB blank-tree-key drops in `QA.md`. Raw payloads were not modified and no
+  S3 publication was attempted.
+
 - **Québec PEP and NL FAL permanent sample plots archived.** Added two open
   provincial corpora to the data submodule in commit `72da747`.
   Québec PEP (`data/raw/qc_pep/`): `PEP_GPKG.zip` 128,568,617 bytes, SHA-256

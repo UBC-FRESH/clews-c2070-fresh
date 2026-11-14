@@ -605,6 +605,50 @@ One NL `remeasurement` row has a null `PLOTKEY`; one immature plot (`5_119019`) 
 
 ---
 
+### Entry: EL-20261114-013
+**Claim**: The reproducible FVSCA calibration v0 harmonization package built and validated the unified plot extract (72,975 sites, 368,133 visits, 15,639,840 tree rows, 7,011,326 intervals) from the archived FAIB, MAGPlot, QC PEP, and NL FAL inputs; the output was committed to the data submodule as `0654864` (payload) and `e22dc2f` (QA/manifest refresh) without modifying raw payloads or attempting S3 publication.
+**Status Symbol**: ✅
+**Evidence Type**: Reproducible build + hard validation + manifest hash audit + git-annex commit
+**Command**: `python3 -m workflows.national.plot_harmonization.build --out data/derived/fvsca_calibration/v0 --sources faib,magplot,qc_pep,nl_fal --qc-gpkg /tmp/gep/qcpep/extract/PEP.gpkg --work-dir /tmp/plot_harmonization_work`; `python3 -m workflows.national.plot_harmonization.validate --out data/derived/fvsca_calibration/v0`; `git -C data annex add derived/fvsca_calibration/v0`; `git -C data commit -m "Add FVSCA calibration v0 harmonized plot extract"`
+**Exit Code**: 0
+**Output Summary**:
+```
+build: 6 source labels
+  faib_psp      7,341 sites / 23,956 visits / 3,217,643 trees / 1,799,382 intervals
+  faib_non_psp  9,512 sites / 11,951 visits /   366,788 trees /    80,702 intervals
+  magplot      39,130 sites / 257,031 visits / 7,771,041 trees / 3,293,792 intervals
+  magplot_wfs   2,778 sites / 13,906 visits / 1,298,474 trees /   369,878 intervals
+  qc_pep       12,834 sites / 53,632 visits / 2,210,417 trees /   979,461 intervals
+  nl_fal        1,380 sites /  7,657 visits /   775,477 trees /   488,111 intervals
+TOTAL          72,975 sites / 368,133 visits / 15,639,840 trees / 7,011,326 intervals
+
+validation: 52 checks, 0 failed
+  no duplicate sites/visits/trees/interval keys
+  visit->site, tree->visit, interval->tree referential integrity PASS
+  DBH 0-500 cm, height 0-100 m, years 1900-2027, interval 2-40 years PASS
+  site/visit n_trees and n_visits consistency PASS
+  manifest counts and 0.5% reconciliation PASS
+
+output SHA-256:
+  sites.csv              72,975 rows  8,371,441 bytes  a88e6891...b128b6c8
+  visits.csv            368,133 rows 30,574,202 bytes  bd07dc11...f2dcbb61534c
+  trees.csv.gz       15,639,840 rows 103,812,857 bytes a0b540f4...e3afffe
+  intervals.csv.gz    7,011,326 rows  48,366,358 bytes bf2781a3...c87b4c10
+  species_crosswalk.csv     355 rows     18,222 bytes 40748824...36f182e35c
+
+dropped rows explained in QA.md:
+  faib_psp 5, faib_non_psp 308 blank PLOT/TREE_NO
+  magplot_wfs 10,699 duplicate NL WFS features
+  nl_fal 168 tallies + 2 visits from absent PLOTKEY 8_119019, 3 duplicate trees,
+    1 height=99 sentinel
+raw inputs unchanged; no S3 publication attempted
+```
+**Verification Timestamp**: 2026-11-14T21:29:13Z
+**Verified By**: Python 3.12.3 / pandas 3.0.3; git-annex 10.20240129
+**Artifact Reference**: data-submodule commits `0654864` and `e22dc2f`; `data/derived/fvsca_calibration/v0/{manifest.json,validation.json,QA.md,sites.csv,visits.csv,trees.csv.gz,intervals.csv.gz,species_crosswalk.csv}`; package `workflows/national/plot_harmonization/`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):
