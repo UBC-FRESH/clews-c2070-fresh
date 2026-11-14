@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-11-14T19:00:00Z"
+updated_utc: "2026-11-14T19:20:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -276,6 +276,66 @@ datasets:
       value: "9ed7b0a23dd74686173ee45fddfcb71a7bbddd7995230c7de2696b7c76d614e8"
       status: "verified"
       target_artifact: "raw/bc_faib_ground_plots/psp/faib_tree_detail.csv.gz"
+    datalad_mirror:
+      include: "yes"
+      rationale: "Open Government Licence - British Columbia permits use, adaptation, and redistribution with attribution. Payloads are archived in the data submodule; arbutus-s3 publication is pending credential resolution."
+
+  - id: bc_faib_ground_plots_nonpsp
+    category: forest_inventory
+    status: archived
+    required_for:
+      - "BC spatial coverage and single-visit initial conditions"
+      - "additional remeasurement sites for fresh-fvsca / FVS-BC"
+    canonical_data_path: "raw/bc_faib_ground_plots/non_psp/"
+    preferred: false
+    source:
+      publisher: "BC Ministry of Forests - Forest Analysis and Inventory Branch"
+      title: "Forest Inventory Ground Plot Data and Interactive Map - non-PSP compilations"
+      url: "https://catalogue.data.gov.bc.ca/dataset/824e684b-4114-4a05-a490-aa56332b57f4"
+      access_mode: "anonymous_ftp"
+      license: "Open Government Licence - British Columbia"
+      provenance_notes: "Downloaded 2026-11-14 via anonymous FTP from ftp://ftp.for.gov.bc.ca/HTS/external/!publish/ground_plot_compilations/non_psp/. The catalogue's HTTPS link returns HTTP 401 (Negotiate/NTLM); the FTP scheme is anonymously readable. Non-PSP dictionary 2026Apr20. Site identifiers are disjoint from the PSP corpus. Province-wide and per-TSA tables are exact duplicate scopes; use publish_province/ for analysis. See data/raw/bc_faib_ground_plots/non_psp/ACQUISITION.md and CONTENTS.md."
+      metadata_created: "2020-07-23T17:58:28.606884"
+      metadata_modified: "2026-04-21T23:21:34.162986"
+      resources:
+        - format: "FTP"
+          name: "Ground Plot Data FTP Download"
+          url: "ftp://ftp.for.gov.bc.ca/HTS/external/!publish/ground_plot_compilations/non_psp/"
+        - format: "HTML"
+          name: "Interactive Mapping App"
+          url: "https://bcgov-env.shinyapps.io/FAIB_GROUND_SAMPLE/"
+    coverage:
+      spatial: "British Columbia; 37 TSAs; 16 BEC zones"
+      temporal: "1995-2025 measurements; non-PSP compilation dated 2026-04-20/21"
+      resolution: "ground plot and individual tree"
+    package_inventory:
+      observed_utc: "2026-11-14T19:18:00Z"
+      file_count: 457
+      table_count: 12
+      total_size_bytes: 269779544
+      gzip_size_bytes: 52765031
+      site_count: 9512
+      visit_count: 11951
+      remeasured_site_count: 2028
+      single_visit_site_count: 7484
+      tree_measurement_count: 367096
+      unique_tree_count: 275264
+      remeasured_tree_count: 76667
+      species_code_count: 42
+      bec_zone_count: 16
+      tsa_count: 37
+      year_min: 1995
+      year_max: 2025
+      dbh_available_pct: 97.5
+      height_available_pct: 77.8
+      visits_with_site_index: 9318
+      visits_with_age: 11286
+      archive_path: "raw/bc_faib_ground_plots/non_psp/"
+    checksum:
+      algorithm: "sha256"
+      value: "2664a13fa52117b09d611287a9102b29f97f6242e632f497be923761b8cb38cd"
+      status: "verified"
+      target_artifact: "raw/bc_faib_ground_plots/non_psp/publish_province/faib_tree_detail.csv.gz"
     datalad_mirror:
       include: "yes"
       rationale: "Open Government Licence - British Columbia permits use, adaptation, and redistribution with attribution. Payloads are archived in the data submodule; arbutus-s3 publication is pending credential resolution."

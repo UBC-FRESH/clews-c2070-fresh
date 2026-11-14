@@ -531,6 +531,37 @@ The S3 failure affected the prior MAGPlot/NFI/CASFRI annex paths. Per the acquis
 
 ---
 
+### Entry: EL-20261114-011
+**Claim**: The BC FAIB non-PSP companion corpus was fully mirrored and verified (457 files, 9,512 sites, 11,951 visits, 367,096 tree rows, disjoint from PSP), and Arbutus S3 publication is blocked by old-cloud credentials rather than a stale remote host.
+**Status Symbol**: ⚠️
+**Evidence Type**: FTP walk + byte-for-byte size verification + gzip round-trip + signed S3 probes
+**Command**: `python3 ftp_walk.py`; `python3 ftp_mirror_curl.py`; `python3 verify_nonpsp.py`; `python3 gzip_nonpsp.py`; `python3 profile_nonpsp.py`; `.venv/bin/python /tmp/gep/opencode/s3_auth_compare.py`; `git -C data cat-file -p git-annex:remote.log`.
+**Exit Code**: 0 for download/verify/gzip/profile; S3 probes returned HTTP 403 by design
+**Output Summary**:
+```
+FTP non_psp: 457 files, 269,779,544 bytes
+Local mirror: expected_files=457 missing=0 wrong_size=0 extra=0
+gzip: 456 CSVs, 269,740,428 -> 52,725,915 bytes; decompressed SHA-256 round-trip pass
+dictionary: 39,116 bytes, sha256 1028e232...40b16
+publish_province/faib_tree_detail.csv.gz: 367,096 rows, 92,488,343 -> 19,070,426 bytes
+  sha256 2664a13fa52117b09d611287a9102b29f97f6242e632f497be923761b8cb38cd
+Sites 9,512; visits 11,951; remeasured sites 2,028; single-visit sites 7,484
+Tree rows 367,096; unique trees 275,264; remeasured trees 76,667
+TSAs 37; BEC zones 16; species 42; years 1995-2025
+PSP ∩ non-PSP site identifiers = 0; union = 16,853
+Per-TSA sums = province (sites 9,512 / visits 11,951 / trees 367,096); union = 9,512
+S3 remote.log after fetch: host=object-arbutus.alliancecan.ca port=443 requeststyle=path
+  bucket=clews-c2070-fresh-data publicurl=.../a0d141b801c74d0a819c09b4bde9c3fb:clews-c2070-fresh-data
+S3 probe: new host project path anonymous GET 200; old host 403
+  stored credentials: new host InvalidAccessKeyId (same as fake key); old host AccessDenied
+```
+The mirrored files were checked against the saved FTP `SIZE` listing after decompression; all 457 sizes matched. No S3 remote parameter was changed in this pass, and no credential guessing or copy retry was attempted.
+**Verification Timestamp**: 2026-11-14T19:20:00Z
+**Verified By**: Python 3.12.3 ftplib/curl 8.x/boto3 SigV4 probes; git-annex 10.20240129
+**Artifact Reference**: `data/raw/bc_faib_ground_plots/non_psp/ACQUISITION.md`, `CONTENTS.md`, `PROVENANCE.csv`; `data/manifests/bc-faib-ground-plots-nonpsp-acquisition.csv`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

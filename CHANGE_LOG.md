@@ -2,6 +2,43 @@
 
 ## 2026-11-14
 
+- **Arbutus S3 publication blocked by stale cloud credentials, not remote
+  configuration.** The local `data` clone's git-annex branch was stale; after
+  fetching `origin/git-annex`, `remote.log` already carries the 2026-10-11
+  update (`host=object-arbutus.alliancecan.ca`, `port=443`,
+  `requeststyle=path`, new project-prefixed publicurl, bucket unchanged at
+  `clews-c2070-fresh-data`). No remote-parameter change was made. Anonymous
+  GET of
+  `https://object-arbutus.alliancecan.ca/a0d141b801c74d0a819c09b4bde9c3fb:clews-c2070-fresh-data`
+  returns 200; the old host returns 403. Signed probes with the stored
+  `~/.aws/credentials [default]` key return `InvalidAccessKeyId` on the new
+  host (identical to a synthetic fake key) and `AccessDenied` on the old host,
+  so the stored key is an old-cloud credential that the new Arbutus cloud does
+  not recognise. No credential guessing was attempted and no S3 copy was
+  retried; publication remains pending a new-cloud access key. Backup of the
+  pre-fetch remote.log is at `/tmp/gep/opencode/remote.log.bak` (outside the
+  repository).
+- **National growth-and-yield data landscape plan committed.**
+  `planning/national-gy-data-landscape.md` added in parent commit `3142bf7`.
+  The document records the 2026-11-14 holdings, access matrix, and phased
+  acquisition plan; no calibration result is claimed.
+- **BC FAIB non-PSP companion corpus archived.** Mirrored all 457 files from
+  `ftp://ftp.for.gov.bc.ca/HTS/external/!publish/ground_plot_compilations/non_psp/`
+  (12 province-wide tables, 37 TSA directories × 12 tables, and the non-PSP
+  dictionary): 269,779,544 bytes uncompressed, 52,765,031 bytes after
+  `gzip -9 -n`. Archive at `data/raw/bc_faib_ground_plots/non_psp/`; per-file
+  provenance at `non_psp/PROVENANCE.csv`;
+  manifest at `data/manifests/bc-faib-ground-plots-nonpsp-acquisition.csv`.
+  Profile: 9,512 sites, 11,951 visits, 367,096 tree rows, 275,264 unique
+  trees, 76,667 remeasured trees, 2,028 remeasured sites, 7,484 single-visit
+  sites, 37 TSAs, 16 BEC zones, 42 species, 1995–2025, DBH 97.5% populated,
+  height 77.8% populated, site index 78.0% of visits, age 94.4% of visits.
+  Site identifiers are disjoint from the 7,341-site PSP corpus (combined
+  16,853 sites / 35,907 visits). The per-TSA tables are exact subsets of the
+  province-wide tables. Updated `metadata/national-plot-data-inventory.csv`
+  and `metadata/required-datasets.yaml` with the non-PSP row; root
+  `ACQUISITION.md`, `CONTENTS.md`, and `PROVENANCE.csv` now cover both
+  sub-corpora.
 - **MAGPlot v1.2 archived (Tier-1).** Downloaded the open MAGPlot data
   package, data dictionary, and supplementary material from ca.nfis.org
   (HTTP 200; 127,123,248 / 933,385 / 288,487 bytes). Data package SHA-256
