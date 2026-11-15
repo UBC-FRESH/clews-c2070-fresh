@@ -1094,3 +1094,73 @@ btc_manifest-tsa24_grades_tsa24.json d4a659b391b5b153de5b8af3f0772a8c84c029fd7f5
 **Verification Timestamp**: 2026-11-15T19:30:00Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, wine 9.0, wine-mono 9.0.0, TIPSY 4.7 BTC, nemora reference checkout
 **Artifact Reference**: data commit `0d15a4b`; parent commit `fe7d9b8`; `data/derived/national/bucking/tsa24_grade_curves/`; `data/derived/national/bucking/tsa24_pilot/{VALIDATION_REPORT.md,validation_summary.json,grade_benchmark.csv,grade_benchmark_summary.json,TSA24_GRADE_CURVES.md}`; BTC manifests under `femic-tsa24-instance/tipsy_io/logs/` and `vdyp_io/profile_logs/`
+
+---
+
+## 2026-11-15 — TSA24 BTC volume and biomass-live harvest-slash ledger
+
+### Entry: EL-20261115-024
+**Claim**: The TSA24 bucking pilot now has a BTC `volume` benchmark and a genuine AGB-based harvest-slash ledger using the FEMIC BTC `biomass-live` and `carbon` banks; the previous mill-residue comparison is removed.
+**Status Symbol**: ✅
+**Evidence Type**: command output, file hashes, validation summary, git commit refs
+**Command**:
+```bash
+export FEMIC_BATCHTIPSY_EXE=/srv/shared-data/gep/iversen-jamie-msc-thesis/btc_install_wine/TIPSYbtc.exe
+export TIPSY_DATABASE=/srv/shared-data/gep/iversen-jamie-msc-thesis/btc_install_wine/Database
+python -m femic tipsy run-btc data/03_input-tsa24.csv \
+  --indicator-bank biomass-live --indicator-bank carbon \
+  --run-id tsa24_biomass \
+  --output-csv data/04_output-tsa24_biomass.csv \
+  --error-csv data/04_error-tsa24_biomass.csv \
+  --instance-root "$FEMIC_TSA24_ROOT"
+
+python -m workflows.national.bucking.compile_tsa24_biomass_curves \
+  --femic-root "$FEMIC_TSA24_ROOT" \
+  --out-dir data/derived/national/bucking/tsa24_grade_curves
+
+python -m workflows.national.bucking.validate_tsa24 \
+  --out-dir data/derived/national/bucking/tsa24_pilot \
+  --grade-curves-dir data/derived/national/bucking/tsa24_grade_curves
+
+python -m pytest -q tests/test_bucking.py
+python -m compileall -q workflows/national/bucking tests/test_bucking.py
+```
+**Exit Code**: 0 (BTC run, compile, validation, tests, compileall)
+**Output Summary**:
+```
+BTC biomass run: 16 rows x 973 columns; 04_error-tsa24_biomass.csv header-only.
+Units: BTC biomass/carbon family is ODT/ha (TIPSY biomass help; fresh-tipsy
+  metric contract biomass_live_odt_ha). Biomass_Live_Above = wood+bark+
+  foliar+branch; roots/total reported separately.
+Biomass compile: 16 AUs x 36 ages = 576 rows; additivity checks pass;
+  AGB max 456.2 ODT/ha.
+BTC volume benchmark: 14 AU matches; 12 positive-volume comparisons;
+  2 zero-volume age joins; 6 no-AU plots.
+  Observed PSP mean 231.27 vs BTC 229.21 m3/ha; bias +2.06; MAE 122.72;
+  RMSE 148.27; relative bias +0.9%.
+  Pilot bucked mean 201.09 m3/ha; bias -28.12; MAE 126.86; RMSE 151.08;
+  relative bias -12.3%.
+Harvest-slash ledger: 8 primary plots; 12 excluded (6 no AU, 4 volume-ratio
+  screen, 2 zero BTC volume).
+  Mean AGB 200.92 ODT/ha; merchantable log biomass 88.27 ODT/ha;
+  harvest slash 112.65 ODT/ha; taper residue 21.01 ODT/ha; ratio 5.36.
+  Slash per m3 log 0.483 ODT/m3 vs taper 0.082 ODT/m3.
+  60% recovery: 67.59 ODT/ha; 122.89 green t/ha at 45%; 110.60 chip green t/ha.
+Basic density: species-specific FVS-BC NBEL/FIA defaults, 0.3098-0.4798 ODT/m3;
+  flagged species_default_not_bc_local.
+Grade status: not validated; D/F zero for all TSA24 AUs; mill residue excluded.
+Tests: 15 passed. compileall: clean.
+```
+**Hashes**:
+```
+04_output-tsa24_biomass.csv 059bca42a845afc5ca873b56018fd99dd1ad4986d96652f3ae9332ce4afc8808
+biomass_au_curves.csv       3a3c4f6feb47766895c3d3e872d4c12c299251eb188c0c093d515647748111d0
+biomass_curves_manifest.json 4e54086307416291c37d0373e1295b560d7bedbd702da00764550030b6477853
+harvest_residue_ledger.csv  2624e8b2ed566be2588fa006705561cecc154ab05f4d895f43aac5bcb654cb11
+harvest_residue_summary.json 1f37270431656eb8b589dca1d7baacc4589dd24ec961d3136b2f989afe7663ad
+btc_volume_benchmark.csv    495bf7b2c675954af8523c6de8c366a9cdb8fefe44f9b0c4edb078064c9b7250
+bc_basic_density.csv        6584fb93a50cb6c1bd080515db780dd635aa9859e25b6867afed07a00c3198b6
+```
+**Verification Timestamp**: 2026-11-15T20:45:00Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, wine 9.0, wine-mono 9.0.0, TIPSY 4.7 BTC, nemora reference checkout
+**Artifact Reference**: data commit `91e3b52`; `data/derived/national/bucking/tsa24_grade_curves/{biomass_au_curves.csv,biomass_curves_manifest.json}`; `data/derived/national/bucking/tsa24_pilot/{btc_volume_benchmark.csv,harvest_residue_ledger.csv,harvest_residue_summary.json,HARVEST_RESIDUE.md,VALIDATION_REPORT.md,validation_summary.json}`; BTC manifest `femic-tsa24-instance/tipsy_io/logs/btc_manifest-tsa24_biomass.json`

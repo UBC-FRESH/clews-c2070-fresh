@@ -53,6 +53,15 @@ from .tree_lists import (
     load_faib_psp_tree_list,
     select_stratified_sample,
 )
+from .validate_tsa24_btc import (
+    DEFAULT_CHIP_YIELD,
+    DEFAULT_MOISTURE_GREEN,
+    DEFAULT_MOISTURE_SEASONED,
+    DEFAULT_RECOVERY_FACTOR,
+    btc_volume_benchmark,
+    harvest_residue_ledger,
+    load_basic_density_table,
+)
 from .validate_tsa24_grades import benchmark_grade_residue
 
 __all__ = ["main"]
@@ -61,9 +70,10 @@ PILOT_NAME = "tsa24_bucking_phase0"
 TSA_NUMBER = 24
 TSA_NAME = "Prince George"
 BASIC_DENSITY_ODT_M3 = 0.45
-MOISTURE_GREEN = 0.45
-MOISTURE_SEASONED = 0.30
-CHIP_YIELD = 0.90
+MOISTURE_GREEN = DEFAULT_MOISTURE_GREEN
+MOISTURE_SEASONED = DEFAULT_MOISTURE_SEASONED
+CHIP_YIELD = DEFAULT_CHIP_YIELD
+HARVEST_RECOVERY_FACTOR = DEFAULT_RECOVERY_FACTOR
 CONSERVATION_REL_TOL = 1e-5
 CONSERVATION_ABS_TOL = 1e-7
 
@@ -91,6 +101,10 @@ def default_species_crosswalk() -> Path:
 
 def default_rules_path() -> Path:
     return Path(__file__).resolve().parent / "rules" / "bc_interior.yaml"
+
+
+def default_basic_density_path() -> Path:
+    return Path(__file__).resolve().parent / "rules" / "bc_basic_density.csv"
 
 
 class TimeboxExceeded(RuntimeError):
@@ -1398,9 +1412,13 @@ def _build_report(
     psp: dict[str, Any],
     sort_summary: dict[str, Any],
     residue: dict[str, Any],
+    harvest_residue: dict[str, Any],
+    harvest_frame: pd.DataFrame,
     vdyp: dict[str, Any],
     tipsy: dict[str, Any],
     tsa24_grades: dict[str, Any],
+    btc_volume: dict[str, Any],
+    btc_volume_frame: pd.DataFrame,
     rsyc: dict[str, Any],
     taper_warnings: Sequence[str],
     elapsed_seconds: float,
@@ -1450,16 +1468,18 @@ def _build_report(
         f"| Pilot | `{PILOT_NAME}` |",
         f"| TSA | {TSA_NUMBER} — {TSA_NAME} |",
         f"| Generated (UTC) | {datetime.now(timezone.utc).isoformat(timespec='seconds')} |",
-        f"| Status | pilot complete; grade benchmark with stated assumptions |",
+        "| Status | pilot complete; BTC volume benchmarked; grade not validated; harvest-slash ledger reported |",
         f"| Sample | {len(selection.plots)} plots, {len(selection.trees)} live trees |",
         f"| Logs | {len(logs)} |",
         f"| Elapsed | {elapsed_seconds:.1f} s |",
         "",
         "> This is the Phase 0/1 pilot. It is **not** the pre-registered three-way",
         "> validation gate. The refreshed TSA24 FEMIC BTC /TSR output exposes",
-        "> `Logs_Grade_*` and `Residual_*` surfaces at each managed AU and age. A",
-        "> BTC-derived grade/residue benchmark is reported with model-output and",
-        "> mill-vs-harvest caveats. No official BC log grade is assigned.",
+        "> `Logs_Grade_*`, `Residual_*`, `Biomass_Live_*`, and `Carbon_Live_*`",
+        "> surfaces at each managed AU and age. Merchantable volume and harvest",
+        "> slash are reported against the BTC volume and `biomass-live` banks.",
+        "> Grade shares remain **not validated** because the pilot bucker is",
+        "> dimension-only and D/F are zero in TSA24.",
         "",
         "## 1. Scope and contracts",
         "",
@@ -1475,8 +1495,12 @@ def _build_report(
         "- Price profile: BC Interior Log Market Report, 3 months ending 2026-09-30.",
         "  Product-level averages, not grade-specific prices. The profile is a",
         "  placeholder for this pilot.",
-        "- Residue: `taper total - recovered logs`. Density, moisture, and chip yield",
-        "  are labelled assumptions.",
+        "- Taper residue: `taper total - recovered logs`. Density, moisture, and",
+        "  chip yield are labelled assumptions.",
+        "- Harvest slash: `AGB - merchantable log biomass`, where AGB is the BTC",
+        "  `biomass-live` `Biomass_Live_Above` surface at the matched AU and age,",
+        "  and log biomass is `sum(log_volume_m3 * basic_density_odt_m3)`. This is",
+        "  **not** the BTC `Residual_*` mill-processing residue surface.",
         "",
         "## 2. TSA24 sample",
         "",
@@ -1596,48 +1620,68 @@ def _build_report(
         f"- Bucked ratio-estimated vs TIPSY: {_compact_metrics(tipsy.get('bucked_vs_tipsy'))}",
         f"- Grade/residue/value inspection: {json.dumps(tipsy.get('grade_residue_value_inspection', {}), default=str)}",
         f"- Caveat: {tipsy.get('caveat', 'n/a')}",
+        "- Note: the TIPSY volume metrics include the two zero-volume age joins;",
+        "  the BTC volume section screens them out, so the two sections have",
+        "  different n and should not be compared row-for-row.",
         "",
-        "### TSA24 grade and residue benchmark (BTC /TSR)",
+        "### BTC merchantable volume",
         "",
-        f"- Status: **{tsa24_grades.get('status')}**",
+        f"- Status: **{btc_volume.get('status')}**",
+        f"- Matched plots: **{btc_volume.get('n_au_matched', 0)}** of "
+        f"**{btc_volume.get('n_plots_total', 0)}** have a managed AU; "
+        f"**{btc_volume.get('n_positive_volume', 0)}** have a positive BTC volume "
+        f"and enter the comparison; **{btc_volume.get('n_zero_btc_volume', 0)}** "
+        f"match an AU but have zero BTC volume at the plot age; "
+        f"**{btc_volume.get('n_no_au_match', 0)}** have no AU match.",
+        "- Match tiers: "
+        + ", ".join(
+            f"**{key}**={value}"
+            for key, value in sorted(
+                (btc_volume.get("match_tier_counts") or {}).items()
+            )
+        )
+        + ".",
+        f"- Join basis: {btc_volume.get('join_basis', 'n/a')}",
+        "",
+        _markdown_table(_volume_benchmark_table(btc_volume), digits=2),
+        "",
+        "Plot-level volume join:",
+        "",
+        _markdown_table(_volume_join_table(btc_volume_frame), digits=2),
+        "",
+        "The primary comparison is the ratio-expanded pilot bucked volume against",
+        "the BTC `volume` at the same AU and FAIB stand age. The observed PSP",
+        "`VOL_MER*PHF` comparison is a sanity check on the same join. The",
+        "sampled-tree comparison is shown only to make the expansion explicit; it",
+        "is not a stand-level estimate.",
+        "",
+        f"- Caveat: {btc_volume.get('caveat', 'n/a')}",
+        "",
+        "### TSA24 grade benchmark (BTC /TSR) — not validated",
+        "",
+        "- Status: **not validated** (grade shares are a model-output proxy, not a field-grade check).",
         f"- Compiled curves: `{tsa24_grades.get('compiled_dir', 'n/a')}`",
         f"- Match tiers: **{tsa24_grades.get('n_au_curve', 0)}** AU-curve, "
         f"**{tsa24_grades.get('n_species_curve', 0)}** species-curve, "
         f"**{tsa24_grades.get('n_no_match', 0)}** no-match; "
-        f"**{tsa24_grades.get('n_zero_pilot_logs', 0)}** plots with no pilot logs, "
-        f"**{tsa24_grades.get('n_zero_tipsy_volume', 0)}** with zero TIPSY volume, "
         f"**{tsa24_grades.get('n_grade_comparable', 0)}** grade-comparable.",
-        f"- Industrial sort shares (exact codes): "
-        f"n={tsa24_grades.get('sort_share_comparison', {}).get('n', 0)}, "
-        f"mean TVD={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('mean_tvd', {}).get('mean'), 3)}, "
-        f"mean overlap={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('mean_overlap', {}).get('mean'), 3)}, "
-        f"aggregate TVD={_fmt((tsa24_grades.get('sort_share_comparison', {}).get('aggregate_distance') or {}).get('total_variation_distance'), 3)}.",
-        f"- Diameter marginal shares: aggregate TVD="
-        f"{_fmt((tsa24_grades.get('diameter_share_comparison', {}).get('aggregate_distance') or {}).get('total_variation_distance'), 3)}; "
-        f"length marginal shares: aggregate TVD="
-        f"{_fmt((tsa24_grades.get('length_share_comparison', {}).get('aggregate_distance') or {}).get('total_variation_distance'), 3)}.",
         f"- TIPSY grade shares (proxy; `Logs_Grade_*`): "
         f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('aggregate_tipsy_grades'))}",
         f"- TIPSY grade-group proxy: "
         f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('aggregate_tipsy_groups'))}",
         f"- Pilot product shares (comparable plots): "
         f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('pilot_product_shares'))}",
-        f"- Residue (absolute ODT/ha): "
-        f"n={tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('n', 0)}, "
-        f"pilot sum={_fmt(tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('observed_sum'), 2)}, "
-        f"TIPSY sum={_fmt(tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('predicted_sum'), 2)}, "
-        f"mean ratio={_fmt(tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('mean_ratio'), 2)}; "
-        f"per m³ mean ratio="
-        f"{_fmt(tsa24_grades.get('residue_comparison', {}).get('per_m3', {}).get('mean_ratio'), 2)}.",
         f"- Value: **{tsa24_grades.get('value_comparison', {}).get('status', 'n/a')}** — "
         f"{tsa24_grades.get('value_comparison', {}).get('note', 'n/a')}",
         f"- Join basis: {tsa24_grades.get('join_basis', 'n/a')}",
-        f"- Caveat: {tsa24_grades.get('residue_comparison', {}).get('note', 'n/a')}",
+        "- Why this is not validated: the pilot bucker assigns dimension-only",
+        "  industrial sorts (`bc_interior.yaml`), not BC log grades. `Logs_Grade_*`",
+        "  is BTC /TSR model output at its own interior rules, not a measured field",
+        "  grade. The two surfaces do not share a grade definition.",
+        "- D/F status: `Logs_Grade_D` and `Logs_Grade_F` are zero for every TSA24",
+        "  AU in this run. Any comparison is therefore limited to H/I/J/U/X/Y and",
+        "  cannot validate premium-grade shares.",
         f"- Caveat: {tsa24_grades.get('grade_share_comparison', {}).get('note', 'n/a')}",
-        "- Interpretation: the grade comparison is a model-output proxy.  The",
-        "  pilot bucker assigns dimension-only sorts; the BTC surface assigns",
-        "  TIPSY log grades from its own interior rules.  Agreement in grade-group",
-        "  shares is informative but is not an official grade validation.",
         "",
         "### RSYC",
         "",
@@ -1653,7 +1697,9 @@ def _build_report(
         f"- Caveat: {rsyc.get('caveat', 'n/a')}",
         f"- Next step: {rsyc.get('next_step', 'n/a')}",
         "",
-        "## 5. Residue ledger",
+        "## 5. Residue ledgers",
+        "",
+        "### Taper residue (pilot bucker)",
         "",
         f"- Residue volume: **{_fmt(residue.get('residue_volume_m3'), 3)} m³**",
         f"- Residue ODT: **{_fmt(residue.get('residue_odt'), 3)} ODT**",
@@ -1666,15 +1712,71 @@ def _build_report(
         f"**{_fmt(residue.get('mean_green_tonnes_45_ha'), 3)}** / "
         f"**{_fmt(residue.get('mean_green_tonnes_30_ha'), 3)}**",
         "",
+        "Taper residue is `taper total - recovered logs` over the sampled stems.",
+        "It covers the stump-height section, top, and unmerchantable stem",
+        "sections. It does **not** include branches, foliage, or bark.",
+        "",
+        "### Harvest slash (AGB - merchantable log biomass)",
+        "",
+        f"- Status: **{harvest_residue.get('status')}**",
+        f"- Primary plots: **{harvest_residue.get('n_plots_primary', 0)}** of "
+        f"**{harvest_residue.get('n_plots_total', 0)}**; "
+        f"**{harvest_residue.get('n_plots_excluded', 0)}** excluded by the "
+        "mass-balance / volume-ratio screen.",
+        "- Status counts: "
+        + ", ".join(
+            f"**{key}**={value}"
+            for key, value in sorted(
+                (harvest_residue.get("status_counts") or {}).items()
+            )
+        )
+        + ".",
+        "",
+        _markdown_table(_harvest_residue_table(harvest_frame), digits=3),
+        "",
+        "Excluded plots (retained in the CSV with a reason):",
+        "",
+        _markdown_table(_harvest_excluded_table(harvest_residue), digits=2),
+        "",
+        "Summary over the primary plots (each plot treated as one hectare):",
+        "",
+        _markdown_table(_harvest_residue_summary_table(harvest_residue), digits=3),
+        "",
         "Assumptions:",
         "",
-        f"- Basic density: **{BASIC_DENSITY_ODT_M3} ODT/m³** (default; no species-specific",
-        "  BC table applied). Flagged as an assumption.",
-        f"- Moisture: **{MOISTURE_GREEN:.0%}** wet basis green, **{MOISTURE_SEASONED:.0%}** seasoned.",
-        f"- Chip yield: **{CHIP_YIELD:.0%}** of green residue tonnes.",
-        "- Residue includes the stump-height section, top, and any unmerchantable",
-        "  sections. It is not a delivered-hog fuel estimate and carries no",
-        "  contamination or moisture segregation.",
+        "- AGB: BTC `biomass-live` `Biomass_Live_Above`, ODT/ha, at the matched",
+        "  managed AU and FAIB stand age. The stand-level value is applied to the",
+        "  plot on a per-hectare basis and scaled by the plot's observed/BTC",
+        "  merchantable-volume ratio, so AGB and pilot logs share a productivity",
+        "  basis; no per-tree AGB is invented. The unscaled AGB is retained in the",
+        "  ledger CSV as `agb_odt_ha_unscaled`.",
+        "- Merchantable log biomass: `sum(log_volume_m3 * basic_density_odt_m3)`.",
+        "  Log volume is expanded by `PHF_TREE` and then by the observed all-tree",
+        "  / sampled-tree merchantable-volume ratio.",
+        "- Basic density: species-specific defaults in",
+        "  `workflows/national/bucking/rules/bc_basic_density.csv`. The table is",
+        "  derived from the FVS-BC variant NBEL/FIA wood dry-weight table",
+        "  (Smith & Miles 2009), converted at 16.01846 kg/m³ per lb/ft³. It is a",
+        "  species default, **not** a BC-local sampled value.",
+        f"- Roadside recovery: **{HARVEST_RECOVERY_FACTOR:.0%}** of the AGB-based",
+        "  slash is assumed recoverable at roadside.",
+        f"- Moisture: **{MOISTURE_GREEN:.0%}** wet basis green, **{MOISTURE_SEASONED:.0%}**",
+        f"  seasoned; chip yield **{CHIP_YIELD:.0%}** of green residue tonnes.",
+        "- Volume-ratio screen: plots outside "
+        f"**{harvest_residue.get('assumptions', {}).get('volume_ratio_screen', {}).get('min', 0.40):.2f}-"
+        f"{harvest_residue.get('assumptions', {}).get('volume_ratio_screen', {}).get('max', 2.50):.2f}** "
+        "observed/BTC volume, or with AGB not above log biomass, are reported but",
+        "  excluded from the primary ledger. This prevents a bad AU/age join from",
+        "  being presented as negative slash.",
+        "- Why AGB-based slash exceeds taper residue: AGB includes bark, branches,",
+        "  and foliage, while the taper ledger only covers top, stump, and",
+        "  unmerchantable stem sections. The per-plot table reports both, plus the",
+        "  branch+foliage+bark and unmerchantable-wood components.",
+        "",
+        "**Not mill residue.** BTC `Residual_Chips`, `Residual_Sawdust`,",
+        "`Residual_Shavings`, `Residual_Trim`, and `Residual_Bark` are",
+        "mill-processing residues. They are not harvest slash and are deliberately",
+        "not used as a validation target for this ledger.",
         "",
         "## 6. Evidence and provenance",
         "",
@@ -1683,10 +1785,12 @@ def _build_report(
         "| FAIB PSP tree list | measured plot data |",
         "| Kozak 2004 taper | published_table |",
         "| TIPSY interior dimension sorts | published_table, adapted to geometry-only |",
-        "| TSA24 BTC /TSR grade/residue | model_output; AU and site-index specific |",
+        "| TSA24 BTC /TSR volume and grade | model_output; AU and site-index specific |",
+        "| TSA24 BTC `biomass-live` AGB | model_output; AU and age specific |",
+        "| Species basic density | species_default_not_bc_local (FVS-BC NBEL/FIA) |",
         "| BC Interior log prices | published product averages; placeholder for grade value |",
-        "| Residue density / moisture / chip yield | assumption |",
-        "| Grade assignment | none (`not_assigned`) |",
+        "| Recovery / moisture / chip yield | assumption |",
+        "| Grade assignment | none (`not_assigned`); grade shares not validated |",
         "",
         "Input and output hashes are in `manifest.json`.",
         "",
@@ -1694,20 +1798,30 @@ def _build_report(
         "",
         "- No official grade benchmark: the pilot is dimension-only, so its sort",
         "  shares are not BC log grades. The BTC `Logs_Grade_*` shares are a",
-        "  model-output proxy, not a field-grade gate.",
+        "  model-output proxy, not a field-grade gate. Grade shares are explicitly",
+        "  **not validated**.",
         "- Logs_Grade_D and Logs_Grade_F are zero for every TSA24 AU in this run.",
         "  The grade comparison therefore covers the H/I/J/U/X/Y surface only.",
-        "- TIPSY `Residual_*` is mill-processing residue (chips/sawdust/shavings/",
-        "  trim/bark), not harvest slash. The pilot residue is",
-        "  `taper total - recovered logs`; the two are not equivalent.",
-        "- The VDYP and TIPSY joins now use the FEMIC AU crosswalk (BEC + species",
+        "- BTC `Residual_*` is mill-processing residue (chips/sawdust/shavings/",
+        "  trim/bark), not harvest slash. It is deliberately excluded from the",
+        "  harvest-slash ledger.",
+        "- The BTC volume join matches 14 of 20 pilot plots. The six unmatched",
+        "  plots are reported with reasons; three have a species-curve grade",
+        "  fallback but no managed AU and therefore no BTC volume or AGB join.",
+        "- The harvest-slash ledger is a stand-level AGB model comparison, not a",
+        "  per-tree biomass audit. It is screened to plots whose observed/BTC",
+        "  volume ratio is within the documented band and whose AGB exceeds log",
+        "  biomass. Expand the sample and refine the AU/age clock before using it",
+        "  as an operational slash supply estimate.",
+        "- The VDYP and TIPSY joins use the FEMIC AU crosswalk (BEC + species",
         "  + FEMIC site-index class), including combined-species AUs. The join is",
         "  still a benchmark mapping, not an operational AU assignment.",
         "- The price profile has no pulpwood price for Hem-Bal or Cedar and no prices",
         "  for White Pine or Yellow Pine. Unpriced volume is reported separately.",
-        "- Residue density, moisture, and chip yield are assumptions. Replace them with",
-        "  species- and product-specific values before publishing a residue supply",
-        "  offer.",
+        "- Basic density is a species-specific default table (FVS-BC NBEL/FIA),",
+        "  not a BC-local sample. Recovery, moisture, and chip yield are assumptions.",
+        "  Replace them with species- and product-specific values before publishing",
+        "  a residue supply offer.",
         "- The sample is 20 plots and 300 trees. It is a pilot, not a TSA-wide",
         "  estimate. Expand to all TSA24 plots and add a proper design-based",
         "  expansion before operational use.",
@@ -1715,6 +1829,138 @@ def _build_report(
         "",
     ]
     )
+    return "\n".join(lines)
+
+
+def _build_harvest_residue_note(
+    harvest_residue: Mapping[str, Any],
+    btc_volume: Mapping[str, Any],
+) -> str:
+    per_ha = harvest_residue.get("per_ha") or {}
+    per_m3 = harvest_residue.get("per_m3") or {}
+    totals = harvest_residue.get("totals_over_primary_plot_ha") or {}
+    assumptions = harvest_residue.get("assumptions") or {}
+
+    def stat(section: Mapping[str, Any], key: str, field: str = "mean") -> Any:
+        return (section.get(key) or {}).get(field)
+
+    lines = [
+        "# TSA24 harvest-slash residue ledger",
+        "",
+        "This note documents the AGB-based harvest-slash ledger for the TSA24",
+        "bucking pilot. It is a model-output comparison, not a delivered-fuel",
+        "offer and not a field residue audit.",
+        "",
+        "## Method",
+        "",
+        "```",
+        "harvest_residue_odt = agb_odt - merchantable_log_biomass_odt",
+        "merchantable_log_biomass_odt = sum(log_volume_m3 * basic_density_odt_m3)",
+        "```",
+        "",
+        "AGB is the FEMIC BTC `biomass-live` bank `Biomass_Live_Above` value at",
+        "the managed AU and FAIB stand age matched by BEC + leading species ->",
+        "AU stratum -> FEMIC site-index class -> AU. The BTC biomass family is",
+        "reported in oven-dry tonnes per hectare; `Biomass_Live_Above` is stem",
+        "wood + bark + foliage + branch, with roots and total reported separately.",
+        "",
+        "The stand-level AGB is applied to the plot on a per-hectare basis and",
+        "scaled by `observed_merchantable_all / BTC_volume` so AGB and the pilot",
+        "log volume share the same plot productivity basis. No per-tree AGB is",
+        "invented. Merchantable log biomass is expanded from the sampled trees by",
+        "`PHF_TREE` and then by the observed all-tree/sampled-tree merchantable",
+        "volume ratio.",
+        "",
+        "## Coverage and screen",
+        "",
+        f"- Pilot plots: {harvest_residue.get('n_plots_total', 0)}",
+        f"- Primary ledger plots: {harvest_residue.get('n_plots_primary', 0)}",
+        f"- Excluded plots: {harvest_residue.get('n_plots_excluded', 0)}",
+        f"- BTC volume AU matches: {btc_volume.get('n_au_matched', 0)} of "
+        f"{btc_volume.get('n_plots_total', 0)}; positive-volume joins: "
+        f"{btc_volume.get('n_positive_volume', 0)}",
+        "",
+        "Plots are excluded from the primary ledger when there is no managed AU,",
+        "the BTC volume is zero at the plot age, the observed/BTC volume ratio is",
+        "outside the documented band, or AGB does not exceed log biomass. Excluded",
+        "plots remain in `harvest_residue_ledger.csv` with a status and reason.",
+        "",
+        "## Basic density",
+        "",
+        "Species-specific defaults are in",
+        "`workflows/national/bucking/rules/bc_basic_density.csv`. The values come",
+        "from the FVS-BC variant NBEL/FIA wood dry-weight table (Smith & Miles",
+        "2009), converted from dry lb/ft³ to ODT/m³ at 16.01846 kg/m³ per lb/ft³.",
+        "They are species defaults, **not** BC-local sampled values.",
+        "",
+        "| Species | ODT/m³ |",
+        "| --- | --- |",
+        "| SW / S (white spruce) | 0.3598 |",
+        "| SB (black spruce) | 0.3798 |",
+        "| SE (Engelmann spruce) | 0.3298 |",
+        "| PL (lodgepole pine) | 0.3798 |",
+        "| FD (Douglas-fir) | 0.4498 |",
+        "| BL (subalpine fir) | 0.3098 |",
+        "| CW (western redcedar) | 0.3098 |",
+        "| HW (western hemlock) | 0.4198 |",
+        "| AT (trembling aspen) | 0.3498 |",
+        "| EP (paper birch) | 0.4798 |",
+        "| AC (black cottonwood) | 0.3098 |",
+        "",
+        "## Recovery, moisture, and chip assumptions",
+        "",
+        f"- Roadside recovery factor: {assumptions.get('recovery_factor', 0.60):.0%} of AGB-based slash.",
+        f"- Moisture, green: {assumptions.get('moisture_green_wet_basis', 0.45):.0%} wet basis.",
+        f"- Moisture, seasoned: {assumptions.get('moisture_seasoned_wet_basis', 0.30):.0%} wet basis.",
+        f"- Chip yield: {assumptions.get('chip_yield_fraction', 0.90):.0%} of green residue tonnes.",
+        "",
+        "## Results (primary plots)",
+        "",
+        "| Metric | Mean | Median | Min | Max |",
+        "| --- | --- | --- | --- | --- |",
+        f"| AGB (ODT/ha) | {_fmt(stat(per_ha, 'agb_odt_ha'), 3)} | {_fmt(stat(per_ha, 'agb_odt_ha', 'median'), 3)} | {_fmt(stat(per_ha, 'agb_odt_ha', 'min'), 3)} | {_fmt(stat(per_ha, 'agb_odt_ha', 'max'), 3)} |",
+        f"| Merchantable log biomass (ODT/ha) | {_fmt(stat(per_ha, 'merchantable_log_odt_ha'), 3)} | {_fmt(stat(per_ha, 'merchantable_log_odt_ha', 'median'), 3)} | {_fmt(stat(per_ha, 'merchantable_log_odt_ha', 'min'), 3)} | {_fmt(stat(per_ha, 'merchantable_log_odt_ha', 'max'), 3)} |",
+        f"| Harvest slash (ODT/ha) | {_fmt(stat(per_ha, 'harvest_residue_odt_ha'), 3)} | {_fmt(stat(per_ha, 'harvest_residue_odt_ha', 'median'), 3)} | {_fmt(stat(per_ha, 'harvest_residue_odt_ha', 'min'), 3)} | {_fmt(stat(per_ha, 'harvest_residue_odt_ha', 'max'), 3)} |",
+        f"| Taper residue (ODT/ha) | {_fmt(stat(per_ha, 'taper_residue_odt_ha'), 3)} | {_fmt(stat(per_ha, 'taper_residue_odt_ha', 'median'), 3)} | {_fmt(stat(per_ha, 'taper_residue_odt_ha', 'min'), 3)} | {_fmt(stat(per_ha, 'taper_residue_odt_ha', 'max'), 3)} |",
+        f"| Non-taper residue (ODT/ha) | {_fmt(stat(per_ha, 'non_taper_residue_odt_ha'), 3)} | {_fmt(stat(per_ha, 'non_taper_residue_odt_ha', 'median'), 3)} | {_fmt(stat(per_ha, 'non_taper_residue_odt_ha', 'min'), 3)} | {_fmt(stat(per_ha, 'non_taper_residue_odt_ha', 'max'), 3)} |",
+        f"| Recoverable slash (ODT/ha) | {_fmt(stat(per_ha, 'recoverable_residue_odt_ha'), 3)} | {_fmt(stat(per_ha, 'recoverable_residue_odt_ha', 'median'), 3)} | {_fmt(stat(per_ha, 'recoverable_residue_odt_ha', 'min'), 3)} | {_fmt(stat(per_ha, 'recoverable_residue_odt_ha', 'max'), 3)} |",
+        f"| Slash per m³ log (ODT/m³) | {_fmt(stat(per_m3, 'harvest_residue_odt_per_m3_log'), 3)} | {_fmt(stat(per_m3, 'harvest_residue_odt_per_m3_log', 'median'), 3)} | {_fmt(stat(per_m3, 'harvest_residue_odt_per_m3_log', 'min'), 3)} | {_fmt(stat(per_m3, 'harvest_residue_odt_per_m3_log', 'max'), 3)} |",
+        f"| Taper residue per m³ taper total (ODT/m³) | {_fmt(stat(per_m3, 'taper_residue_odt_per_m3_taper_total'), 3)} | {_fmt(stat(per_m3, 'taper_residue_odt_per_m3_taper_total', 'median'), 3)} | {_fmt(stat(per_m3, 'taper_residue_odt_per_m3_taper_total', 'min'), 3)} | {_fmt(stat(per_m3, 'taper_residue_odt_per_m3_taper_total', 'max'), 3)} |",
+        "",
+        f"- Primary-plot hectares (each plot treated as one hectare): {totals.get('sample_hectares', 0)}",
+        f"- Harvest slash total: {_fmt(totals.get('harvest_residue_odt'), 3)} ODT",
+        f"- Taper residue total: {_fmt(totals.get('taper_residue_odt'), 3)} ODT",
+        f"- Recoverable slash total: {_fmt(totals.get('recoverable_residue_odt'), 3)} ODT",
+        f"- Recoverable green tonnes at 45%: {_fmt(totals.get('recoverable_green_tonnes_45'), 3)} t",
+        f"- Recoverable chip green tonnes at 45% and 0.90 yield: {_fmt(totals.get('recoverable_chip_green_tonnes'), 3)} t",
+        f"- Harvest-to-taper residue ratio: {_fmt(harvest_residue.get('ratio_harvest_to_taper_residue'), 2)}",
+        "",
+        "## Difference from taper residue and mill residue",
+        "",
+        "AGB-based harvest slash is larger than the pilot taper residue because",
+        "AGB includes bark, branches, and foliage, while the taper ledger only",
+        "covers the stump-height section, top, and unmerchantable stem sections.",
+        "The per-plot ledger reports both quantities and the branch+foliage+bark",
+        "and unmerchantable-wood components.",
+        "",
+        "BTC `Residual_Chips`, `Residual_Sawdust`, `Residual_Shavings`,",
+        "`Residual_Trim`, and `Residual_Bark` are **mill-processing residues**.",
+        "They are not harvest slash, are not on the same basis, and are deliberately",
+        "excluded from this ledger. No ratio against `Residual_*` is computed.",
+        "",
+        "## Limitations",
+        "",
+        "- AGB is a stand-level BTC model output at the managed AU site index, not a",
+        "  plot measurement.",
+        "- The FAIB stand age and the managed AU age origin are not guaranteed to be",
+        "  the same clock; the volume-ratio screen removes the worst mismatches but",
+        "  does not eliminate the join uncertainty.",
+        "- Basic density is a species default, not a BC-local sample.",
+        "- Recovery, moisture, and chip yield are assumptions.",
+        "- The sample is 20 plots / 300 trees; this is a pilot, not a TSA-wide",
+        "  residue supply estimate.",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -1726,6 +1972,160 @@ def _compact_metrics(metrics: dict[str, Any] | None) -> str:
         f"MAE={_fmt(metrics.get('mae'))}, "
         f"rel.bias={_fmt((metrics.get('relative_bias') or 0) * 100, 1)}%"
     )
+
+
+def _volume_join_table(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame
+    columns = [
+        "plot_id",
+        "leading_species",
+        "stand_age",
+        "au_id",
+        "match_tier",
+        "btc_volume_m3ha",
+        "observed_merchantable_all_m3ha",
+        "pilot_bucked_log_m3ha_ratio_est",
+    ]
+    return frame[columns].rename(
+        columns={
+            "leading_species": "leading species",
+            "stand_age": "stand age",
+            "btc_volume_m3ha": "BTC m3/ha",
+            "observed_merchantable_all_m3ha": "observed m3/ha",
+            "pilot_bucked_log_m3ha_ratio_est": "pilot m3/ha (ratio est.)",
+        }
+    )
+
+
+def _volume_benchmark_table(btc_volume: Mapping[str, Any]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for label, key in (
+        ("Observed PSP VOL_MER*PHF (all live trees)", "observed_all_vs_btc"),
+        ("Pilot bucked logs (ratio-expanded)", "bucked_ratio_est_vs_btc"),
+        ("Pilot bucked logs (sampled trees only)", "bucked_sampled_vs_btc"),
+    ):
+        metrics = btc_volume.get(key) or {}
+        if not metrics.get("n"):
+            continue
+        mean_value = float(metrics["mean_observed"])
+        mean_btc = float(metrics["mean_predicted"])
+        rows.append(
+            {
+                "comparison": label,
+                "n": int(metrics["n"]),
+                "mean_value": mean_value,
+                "mean_btc": mean_btc,
+                "bias_value_minus_btc": mean_value - mean_btc,
+                "mae": float(metrics["mae"]),
+                "rmse": float(metrics["rmse"]),
+                "relative_bias_value_vs_btc": (
+                    mean_value / mean_btc - 1.0 if mean_btc > 0 else None
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _harvest_residue_table(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame
+    primary = frame[frame["status"] == "ok"].copy()
+    if primary.empty:
+        return primary
+    columns = [
+        "plot_id",
+        "leading_species",
+        "stand_age",
+        "au_id",
+        "agb_odt_ha",
+        "merchantable_log_odt_ha",
+        "harvest_residue_odt_ha",
+        "taper_residue_odt_ha",
+        "branch_foliage_bark_odt_ha",
+        "harvest_residue_odt_per_m3_log",
+        "recoverable_residue_odt_ha",
+        "recoverable_green_tonnes_45_ha",
+    ]
+    return primary[columns].rename(
+        columns={
+            "agb_odt_ha": "AGB ODT/ha",
+            "merchantable_log_odt_ha": "log ODT/ha",
+            "harvest_residue_odt_ha": "slash ODT/ha",
+            "taper_residue_odt_ha": "taper ODT/ha",
+            "branch_foliage_bark_odt_ha": "branch+foliage+bark ODT/ha",
+            "harvest_residue_odt_per_m3_log": "slash ODT/m3 log",
+            "recoverable_residue_odt_ha": "recoverable ODT/ha",
+            "recoverable_green_tonnes_45_ha": "recoverable green t/ha (45%)",
+        }
+    )
+
+
+def _harvest_excluded_table(harvest_residue: Mapping[str, Any]) -> pd.DataFrame:
+    rows = harvest_residue.get("excluded_plots") or []
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).rename(
+        columns={
+            "plot_id": "plot_id",
+            "bec_zone": "BEC",
+            "leading_species": "leading species",
+            "stand_age": "stand age",
+            "status": "status",
+            "status_reason": "reason",
+        }
+    )
+
+
+def _harvest_residue_summary_table(harvest_residue: Mapping[str, Any]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    units = {
+        "agb_odt_ha": "ODT/ha",
+        "agb_odt_ha_unscaled": "ODT/ha",
+        "merchantable_log_odt_ha": "ODT/ha",
+        "harvest_residue_odt_ha": "ODT/ha",
+        "taper_residue_odt_ha": "ODT/ha",
+        "non_taper_residue_odt_ha": "ODT/ha",
+        "branch_foliage_bark_odt_ha": "ODT/ha",
+        "unmerchantable_wood_odt_ha": "ODT/ha",
+        "recoverable_residue_odt_ha": "ODT/ha",
+        "green_tonnes_45_ha": "green t/ha",
+        "green_tonnes_30_ha": "green t/ha",
+        "recoverable_green_tonnes_45_ha": "green t/ha",
+        "recoverable_chip_green_tonnes_ha": "green t/ha",
+    }
+    for key, unit in units.items():
+        stats = (harvest_residue.get("per_ha") or {}).get(key) or {}
+        if not stats.get("n"):
+            continue
+        rows.append(
+            {
+                "metric": f"{key} ({unit})",
+                "n": stats["n"],
+                "mean": stats["mean"],
+                "median": stats["median"],
+                "min": stats["min"],
+                "max": stats["max"],
+            }
+        )
+    for key, unit in (
+        ("harvest_residue_odt_per_m3_log", "ODT/m3 log"),
+        ("taper_residue_odt_per_m3_taper_total", "ODT/m3 taper total"),
+    ):
+        stats = (harvest_residue.get("per_m3") or {}).get(key) or {}
+        if not stats.get("n"):
+            continue
+        rows.append(
+            {
+                "metric": f"{key} ({unit})",
+                "n": stats["n"],
+                "mean": stats["mean"],
+                "median": stats["median"],
+                "min": stats["min"],
+                "max": stats["max"],
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def _build_manifest(
@@ -1788,6 +2188,11 @@ def _build_manifest(
             "femic-tsa24-instance/data/04_output-tsa24.csv",
         ),
         _hash_record(
+            "biomass_output",
+            femic_root / "data" / "04_output-tsa24_biomass.csv",
+            "femic-tsa24-instance/data/04_output-tsa24_biomass.csv",
+        ),
+        _hash_record(
             "au_table",
             femic_root / "data" / "model_input_bundle" / "au_table.csv",
             "femic-tsa24-instance/data/model_input_bundle/au_table.csv",
@@ -1797,6 +2202,23 @@ def _build_manifest(
             _resolve_path(args.grade_curves_dir, Path(args.repo_root))
             / "managed_au_curves.csv",
             "tsa24_grade_curves/managed_au_curves.csv",
+        ),
+        _hash_record(
+            "tsa24_biomass_curves",
+            _resolve_path(args.grade_curves_dir, Path(args.repo_root))
+            / "biomass_au_curves.csv",
+            "tsa24_grade_curves/biomass_au_curves.csv",
+        ),
+        _hash_record(
+            "tsa24_biomass_manifest",
+            _resolve_path(args.grade_curves_dir, Path(args.repo_root))
+            / "biomass_curves_manifest.json",
+            "tsa24_grade_curves/biomass_curves_manifest.json",
+        ),
+        _hash_record(
+            "basic_density",
+            _resolve_path(args.basic_density, Path(args.repo_root)),
+            "workflows/national/bucking/rules/bc_basic_density.csv",
         ),
         _hash_record(
             "tsa24_grade_industrial_sorts",
@@ -1863,9 +2285,14 @@ def _build_manifest(
             },
             "residue_assumptions": {
                 "basic_density_odt_m3": BASIC_DENSITY_ODT_M3,
+                "basic_density_source": (
+                    "species-specific defaults in rules/bc_basic_density.csv "
+                    "(FVS-BC NBEL/FIA table; not a BC-local sample)"
+                ),
                 "moisture_green_wet_basis": MOISTURE_GREEN,
                 "moisture_seasoned_wet_basis": MOISTURE_SEASONED,
                 "chip_yield_fraction": CHIP_YIELD,
+                "harvest_recovery_factor": HARVEST_RECOVERY_FACTOR,
             },
         },
         "sample": selection.manifest_record(),
@@ -1876,10 +2303,11 @@ def _build_manifest(
         "outputs": outputs,
         "notes": [
             "Pilot, not the pre-registered three-way validation gate.",
-            "No official grade assigned.",
-            "Grade/residue benchmark comes from refreshed TSA24 BTC /TSR output.",
+            "No official grade assigned; grade shares are not validated.",
+            "Merchantable volume is benchmarked against the compiled BTC volume curve.",
+            "Harvest slash is AGB - merchantable log biomass from the BTC biomass-live bank.",
+            "BTC Residual_* is mill-processing residue and is not used as harvest slash.",
             "Logs_Grade_D and Logs_Grade_F are zero for every TSA24 AU in this run.",
-            "TIPSY residual fibre is mill residue, not harvest slash.",
         ],
     }
 
@@ -1991,17 +2419,42 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     rsyc, rsyc_curves, rsyc_plots = _run_rsyc(
         repo_root, femic_root, faib, plot_summary, deadline
     )
-    print("Benchmark: TSA24 grade/residue...", file=sys.stderr)
+    print("Benchmark: TSA24 biological curves...", file=sys.stderr)
     grade_curves_dir = _resolve_path(args.grade_curves_dir, repo_root)
+    plot_attrs = _plot_benchmark_attributes(faib, femic_root)
     if grade_curves_dir.exists():
         grade_benchmark, grade_frame = benchmark_grade_residue(
-            attrs=_plot_benchmark_attributes(faib, femic_root),
+            attrs=plot_attrs,
             plot_summary=plot_summary,
             logs=logs,
             tree_summary=tree_summary,
             compiled_dir=grade_curves_dir,
         )
         grade_benchmark["compiled_dir"] = str(args.grade_curves_dir)
+
+        print("Benchmark: BTC merchantable volume...", file=sys.stderr)
+        btc_volume, btc_volume_frame = btc_volume_benchmark(
+            attrs=plot_attrs,
+            plot_summary=plot_summary,
+            compiled_dir=grade_curves_dir,
+        )
+
+        print("Ledger: harvest slash...", file=sys.stderr)
+        density_table = load_basic_density_table(
+            _resolve_path(args.basic_density, repo_root)
+        )
+        harvest_residue, harvest_frame = harvest_residue_ledger(
+            attrs=plot_attrs,
+            plot_summary=plot_summary,
+            tree_summary=tree_summary,
+            logs=logs,
+            compiled_dir=grade_curves_dir,
+            density_table=density_table,
+            recovery_factor=HARVEST_RECOVERY_FACTOR,
+            moisture_green=MOISTURE_GREEN,
+            moisture_seasoned=MOISTURE_SEASONED,
+            chip_yield=CHIP_YIELD,
+        )
     else:
         grade_benchmark = {
             "status": "missing_compiled_curves",
@@ -2012,6 +2465,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ),
         }
         grade_frame = pd.DataFrame()
+        btc_volume = {
+            "status": "missing_compiled_curves",
+            "compiled_dir": str(grade_curves_dir),
+        }
+        btc_volume_frame = pd.DataFrame()
+        harvest_residue = {
+            "status": "missing_compiled_curves",
+            "compiled_dir": str(grade_curves_dir),
+        }
+        harvest_frame = pd.DataFrame()
+        density_table = {}
 
     elapsed = time.monotonic() - started
     summary = {
@@ -2028,17 +2492,24 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "psp_volume": psp,
         "sorts": sort_summary,
         "residue": residue_summary,
+        "harvest_residue": harvest_residue,
         "benchmarks": {
             "vdyp": vdyp,
             "tipsy": tipsy,
             "tsa24_grades": grade_benchmark,
+            "btc_volume": btc_volume,
             "rsyc": rsyc,
         },
         "assumptions": {
             "basic_density_odt_m3": BASIC_DENSITY_ODT_M3,
+            "basic_density_source": (
+                "species-specific defaults in rules/bc_basic_density.csv "
+                "(FVS-BC NBEL/FIA table; not a BC-local sample)"
+            ),
             "moisture_green_wet_basis": MOISTURE_GREEN,
             "moisture_seasoned_wet_basis": MOISTURE_SEASONED,
             "chip_yield_fraction": CHIP_YIELD,
+            "harvest_recovery_factor": HARVEST_RECOVERY_FACTOR,
         },
         "status": "pilot_complete_with_gaps",
     }
@@ -2064,6 +2535,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         json.dumps(_jsonable(grade_benchmark), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    if not btc_volume_frame.empty:
+        _write_csv(btc_volume_frame, out_dir / "btc_volume_benchmark.csv")
+    if not harvest_frame.empty:
+        _write_csv(harvest_frame, out_dir / "harvest_residue_ledger.csv")
+    (out_dir / "harvest_residue_summary.json").write_text(
+        json.dumps(_jsonable(harvest_residue), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     if not rsyc_curves.empty:
         _write_csv(rsyc_curves, out_dir / "rsyc_curves.csv")
     if not rsyc_plots.empty:
@@ -2080,14 +2559,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         psp,
         sort_summary,
         residue_summary,
+        harvest_residue,
+        harvest_frame,
         vdyp,
         tipsy,
         grade_benchmark,
+        btc_volume,
+        btc_volume_frame,
         rsyc,
         taper_warnings,
         elapsed,
     )
     (out_dir / "VALIDATION_REPORT.md").write_text(report, encoding="utf-8")
+    (out_dir / "HARVEST_RESIDUE.md").write_text(
+        _build_harvest_residue_note(harvest_residue, btc_volume),
+        encoding="utf-8",
+    )
     (out_dir / "validation_summary.json").write_text(
         json.dumps(_jsonable(summary), indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -2104,9 +2591,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "status": "pilot_complete_with_gaps",
         "notes": (
             f"{len(selection.plots)} stratified plots / {len(selection.trees)} trees; "
-            "Kozak taper + TIPSY interior dimension sorts; refreshed TSA24 BTC /TSR "
-            "grade/residue benchmark with model-output and mill-vs-harvest caveats; "
-            "density/moisture/chip assumptions flagged."
+            "Kozak taper + TIPSY interior dimension sorts; BTC volume benchmarked; "
+            "AGB-based harvest-slash ledger with species density/recovery assumptions; "
+            "grade shares not validated (dimension-only pilot; D/F zero in TSA24); "
+            "BTC mill residue excluded."
         ),
     }
     (out_dir / "pilot_row.json").write_text(
@@ -2165,6 +2653,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--price-profile", default=str(default_price_profile()))
     parser.add_argument("--species-crosswalk", default=str(default_species_crosswalk()))
     parser.add_argument("--rules", default=str(default_rules_path()))
+    parser.add_argument(
+        "--basic-density",
+        default=str(default_basic_density_path()),
+        help="Species basic-density table (default: rules/bc_basic_density.csv).",
+    )
     parser.add_argument("--femic-root", default=str(default_femic_root()))
     parser.add_argument(
         "--grade-curves-dir",

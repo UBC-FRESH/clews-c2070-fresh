@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from workflows.national.bucking.bucking import (
@@ -20,9 +21,16 @@ from workflows.national.bucking.taper import (
     default_kozak_parameter_path,
     default_nemora_root,
 )
+from workflows.national.bucking.validate_tsa24_btc import (
+    btc_volume_benchmark,
+    harvest_residue_ledger,
+    load_basic_density_table,
+    resolve_species_density,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RULES_PATH = REPO_ROOT / "workflows" / "national" / "bucking" / "rules" / "bc_interior.yaml"
+DENSITY_PATH = REPO_ROOT / "workflows" / "national" / "bucking" / "rules" / "bc_basic_density.csv"
 PRICE_PATH = default_nemora_root() / "config" / "log_prices" / "bc_interior_2026q3.yaml"
 
 
@@ -233,3 +241,227 @@ def test_dead_tree_is_rejected(registry, rules, prices):
     )
     with pytest.raises(BuckingError, match="only live trees"):
         buck_tree(tree, registry.resolve("BC", "PL", "SBS"), rules, prices)
+
+
+def test_basic_density_table_covers_pilot_species():
+    table = load_basic_density_table(DENSITY_PATH)
+    for species in ("SW", "SE", "SB", "S", "PL", "FD", "AT", "BL", "CW", "HW", "EP", "AC"):
+        density = resolve_species_density(species, table)
+        assert 0.20 <= density <= 0.80
+    assert resolve_species_density("BL", table) == pytest.approx(0.309797, rel=1e-6)
+    with pytest.raises(KeyError, match="no basic-density entry"):
+        resolve_species_density("ZZ", table)
+
+
+def _write_compiled_curves(root: Path, *, agb: float = 100.0, volume: float = 100.0) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "au_id": 1,
+                "age": 0,
+                "volume": 0.0,
+                "stratum_code": "SBS_SX",
+                "si_level": "H",
+                "leading_species": "SX",
+            },
+            {
+                "au_id": 1,
+                "age": 100,
+                "volume": volume,
+                "stratum_code": "SBS_SX",
+                "si_level": "H",
+                "leading_species": "SX",
+            },
+        ]
+    ).to_csv(root / "managed_au_curves.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "au_id": 1,
+                "au_table_au_id": 1,
+                "managed_curve_id": 1,
+                "stratum_code": "SBS_SX",
+                "si_level": "H",
+                "bec_zone": "SBS",
+                "leading_species": "SX",
+            }
+        ]
+    ).to_csv(root / "au_grade_coverage.csv", index=False)
+    pd.DataFrame(
+        [
+            {
+                "au_id": 1,
+                "stratum_code": "SBS_SX",
+                "si_level": "H",
+                "leading_species": "SX",
+                "age": 0,
+                "agb_odt_ha": 0.0,
+                "biomass_live_wood_odt_ha": 0.0,
+                "biomass_live_bark_odt_ha": 0.0,
+                "biomass_live_foliar_odt_ha": 0.0,
+                "biomass_live_branch_odt_ha": 0.0,
+            },
+            {
+                "au_id": 1,
+                "stratum_code": "SBS_SX",
+                "si_level": "H",
+                "leading_species": "SX",
+                "age": 100,
+                "agb_odt_ha": agb,
+                "biomass_live_wood_odt_ha": 0.60 * agb,
+                "biomass_live_bark_odt_ha": 0.10 * agb,
+                "biomass_live_foliar_odt_ha": 0.10 * agb,
+                "biomass_live_branch_odt_ha": 0.20 * agb,
+            },
+        ]
+    ).to_csv(root / "biomass_au_curves.csv", index=False)
+
+
+def _plot_inputs(
+    *,
+    observed_all: float = 100.0,
+    observed_sampled: float = 50.0,
+    stand_age: float = 100.0,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    attrs = pd.DataFrame(
+        [{"plot_id": "P1", "stratum_code": "SBS_SX", "si_level": "H", "au_id": 1}]
+    )
+    plot_summary = pd.DataFrame(
+        [
+            {
+                "plot_id": "P1",
+                "bec_zone": "SBS",
+                "leading_species": "SW",
+                "stand_age": stand_age,
+                "site_index": 20.0,
+                "observed_merchantable_all_m3ha": observed_all,
+                "observed_merchantable_sampled_m3ha": observed_sampled,
+            }
+        ]
+    )
+    tree_summary = pd.DataFrame(
+        [
+            {
+                "tree_id": "T1",
+                "plot_id": "P1",
+                "species": "SW",
+                "expansion_factor": 10.0,
+                "residue_odt_ha": 2.0,
+                "residue_m3_ha": 5.0,
+                "taper_total_m3_ha": 20.0,
+            }
+        ]
+    )
+    logs = pd.DataFrame([{"tree_id": "T1", "plot_id": "P1", "volume_m3": 2.0}])
+    return attrs, plot_summary, tree_summary, logs
+
+
+def test_harvest_residue_mass_balance_and_conversions(tmp_path):
+    _write_compiled_curves(tmp_path)
+    attrs, plot_summary, tree_summary, logs = _plot_inputs()
+    table = load_basic_density_table(DENSITY_PATH)
+    summary, frame = harvest_residue_ledger(
+        attrs=attrs,
+        plot_summary=plot_summary,
+        tree_summary=tree_summary,
+        logs=logs,
+        compiled_dir=tmp_path,
+        density_table=table,
+    )
+    assert summary["n_plots_primary"] == 1
+    row = frame.iloc[0]
+    assert row["status"] == "ok"
+    log_odt = 2.0 * 10.0 * resolve_species_density("SW", table)
+    assert row["merchantable_log_odt_ha"] == pytest.approx(log_odt * 2.0, rel=1e-9)
+    assert row["agb_odt_ha"] == pytest.approx(100.0, rel=1e-9)
+    assert row["harvest_residue_odt_ha"] == pytest.approx(
+        100.0 - log_odt * 2.0, rel=1e-9
+    )
+    assert row["harvest_residue_odt_ha"] > row["taper_residue_odt_ha"]
+    assert row["recoverable_residue_odt_ha"] == pytest.approx(
+        0.60 * row["harvest_residue_odt_ha"], rel=1e-9
+    )
+    assert row["recoverable_green_tonnes_45_ha"] == pytest.approx(
+        row["recoverable_residue_odt_ha"] / 0.55, rel=1e-9
+    )
+    assert row["recoverable_green_tonnes_30_ha"] == pytest.approx(
+        row["recoverable_residue_odt_ha"] / 0.70, rel=1e-9
+    )
+    assert row["recoverable_chip_green_tonnes_ha"] == pytest.approx(
+        row["recoverable_green_tonnes_45_ha"] * 0.90, rel=1e-9
+    )
+
+
+def test_harvest_residue_excludes_agb_below_logs(tmp_path):
+    _write_compiled_curves(tmp_path, agb=10.0, volume=100.0)
+    attrs, plot_summary, tree_summary, logs = _plot_inputs()
+    table = load_basic_density_table(DENSITY_PATH)
+    summary, frame = harvest_residue_ledger(
+        attrs=attrs,
+        plot_summary=plot_summary,
+        tree_summary=tree_summary,
+        logs=logs,
+        compiled_dir=tmp_path,
+        density_table=table,
+    )
+    assert summary["n_plots_primary"] == 0
+    assert frame.iloc[0]["status"] == "agb_below_logs"
+    assert summary["excluded_plots"][0]["status"] == "agb_below_logs"
+
+
+def test_harvest_residue_excludes_volume_ratio_out_of_range(tmp_path):
+    _write_compiled_curves(tmp_path, agb=100.0, volume=10.0)
+    attrs, plot_summary, tree_summary, logs = _plot_inputs(observed_all=100.0)
+    table = load_basic_density_table(DENSITY_PATH)
+    summary, frame = harvest_residue_ledger(
+        attrs=attrs,
+        plot_summary=plot_summary,
+        tree_summary=tree_summary,
+        logs=logs,
+        compiled_dir=tmp_path,
+        density_table=table,
+    )
+    assert summary["n_plots_primary"] == 0
+    assert frame.iloc[0]["status"] == "volume_ratio_out_of_range"
+    assert pd.isna(frame.iloc[0]["harvest_residue_odt_ha"])
+
+
+def test_btc_volume_benchmark_metrics(tmp_path):
+    root = tmp_path / "curves"
+    root.mkdir()
+    pd.DataFrame(
+        [
+            {"au_id": 1, "age": 100, "volume": 80.0, "stratum_code": "SBS_SX", "si_level": "H", "leading_species": "SX"},
+            {"au_id": 2, "age": 100, "volume": 220.0, "stratum_code": "SBS_PLI", "si_level": "H", "leading_species": "PLI"},
+        ]
+    ).to_csv(root / "managed_au_curves.csv", index=False)
+    pd.DataFrame(
+        [
+            {"au_id": 1, "stratum_code": "SBS_SX", "si_level": "H"},
+            {"au_id": 2, "stratum_code": "SBS_PLI", "si_level": "H"},
+        ]
+    ).to_csv(root / "au_grade_coverage.csv", index=False)
+    attrs = pd.DataFrame(
+        [
+            {"plot_id": "P1", "stratum_code": "SBS_SX", "si_level": "H", "au_id": 1},
+            {"plot_id": "P2", "stratum_code": "SBS_PLI", "si_level": "H", "au_id": 2},
+        ]
+    )
+    plot_summary = pd.DataFrame(
+        [
+            {"plot_id": "P1", "bec_zone": "SBS", "leading_species": "SW", "stand_age": 100, "site_index": 20, "observed_merchantable_all_m3ha": 100.0, "observed_merchantable_sampled_m3ha": 50.0, "bucked_log_m3ha": 10.0, "bucked_log_m3ha_ratio_est": 90.0},
+            {"plot_id": "P2", "bec_zone": "SBS", "leading_species": "PL", "stand_age": 100, "site_index": 20, "observed_merchantable_all_m3ha": 200.0, "observed_merchantable_sampled_m3ha": 50.0, "bucked_log_m3ha": 10.0, "bucked_log_m3ha_ratio_est": 210.0},
+        ]
+    )
+    summary, frame = btc_volume_benchmark(
+        attrs=attrs, plot_summary=plot_summary, compiled_dir=root
+    )
+    assert summary["n_matched"] == 2
+    metrics = summary["observed_all_vs_btc"]
+    assert metrics["mean_observed"] == pytest.approx(150.0)
+    assert metrics["mean_predicted"] == pytest.approx(150.0)
+    assert metrics["mean_bias_predicted_minus_observed"] == pytest.approx(0.0)
+    assert metrics["mae"] == pytest.approx(20.0)
+    assert metrics["rmse"] == pytest.approx(20.0)
+    assert frame["btc_volume_m3ha"].tolist() == [80.0, 220.0]

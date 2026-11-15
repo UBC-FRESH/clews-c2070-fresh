@@ -2,6 +2,28 @@
 
 ## 2026-11-15
 
+- **Corrected the TSA24 residue validation with the documented BTC volume and
+  `biomass-live` surfaces.** Ran `femic tipsy run-btc` with the `biomass-live`
+  and `carbon` banks to `04_output-tsa24_biomass.csv` (16 AUs × 36 ages, 973
+  columns, ODT/ha), added `tsa24_biomass_curves.py` /
+  `compile_tsa24_biomass_curves.py`, and compiled a 576-row
+  `biomass_au_curves.csv` with explicit additivity checks. Added
+  `validate_tsa24_btc.py`: the BTC `volume` benchmark matches 14 of 20 plots
+  (12 positive-volume comparisons, 2 zero-volume age joins, 6 no-AU), with
+  observed mean 231.27 vs BTC 229.21 m³/ha, MAE 122.72, RMSE 148.27, relative
+  bias +0.9%; pilot bucked mean 201.09 m³/ha, bias -28.12, MAE 126.86, RMSE
+  151.08, relative bias -12.3%. The harvest-slash ledger uses
+  `AGB - merchantable log biomass` on 8 volume-consistent plots: mean AGB
+  200.92 ODT/ha, log biomass 88.27 ODT/ha, harvest slash 112.65 ODT/ha, taper
+  residue 21.01 ODT/ha (ratio 5.36); 60% roadside recovery, 45%/30% moisture,
+  0.90 chip yield. Added species basic-density defaults
+  (`rules/bc_basic_density.csv`, FVS-BC NBEL/FIA) and removed the mill-residue
+  ratio comparison from the grade benchmark; grade shares are explicitly
+  **not validated** (dimension-only pilot; D/F zero in TSA24). New artifacts:
+  `btc_volume_benchmark.csv`, `harvest_residue_ledger.csv`,
+  `harvest_residue_summary.json`, `HARVEST_RESIDUE.md`,
+  `biomass_curves_manifest.json`. Tests: 15 passed; `compileall` clean.
+
 - **Reran the TSA24 grade/residue benchmark from BTC `/TSR` output and
   superseded the nominal-site-index `.taf` table.** Installed `wine` and
   `xvfb` with non-interactive `sudo` and added Wine Mono, then ran the

@@ -642,20 +642,10 @@ def benchmark_grade_residue(
     )
 
     residue_frame = frame[frame["match_tier"] == "au_curve"].copy()
-    residue_metrics = _benchmark_metrics(
-        residue_frame,
-        "pilot_residue_odt_ha",
-        "tipsy_residual_fibre_odt_ha",
-    )
     residue_per_m3_frame = frame[frame["match_tier"] == "au_curve"].copy()
     residue_per_m3_frame["pilot_residue_odt_per_m3"] = (
         residue_per_m3_frame["pilot_residue_odt_ha"]
         / residue_per_m3_frame["pilot_taper_total_m3ha"].replace(0, np.nan)
-    )
-    residue_per_m3_metrics = _benchmark_metrics(
-        residue_per_m3_frame,
-        "pilot_residue_odt_per_m3",
-        "tipsy_residue_odt_per_m3",
     )
 
     summary = {
@@ -742,14 +732,22 @@ def benchmark_grade_residue(
             ),
         },
         "residue_comparison": {
-            "status": "semantic_mismatch_reported",
+            "status": "not_comparable_by_design",
             "au_curve_n": int(len(residue_frame)),
-            "absolute_odt_ha": residue_metrics,
-            "per_m3": residue_per_m3_metrics,
+            "pilot_taper_residue_odt_ha_sum": float(
+                residue_frame["pilot_residue_odt_ha"].sum()
+            ),
+            "pilot_taper_residue_odt_per_m3_mean": float(
+                residue_per_m3_frame["pilot_residue_odt_per_m3"]
+                .replace([np.inf, -np.inf], np.nan)
+                .mean()
+            ),
             "note": (
-                "TIPSY residual fibre is mill-processing chips/sawdust/shavings/"
-                "trim/bark.  The pilot residue is harvest slash "
-                "(taper total - recovered logs).  The two are not equivalent."
+                "BTC Residual_Chips/Sawdust/Shavings/Trim/Bark are "
+                "mill-processing residues. The pilot taper residue is harvest "
+                "slash (top/stump/unmerchantable). The two are not equivalent, "
+                "so no ratio or error metric is computed. Harvest slash is "
+                "reported separately from the biomass-live AGB bank."
             ),
         },
         "value_comparison": {
