@@ -1,5 +1,7 @@
 tmp/
 .venv/
+.venv-*/
+pyfvs.log
 __pycache__/
 *.egg-info/
 .pytest_cache/

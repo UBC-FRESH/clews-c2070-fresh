@@ -747,6 +747,66 @@ git-annex:
 
 ---
 
+### Entry: EL-20261115-016
+**Claim**: The first measured uncalibrated FVS-BC baseline from this workspace ran on the BC FAIB PSP snapshot with `fresh-fvsbc` 0.21.4 (checkout `f5dce34`) and `fresh-fvsbc-pyfvs` 0.4.1, compared 139 intervals across 139 BEC variants with 0 skipped, and reproduced the reference D6-corrected all-zone baseline exactly; the aggregate tables and hashed manifest were committed to the data submodule (`0d577cd`) and pushed to `origin/main`.
+**Status Symbol**: ✅
+**Evidence Type**: Reproducible FVS run + reference-summary reproduction + per-metric computation + manifest hash audit + git-annex S3 check
+**Command**: `python3 -m venv .venv-fvsca`; `.venv-fvsca/bin/pip install -e "/srv/shared-data/gep/ws4/tmp/fresh-fvsbc[fvs]"`; `.venv-fvsca/bin/python /srv/shared-data/gep/ws4/tmp/fresh-fvsbc/scripts/build_calibration_dataset.py --psp-dir /tmp/fvsca_psp --out-dir /tmp/fvsca_calibration`; `.venv-fvsca/bin/python /srv/shared-data/gep/ws4/tmp/fresh-fvsbc/scripts/run_baseline_backtest.py --data-dir /tmp/fvsca_calibration --psp-dir /tmp/fvsca_psp --out-dir /tmp/fvsca_baseline --per-bec 1 --tree-age 60`; `git -C data add derived/fvsca_calibration/bc_baseline && git -C data commit -m "Add first measured FVS-BC baseline on FAIB PSP"`; `cd data && ~/bin/git-annex-s3 copy --to arbutus-s3 derived/fvsca_calibration/bc_baseline`; `git -C data push origin main`; `git -C data push origin git-annex`
+**Exit Code**: 0
+**Output Summary**:
+```
+environment:
+  fresh-fvsbc 0.21.4 editable, checkout f5dce34 (v0.21.4-212-gf5dce34)
+  fresh-fvsbc-pyfvs 0.4.1; PyFVS commit e95172b; FVS source ef5fa847
+  Python 3.12.3; pandas 3.1.1; numpy 2.5.4
+  pyfvs.list_variants() -> {'BC': {'lib': 'pyfvs.fvsbc', 'status': 'OK'}}
+
+inputs (decompressed SHA-256 match reference runtime/calibration/manifest.json):
+  faib_header.csv          1,406,012 bytes  f029e21c...079ea8b2
+  faib_sample_byvisit.csv  3,186,768 bytes  9b6db291...52fece60
+  faib_plot_header.csv     2,815,639 bytes  dcb206e5...b45514ae
+  faib_tree_detail.csv   740,181,676 bytes  d9f609cd...3a4c910
+
+dataset build (40.4 s, 1.53 GiB peak):
+  7,341 header; 23,956 visits; 24,962 plot-visit summaries;
+  17,151 intervals; 139 BEC units; 1,814,527 tree-survival rows
+
+sample: 139 intervals / 139 BEC variants; 0 skipped; 2 intervals with 23
+unresolved trees (ESSFwc4 19, PPxh2 4); years 3-27, mean 10.76
+
+baseline (80.1 s wall, 474.9 s CPU, 452,880 KB peak):
+  initial BA   n=139  obs 37.020  pred 36.331  bias -0.689  MAE 0.836  RMSE 1.367
+  end BA       n=139  obs 39.420  pred 35.252  bias -4.168  MAE 8.648  RMSE 11.410
+  end TPH      n=139  obs 2201.605 pred 1809.755 bias -391.850 MAE 781.732
+  end QMD      n=139  obs 18.676  pred 19.578  bias +0.901  MAE 2.478
+  top height   n=139  obs 27.525  pred 22.705  bias -4.820  MAE 4.958
+  volume       n=139  obs 302.444 pred 248.554 bias -53.890 MAE 84.242
+  flags: 1 above p99 (SBSwk1); 5 above max (IDFxx2, SBPSxc, SBSmc3, SBSun, SBSwk3)
+  D5 filter (exclude SBPS + flagged): n=130 bias -5.259 MAE 8.445
+  per-BEC agreement with d6-all-zone-summary.csv: max abs diff 6.9e-13
+
+probes:
+  D7.3 four-candidate subset (116 rows, 67.6 s) reproduces documented test rows:
+    bamax53 -1.90/1.93, TPH -487.78/518.44
+    bamax55 -1.76/1.79, TPH -481.78/514.72
+    bamax60 -1.61/1.65, TPH -468.49/505.44
+    bamax60-mort0.3 +0.10/1.68, TPH -352.92/432.20
+  D7.4 --bundle path failed:
+    BundleError: idfdk-ingrowth-pilot-2026-11-03 renders BAMAX, and the
+    keyword set does not carry them (probe renders "53", bundle "53.0")
+  D7.4 --ingrowth path (29 intervals, 21.3 s) reproduces D9.24:
+    test  n=7   BA -1.76/1.79 (-5.6%)  TPH +204.65/327.16 (+8.6%)
+    train n=22  BA -0.08/3.23 (-0.3%)  TPH +602.74/674.43 (+37.4%)
+
+data commit 0d577cd pushed 097e5e7..0d577cd main -> main
+git annex find --not --in arbutus-s3 = 0
+```
+**Verification Timestamp**: 2026-11-15T09:16:00Z
+**Verified By**: Python 3.12.3 / fresh-fvsbc 0.21.4 / fresh-fvsbc-pyfvs 0.4.1; git-annex 10.20240129; Arbutus S3
+**Artifact Reference**: `workflows/national/fvsca/BC_BASELINE_REPORT.md`; data-submodule commit `0d577cd`; `data/derived/fvsca_calibration/bc_baseline/{manifest.json,metrics_summary.csv,baseline_summary.csv,baseline_by_zone.csv,baseline_by_tsa.csv,baseline_by_species.csv,baseline_by_dbh.csv,baseline_by_ba.csv,baseline_skips.csv,baseline_report.md,probe_idfdk/}`; full per-interval table and FVS runs at `/tmp/fvsca_baseline/`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

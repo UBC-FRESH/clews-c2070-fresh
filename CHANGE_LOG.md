@@ -2,6 +2,34 @@
 
 ## 2026-11-15
 
+- **Ran the first measured FVS-BC baseline on the BC FAIB PSP data.**
+  Created the repository-local `.venv-fvsca` environment with
+  `fresh-fvsbc` 0.21.4 (editable read-only checkout at `f5dce34`) and
+  `fresh-fvsbc-pyfvs` 0.4.1 / PyFVS `e95172b` / FVS source `ef5fa847`, then
+  ran the reference `run_baseline_backtest.py` on the default BEC-stratified
+  sample: **139 intervals across 139 BEC variants, 0 skipped**, in 80.1 s wall
+  (452,880 KB peak RSS). Initial BA bias -0.689 / MAE 0.836 m2/ha; end BA bias
+  -4.168 / MAE 8.648; end TPH bias -391.85 / MAE 781.73; end QMD +0.901 /
+  MAE 2.478; top height -4.820 / MAE 4.958; volume -53.890 / MAE 84.242.
+  Envelope flags: 1 above p99 (`SBSwk1`) and 5 above max (`IDFxx2`,
+  `SBPSxc`, `SBSmc3`, `SBSun`, `SBSwk3`). The run reproduces the reference
+  D6-corrected all-zone baseline exactly (per-BEC bias/MAE maximum absolute
+  difference `6.9e-13`) and the D5 end-BA numbers under D5's exclusion filter
+  (-5.259 / 8.445, n=130); the SBPS `457,348 m2/ha` explosion is absent on the
+  0.4.1 `REGENT`-fixed build. Added
+  `workflows/national/fvsca/BC_BASELINE_REPORT.md` and the aggregate tables,
+  metrics, probe aggregates, and a hashed manifest under
+  `data/derived/fvsca_calibration/bc_baseline/` (data commit `0d577cd`, pushed
+  to `origin/main`; no new annex objects, `git annex find --not --in
+  arbutus-s3` = 0). Optional IDFdk probes: the four-candidate D7.3 subset
+  reproduces the documented test-fold rows exactly; the D7.4 `--bundle` path
+  fails on a `BAMAX` field-format mismatch (`53` vs `53.0`), and the documented
+  `--ingrowth` path reproduces the D9.24 corrected percentages (test BA -5.6%,
+  TPH +8.6%; train TPH +37.4%), not the stale D7.4 TPH table. Raw inputs
+  unchanged; per-interval tables and FVS run directories stayed in `/tmp`
+  because they carry site identifiers. Also ignored `.venv-*/` and the
+  generated `pyfvs.log`.
+
 - **Added the `fresh-fvsca` BC prototype, parity report, and consumer dataset.**
   `workflows/national/fvsca/` now contains the multi-variant contract
   (`VariantProfile`: BC implemented; ON and ACD stubs; AB, SK, MB, YT, NT
