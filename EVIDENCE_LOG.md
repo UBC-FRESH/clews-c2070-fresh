@@ -879,3 +879,36 @@ validation article: 60 summary rows, 6,434 validated curves; median R2 0.57-0.80
 **Verification Timestamp**: 2026-11-15T10:10:00Z
 **Verified By**: curl 8.x, unzip 6.00, Python 3.12.3 (pandas 3.0.3, pyogrio 0.13.0), SQLite integrity_check
 **Artifact Reference**: `data/raw/national/rsyc/{ACQUISITION.md,PROVENANCE.csv,CONTENTS.md}`; upstream manifests `data-raw/{RSYC_models_manifest.csv,tiles-manifest.csv,ecostrat-manifest.csv}` at RSYC `dev`
+
+### Entry: EL-20261115-018
+**Claim**: The RSYC data commit and all three annexed artifacts were published to GitHub and arbutus-s3, and no RSYC annex object remains unpublished.
+**Status Symbol**: ✅
+**Evidence Type**: git-annex copy/whereis/find output and Git push refs
+**Command**:
+```bash
+cd data
+~/bin/git-annex-s3 copy --to arbutus-s3 raw/national
+~/bin/git-annex-s3 whereis raw/national/rsyc/RSYC_models.zip raw/national/rsyc/RSYC_tiles.gpkg raw/national/rsyc/RSYC_ecostrat.gpkg
+~/bin/git-annex-s3 find raw/national --not --in arbutus-s3 | wc -l
+~/bin/git-annex-s3 find --not --in arbutus-s3 | wc -l
+git push origin main
+git push origin git-annex
+cd ..
+git push origin feature/p7-source-triage-and-production-readiness
+```
+**Exit Code**: 0
+**Output Summary**:
+```
+data commit a77fdbc "Acquire RSYC national yield curves and bucking references"
+copy ecostrat ok; copy models.zip ok; copy tiles.gpkg ok
+whereis each artifact: 2 copies ([here] + [arbutus-s3])
+git annex find raw/national --not --in arbutus-s3 = 0
+git annex find --not --in arbutus-s3 (repo-wide) = 0
+data push: f915fa1..a77fdbc main -> main
+data push: 4b38575..5fcce83 git-annex -> git-annex
+parent commit 011ac6f "Register RSYC national yield curves and bucking references"
+parent push: 8ba6dda..011ac6f feature/p7-source-triage-and-production-readiness -> feature/p7-source-triage-and-production-readiness
+```
+**Verification Timestamp**: 2026-11-15T10:19:00Z
+**Verified By**: git-annex 10.20240129; arbutus-s3 special remote; Git 2.45.2
+**Artifact Reference**: data commit `a77fdbc`; parent commit `011ac6f`; `data/raw/national/`; S3 remote `arbutus-s3`

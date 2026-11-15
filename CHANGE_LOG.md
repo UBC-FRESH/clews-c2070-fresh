@@ -21,7 +21,9 @@
   variants (citation, licence, input/output contract, architecture role); no
   upstream code was cloned or vendored. Registered RSYC in
   `metadata/national-plot-data-inventory.csv` and
-  `metadata/required-datasets.yaml`.
+  `metadata/required-datasets.yaml`. Published the three annex objects to
+  `arbutus-s3`; `git annex find --not --in arbutus-s3` is 0 repo-wide. Data
+  commit `a77fdbc`; parent commit `011ac6f`.
 
 - **Added the WS4 TSA instance factory and the first TSA24 pilot instance.**
   `workflows/ws4_instances/` now carries the standard (`README.md`), instance
