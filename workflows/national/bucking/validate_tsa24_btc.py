@@ -590,6 +590,11 @@ def harvest_residue_ledger(
         taper_residue_m3 = float(plot.taper_residue_m3ha_sampled) * expansion
         taper_total_m3 = float(plot.taper_total_m3ha_sampled) * expansion
         harvest_residue = agb_ledger - merchantable_log_odt_ledger
+        harvest_residue_unscaled = (
+            agb_unscaled - merchantable_log_odt_ledger
+            if ledger_has_values
+            else float("nan")
+        )
         non_taper_residue = harvest_residue - taper_residue_odt
         bark = float(biomass_row.get("biomass_live_bark_odt_ha", float("nan")))
         foliar = float(biomass_row.get("biomass_live_foliar_odt_ha", float("nan")))
@@ -634,6 +639,7 @@ def harvest_residue_ledger(
                 "merchantable_log_odt_ha": merchantable_log_odt_ledger,
                 "merchantable_log_m3ha": merchantable_log_m3_ledger,
                 "harvest_residue_odt_ha": harvest_residue,
+                "harvest_residue_odt_ha_unscaled": harvest_residue_unscaled,
                 "taper_residue_odt_ha": taper_residue_odt,
                 "taper_residue_m3ha": taper_residue_m3,
                 "taper_total_m3ha": taper_total_m3,
@@ -692,6 +698,9 @@ def harvest_residue_ledger(
             ),
             "harvest_residue_odt_ha": _summary_stats(
                 primary["harvest_residue_odt_ha"].tolist()
+            ),
+            "harvest_residue_odt_ha_unscaled": _summary_stats(
+                primary["harvest_residue_odt_ha_unscaled"].tolist()
             ),
             "taper_residue_odt_ha": _summary_stats(
                 primary["taper_residue_odt_ha"].tolist()
