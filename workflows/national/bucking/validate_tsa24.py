@@ -2019,8 +2019,8 @@ def _volume_benchmark_table(btc_volume: Mapping[str, Any]) -> pd.DataFrame:
                 "bias_value_minus_btc": mean_value - mean_btc,
                 "mae": float(metrics["mae"]),
                 "rmse": float(metrics["rmse"]),
-                "relative_bias_value_vs_btc": (
-                    mean_value / mean_btc - 1.0 if mean_btc > 0 else None
+                "relative_bias_value_vs_btc_pct": (
+                    (mean_value / mean_btc - 1.0) * 100.0 if mean_btc > 0 else None
                 ),
             }
         )
