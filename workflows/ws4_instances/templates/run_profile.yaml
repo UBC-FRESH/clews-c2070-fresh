@@ -1,0 +1,36 @@
+# FEMIC / Patchworks run profile for one WS4 TSA instance.
+# This records intent and provenance. It is not consumed by the minimal
+# area-control lane, which starts from an already compiled dataset.
+
+mode: tsa
+tsa_number: "{{TSA_NUMBER}}"
+tsa_name: "{{TSA_NAME}}"
+dataset: "{{DATASET_PATH}}"
+dataset_sha256: "{{DATASET_SHA256}}"
+
+femic:
+  source_bundle: ""
+  recipe: ""
+  fragments: ""
+  thlb_rule: ""
+  build_command: ""
+  notes: "Replace the placeholders with the FEMIC run log and Patchworks export."
+
+patchworks:
+  export: ""
+  fragment_fields:
+    au: theme2
+    age: age
+    area_ha: AREA_HA
+    managed: "theme1 == 1"
+
+ws4:
+  validate_command: "ws4 validate --dataset dataset"
+  build_command: ""
+
+run:
+  period_width: 10
+  horizon_years: 100
+  area_control_config: config/area_control.yaml
+  schedule: schedules/area_control.csv
+  simulation: runs/area_control

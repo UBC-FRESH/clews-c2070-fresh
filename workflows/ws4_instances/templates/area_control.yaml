@@ -1,0 +1,34 @@
+# Area-control contract for one WS4 TSA instance.
+# The runner validates every key against the compiled dataset and fails loudly
+# when a managed block cannot be resolved.
+
+# The AU token in tracks.name, e.g. "AU(2401000)+IFM(managed)+...".
+au_regex: 'AU\(([^)]+)\)'
+
+# The feature label that carries the managed volume curve.
+volume_label: feature.Yield.managed.Total
+
+# The harvest treatment used for eligibility and schedule.csv.
+treatment: CC
+
+# A track is managed when its name contains this literal token.
+managed_token: IFM(managed)
+
+# Accounting period width and simulation/planning horizon, in years.
+period_width: 10
+horizon_years: 100
+
+# Q = A * period_width / R * quota_factor.
+quota_factor: 1.0
+
+# Optional policy floor on harvest age. null means use the treatment begin.
+min_age: null
+
+# global: one Q for the whole managed land base (documented TSA24/TSA29
+#         reference construction).
+# per_au: apply Q_AU separately to each analysis unit.
+quota_scope: global
+
+# operable: a block remains a candidate after its earliest operable year.
+# earliest_only: accept a block only in the period containing that year.
+eligibility: operable

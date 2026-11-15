@@ -1,0 +1,16 @@
+# Optional diagnostic targets for the WS4 report.
+#
+# This is a policy pull, not the area-control quota. Fill it only after the
+# area-control diagnostic is known. The minimal lane does not optimize against
+# these targets; it reports them.
+#
+# targets:
+#   - account: product.HarvestedVolume.managed.Total.CC
+#     period: 1
+#     period_width: 10
+#     minimum: 70000000.0
+#     min_weight: 1.0
+#     shape: linear
+#     priority: 1
+#     notes: "Policy diagnostic; check against area-control capacity."
+targets: []

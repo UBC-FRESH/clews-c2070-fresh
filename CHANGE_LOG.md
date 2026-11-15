@@ -2,6 +2,26 @@
 
 ## 2026-11-15
 
+- **Added the WS4 TSA instance factory and the first TSA24 pilot instance.**
+  `workflows/ws4_instances/` now carries the standard (`README.md`), instance
+  templates, `make_instance.py`, and the area-control runner
+  (`area_control.py`). The runner validates the explicit AU/volume/treatment
+  contract against the compiled tables, builds the area-weighted managed MAI
+  curve, derives `R`, computes `Q = A*P/R`, and writes an oldest-first
+  `schedule.csv`, per-AU/period `diagnostics.csv`, and `summary.json`. Two
+  readings are explicit: `quota_scope` (`global` default, matching the
+  documented TSA24/TSA29 reference; `per_au` for AU caps) and `eligibility`
+  (`operable` default; `earliest_only` for a strict first-window rule). The
+  TSA24 pilot at `data/derived/ws4/tsa24/` (data commit `f915fa1`) has
+  `A = 3,060,473.1 ha`, `R = 100`, `Q = 306,047.3 ha/period`,
+  `MAI(R) = 2.183 m3/ha/yr`, 205,959 schedule rows, and a 100-year WS4
+  simulation. Period 1 harvest is 71.68M m3 (reference ~71.7M); the 10-period
+  total is 814.04M m3, with period 10 at 69.94M m3 just below the 70M
+  diagnostic floor. The schedule matches the reference first-entry area in
+  every period; the remaining volume difference is the reference's multi-entry
+  chains and later in-period offsets. Added
+  `metadata/ws4-instances.csv`, the instance manifest, and a planning note.
+
 - **Ran the first measured FVS-BC baseline on the BC FAIB PSP data.**
   Created the repository-local `.venv-fvsca` environment with
   `fresh-fvsbc` 0.21.4 (editable read-only checkout at `f5dce34`) and

@@ -22,6 +22,8 @@
 
 The BC component is built on BC VRI vector inventory plus VDYP/TIPSY/FVS-BC through FEMIC (`planning/qc_bc_yield_curves_extraction.md` §B; https://github.com/UBC-FRESH/fresh-fvsbc). The all-BC mini-model is a stepping stone: one WS4 instance per TSA, exercising per-TSA orchestration and input contracts at provincial scale.
 
+The first instance is TSA24 / Prince George (`data/derived/ws4/tsa24`), with the reusable factory in `workflows/ws4_instances/` and the instance registry in `metadata/ws4-instances.csv`. It is a minimal-lane pilot (validate, area control, simulate/report), not an optimized scenario.
+
 The national model changes both data and model. NFI raster inventory (SCANFI) replaces VRI polygons, and a national G&Y system replaces BC-specific G&Y. Neither replacement is solved (`metadata/readiness-gates.yaml`, gates `national_scaling` and `species_composition`).
 
 FVS is regional. The source tree has `canada/bc`, `canada/on`, and `acd`; variants are selected at compile time, and no `canada` variant covers all provinces (https://github.com/USDAForestService/ForestVegetationSimulator/tree/main/canada; https://github.com/USDAForestService/ForestVegetationSimulator/tree/main/acd).

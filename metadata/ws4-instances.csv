@@ -1,0 +1,2 @@
+tsa_number,tsa_name,instance_path,dataset_sha256,status,au_count,schedule_rows,notes
+24,Prince George,data/derived/ws4/tsa24,c1304ed993814b1e4c049e98b53d197fc5218cda32d29d1cc01d2b8eda7a53eb,pilot-simulated,24,205959,"Minimal lane: ws4 validate + area control + simulate/report; A=3,060,473.1 ha, R=100, Q=306,047.3 ha/period, MAI=2.183; period 1 71.68M m3, 10-period total 814.04M m3; single-entry, global quota."
