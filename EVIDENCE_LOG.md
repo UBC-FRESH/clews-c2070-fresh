@@ -1093,4 +1093,4 @@ btc_manifest-tsa24_grades_tsa24.json d4a659b391b5b153de5b8af3f0772a8c84c029fd7f5
 ```
 **Verification Timestamp**: 2026-11-15T19:30:00Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, wine 9.0, wine-mono 9.0.0, TIPSY 4.7 BTC, nemora reference checkout
-**Artifact Reference**: data commit `0d15a4b`; `data/derived/national/bucking/tsa24_grade_curves/`; `data/derived/national/bucking/tsa24_pilot/{VALIDATION_REPORT.md,validation_summary.json,grade_benchmark.csv,grade_benchmark_summary.json,TSA24_GRADE_CURVES.md}`; BTC manifests under `femic-tsa24-instance/tipsy_io/logs/` and `vdyp_io/profile_logs/`
+**Artifact Reference**: data commit `0d15a4b`; parent commit `fe7d9b8`; `data/derived/national/bucking/tsa24_grade_curves/`; `data/derived/national/bucking/tsa24_pilot/{VALIDATION_REPORT.md,validation_summary.json,grade_benchmark.csv,grade_benchmark_summary.json,TSA24_GRADE_CURVES.md}`; BTC manifests under `femic-tsa24-instance/tipsy_io/logs/` and `vdyp_io/profile_logs/`
