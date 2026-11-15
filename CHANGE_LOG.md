@@ -2,6 +2,29 @@
 
 ## 2026-11-15
 
+- **Added the national assortment/stand-to-tree disaggregation prototype and
+  TSA24 demonstration.** New `workflows/national/assortments/` package fits
+  RSYC-stratified DBH distributions (`fit_censored_inventory` Weibull/gamma,
+  grouped generalized beta, two-component gamma mixture) with
+  ecodistrict -> ecoregion -> ecoprovince -> ecozone -> TSA24-species fallback;
+  fits hierarchical height-diameter models with
+  `fit_height_diameter_models`; synthesizes a volume-constrained tree list;
+  bucks it with the existing BC interior rules and Kozak taper; and aggregates
+  a species x product/sort x top-diameter/length matrix with a residue/AGB
+  ledger and a facility feedstock contract. The documented shape-vs-scale
+  contract is explicit: the distribution sets shape, the target volume sets
+  scale. TSA24 target is BTC AU `23000` (`SBS_SX`, site class H) at age 100 in
+  Nechako Lowland, 311.6 m3/ha: 600 trees, 1,062.4 TPH, 31.96 m2/ha BA, QMD
+  19.57 cm; recovered logs 259.96 m3 (83.4%), residue 51.64 m3 (16.6%),
+  taper total 311.60 m3; DBH quantile MAE max 2.15 cm; volume conservation
+  exact; all five checks pass. General all-age fits: 68 strata (48 direct, 20
+  pooled), selected KS median 0.050, max 0.221, 3 high-KS; generalized beta is
+  retained as a diagnostic candidate but excluded from synthesis because it
+  lacks a documented inverse-CDF sampler. Added
+  `metadata/assortment-pilots.csv` and artifacts under
+  `data/derived/national/assortments/tsa24_prototype/`. Tests: 8 assortment +
+  15 bucking = 23 passed; `compileall` clean.
+
 - **Corrected the TSA24 residue validation with the documented BTC volume and
   `biomass-live` surfaces.** Ran `femic tipsy run-btc` with the `biomass-live`
   and `carbon` banks to `04_output-tsa24_biomass.csv` (16 AUs × 36 ages, 973

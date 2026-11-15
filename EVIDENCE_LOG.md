@@ -1164,3 +1164,65 @@ bc_basic_density.csv        6584fb93a50cb6c1bd080515db780dd635aa9859e25b6867afed
 **Verification Timestamp**: 2026-11-15T20:45:00Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, wine 9.0, wine-mono 9.0.0, TIPSY 4.7 BTC, nemora reference checkout
 **Artifact Reference**: data commit `91e3b52`; `data/derived/national/bucking/tsa24_grade_curves/{biomass_au_curves.csv,biomass_curves_manifest.json}`; `data/derived/national/bucking/tsa24_pilot/{btc_volume_benchmark.csv,harvest_residue_ledger.csv,harvest_residue_summary.json,HARVEST_RESIDUE.md,VALIDATION_REPORT.md,validation_summary.json}`; BTC manifest `femic-tsa24-instance/tipsy_io/logs/btc_manifest-tsa24_biomass.json`
+
+---
+
+## 2026-11-15 — TSA24 stand-to-tree assortment disaggregation prototype
+
+### Entry: EL-20261115-025
+**Claim**: The RSYC-stratified stand-to-tree prototype produces a volume-constrained TSA24 tree list, a conserved assortment matrix, and a passing five-check validation.
+**Status Symbol**: ✅
+**Evidence Type**: command output, validation summary, artifact hashes, test execution
+**Command**:
+```bash
+PYTHONPATH=/srv/shared-data/gep/ws4/nemora/src \
+  .venv/bin/python -m workflows.national.assortments.validate_tsa24 \
+  --out-dir data/derived/national/assortments/tsa24_prototype
+
+PYTHONPATH=/srv/shared-data/gep/ws4/nemora/src \
+  .venv/bin/python -m pytest -q \
+  workflows/national/assortments/tests/test_assortments.py tests/test_bucking.py
+
+PYTHONPATH=/srv/shared-data/gep/ws4/nemora/src \
+  .venv/bin/python -m compileall -q workflows/national/assortments
+```
+**Exit Code**: 0 (prototype, tests, compileall)
+**Output Summary**:
+```
+TSA24 subset: 558 sites / 1,318 plots / 155,904 live valid trees;
+  491 sites mapped to RSYC ecodistricts.
+Target: BTC AU 23000, SBS_SX, site class H, age 100, Nechako Lowland;
+  target volume 311.6 m3/ha x 1 ha.
+Target composition (leading-species-filtered, sum=1): SW 0.606, AT 0.116,
+  BL 0.113, PL 0.102, FD 0.028, EP 0.022, SB 0.013; W/DG excluded by taper
+  support, AC/HW below the 0.01 share floor.
+DBH AU fits: 7/7 direct ecodistrict fits; selected distributions mixture 6,
+  gamma 1; KS 0.012-0.063; weighted quantile MAE max 2.145 cm.
+General all-age fits: 68 strata (48 direct, 20 pooled); selected KS median
+  0.050, max 0.221, 3 high-KS.
+Height AU fits: 7/7 direct ecodistrict; RMSE 1.81-3.82 m.
+Synthetic tree list: 600 trees; 1,062.4 TPH; 31.96 m2/ha BA; QMD 19.57 cm;
+  volume scale 0.725926; achieved taper total 311.600 m3 = target.
+Assortment: 508 logs; recovered 259.958 m3 (83.4%); residue 51.642 m3
+  (16.6%); residue 18.704 ODT; wood AGB proxy 113.835 ODT vs BTC AGB
+  204.7 ODT (wood-only vs total AGB; not expected to match).
+Products: sawlog 243.222 m3, other 16.437 m3, pulpwood 0.299 m3.
+Checks: DBH quantiles PASS; target volume PASS; conservation PASS;
+  species weights PASS; no negative values PASS.
+Tests: 23 passed (8 assortment + 15 bucking). compileall: clean.
+```
+**Hashes**:
+```
+distribution_fits.csv  89a545954a629efbf3c7cb1d2e10a3bb43fb11a8b7b229032cb928bef6f8055c
+height_models.csv      26c1289285e041207845d94a3fa7eb792d70967c10f8c3fc4c374ec574a05871
+synthetic_trees.csv    63cb74250fd29b57c3fd267cfff9a091d43346e2951eaf849b98360c7e28b79c
+assortment_matrix.csv  57043d584e84284512f8d60ac4e0ff8cf668c9091b659134440f8f0b7289faef
+dbh_validation.csv     734f94668e65fc1978d624663a50305e15dad4e1e9ae873fb9e90431727cb8b9
+species_composition.csv cb764514e101788d3528068513f86d13ea33a7f2d5a97bd661a85eb1663dc6a0
+VALIDATION_REPORT.md   0cec5147e2fd389eb38fa9e413a3d026cb6ae53486c9ba24fafe4fabad0d7143
+validation_summary.json 15ad1ace07ccea682ac2d9ffac54b57f9e54f5d2fb2de0f914e02e9d7bf347dc
+manifest.json          d2cb1a154c367085ae24d2ce0176387faf1a7e8aad3fd6ba1df2c3f24af0e709
+```
+**Verification Timestamp**: 2026-11-15T21:30:00Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, scipy 1.18.0, nemora reference checkout (`ws4/nemora`)
+**Artifact Reference**: data commit `2b60f8a8849e8b9a4db33c6ea6096d0bce42d8be`; parent commit `909456a742689b1cecec3505ed6706f259d5e98b`; `data/derived/national/assortments/tsa24_prototype/`; `workflows/national/assortments/`; `metadata/assortment-pilots.csv`
