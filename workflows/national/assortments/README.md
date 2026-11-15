@@ -176,6 +176,11 @@ Defaults:
 | Synthetic trees | 600 |
 | Seed | 20261115 |
 
+BTC TSA24 exposes a combined `SBS_SX` spruce stratum rather than a separate
+`SBS_SW`; the prototype uses `SBS_SX` at site class H and filters its
+composition to the spruce-leading plot group (SW/SE/S/SB).  The run does not
+claim a species-specific SBS_SW curve that the BTC table does not provide.
+
 The target composition is filtered to plots whose leading species belongs to
 the AU's leading-species group (for `SX`: SW/SE/S/SB).  This keeps an SBS_SX
 target from being driven by mixed or deciduous-leading plots elsewhere in the
