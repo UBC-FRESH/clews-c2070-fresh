@@ -201,6 +201,9 @@ nominal-site-index surfaces (SW 20, PLI 23, FDI 25); SE and BL use the SW
 table as the interior volume surrogate.  The residual-fibre columns are
 TIPSY/SYLVER mill-processing residues, not harvest slash.
 
+The compile path requires `fresh-tipsy` importable (install the sibling
+checkout editable or put its `src/` on `PYTHONPATH`).
+
 ```bash
 .venv/bin/python -m workflows.national.bucking.compile_tsa24_grade_curves \
   --femic-root "$FEMIC_TSA24_ROOT" \

@@ -30,12 +30,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
-from fresh_tipsy.tables.columns import load_columns
-from fresh_tipsy.tables.parsers import RunBlock, TIPSYTable, parse_taf_file
+
+if TYPE_CHECKING:
+    from fresh_tipsy.tables.parsers import RunBlock, TIPSYTable
 
 __all__ = [
     "DEFAULT_AGE_MAX",
@@ -154,11 +155,24 @@ def _sha256(path: Path) -> str:
 
 @lru_cache(maxsize=16)
 def _load_table(path: Path) -> TIPSYTable:
+    try:
+        from fresh_tipsy.tables.parsers import parse_taf_file
+    except ImportError as exc:  # pragma: no cover - environment guard
+        raise RuntimeError(
+            "fresh-tipsy is required to parse TIPSY .taf tables; install it "
+            "editable or set PYTHONPATH to the fresh-tipsy src directory"
+        ) from exc
     return parse_taf_file(path)
 
 
 @lru_cache(maxsize=16)
 def _taf_columns() -> Mapping[str, int]:
+    try:
+        from fresh_tipsy.tables.columns import load_columns
+    except ImportError as exc:  # pragma: no cover - environment guard
+        raise RuntimeError(
+            "fresh-tipsy is required to read the TAF column map"
+        ) from exc
     return {spec.name: spec.position for spec in load_columns("taf")}
 
 
