@@ -990,18 +990,18 @@ datasets:
       url: null
       access_mode: "derived_product"
       license: "inherited from input sources; see the source dataset registry rows"
-      provenance_notes: "Generated 2026-11-14 by workflows/national/plot_harmonization/build.py (data submodule commits 0654864 and e22dc2f) from archived BC FAIB PSP/non-PSP, MAGPlot v1.2 plus WFS-only supplement, Quebec PEP, and NL FAL. Raw inputs unchanged. See data/derived/fvsca_calibration/v0/manifest.json and QA.md. No S3 publication in this build."
+      provenance_notes: "Rebuilt 2026-11-15 by workflows/national/plot_harmonization/build.py from archived BC FAIB PSP/non-PSP, MAGPlot v1.2 plus WFS-only supplement, Quebec PEP, and NL FAL; raw inputs unchanged. Supersedes the invalid 2026-11-14 v0 (data commits 0654864 and e22dc2f), which stored QC plot area in square metres under a hectare label and lost MAGPlot intervals to site-level visit ordering. See data/derived/fvsca_calibration/v0/{manifest.json,QA.md,REVIEW_FIXES.md}. Published to arbutus-s3 on 2026-11-15."
     coverage:
       spatial: "BC, QC, NL, plus MAGPlot coverage (BC, QC, NB, NL, YT, NT, SK, MB, PE)"
       temporal: "1921-2026"
       resolution: "ground plot and individual tree"
     package_inventory:
-      observed_utc: "2026-11-14T21:51:57Z"
+      observed_utc: "2026-11-15T07:27:50Z"
       manifest_path: "derived/fvsca_calibration/v0/manifest.json"
       site_count: 72975
       visit_count: 368133
       tree_measurement_count: 15639840
-      interval_count: 7011326
+      interval_count: 7228291
       species_crosswalk_rows: 355
       source_labels:
         - faib_psp
@@ -1018,7 +1018,7 @@ datasets:
       target_artifact: "derived/fvsca_calibration/v0/manifest.json"
     datalad_mirror:
       include: "yes"
-      rationale: "Derived calibration payload is about 183 MB uncompressed/gzip; keep it in the data submodule and annex large CSV.GZ outputs. Publication awaits new-cloud credentials."
+      rationale: "Derived calibration payload is about 196 MB uncompressed/gzip; keep it in the data submodule and annex large CSV.GZ outputs. Published to arbutus-s3 on 2026-11-15."
 
     # End of curated registry.
 

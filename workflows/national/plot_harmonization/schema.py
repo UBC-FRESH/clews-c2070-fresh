@@ -7,7 +7,9 @@ factors.  Nothing in this module invents a cross-source plot join.
 
 Column order below is the on-disk order.  ``trees.csv.gz`` and
 ``intervals.csv.gz`` are streamed source by source so the build never needs
-the full national tree table in memory.
+the full national tree table in memory.  Intervals carry both endpoint visit
+identifiers (``visit_id0``/``visit_id1``) so consumers can join them to
+``visits.csv`` and ``trees.csv.gz`` even when a site has several plots.
 """
 
 from __future__ import annotations
@@ -68,6 +70,8 @@ INTERVAL_COLUMNS: tuple[str, ...] = (
     "source",
     "site_id",
     "tree_id",
+    "visit_id0",
+    "visit_id1",
     "year0",
     "year1",
     "years",

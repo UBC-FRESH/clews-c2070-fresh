@@ -109,6 +109,13 @@ def _wkt_lon_lat(values: pd.Series) -> tuple[pd.Series, pd.Series]:
     )
 
 
+def all_site_ids(raw_root: Path, *, data_dir: Path | None = None) -> set[str]:
+    """Return every cleaned ZIP site identifier before any sampling filter."""
+    zip_path = raw_root / "magplot" / "MAGPlot_latest_data_package.zip"
+    sites_raw = _read_table(zip_path, data_dir, "magp_sites.csv")
+    return set(clean_id(sites_raw["magp_site_id"]).dropna().astype(str))
+
+
 def load_zip(
     raw_root: Path,
     *,
@@ -167,20 +174,25 @@ def load_zip(
     )
     stats["input"]["visits"] = int(len(header))
     header["site_id"] = clean_id(header["magp_site_id"])
+    header["plot_id"] = clean_id(header["plot_id"])
+    header["meas_num_value"] = numeric(header["meas_num"])
     header = header[header["site_id"].isin(sites["site_id"])]
     header["visit_id"] = (
-        clean_id(header["plot_id"]).fillna("NA")
+        header["plot_id"].fillna("NA")
         + "|"
         + clean_id(header["meas_num"]).fillna("NA")
     )
-    header = header.dropna(subset=["site_id", "visit_id"])
+    header = header.dropna(
+        subset=["site_id", "visit_id", "plot_id", "meas_num_value"]
+    )
     header = header.drop_duplicates("visit_id", keep="first")
     header["year"] = numeric(header["meas_year"])
     header = header.dropna(subset=["year"])
+    header = header.sort_values(
+        ["site_id", "plot_id", "meas_num_value"], kind="mergesort"
+    )
     header["_visit_order"] = (
-        header.groupby("site_id", sort=False)["meas_num"]
-        .rank(method="dense")
-        .astype("int64")
+        header.groupby(["site_id", "plot_id"], sort=False).cumcount() + 1
     )
     header["_plot_area_ha"] = positive(header["meas_plot_size"])
     header["_baf"] = pd.NA
@@ -258,16 +270,25 @@ def load_zip(
     trees["visit_id"] = (
         trees["plot_id"].fillna("NA") + "|" + trees["meas_num"].fillna("NA")
     )
+    missing_key = (
+        trees["site_id"].isna()
+        | trees["plot_id"].isna()
+        | trees["tree_num"].isna()
+        | trees["visit_id"].isna()
+        | trees["meas_num"].isna()
+    )
+    drop_reason(stats, "tree_missing_site_or_tree_key", int(missing_key.sum()))
+    trees = trees.loc[~missing_key].copy()
     trees["tree_id"] = np.where(
         trees["tree_num"] < 8_000_000,
-        trees["plot_id"].fillna("NA").astype(str)
+        trees["plot_id"].astype(str)
         + "|"
         + trees["tree_num"].astype("Int64").astype("string"),
-        trees["plot_id"].fillna("NA").astype(str)
+        trees["plot_id"].astype(str)
         + "|"
         + trees["tree_num"].astype("Int64").astype("string")
         + "|"
-        + trees["meas_num"].fillna("NA"),
+        + trees["meas_num"],
     )
     trees["tree_id"] = pd.Series(trees["tree_id"], dtype="string")
 
@@ -338,6 +359,8 @@ def load_wfs(
     wfs_ids = set(sites_raw["site_id"].astype(str))
 
     wfs_lon, wfs_lat = _wkt_lon_lat(sites_raw["WKT"])
+    wfs_lon = _clean_coord(wfs_lon, 180)
+    wfs_lat = _clean_coord(wfs_lat, 90)
     wfs_accuracy = pd.Series(
         "wfs_epsg3978_transformed", index=sites_raw.index, dtype="string"
     ).mask(wfs_lat.isna() | wfs_lon.isna(), "missing")
@@ -430,7 +453,14 @@ def load_wfs(
             "_tree_id_source": clean_id(trees_raw["tree_id"]),
         }
     )
-    trees = trees.dropna(subset=["site_id", "year"])
+    missing_key = (
+        trees["site_id"].isna() | trees["plot_id"].isna() | trees["tree_num"].isna()
+    )
+    drop_reason(stats, "tree_missing_site_or_tree_key", int(missing_key.sum()))
+    trees = trees.loc[~missing_key].copy()
+    missing_year = trees["year"].isna()
+    drop_reason(stats, "tree_missing_visit_year", int(missing_year.sum()))
+    trees = trees.loc[~missing_year].copy()
     trees["visit_id"] = (
         trees["plot_id"].fillna("NA")
         + "|"
@@ -439,12 +469,15 @@ def load_wfs(
         + trees["month"].fillna(0).astype("Int64").astype("string")
     )
     visit_order = (
-        trees[["site_id", "visit_id", "year", "month"]]
+        trees[["site_id", "plot_id", "visit_id", "year", "month"]]
         .drop_duplicates(["site_id", "visit_id"])
-        .sort_values(["site_id", "year", "month"], kind="mergesort")
+        .assign(_month_order=lambda frame: frame["month"].fillna(0))
+        .sort_values(
+            ["site_id", "plot_id", "year", "_month_order"], kind="mergesort"
+        )
     )
     visit_order["_visit_order"] = (
-        visit_order.groupby("site_id", sort=False).cumcount() + 1
+        visit_order.groupby(["site_id", "plot_id"], sort=False).cumcount() + 1
     )
     visits = (
         trees.groupby(["site_id", "visit_id"], as_index=False)
@@ -475,10 +508,10 @@ def load_wfs(
 
     trees["tree_id"] = np.where(
         trees["tree_num"] < 8_000_000,
-        trees["plot_id"].fillna("NA").astype(str)
+        trees["plot_id"].astype(str)
         + "|"
         + trees["tree_num"].astype("Int64").astype("string"),
-        trees["plot_id"].fillna("NA").astype(str)
+        trees["plot_id"].astype(str)
         + "|"
         + trees["tree_num"].astype("Int64").astype("string")
         + "|"

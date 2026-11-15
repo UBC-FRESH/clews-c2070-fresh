@@ -9,8 +9,9 @@ column-oriented calibration extract for `fresh-fvsca`:
 - Québec PEP (`qc_pep`);
 - Newfoundland and Labrador FAL permanent sample plots (`nl_fal`).
 
-It does **not** run a calibration and does **not** publish to S3. The output is
-the input to the calibration workstream.
+It does **not** run a calibration and the builder does **not** publish to S3;
+release publication is a separate git-annex step. The output is the input to
+the calibration workstream.
 
 ## Run
 
@@ -64,14 +65,16 @@ WFS `Sites_Summary` points from EPSG:3978 to lon/lat.
 | `sites.csv` | 72,975 | one row per source site |
 | `visits.csv` | 368,133 | one row per source measurement event |
 | `trees.csv.gz` | 15,639,840 | one row per tree measurement |
-| `intervals.csv.gz` | 7,011,326 | consecutive tree observations, 2–40 years |
+| `intervals.csv.gz` | 7,228,291 | consecutive tree observations, 2–40 years |
 | `species_crosswalk.csv` | 355 | source species code → coarse group |
 | `manifest.json` | — | hashes, counts, build time, commit, thresholds |
 | `QA.md` | — | reconciliation, drops, units, coverage, validation |
 | `validation.json` | — | machine-readable hard-check results |
 
-Counts above are from the full 2026-11-14 build; the manifest is authoritative
-for a particular run.
+Counts above are from the corrected full 2026-11-15 rebuild; the manifest is
+authoritative for a particular run. The previous v0 was invalidated by a QC
+plot-area unit error (square metres labelled hectares) and lost MAGPlot
+intervals; see `data/derived/fvsca_calibration/v0/REVIEW_FIXES.md`.
 
 ## Unified v0 schema
 
@@ -124,8 +127,8 @@ height_m, status, crown_class, expansion_factor, damage_code, is_remeasured`
 
 ### `intervals.csv.gz`
 
-`source, site_id, tree_id, year0, year1, years, dbh0_cm, dbh1_cm, status_end,
-dead, known, exposure_years`
+`source, site_id, tree_id, visit_id0, visit_id1, year0, year1, years,
+dbh0_cm, dbh1_cm, status_end, dead, known, exposure_years`
 
 An interval is retained only when:
 
@@ -135,6 +138,10 @@ An interval is retained only when:
 - `2 <= years <= 40`.
 
 `dead` and `known` are 0/1 indicators; `exposure_years = years * known`.
+`visit_id0`/`visit_id1` are the start/end rows in `visits.csv`, so intervals
+remain joinable when a site carries several MAGPlot nested plots in the same
+year. `dbh1_cm` may be null when `status_end = dead` (downed or broken trees
+cannot always be measured); `dbh0_cm` is always present.
 
 ## Source mapping decisions
 
@@ -176,7 +183,8 @@ An interval is retained only when:
 - `visit_id = id_pe_mes`; `tree_id = id_arbre`.
 - `dhp` is millimetres → centimetres (`/10`).
 - `tige_ha` is the stems-per-hectare expansion factor; `st_ha` is basal area
-  per hectare. `plot_area_ha = 10000 / median(tige_ha)` per visit.
+  per hectare. `plot_area_ha = 1 / median(tige_ha)` per visit (e.g.
+  `tige_ha = 25` is a 0.04 ha plot).
 - `etat` live codes: 10, 12, 30, 40, 42, 50, 52, 58; documented dead codes are
   dead; removed/intruder, sapling and missing codes are `missing`.
 - `haut_arbre` is decimetres → metres (`/10`); `hauteurdef` is already metres.
@@ -203,15 +211,21 @@ An interval is retained only when:
 
 `validate.py` enforces:
 
-- exact required columns;
+- exact required columns and non-empty required tables;
 - no duplicate site/visit/tree/interval keys;
-- visit→site, tree→visit, and interval→tree referential integrity;
-- DBH 0–500 cm; height 0–100 m or null; years 1900–2027; interval 2–40
-  years;
+- visit→site, tree→visit, interval→tree, and interval→visit referential
+  integrity;
+- DBH 0–500 cm; height 0–100 m or null; non-null years 1900–2027; interval
+  2–40 years;
 - interval arithmetic and status/flag consistency;
 - site `n_visits`/`n_trees` and visit `n_trees` agreement;
-- manifest counts and the 0.5% source reconciliation rule (differences must be
-  explained by a dropped-row reason).
+- manifest counts; a missing `manifest.json` is fatal;
+- the 0.5% source reconciliation rule: a larger count difference must be
+  covered by the manifest's exact `explained_drops` row count, and null-only
+  reasons such as `tree_dbh_out_of_range` never explain a row-count change;
+- output SHA-256, byte size, and row counts against `manifest["outputs"]`;
+- `species_crosswalk.csv` columns, non-emptiness, source coverage, and group
+  domain.
 
 Run the checks alone:
 

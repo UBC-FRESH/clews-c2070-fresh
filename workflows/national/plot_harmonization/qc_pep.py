@@ -4,7 +4,8 @@ The PEP stores tally trees in ``dendro_arbres`` and the intensively measured
 height/age subsample in ``dendro_arbres_etudes``.  DBH is in millimetres and is
 converted to centimetres here.  The source supplies ``tige_ha`` (stems per
 hectare) and ``st_ha`` (basal area per hectare) per tree, so plot area is
-derived as ``10000 / median(tige_ha)`` rather than guessed from ``dimension``.
+derived as ``1 / median(tige_ha)`` hectares rather than guessed from
+``dimension``.
 
 Mapping decisions
 -----------------
@@ -50,6 +51,17 @@ _STATUS.update({code: "dead" for code in _DEAD})
 
 def _query(connection: sqlite3.Connection, sql: str) -> pd.DataFrame:
     return pd.read_sql_query(sql, connection)
+
+
+def plot_area_ha(expansion_factor: pd.Series) -> pd.Series:
+    """Convert a stems-per-hectare factor to plot area in hectares.
+
+    ``tige_ha`` is stems per hectare, so one stem represents ``1 / tige_ha``
+    hectares.  A 25 stems-per-hectare factor therefore represents a 0.04 ha
+    plot.  Non-positive factors become null.
+    """
+    factor = positive(expansion_factor)
+    return 1.0 / factor
 
 
 def load(
@@ -183,7 +195,7 @@ def load(
         "station_pe.type_eco mode. No numeric site index is stored."
     )
     notes.append(
-        "plot_area_ha is derived as 10000/median(tige_ha) after tree load; "
+        "plot_area_ha is derived as 1/median(tige_ha) hectares after tree load; "
         "no BAF is present because plots are fixed-area."
     )
 
@@ -271,7 +283,7 @@ def load(
     # height/age from the study-tree subsample.
     tally = trees[trees["_tally"]]
     area = (
-        tally.assign(_area=10000.0 / tally["expansion_factor"])
+        tally.assign(_area=plot_area_ha(tally["expansion_factor"]))
         .groupby("visit_id")["_area"]
         .median()
         .rename("_plot_area_ha")

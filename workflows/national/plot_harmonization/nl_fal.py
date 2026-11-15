@@ -131,7 +131,9 @@ def load(raw_root: Path, *, max_sites: int | None = None) -> SourceTables:
     crew = pd.read_csv(base / "remeasurement_crew_date.csv.gz", low_memory=False)
     crew["site_id"] = clean_id(crew["PLOTKEY"])
     crew["visit_seq"] = numeric(crew["REMEASUREMENT"])
-    crew["_date"] = pd.to_datetime(crew["ORIGINAL_DATE"], unit="ms", errors="coerce")
+    crew["_date"] = pd.to_datetime(
+        crew["ORIGINAL_DATE"], unit="ms", errors="coerce", utc=True
+    ).dt.tz_convert("America/St_Johns")
     crew = crew.dropna(subset=["site_id", "visit_seq"]).drop_duplicates(
         ["site_id", "visit_seq"]
     )
@@ -157,11 +159,13 @@ def load(raw_root: Path, *, max_sites: int | None = None) -> SourceTables:
     remeasure["_visit_order"] = (
         remeasure.groupby("site_id", sort=False).cumcount() + 1
     )
-    remeasure["_plot_area_ha"] = numeric(remeasure["PLOTSIZE"]) / 10000.0
-    remeasure.loc[remeasure["_plot_area_ha"] <= 0, "_plot_area_ha"] = pd.NA
+    plot_size_m2 = numeric(remeasure["PLOTSIZE"])
+    remeasure["_plot_area_ha"] = (plot_size_m2 / 10000.0).where(plot_size_m2 > 0)
     remeasure["_baf"] = pd.NA
     remeasure["_plot_design"] = (
-        "NL_FAL:" + remeasure["PLOTSIZE"].astype("Int64").astype("string") + "m2"
+        "NL_FAL:"
+        + plot_size_m2.round().astype("Int64").astype("string")
+        + "m2"
     )
     remeasure["site_index"] = pd.NA
     remeasure["age"] = pd.NA
@@ -183,8 +187,8 @@ def load(raw_root: Path, *, max_sites: int | None = None) -> SourceTables:
     visits["source"] = source
     visits["year"] = visits["year"].astype("int64")
     notes.append(
-        "visit year from remeasurement_crew_date.ORIGINAL_DATE, not from the "
-        "REMEASUREMENT sequence number."
+        "visit year from remeasurement_crew_date.ORIGINAL_DATE interpreted in "
+        "America/St_Johns, not from the REMEASUREMENT sequence number."
     )
     notes.append(
         "PLOTSIZE is interpreted as square metres (source has no coded domain); "

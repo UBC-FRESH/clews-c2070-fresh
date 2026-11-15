@@ -19,7 +19,9 @@ from pathlib import Path
 
 import pandas as pd
 
+from .common import sha256_file
 from .schema import (
+    CROSSWALK_COLUMNS,
     INTERVAL_COLUMNS,
     MAX_DBH_CM,
     MAX_HEIGHT_M,
@@ -86,6 +88,8 @@ def _read(out: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataF
             "source": "string",
             "site_id": "string",
             "tree_id": "string",
+            "visit_id0": "string",
+            "visit_id1": "string",
             "status_end": "string",
         },
         low_memory=False,
@@ -127,13 +131,31 @@ def run_checks(out: Path) -> list[Check]:
     """Run all hard checks against an output directory."""
     out = Path(out)
     manifest_path = out / "manifest.json"
-    manifest = (
-        json.loads(manifest_path.read_text(encoding="utf-8"))
-        if manifest_path.is_file()
-        else {}
-    )
+    if not manifest_path.is_file():
+        return [
+            _check(
+                "manifest present",
+                False,
+                f"{manifest_path.name} is missing; validation cannot verify counts or hashes",
+            )
+        ]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     sites, visits, trees, intervals = _read(out)
     checks: list[Check] = []
+
+    for name, frame in (
+        ("sites", sites),
+        ("visits", visits),
+        ("trees", trees),
+        ("intervals", intervals),
+    ):
+        checks.append(
+            _check(
+                f"non-empty {name}",
+                not frame.empty,
+                f"{len(frame):,} rows",
+            )
+        )
 
     checks.append(
         _check(
@@ -204,6 +226,22 @@ def run_checks(out: Path) -> list[Check]:
             "interval tree referential integrity",
         )
     )
+    checks.append(
+        _missing_keys(
+            intervals.rename(columns={"visit_id0": "visit_id"}),
+            visits,
+            ["source", "site_id", "visit_id"],
+            "interval start visit referential integrity",
+        )
+    )
+    checks.append(
+        _missing_keys(
+            intervals.rename(columns={"visit_id1": "visit_id"}),
+            visits,
+            ["source", "site_id", "visit_id"],
+            "interval end visit referential integrity",
+        )
+    )
 
     checks.append(
         _check(
@@ -244,28 +282,33 @@ def run_checks(out: Path) -> list[Check]:
     checks.append(
         _check(
             "DBH range",
-            bool(dbh.dropna().between(MIN_DBH_CM, MAX_DBH_CM).all()),
-            f"observed [{dbh.min()}, {dbh.max()}] cm",
+            bool(dbh.notna().any())
+            and bool(dbh.dropna().between(MIN_DBH_CM, MAX_DBH_CM).all()),
+            f"{int(dbh.notna().sum()):,} observed in [{dbh.min()}, {dbh.max()}] cm",
         )
     )
     checks.append(
         _check(
             "height range",
-            bool(height.dropna().between(MIN_HEIGHT_M, MAX_HEIGHT_M).all()),
-            f"observed [{height.min()}, {height.max()}] m",
+            bool(height.notna().any())
+            and bool(height.dropna().between(MIN_HEIGHT_M, MAX_HEIGHT_M).all()),
+            f"{int(height.notna().sum()):,} observed in "
+            f"[{height.min()}, {height.max()}] m",
         )
     )
     checks.append(
         _check(
             "tree status domain",
-            bool(trees["status"].isin(STATUS_VALUES).all()),
+            bool(trees["status"].notna().all())
+            and bool(trees["status"].isin(STATUS_VALUES).all()),
             f"values {sorted(trees['status'].dropna().unique().tolist())}",
         )
     )
     checks.append(
         _check(
             "species group domain",
-            bool(trees["species_group"].isin(SPECIES_GROUPS).all()),
+            bool(trees["species_group"].notna().all())
+            and bool(trees["species_group"].isin(SPECIES_GROUPS).all()),
             f"values {sorted(trees['species_group'].dropna().unique().tolist())}",
         )
     )
@@ -274,16 +317,19 @@ def run_checks(out: Path) -> list[Check]:
     checks.append(
         _check(
             "visit year range",
-            bool(years.dropna().between(MIN_YEAR, MAX_YEAR).all()),
-            f"observed [{years.min()}, {years.max()}]",
+            bool(years.notna().all())
+            and bool(years.between(MIN_YEAR, MAX_YEAR).all()),
+            f"{int(years.isna().sum()):,} null; observed "
+            f"[{years.min()}, {years.max()}]",
         )
     )
     interval_years = pd.to_numeric(intervals["years"], errors="coerce")
     checks.append(
         _check(
             "interval length",
-            bool(
-                interval_years.dropna().between(
+            bool(interval_years.notna().all())
+            and bool(
+                interval_years.between(
                     MIN_INTERVAL_YEARS, MAX_INTERVAL_YEARS
                 ).all()
             ),
@@ -295,17 +341,20 @@ def run_checks(out: Path) -> list[Check]:
     checks.append(
         _check(
             "interval year range",
-            bool(
-                year0.dropna().between(MIN_YEAR, MAX_YEAR).all()
-                and year1.dropna().between(MIN_YEAR, MAX_YEAR).all()
-            ),
+            bool(year0.notna().all())
+            and bool(year1.notna().all())
+            and bool(year0.between(MIN_YEAR, MAX_YEAR).all())
+            and bool(year1.between(MIN_YEAR, MAX_YEAR).all()),
             f"year0 [{year0.min()}, {year0.max()}], year1 [{year1.min()}, {year1.max()}]",
         )
     )
     checks.append(
         _check(
             "interval arithmetic",
-            bool((interval_years == (year1 - year0)).all()),
+            bool(interval_years.notna().all())
+            and bool(year0.notna().all())
+            and bool(year1.notna().all())
+            and bool((interval_years == (year1 - year0)).all()),
             "years must equal year1-year0",
         )
     )
@@ -314,24 +363,28 @@ def run_checks(out: Path) -> list[Check]:
     checks.append(
         _check(
             "interval exposure",
-            bool((exposure == interval_years * known).all()),
+            bool(exposure.notna().all())
+            and bool(known.notna().all())
+            and bool((exposure == interval_years * known).all()),
             "exposure_years must equal years*known",
         )
     )
     checks.append(
         _check(
             "interval end status",
-            bool(intervals["status_end"].isin(["live", "dead"]).all()),
+            bool(intervals["status_end"].notna().all())
+            and bool(intervals["status_end"].isin(["live", "dead"]).all()),
             f"values {sorted(intervals['status_end'].dropna().unique().tolist())}",
         )
     )
     checks.append(
         _check(
             "interval flags",
-            bool(
-                intervals["dead"].isin([0, 1]).all()
-                and intervals["known"].isin([0, 1]).all()
-                and (
+            bool(intervals[["dead", "known"]].notna().all().all())
+            and bool(intervals["dead"].isin([0, 1]).all())
+            and bool(intervals["known"].isin([0, 1]).all())
+            and bool(
+                (
                     intervals["dead"].astype(int)
                     == intervals["status_end"].eq("dead").astype(int)
                 ).all()
@@ -392,20 +445,121 @@ def run_checks(out: Path) -> list[Check]:
         )
         selected = stats.get("selected", {})
         dropped = stats.get("dropped") or {}
+        explained = stats.get("explained_drops") or {}
         for name in ("sites", "visits", "trees"):
             denominator = int(selected.get(name, 0))
             numerator = int(output.get(f"{name}", 0))
             if denominator == 0:
                 continue
             delta = abs(numerator - denominator) / denominator
+            delta_rows = abs(numerator - denominator)
+            explained_count = explained.get(name)
+            explained_ok = (
+                isinstance(explained_count, int) and delta_rows <= explained_count
+            )
             checks.append(
                 _check(
                     f"{source} {name} reconciliation",
-                    delta <= 0.005 or bool(dropped),
-                    f"{delta:.4%} difference; dropped reasons: "
+                    delta <= 0.005 or explained_ok,
+                    f"{delta:.4%} difference ({delta_rows:,} rows); "
+                    f"explained_drops={explained_count}; reasons: "
                     + (", ".join(sorted(dropped)) if dropped else "none"),
                 )
             )
+
+    manifest_sources = set(manifest.get("sources", {}))
+    output_sources = set(sites["source"].dropna().astype(str))
+    checks.append(
+        _check(
+            "manifest source coverage",
+            manifest_sources == output_sources,
+            f"manifest {sorted(manifest_sources)}; outputs {sorted(output_sources)}",
+        )
+    )
+
+    crosswalk_path = out / "species_crosswalk.csv"
+    crosswalk = (
+        pd.read_csv(crosswalk_path, dtype="string", low_memory=False)
+        if crosswalk_path.is_file()
+        else pd.DataFrame(columns=CROSSWALK_COLUMNS)
+    )
+    row_counts = {
+        "sites.csv": len(sites),
+        "visits.csv": len(visits),
+        "trees.csv.gz": len(trees),
+        "intervals.csv.gz": len(intervals),
+        "species_crosswalk.csv": len(crosswalk),
+    }
+    outputs = manifest.get("outputs") or {}
+    declared = set(outputs)
+    missing_records = sorted(set(row_counts) - declared)
+    checks.append(
+        _check(
+            "manifest outputs declared",
+            bool(outputs) and not missing_records,
+            "all five outputs declared"
+            if not missing_records
+            else f"missing records: {missing_records}",
+        )
+    )
+    for name, record in outputs.items():
+        path = out / name
+        problems: list[str] = []
+        if not path.is_file():
+            problems.append("file missing")
+        else:
+            if int(record.get("bytes", -1)) != path.stat().st_size:
+                problems.append(
+                    f"bytes {record.get('bytes')} != {path.stat().st_size}"
+                )
+            if record.get("sha256") != sha256_file(path):
+                problems.append("sha256 mismatch")
+            expected_rows = row_counts.get(name)
+            if expected_rows is not None and int(record.get("rows", -1)) != expected_rows:
+                problems.append(
+                    f"rows {record.get('rows')} != {expected_rows}"
+                )
+        checks.append(
+            _check(
+                f"output {name} manifest record",
+                not problems,
+                "hash, bytes, and rows match"
+                if not problems
+                else "; ".join(problems),
+            )
+        )
+
+    checks.append(
+        _check(
+            "species crosswalk columns",
+            tuple(crosswalk.columns) == CROSSWALK_COLUMNS,
+            f"{len(crosswalk.columns)} columns",
+        )
+    )
+    checks.append(
+        _check(
+            "species crosswalk non-empty",
+            not crosswalk.empty,
+            f"{len(crosswalk):,} rows",
+        )
+    )
+    crosswalk_sources = set(crosswalk.get("source", pd.Series(dtype="string")).dropna())
+    checks.append(
+        _check(
+            "species crosswalk source coverage",
+            output_sources.issubset(crosswalk_sources),
+            f"missing {sorted(output_sources - crosswalk_sources)}",
+        )
+    )
+    groups = crosswalk.get("species_group", pd.Series(dtype="string"))
+    checks.append(
+        _check(
+            "species crosswalk group domain",
+            bool(groups.notna().all())
+            and bool(groups.isin(SPECIES_GROUPS).all()),
+            f"values {sorted(groups.dropna().unique().tolist())}",
+        )
+    )
 
     return checks
 

@@ -146,7 +146,7 @@ def _load_source(
         if include_wfs:
             ids = zip_site_ids
             if ids is None:
-                ids = set(results[0].sites["site_id"].astype(str))
+                ids = magplot.all_site_ids(raw_root, data_dir=magplot_dir)
             results.append(
                 magplot.load_wfs(
                     raw_root, zip_site_ids=ids, max_sites=max_sites
@@ -163,6 +163,35 @@ def _load_source(
     if source == "nl_fal":
         return [nl_fal.load(raw_root, max_sites=max_sites)]
     raise ValueError(f"unknown source {source!r}")
+
+
+#: Reasons that remove rows after a source's ``selected`` baseline is counted.
+#: Range and sentinel reasons only null values and therefore never explain a
+#: row-count difference.
+_EXPLAINED_TREE_DROP_REASONS = (
+    "tree_missing_site_or_tree_key",
+    "tree_missing_visit_year",
+    "tree_visit_not_found",
+    "tree_duplicate_key",
+)
+
+
+def _explained_drops(stats: dict) -> dict[str, int]:
+    dropped = stats.get("dropped") or {}
+    trees = sum(int(dropped.get(reason, 0)) for reason in _EXPLAINED_TREE_DROP_REASONS)
+    return {"sites": 0, "visits": 0, "trees": trees}
+
+
+def _input_labels(
+    source: str, *, include_wfs: bool, qc_gpkg: Path | None
+) -> list[str]:
+    if source == "faib":
+        return ["faib_psp", "faib_non_psp"]
+    if source == "magplot":
+        return ["magplot"] + (["magplot_wfs"] if include_wfs else [])
+    if source == "qc_pep" and qc_gpkg is not None:
+        return []
+    return [source]
 
 
 def _source_counts(stats: dict) -> dict[str, int]:
@@ -450,20 +479,25 @@ def build(
     }
 
     for source in sources:
-        labels = (
-            ["faib_psp", "faib_non_psp", "magplot", "magplot_wfs", "qc_pep", "nl_fal"]
-            if source in {"faib", "magplot"}
-            else [source]
+        labels = _input_labels(
+            source, include_wfs=include_wfs, qc_gpkg=qc_gpkg
         )
         for label in labels:
             if label in RAW_INPUTS:
                 manifest["inputs"][label] = _input_records(raw_root, label)
     if "qc_pep" in sources:
-        member = raw_root / "qc_pep" / "PEP_GPKG.zip"
-        if member.is_file():
-            manifest["inputs"].setdefault("qc_pep_member", []).append(
-                zip_member_record(member, "PEP.gpkg")
-            )
+        if qc_gpkg is not None:
+            gpkg_path = Path(qc_gpkg)
+            if gpkg_path.is_file():
+                manifest["inputs"]["qc_pep_gpkg"] = [
+                    file_record(gpkg_path, relative_to=REPO_ROOT)
+                ]
+        else:
+            member = raw_root / "qc_pep" / "PEP_GPKG.zip"
+            if member.is_file():
+                manifest["inputs"].setdefault("qc_pep_member", []).append(
+                    zip_member_record(member, "PEP.gpkg")
+                )
 
     tree_path = out / "trees.csv.gz"
     interval_path = out / "intervals.csv.gz"
@@ -510,6 +544,7 @@ def build(
                         "trees": 0,
                         "intervals": 0,
                     }
+                    stats["explained_drops"] = _explained_drops(stats)
                     site_rows.append(
                         finalize_sites(result.sites, result.visits, result.trees)
                     )
@@ -534,6 +569,7 @@ def build(
                     "trees": int(len(result.trees)),
                     "intervals": int(len(intervals)),
                 }
+                stats["explained_drops"] = _explained_drops(stats)
                 stats["coverage"] = {
                     "visits": int(len(visits_final)),
                     "site_index_visits": int(visits_final["site_index"].notna().sum()),

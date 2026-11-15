@@ -1,5 +1,36 @@
 # Change Log
 
+## 2026-11-15
+
+- **FVSCA calibration v0 corrected and rebuilt after harmonization review.**
+  The 2026-11-14 v0 (`0654864`, `e22dc2f`) is **invalid**: QC PEP
+  `plot_area_ha` used `10000 / tige_ha`, so a 25 stems/ha plot was stored as
+  400.0 "ha" instead of 0.04 ha (10,000x error), and MAGPlot
+  `_visit_order` was assigned per site rather than per `(site_id, plot_id)`,
+  discarding valid intervals (especially WFS nested plots). The corrected
+  build also fixes float status codes (`10.0`/`0.0`), retains dead endpoints
+  with null DBH, requires a start DBH, adds interval `visit_id0`/`visit_id1`,
+  makes reconciliation use exact `explained_drops` counts, makes a missing
+  manifest and empty required frames hard failures, validates output
+  hashes/counts and the species crosswalk, honors `--sources`/`--no-wfs`/
+  `--qc-gpkg` in `manifest["inputs"]`, passes the full ZIP site-id set to
+  `load_wfs` under `--max-sites`, and converts NL `ORIGINAL_DATE` in
+  `America/St_Johns`. New totals: 72,975 sites, 368,133 visits, 15,639,840
+  tree rows, **7,228,291 intervals** (+216,965), 355 crosswalk rows, and
+  69/69 validation checks. Sites/visits/trees are unchanged. New output
+  SHA-256: `sites.csv` `7796f2c8...bccf54de9`, `visits.csv`
+  `bd07dc11...f2dcbb61534c`, `trees.csv.gz` `a0b540f4...e3afffe`,
+  `intervals.csv.gz` `b42845c5...92acdd3f9b`, `species_crosswalk.csv`
+  `40748824...36f182e35c`, `manifest.json` `f49b1ec7...1bd63239`. The previous
+  output hashes are retained in
+  `data/derived/fvsca_calibration/v0/REVIEW_FIXES.md` and
+  `/tmp/fvsca_v0_old/` (build-local backup): `sites.csv`
+  `a88e6891...b128b6c8`, `intervals.csv.gz` `bf2781a3...c87b4c10`,
+  `manifest.json` `ffe8ea09...fe13879f`, `QA.md`
+  `0e293864...ccd6bbf3`. Added 13 focused regression tests. The corrected
+  outputs were published to `arbutus-s3` (data `git-annex` branch) and
+  recorded in `EVIDENCE_LOG.md`.
+
 ## 2026-11-14
 
 - **FVSCA calibration v0 harmonized plot extract built and committed.** Added

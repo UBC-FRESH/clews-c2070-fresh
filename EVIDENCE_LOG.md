@@ -649,6 +649,48 @@ raw inputs unchanged; no S3 publication attempted
 
 ---
 
+### Entry: EL-20261115-014
+**Claim**: The invalid 2026-11-14 FVSCA calibration v0 was corrected and rebuilt from unchanged raw inputs: QC PEP `plot_area_ha` is now hectares (25 stems/ha -> 0.04 ha), MAGPlot intervals are ordered per `(site_id, plot_id)`, and the rebuilt package passes 69/69 hard validation checks with 72,975 sites, 368,133 visits, 15,639,840 tree rows, and 7,228,291 intervals. The corrected outputs were committed to the data submodule as `21205c9` and published to `arbutus-s3`.
+**Status Symbol**: ✅
+**Evidence Type**: Reproducible build + full validation + focused regression tests + manifest hash audit + git-annex S3 verification
+**Command**: `.venv/bin/python -m workflows.national.plot_harmonization.build --out data/derived/fvsca_calibration/v0 --sources faib,magplot,qc_pep,nl_fal`; `.venv/bin/python -m workflows.national.plot_harmonization.validate --out data/derived/fvsca_calibration/v0`; `.venv/bin/python -m pytest -q tests/test_plot_harmonization.py`; `.venv/bin/python -m pytest -q tests`; `git -C data annex add derived/fvsca_calibration/v0`; `git -C data commit -m "Rebuild FVSCA calibration v0 after harmonization review"`; `cd data && ~/bin/git-annex-s3 copy --to arbutus-s3 derived/fvsca_calibration/v0`; `git -C data annex whereis derived/fvsca_calibration/v0/{intervals,trees}.csv.gz`; `git -C data annex find --not --in arbutus-s3`
+**Exit Code**: 0
+**Output Summary**:
+```
+build: 6 source labels
+  faib_psp      7,341 sites / 23,956 visits / 3,217,643 trees / 1,799,382 intervals
+  faib_non_psp  9,512 sites / 11,951 visits /   366,788 trees /    80,702 intervals
+  magplot      39,130 sites / 257,031 visits / 7,771,041 trees / 3,298,527 intervals
+  magplot_wfs   2,778 sites / 13,906 visits / 1,298,474 trees /   436,550 intervals
+  qc_pep       12,834 sites / 53,632 visits / 2,210,417 trees / 1,119,613 intervals
+  nl_fal        1,380 sites /  7,657 visits /   775,477 trees /   493,517 intervals
+TOTAL          72,975 sites / 368,133 visits / 15,639,840 trees / 7,228,291 intervals
+
+QC plot_area_ha: old site-level 400.0 "ha" -> new 0.04 ha (25 stems/ha)
+MAGPlot intervals: old 7,011,326 total -> new 7,228,291 (+216,965)
+sites/visits/trees unchanged; sites.csv changed only in QC plot_area_ha units
+validation: 69 checks, 0 failed
+tests: 13 passed (focused); 196 passed + 29 subtests (repo tests/)
+
+output SHA-256:
+  sites.csv              72,975 rows  8,359,304 bytes  7796f2c8...bccf54de9
+  visits.csv            368,133 rows 30,574,202 bytes bd07dc11...f2dcbb61534c (unchanged)
+  trees.csv.gz       15,639,840 rows 103,812,857 bytes a0b540f4...e3afffe (unchanged)
+  intervals.csv.gz    7,228,291 rows  53,638,804 bytes b42845c5...92acdd3f9b
+  species_crosswalk.csv     355 rows     18,222 bytes 40748824...36f182e35c (unchanged)
+  manifest.json                            16,710 bytes f49b1ec7...1bd63239
+
+git-annex:
+  intervals.csv.gz: 2 copies [here], [arbutus-s3]
+  trees.csv.gz:     2 copies [here], [arbutus-s3]
+  git annex find --not --in arbutus-s3 = 0 objects
+```
+**Verification Timestamp**: 2026-11-15T07:55:00Z
+**Verified By**: Python 3.12.3 / pandas 3.0.3; git-annex 10.20240129; pytest 9.1.1; Arbutus S3
+**Artifact Reference**: data-submodule commit `21205c9`; `data/derived/fvsca_calibration/v0/{manifest.json,validation.json,QA.md,REVIEW_FIXES.md,sites.csv,visits.csv,trees.csv.gz,intervals.csv.gz,species_crosswalk.csv}`; old backups `/tmp/fvsca_v0_old/`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

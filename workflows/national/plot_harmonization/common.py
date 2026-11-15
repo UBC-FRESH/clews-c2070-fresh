@@ -117,7 +117,8 @@ def map_status(values: pd.Series, mapping: Mapping[str, str]) -> pd.Series:
     Unknown and null codes become ``missing``.  Matching is case-insensitive
     and whitespace-stripped.
     """
-    normalized = values.astype("string").str.strip().str.upper()
+    normalized = values.astype("string").str.strip()
+    normalized = normalized.str.replace(r"\.0$", "", regex=True).str.upper()
     lookup = {str(key).strip().upper(): value for key, value in mapping.items()}
     return normalized.map(lookup).fillna("missing").astype("string")
 
@@ -236,9 +237,11 @@ def compute_visit_metrics(trees: pd.DataFrame) -> pd.DataFrame:
 def compute_intervals(trees: pd.DataFrame) -> pd.DataFrame:
     """Build consecutive-tree-measurement intervals.
 
-    An interval is retained only when the tree was live at the start, its end
-    status is known, the two observations are on consecutive source visits, and
-    the elapsed time is within the fresh-fvsbc 2-40 year window.  Missing end
+    An interval is retained only when the tree was live at the start, its start
+    DBH is known, its end status is known, a live end has a measured DBH, the
+    two observations are on consecutive source visits, and the elapsed time is
+    within the fresh-fvsbc 2-40 year window.  A dead end may have a null DBH
+    because downed or broken trees cannot always be measured.  Missing end
     status is not treated as dead.
     """
     if trees.empty:
@@ -257,9 +260,9 @@ def compute_intervals(trees: pd.DataFrame) -> pd.DataFrame:
         ]
     ].copy()
     frame = frame[
-        frame["dbh_cm"].notna()
-        & frame["_visit_order"].notna()
+        frame["_visit_order"].notna()
         & frame["_year"].notna()
+        & frame["visit_id"].notna()
         & frame["status"].isin(["live", "dead"])
     ]
     frame = frame.drop_duplicates(
@@ -273,15 +276,22 @@ def compute_intervals(trees: pd.DataFrame) -> pd.DataFrame:
     frame["_prev_year"] = grouped["_year"].shift(1)
     frame["_prev_dbh"] = grouped["dbh_cm"].shift(1)
     frame["_prev_status"] = grouped["status"].shift(1)
+    frame["_prev_visit"] = grouped["visit_id"].shift(1)
 
     years = frame["_year"] - frame["_prev_year"]
+    start_has_dbh = frame["_prev_dbh"].notna()
+    end_has_dbh = frame["dbh_cm"].notna() | frame["status"].eq("dead")
     keep = (
         frame["_prev_status"].eq("live")
+        & start_has_dbh
         & frame["status"].isin(["live", "dead"])
+        & end_has_dbh
         & (frame["_visit_order"] - frame["_prev_order"]).eq(1)
         & years.between(MIN_INTERVAL_YEARS, MAX_INTERVAL_YEARS, inclusive="both")
     )
     frame = frame.loc[keep].copy()
+    frame["visit_id0"] = frame["_prev_visit"].astype("string")
+    frame["visit_id1"] = frame["visit_id"].astype("string")
     frame["year0"] = frame["_prev_year"].astype("int64")
     frame["year1"] = frame["_year"].astype("int64")
     frame["years"] = years.loc[keep].astype("int64")
