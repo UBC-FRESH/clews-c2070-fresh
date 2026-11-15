@@ -959,3 +959,35 @@ The 0.45 ODT/m³ density, 45%/30% moisture, and 0.90 chip yield are flagged assu
 **Verification Timestamp**: 2026-11-15T18:20:00Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, pyarrow 26.0.1, geopandas 1.1.4, nemora reference checkout
 **Artifact Reference**: `data/derived/national/bucking/tsa24_pilot/{validation_summary.json,manifest.json,VALIDATION_REPORT.md}`; `metadata/bucking-pilots.csv`
+
+### Entry: EL-20261115-021
+**Claim**: The TSA24 bucking pilot outputs, contracts, and metadata were committed to the parent and data repositories, and both remote branches were pushed; no changed annex object is unpublished.
+**Status Symbol**: ✅
+**Evidence Type**: git commit/push refs and git-annex find output
+**Command**:
+```bash
+cd data
+git add derived/national/bucking/tsa24_pilot
+git commit -m "Add TSA24 bucking pilot outputs"
+git annex find --not --in arbutus-s3 | wc -l
+git push origin main
+git push origin git-annex
+cd ..
+git add workflows/national/bucking tests/test_bucking.py tests/conftest.py \
+  metadata/bucking-pilots.csv CHANGE_LOG.md EVIDENCE_LOG.md data
+git commit -m "Add national bucking contracts and TSA24 pilot"
+git push origin feature/p7-source-triage-and-production-readiness
+```
+**Exit Code**: 0
+**Output Summary**:
+```
+data commit 3056429 "Add TSA24 bucking pilot outputs" (17 files, 2,440 insertions)
+git annex find --not --in arbutus-s3 = 0
+data push: a77fdbc..3056429 main -> main
+data push: git-annex up-to-date (all new outputs are text files in regular git)
+parent commit c408aca "Add national bucking contracts and TSA24 pilot" (13 files, 4,240 insertions)
+parent push: d6f2402..c408aca feature/p7-source-triage-and-production-readiness -> feature/p7-source-triage-and-production-readiness
+```
+**Verification Timestamp**: 2026-11-15T18:35:00Z
+**Verified By**: Git 2.45.2; git-annex 10.20240129; GitHub `origin`
+**Artifact Reference**: data commit `3056429`; parent commit `c408aca`; `data/derived/national/bucking/tsa24_pilot/`; `workflows/national/bucking/`
