@@ -33,6 +33,11 @@ from .height import (
     HeightModelRecord,
     fit_height_models,
 )
+from .mixtures import (
+    MIXTURE_FAMILY_COMPONENTS,
+    MixtureFitError,
+    fit_truncated_mixture,
+)
 from .synthesize import (
     DistributionSpec,
     SynthesisError,
@@ -43,6 +48,7 @@ from .synthesize import (
 )
 
 __all__ = [
+    "MIXTURE_FAMILY_COMPONENTS",
     "AssortmentError",
     "DistributionFit",
     "DistributionFitError",
@@ -55,6 +61,7 @@ __all__ = [
     "HeightModelBundle",
     "HeightModelError",
     "HeightModelRecord",
+    "MixtureFitError",
     "SynthesisError",
     "SynthesisTarget",
     "SynthesizedStand",
@@ -64,6 +71,7 @@ __all__ = [
     "fit_dbh_distributions",
     "fit_distribution_for_target",
     "fit_height_models",
+    "fit_truncated_mixture",
     "normalize_species_weights",
     "synthesize_tree_list",
 ]

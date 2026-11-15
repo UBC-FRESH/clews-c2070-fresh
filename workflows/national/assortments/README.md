@@ -65,16 +65,44 @@ DBH limit, and the RSYC ecological hierarchy.
 - **Estimators.** Weibull and gamma use
   `nemora.workflows.censoring.fit_censored_inventory` (the 2sc two-stage
   truncation correction).  Generalized beta (`gb1`, `gb2`) uses
-  `nemora.fit.fit_inventory` on grouped tallies.  A two-component gamma mixture
-  uses `nemora.fit.mixture.fit_mixture_grouped`.
+  `nemora.fit.fit_inventory` on grouped tallies.  The legacy two-component
+  gamma mixture (`mixture`) uses `nemora.fit.mixture.fit_mixture_grouped`.
+  Three multi-component families are added on the same left-truncated grouped
+  support:
+  - `mix_weibull_2`: two Weibull components with independent shape `a`,
+    scale `beta`, and weights;
+  - `mix_weibull_gamma`: one Weibull and one gamma component;
+  - `mix_weibull_3`: three Weibulls, attempted only when the two-component
+    candidates leave a high-KS stratum (selected KS > 0.15).
+
+  The new families use the assortment-owned `mixtures.py` boundary.  Its EM
+  delegates each component M-step to `fit_censored_inventory` (Weibull) or the
+  documented gamma moment update; it does not reimplement a density
+  estimator.  The legacy gamma mixture is kept unchanged so the comparison
+  against the previous run is like-for-like.
+- **Mixture stability.** The new fits use deterministic weighted-quantile
+  starts plus a seeded jittered restart.  Components are sorted by `beta`,
+  then by shape, after every update; weights move with their components.  A
+  start is rejected when a weight is below `1e-4`, a parameter is non-finite
+  or non-positive, or two components collapse onto the same parameters.
+  Convergence is accepted on the likelihood/parameter tolerance or on a
+  12-iteration stall with negligible parameter movement.  Unstable fits stay
+  in `distribution_fits.csv` for audit but are never selected for synthesis.
 - **Scoring.** Candidate AIC/AICc/BIC and KS are recomputed on one common,
   support-conditioned binned likelihood.  Native estimator metrics are kept
   beside them.  This is a scoring layer, not a second estimator.
-- **Selection.** Synthesis uses the best Weibull, gamma, or gamma mixture.
-  Generalized beta is a diagnostic candidate: the registry has no inverse CDF
-  for it and a grouped curve fit can land on a numerically valid but
-  unsampleable parameter set.  The CSV records `synthesis_compatible` and
-  `aic_best` so the choice is auditable.
+- **Selection.** Synthesis uses the best Weibull, gamma, or mixture.  A
+  mixture replaces a single-component distribution only when it improves
+  common AIC by at least two units; smaller gains go to the simpler model.
+  Among mixtures the same two-unit rule prefers fewer components.  New Weibull
+  families must converge before selection.  The legacy two-gamma mixture
+  remains available as the documented fallback and carries a ten-unit AIC
+  penalty when it did not converge, so a converged alternative wins when the
+  fits are close.  Generalized beta is a diagnostic candidate: the registry
+  has no inverse CDF for it and a grouped curve fit can land on a numerically
+  valid but unsampleable parameter set.  The CSV records
+  `synthesis_compatible`, `aic_best`, `converged`, and the per-start
+  diagnostics so the choice is auditable.
 - **Fail loudly.** If no candidate can be fitted and the species-only default
   is also too thin, `DistributionFitError` is raised.  The TSA24 runner records
   per-stratum failures rather than substituting a shape silently.
@@ -93,8 +121,10 @@ and evidence tier.  It does not refit or smooth the coefficients.
 - Trees are allocated by largest remainder, so the species weights are honoured
   at the tree-count level.
 - DBH is drawn with `nemora.sampling.sample_truncated` (Weibull/gamma) or
-  `nemora.fit.mixture.sample_mixture` (mixture), conditioned on the fitted
-  support.
+  `nemora.fit.mixture.sample_mixture` (all mixture families, including the
+  Weibull-containing ones), conditioned on the fitted support.  Mixture
+  component names travel with the weights and parameters so a Weibull
+  component is never sampled as a gamma.
 - **Adapter note.** `nemora.synthesis.helpers.StandDBHSampler` is an analytic
   or bootstrap sampler that does not expose a truncation support.  Because the
   TSA24 fits are left-censored at the plot DBH limit, the synthesizer calls the
@@ -173,6 +203,11 @@ Defaults:
 | DBH bin width | 2 cm |
 | Fit threshold | 30 trees / 5 plots |
 | Height threshold | 30 observations |
+| Mixture families | `mixture`, `mix_weibull_2`, `mix_weibull_gamma`, optional `mix_weibull_3` |
+| Mixture starts | 2 (3-component: 1) |
+| Mixture convergence | tolerance `1e-6` or a 12-iteration stall |
+| Mixture minimum weight | `1e-4` |
+| Mixture selection margin | `2` AIC units |
 | Synthetic trees | 600 |
 | Seed | 20261115 |
 
@@ -180,6 +215,32 @@ BTC TSA24 exposes a combined `SBS_SX` spruce stratum rather than a separate
 `SBS_SW`; the prototype uses `SBS_SX` at site class H and filters its
 composition to the spruce-leading plot group (SW/SE/S/SB).  The run does not
 claim a species-specific SBS_SW curve that the BTC table does not provide.
+
+### TSA24 mixture results
+
+The 2026-11-15 re-fit added the new families to all 75 TSA24 DBH targets
+(68 general + 7 AU).  The selected model changed in 45 strata: 42 improved by
+more than 2 AIC and one was worse by more than 2 AIC (`SB` in the AU age
+window, +6.7 AIC).  `mix_weibull_gamma` was selected 33 times and
+`mix_weibull_2` 12 times; the legacy two-gamma fallback remained selected 22
+times, mostly where it was already the best model or where the new fits were
+unstable.  `mix_weibull_3` was attempted on three high-KS strata and was not
+stable; it was never selected.
+
+The three high-KS rows in the previous report are two unique strata, both
+`CW` in the Montane Cordillera.  They remain the only high-KS selections:
+the new Weibull mixtures are worse than the single Weibull and the legacy
+gamma mixture on those tallies, because the first 2-4 cm bin dominates the
+expansion-factor tally.  The `AC` Montane Cordillera fit improved from KS
+0.184 to 0.040 and the `DG` Fraser Basin fit from 0.156 to 0.065.
+
+For the target AU (`SBS_SX`, site class H, age 100), six of seven species
+switched to a Weibull mixture (`BL`, `EP`, `PL` to `mix_weibull_2`; `FD`,
+`SB`, `SW` to `mix_weibull_gamma`); `AT` kept the legacy gamma mixture.
+The volume-constrained tree list still hits the 311.6 m3 target and volume
+conservation is exact.  The changed shapes raise TPH from 1,062 to 1,225 and
+lower QMD from 19.57 to 18.72 cm; recovered logs fall from 259.96 to
+252.58 m3 and residue rises from 51.64 to 59.02 m3.
 
 The target composition is filtered to plots whose leading species belongs to
 the AU's leading-species group (for `SX`: SW/SE/S/SB).  This keeps an SBS_SX
@@ -196,7 +257,9 @@ PYTHONPATH="${NEMORA_ROOT}/src" \
 
 The tests cover censored Weibull recovery, hierarchical fallback, exact target
 volume, conservation, species-weight normalization, unsupported-species
-failure, non-negative ledger values, and the facility capacity screen.
+failure, non-negative ledger values, the facility capacity screen, bimodal
+two-Weibull recovery, mixture component ordering, degenerate-component
+rejection, mixed Weibull/gamma fitting, and truncated mixture sampling.
 
 ## 8. Known limits
 
@@ -204,6 +267,17 @@ failure, non-negative ledger values, and the facility capacity screen.
   TSA24 AU uses an explicit 80-120 year window.
 - The shape fit uses the modal DBH limit class; plots with other limits are
   excluded and reported.
+- The additive mixture families fit the untruncated component densities but
+  condition every M-step and the observed likelihood on `DBH >= DBH limit`.
+  They do not mix truncation points in one fit.
+- `mix_weibull_3` is the least stable family.  It is only attempted after the
+  two-component fits leave a KS above 0.15, and a non-converged three-component
+  fit is never selected.  A collapsed extra component is rejected rather than
+  reported as an improvement.
+- A two-Weibull fit can be worse than a single Weibull when the first DBH bin
+  dominates the tally (for example, a 2 cm plot limit with most stems in the
+  2-4 cm bin).  That result is retained in the candidate table and the
+  single-component model wins on AIC.
 - The target volume is treated as a taper-total target.  Recovered log volume
   is lower by residue; it is not forced to equal the BTC volume.
 - The wood AGB proxy excludes bark, branches, and foliage, so it is not

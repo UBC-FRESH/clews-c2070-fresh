@@ -6,7 +6,11 @@ The estimator layer is deliberately a thin boundary around ``nemora``:
   carried as an explicit truncation support.
 * Generalized beta candidates use ``nemora.fit.fit_inventory`` with the
   documented grouped-data path.
-* A two-component gamma mixture uses ``fit_mixture_grouped``.
+* The legacy two-component gamma mixture uses ``fit_mixture_grouped``.
+* ``mix_weibull_2``, ``mix_weibull_gamma``, and ``mix_weibull_3`` use the
+  assortment-owned ``mixtures.fit_truncated_mixture`` boundary, which delegates
+  each component M-step to ``fit_censored_inventory`` (Weibull) or the
+  documented gamma moment update and conditions on the same support.
 
 The functions here do not re-implement any estimator.  They only prepare
 grouped tallies, call the documented APIs, and score the returned candidates
@@ -45,6 +49,14 @@ from nemora.fit.mixture import (
 )
 from nemora.workflows.censoring import fit_censored_inventory
 
+from .mixtures import (
+    MIXTURE_FAMILY_COMPONENTS,
+    MixtureComponent,
+    MixtureFitError,
+    canonical_component_order,
+    fit_truncated_mixture,
+)
+
 __all__ = [
     "DEFAULT_LEVELS",
     "DistributionFit",
@@ -61,7 +73,35 @@ DEFAULT_LEVELS: tuple[str, ...] = (
     "ecozone",
 )
 
-_CANDIDATE_ORDER = {"weibull": 0, "gamma": 1, "mixture": 2, "gb1": 3, "gb2": 4}
+_CANDIDATE_ORDER = {
+    "weibull": 0,
+    "gamma": 1,
+    "mixture": 2,
+    "mix_weibull_2": 3,
+    "mix_weibull_gamma": 4,
+    "mix_weibull_3": 5,
+    "gb1": 6,
+    "gb2": 7,
+}
+
+#: Minimum common AIC improvement required before a mixture replaces a
+#: single-component distribution.  An improvement below two AIC units is
+#: treated as negligible and the simpler model is kept.
+_MIXTURE_AIC_GAIN = 2.0
+
+#: A non-converged legacy gamma mixture remains available as the documented
+#: fallback, but pays this AIC penalty so a converged alternative wins when
+#: the two are close.
+_NONCONVERGED_AIC_PENALTY = 10.0
+
+#: Mixture families introduced by the Weibull-extension work.  Unlike the
+#: legacy two-gamma fallback, these are never selected when the EM did not
+#: converge.
+_NEW_MIXTURE_FAMILIES = {"mix_weibull_2", "mix_weibull_gamma", "mix_weibull_3"}
+
+#: A three-component Weibull family is only attempted when the two-component
+#: candidates leave a high-KS stratum, because it is the least stable family.
+_THREE_COMPONENT_KS_TRIGGER = 0.15
 
 
 class DistributionFitError(RuntimeError):
@@ -76,6 +116,7 @@ class FitCandidate:
     parameters: dict[str, float] = field(default_factory=dict)
     component_weights: tuple[float, ...] | None = None
     component_parameters: tuple[dict[str, float], ...] | None = None
+    component_names: tuple[str, ...] | None = None
     n_parameters: int = 0
     aic: float = math.nan
     aicc: float = math.nan
@@ -89,6 +130,12 @@ class FitCandidate:
     log_likelihood: float = math.nan
     method: str = ""
     fit_status: str = "ok"
+    converged: bool = True
+    iterations: int = 0
+    n_starts: int = 0
+    n_valid_starts: int = 0
+    ordering_swaps: int = 0
+    fit_diagnostics: str = ""
     error: str | None = None
 
     @property
@@ -107,18 +154,23 @@ class FitCandidate:
         """
         if not self.is_success:
             return False
-        return self.distribution in {"weibull", "gamma", "mixture"}
+        supported = {"weibull", "gamma"} | set(MIXTURE_FAMILY_COMPONENTS)
+        return self.distribution in supported
 
     def parameters_json(self) -> str:
         if self.component_parameters is not None:
+            names = self.component_names or ("gamma",) * len(self.component_parameters)
             components = [
                 {
-                    "name": "gamma",
+                    "name": name,
                     "weight": float(weight),
                     "parameters": {key: float(value) for key, value in params.items()},
                 }
-                for weight, params in zip(
-                    self.component_weights or (), self.component_parameters, strict=False
+                for name, weight, params in zip(
+                    names,
+                    self.component_weights or (),
+                    self.component_parameters,
+                    strict=False,
                 )
             ]
             return json.dumps({"components": components}, sort_keys=True)
@@ -128,6 +180,36 @@ class FitCandidate:
         if self.component_weights is None:
             return ""
         return json.dumps([float(value) for value in self.component_weights])
+
+
+def _aic_key(candidate: FitCandidate) -> tuple[float, int]:
+    return (candidate.aic, _CANDIDATE_ORDER.get(candidate.distribution, 99))
+
+
+def _selection_aic(candidate: FitCandidate) -> float:
+    """Return AIC with a stability penalty for a non-converged fallback."""
+    return candidate.aic + (0.0 if candidate.converged else _NONCONVERGED_AIC_PENALTY)
+
+
+def _select_mixture(candidates: Sequence[FitCandidate]) -> FitCandidate | None:
+    """Choose a mixture, preferring converged and simpler fits within 2 AIC."""
+    if not candidates:
+        return None
+    ranked = sorted(
+        candidates,
+        key=lambda candidate: (
+            _selection_aic(candidate),
+            candidate.n_parameters,
+            _CANDIDATE_ORDER.get(candidate.distribution, 99),
+        ),
+    )
+    best = ranked[0]
+    for candidate in ranked[1:]:
+        if _selection_aic(candidate) - _selection_aic(best) >= _MIXTURE_AIC_GAIN:
+            break
+        if candidate.n_parameters < best.n_parameters:
+            best = candidate
+    return best
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,9 +255,13 @@ class DistributionFit:
     def selected(self) -> FitCandidate:
         """Return the synthesis-selected candidate.
 
-        Selection follows a parsimony rule: prefer Weibull or gamma unless a
-        mixture improves common AIC by more than 10.  Generalized beta is
-        reported for comparison but is not synthesis-compatible.
+        Selection uses the common-support AIC.  A mixture replaces a
+        single-component distribution only when it improves AIC by at least
+        two units; smaller gains are treated as negligible and the simpler
+        model wins.  Among mixtures, the same two-AIC-unit rule prefers fewer
+        components.  A non-converged legacy gamma mixture remains available as
+        the documented fallback with a ten-unit stability penalty; new Weibull
+        families must converge before they can be selected.
         """
         compatible = [
             candidate
@@ -193,22 +279,25 @@ class DistributionFit:
             if candidate.distribution in {"weibull", "gamma"}
         ]
         flexible = [
-            candidate for candidate in compatible if candidate.distribution == "mixture"
+            candidate
+            for candidate in compatible
+            if candidate.distribution in MIXTURE_FAMILY_COMPONENTS
+            and (candidate.converged or candidate.distribution == "mixture")
         ]
-        best_simple = min(
-            simple,
-            key=lambda candidate: (
-                candidate.aic,
-                _CANDIDATE_ORDER.get(candidate.distribution, 99),
-            ),
-            default=None,
-        )
-        best_flexible = (
-            min(flexible, key=lambda candidate: candidate.aic) if flexible else None
-        )
+        best_simple = min(simple, key=_aic_key, default=None)
+        best_flexible = _select_mixture(flexible)
         if best_simple is None:
-            return best_flexible  # type: ignore[return-value]
-        if best_flexible is not None and best_flexible.aic < best_simple.aic - 10.0:
+            if best_flexible is None:
+                raise DistributionFitError(
+                    f"no usable candidate for {self.fit_id}; "
+                    f"mixtures: {[c.distribution for c in flexible]}"
+                )
+            return best_flexible
+        if (
+            best_flexible is not None
+            and _selection_aic(best_flexible)
+            <= best_simple.aic - _MIXTURE_AIC_GAIN
+        ):
             return best_flexible
         return best_simple
 
@@ -247,6 +336,11 @@ class DistributionFit:
                     "fit_status": candidate.fit_status,
                     "parameters_json": candidate.parameters_json(),
                     "component_weights_json": candidate.component_weights_json(),
+                    "component_names_json": (
+                        json.dumps(list(candidate.component_names))
+                        if candidate.component_names is not None
+                        else ""
+                    ),
                     "n_parameters": candidate.n_parameters,
                     "aic": candidate.aic,
                     "aicc": candidate.aicc,
@@ -259,6 +353,12 @@ class DistributionFit:
                     "rss": candidate.rss,
                     "log_likelihood": candidate.log_likelihood,
                     "method": candidate.method,
+                    "converged": candidate.converged,
+                    "iterations": candidate.iterations,
+                    "n_starts": candidate.n_starts,
+                    "n_valid_starts": candidate.n_valid_starts,
+                    "ordering_swaps": candidate.ordering_swaps,
+                    "fit_diagnostics": candidate.fit_diagnostics,
                     "selected": candidate is selected,
                     "selected_distribution": selected.distribution,
                     "synthesis_compatible": candidate.synthesis_compatible,
@@ -390,14 +490,18 @@ def _pdf_values(
     parameters: Mapping[str, float],
     component_weights: Sequence[float] | None,
     component_parameters: Sequence[Mapping[str, float]] | None,
+    component_names: Sequence[str] | None,
     points: np.ndarray,
 ) -> np.ndarray:
     values = np.asarray(points, dtype=float)
-    if distribution == "mixture":
+    if distribution in MIXTURE_FAMILY_COMPONENTS:
         components = [
-            _mixture_component(weight, params)
-            for weight, params in zip(
-                component_weights or (), component_parameters or (), strict=False
+            _mixture_component(name, weight, params)
+            for name, weight, params in zip(
+                component_names or (),
+                component_weights or (),
+                component_parameters or (),
+                strict=False,
             )
         ]
         return np.clip(mixture_pdf(values, components), 1e-12, None)
@@ -405,11 +509,11 @@ def _pdf_values(
     return np.clip(definition.pdf(values, dict(parameters)), 1e-12, None)
 
 
-def _mixture_component(weight: float, parameters: Mapping[str, float]):
+def _mixture_component(name: str, weight: float, parameters: Mapping[str, float]):
     from nemora.core import MixtureComponentFit
 
     return MixtureComponentFit(
-        name="gamma",
+        name=name,
         weight=float(weight),
         parameters={key: float(value) for key, value in parameters.items()},
     )
@@ -420,6 +524,7 @@ def _conditional_cdf(
     parameters: Mapping[str, float],
     component_weights: Sequence[float] | None,
     component_parameters: Sequence[Mapping[str, float]] | None,
+    component_names: Sequence[str] | None,
     support_lower: float,
     points: np.ndarray,
     *,
@@ -445,11 +550,14 @@ def _conditional_cdf(
         lower_mass = float(gamma_dist.cdf(support_lower, shape, scale=scale))
         raw = gamma_dist.cdf(values, shape, scale=scale)
         return np.clip((raw - lower_mass) / max(1.0 - lower_mass, 1e-12), 0.0, 1.0)
-    if distribution == "mixture":
+    if distribution in MIXTURE_FAMILY_COMPONENTS:
         components = [
-            _mixture_component(weight, params)
-            for weight, params in zip(
-                component_weights or (), component_parameters or (), strict=False
+            _mixture_component(name, weight, params)
+            for name, weight, params in zip(
+                component_names or (),
+                component_weights or (),
+                component_parameters or (),
+                strict=False,
             )
         ]
         lower_mass = float(mixture_cdf(np.array([support_lower]), components)[0])
@@ -462,6 +570,7 @@ def _conditional_cdf(
         parameters,
         component_weights,
         component_parameters,
+        component_names,
         grid,
     )
     cdf_grid = cumulative_trapezoid(densities, grid, initial=0.0)
@@ -480,6 +589,7 @@ def _common_metrics(
     parameters: Mapping[str, float],
     component_weights: Sequence[float] | None,
     component_parameters: Sequence[Mapping[str, float]] | None,
+    component_names: Sequence[str] | None,
     tallies: np.ndarray,
     edges: np.ndarray,
     support_lower: float,
@@ -494,6 +604,7 @@ def _common_metrics(
         parameters,
         component_weights,
         component_parameters,
+        component_names,
         support_lower,
         edges,
         upper_cap=upper_cap,
@@ -540,6 +651,7 @@ def _candidate_from_fit(
         parameters=parameters,
         component_weights=None,
         component_parameters=None,
+        component_names=None,
         tallies=tallies,
         edges=edges,
         support_lower=support_lower,
@@ -564,35 +676,65 @@ def _candidate_from_fit(
     )
 
 
+def _canonicalise_mixture(
+    names: Sequence[str],
+    weights: Sequence[float],
+    parameters: Sequence[Mapping[str, float]],
+) -> tuple[tuple[str, ...], tuple[float, ...], tuple[dict[str, float], ...]]:
+    components = [
+        MixtureComponent(name=str(name), weight=float(weight), parameters=dict(params))
+        for name, weight, params in zip(names, weights, parameters, strict=True)
+    ]
+    ordered, _ = canonical_component_order(components)
+    return (
+        tuple(component.name for component in ordered),
+        tuple(component.weight for component in ordered),
+        tuple(component.parameters for component in ordered),
+    )
+
+
 def _candidate_from_mixture(
     result,
     *,
+    family: str,
     tallies: np.ndarray,
     edges: np.ndarray,
     support_lower: float,
     upper_cap: float,
+    method: str = "mixture-em",
 ) -> FitCandidate:
-    weights = tuple(float(component.weight) for component in result.components)
-    components = tuple(
-        {key: float(value) for key, value in component.parameters.items()}
-        for component in result.components
+    names, weights, components = _canonicalise_mixture(
+        [component.name for component in result.components],
+        [component.weight for component in result.components],
+        [component.parameters for component in result.components],
     )
     n_parameters = sum(len(params) for params in components) + max(len(components) - 1, 0)
     aic, aicc, bic, ks, log_likelihood = _common_metrics(
-        distribution="mixture",
+        distribution=family,
         parameters={},
         component_weights=weights,
         component_parameters=components,
+        component_names=names,
         tallies=tallies,
         edges=edges,
         support_lower=support_lower,
         upper_cap=upper_cap,
         n_parameters=n_parameters,
     )
+    converged = bool(getattr(result, "converged", True))
+    raw_diagnostics = getattr(result, "diagnostics", None)
+    if hasattr(result, "n_starts"):
+        diagnostics_payload = raw_diagnostics
+    else:
+        diagnostics_payload = {
+            "iterations": int(getattr(result, "iterations", 0)),
+            "converged": converged,
+        }
     return FitCandidate(
-        distribution="mixture",
+        distribution=family,
         component_weights=weights,
         component_parameters=components,
+        component_names=names,
         n_parameters=n_parameters,
         aic=aic,
         aicc=aicc,
@@ -604,7 +746,17 @@ def _candidate_from_mixture(
         native_ks=math.nan,
         rss=math.nan,
         log_likelihood=log_likelihood,
-        method="mixture-em",
+        method=method,
+        converged=converged,
+        iterations=int(getattr(result, "iterations", 0)),
+        n_starts=int(getattr(result, "n_starts", 0)),
+        n_valid_starts=int(getattr(result, "n_valid_starts", 0)),
+        ordering_swaps=int(getattr(result, "ordering_swaps", 0)),
+        fit_diagnostics=(
+            json.dumps(diagnostics_payload, sort_keys=True, default=str)
+            if diagnostics_payload
+            else ""
+        ),
     )
 
 
@@ -614,6 +766,7 @@ def _failed_candidate(name: str, error: Exception) -> FitCandidate:
         fit_status="failed",
         error=f"{type(error).__name__}: {error}",
         method="failed",
+        converged=False,
     )
 
 
@@ -687,6 +840,7 @@ def _fit_candidates(
         candidates.append(
             _candidate_from_mixture(
                 mixture,
+                family="mixture",
                 tallies=tallies,
                 edges=edges,
                 support_lower=support_lower,
@@ -696,7 +850,94 @@ def _fit_candidates(
     except Exception as error:  # noqa: BLE001 - report the documented failure
         candidates.append(_failed_candidate("mixture", error))
 
+    for family in ("mix_weibull_2", "mix_weibull_gamma"):
+        candidates.append(
+            _fit_truncated_family(
+                family,
+                mids,
+                tallies,
+                edges,
+                support_lower=support_lower,
+                upper_cap=upper_cap,
+                seed=seed,
+                n_starts=2,
+                max_iter=250,
+            )
+        )
+
+    best_mixture_ks = min(
+        (
+            candidate.ks
+            for candidate in candidates
+            if candidate.is_success
+            and candidate.distribution in MIXTURE_FAMILY_COMPONENTS
+        ),
+        default=math.inf,
+    )
+    if best_mixture_ks > _THREE_COMPONENT_KS_TRIGGER:
+        candidates.append(
+            _fit_truncated_family(
+                "mix_weibull_3",
+                mids,
+                tallies,
+                edges,
+                support_lower=support_lower,
+                upper_cap=upper_cap,
+                seed=seed,
+                n_starts=1,
+                max_iter=150,
+            )
+        )
+
     return candidates
+
+
+def _fit_truncated_family(
+    family: str,
+    mids: np.ndarray,
+    tallies: np.ndarray,
+    edges: np.ndarray,
+    *,
+    support_lower: float,
+    upper_cap: float,
+    seed: int,
+    n_starts: int,
+    max_iter: int,
+) -> FitCandidate:
+    """Fit one new mixture family, retrying gamma moments with censored fits."""
+    names = MIXTURE_FAMILY_COMPONENTS[family]
+    updates = ["moments", "censored"] if "gamma" in names else ["moments"]
+    last_error: Exception | None = None
+    for gamma_update in updates:
+        try:
+            result = fit_truncated_mixture(
+                mids,
+                tallies,
+                names,
+                support_lower=support_lower,
+                n_starts=n_starts,
+                max_iter=max_iter,
+                tol=1e-6,
+                min_weight=1e-4,
+                random_state=seed,
+                gamma_update=gamma_update,
+            )
+        except Exception as error:  # noqa: BLE001 - try the documented fallback
+            last_error = error
+            continue
+        return _candidate_from_mixture(
+            result,
+            family=family,
+            tallies=tallies,
+            edges=edges,
+            support_lower=support_lower,
+            upper_cap=upper_cap,
+            method=f"truncated-em-{gamma_update}",
+        )
+    return _failed_candidate(
+        family,
+        last_error or MixtureFitError(f"no {family} fit was produced"),
+    )
 
 
 def _attempt_fit(

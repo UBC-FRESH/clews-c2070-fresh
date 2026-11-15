@@ -27,6 +27,7 @@ from workflows.national.bucking.schema import TreeRecord
 from workflows.national.bucking.taper import TaperDomainError, TaperRegistry, UnsupportedTaperError
 
 from .height import HeightModelRecord
+from .mixtures import MIXTURE_FAMILY_COMPONENTS
 
 __all__ = [
     "DistributionSpec",
@@ -52,6 +53,7 @@ class DistributionSpec:
     support: tuple[float, float]
     component_weights: tuple[float, ...] | None = None
     component_parameters: tuple[dict[str, float], ...] | None = None
+    component_names: tuple[str, ...] | None = None
     fit_id: str = ""
     evidence_tier: str = ""
 
@@ -67,14 +69,32 @@ class DistributionSpec:
             raise ValueError("distribution support upper bound must exceed the lower bound")
         object.__setattr__(self, "support", (lower, upper))
         name = str(self.distribution).strip().lower()
-        if name not in {"weibull", "gamma", "mixture", "gb1", "gb2", "gg"}:
+        supported = {
+            "weibull",
+            "gamma",
+            "mixture",
+            "mix_weibull_2",
+            "mix_weibull_gamma",
+            "mix_weibull_3",
+            "gb1",
+            "gb2",
+            "gg",
+        }
+        if name not in supported:
             raise ValueError(f"unsupported synthesis distribution {self.distribution!r}")
         object.__setattr__(self, "distribution", name)
-        if name == "mixture":
+        if name in MIXTURE_FAMILY_COMPONENTS:
             if not self.component_weights or not self.component_parameters:
                 raise ValueError("mixture distributions require component weights and parameters")
             if len(self.component_weights) != len(self.component_parameters):
                 raise ValueError("mixture component weights and parameters must align")
+            names = self.component_names or MIXTURE_FAMILY_COMPONENTS[name]
+            if len(names) != len(self.component_weights):
+                raise ValueError("mixture component names must align with the weights")
+            unknown = sorted(set(names).difference({"weibull", "gamma"}))
+            if unknown:
+                raise ValueError(f"unsupported mixture component names: {unknown}")
+            object.__setattr__(self, "component_names", tuple(str(item) for item in names))
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,6 +243,7 @@ class SynthesizedStand:
                     "parameters": spec.parameters,
                     "component_weights": spec.component_weights,
                     "component_parameters": spec.component_parameters,
+                    "component_names": spec.component_names,
                     "support": spec.support,
                     "fit_id": spec.fit_id,
                     "evidence_tier": spec.evidence_tier,
@@ -311,11 +332,15 @@ def _sample_dbh(spec: DistributionSpec, size: int, rng: np.random.Generator) -> 
             size,
             random_state=rng,
         )
-    elif spec.distribution == "mixture":
+    elif spec.distribution in MIXTURE_FAMILY_COMPONENTS:
+        names = spec.component_names or MIXTURE_FAMILY_COMPONENTS[spec.distribution]
         components = [
-            MixtureComponentFit(name="gamma", weight=float(weight), parameters=dict(params))
-            for weight, params in zip(
-                spec.component_weights or (), spec.component_parameters or (), strict=False
+            MixtureComponentFit(name=name, weight=float(weight), parameters=dict(params))
+            for name, weight, params in zip(
+                names,
+                spec.component_weights or (),
+                spec.component_parameters or (),
+                strict=False,
             )
         ]
         draws = sample_mixture(

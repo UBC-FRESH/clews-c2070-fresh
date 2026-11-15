@@ -44,12 +44,14 @@ from workflows.national.assortments.assortments import (
 )
 from workflows.national.assortments.distributions import (
     DistributionFit,
+    FitCandidate,
     fit_dbh_distributions,
 )
 from workflows.national.assortments.height import (
     HeightModelBundle,
     fit_height_models,
 )
+from workflows.national.assortments.mixtures import MIXTURE_FAMILY_COMPONENTS
 from workflows.national.assortments.rsyc import assign_sites_to_ecostrata
 from workflows.national.assortments.synthesize import (
     DistributionSpec,
@@ -74,7 +76,7 @@ from workflows.national.bucking.taper import (
 __all__ = ["main"]
 
 PILOT_NAME = "tsa24_assortment_disaggregation"
-PILOT_VERSION = "0.1.0"
+PILOT_VERSION = "0.2.0"
 TSA_NAME = "Prince George"
 DEFAULT_AU_ID = 23000
 DEFAULT_AGE = 100.0
@@ -531,10 +533,12 @@ def _fitted_quantiles(fit: DistributionFit, probabilities: Sequence[float]) -> n
             probabilities,
         )
     grid = np.linspace(lower, upper, 1024)
-    if candidate.distribution == "mixture":
+    if candidate.distribution in MIXTURE_FAMILY_COMPONENTS:
+        names = candidate.component_names or ("gamma",) * len(candidate.component_weights or ())
         components = [
-            MixtureComponentFit(name="gamma", weight=float(weight), parameters=dict(params))
-            for weight, params in zip(
+            MixtureComponentFit(name=name, weight=float(weight), parameters=dict(params))
+            for name, weight, params in zip(
+                names,
                 candidate.component_weights or (),
                 candidate.component_parameters or (),
                 strict=False,
@@ -638,6 +642,321 @@ def validate_dbh_fits(
             },
         }
     return pd.DataFrame(rows), summaries
+
+
+def _load_baseline_fits(path: Path) -> dict[tuple[str, str, str], dict[str, Any]]:
+    """Load the selected candidate from a previous distribution_fits.csv."""
+    if not path.exists():
+        return {}
+    frame = pd.read_csv(path)
+    required = {"scope", "target_id", "fit_id", "distribution", "selected", "aic", "ks"}
+    if not required.issubset(frame.columns):
+        return {}
+    selected = frame[
+        frame["selected"].astype(str).str.strip().str.lower().isin({"true", "1"})
+    ]
+    baseline: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for row in selected.itertuples(index=False):
+        key = (str(row.scope), str(row.target_id), str(row.fit_id))
+        baseline[key] = {
+            "distribution": str(row.distribution),
+            "aic": float(row.aic),
+            "aicc": float(getattr(row, "aicc", math.nan)),
+            "ks": float(row.ks),
+        }
+    return baseline
+
+
+def _fit_key(fit: DistributionFit) -> tuple[str, str, str]:
+    return (fit.scope, fit.target_id, fit.fit_id)
+
+
+def _candidate_record(candidate: FitCandidate) -> dict[str, Any]:
+    return {
+        "distribution": candidate.distribution,
+        "fit_status": candidate.fit_status,
+        "aic": candidate.aic,
+        "aicc": candidate.aicc,
+        "ks": candidate.ks,
+        "n_parameters": candidate.n_parameters,
+        "converged": candidate.converged,
+        "iterations": candidate.iterations,
+        "n_starts": candidate.n_starts,
+        "n_valid_starts": candidate.n_valid_starts,
+        "ordering_swaps": candidate.ordering_swaps,
+        "method": candidate.method,
+        "error": candidate.error,
+    }
+
+
+def compare_to_previous(
+    baseline: Mapping[tuple[str, str, str], Mapping[str, Any]],
+    fits: Sequence[DistributionFit],
+) -> dict[str, Any]:
+    """Compare the new selection against the previous run's selected models."""
+    new_families = {"mix_weibull_2", "mix_weibull_gamma", "mix_weibull_3"}
+    rows: list[dict[str, Any]] = []
+    matched = 0
+    for fit in fits:
+        candidate = fit.selected
+        previous = baseline.get(_fit_key(fit))
+        new_candidates = [
+            item
+            for item in fit.candidates
+            if item.distribution in new_families
+        ]
+        successful = [item for item in new_candidates if item.is_success]
+        best_new = min(successful, key=lambda item: item.aic, default=None)
+        unstable = [
+            item.distribution
+            for item in new_candidates
+            if item.fit_status != "ok" or not item.converged
+        ]
+        row: dict[str, Any] = {
+            "scope": fit.scope,
+            "fit_id": fit.fit_id,
+            "target_id": fit.target_id,
+            "species": fit.species,
+            "evidence_tier": fit.evidence_tier,
+            "n_trees": fit.n_trees,
+            "n_plots": fit.n_plots,
+            "n_bins": fit.n_bins,
+            "dbh_limit_cm": fit.dbh_limit_cm,
+            "selected_distribution": candidate.distribution,
+            "selected_aic": candidate.aic,
+            "selected_aicc": candidate.aicc,
+            "selected_ks": candidate.ks,
+            "selected_converged": candidate.converged,
+            "best_new_mixture": best_new.distribution if best_new else None,
+            "best_new_mixture_aic": best_new.aic if best_new else math.nan,
+            "best_new_mixture_ks": best_new.ks if best_new else math.nan,
+            "best_new_mixture_converged": best_new.converged if best_new else False,
+            "new_mixture_unstable": unstable,
+            "new_mixture_candidates": [
+                _candidate_record(item) for item in new_candidates
+            ],
+            "matched_previous": previous is not None,
+        }
+        if previous is not None:
+            matched += 1
+            row["previous_distribution"] = previous["distribution"]
+            row["previous_aic"] = previous["aic"]
+            row["previous_aicc"] = previous["aicc"]
+            row["previous_ks"] = previous["ks"]
+            row["delta_aic"] = candidate.aic - previous["aic"]
+            row["delta_aicc"] = candidate.aicc - previous["aicc"]
+            row["delta_ks"] = candidate.ks - previous["ks"]
+            row["switched"] = candidate.distribution != previous["distribution"]
+            row["switched_to_new_mixture"] = (
+                candidate.distribution in new_families
+                and previous["distribution"] not in new_families
+            )
+            row["mixture_worse"] = (
+                best_new is not None and best_new.aic > previous["aic"] + 2.0
+            )
+            row["mixture_improves_previous"] = (
+                best_new is not None and best_new.aic < previous["aic"] - 2.0
+            )
+        else:
+            row.update(
+                {
+                    "previous_distribution": None,
+                    "previous_aic": math.nan,
+                    "previous_aicc": math.nan,
+                    "previous_ks": math.nan,
+                    "delta_aic": math.nan,
+                    "delta_aicc": math.nan,
+                    "delta_ks": math.nan,
+                    "switched": False,
+                    "switched_to_new_mixture": False,
+                    "mixture_worse": False,
+                    "mixture_improves_previous": False,
+                }
+            )
+        rows.append(row)
+
+    matched_rows = [row for row in rows if row["matched_previous"]]
+    switched = [row for row in matched_rows if row["switched"]]
+    switched_new = [row for row in matched_rows if row["switched_to_new_mixture"]]
+    improved = [
+        row
+        for row in matched_rows
+        if math.isfinite(row["delta_aic"]) and row["delta_aic"] < -2.0
+    ]
+    worse = [
+        row
+        for row in matched_rows
+        if math.isfinite(row["delta_aic"]) and row["delta_aic"] > 2.0
+    ]
+    high_ks_before = [
+        row
+        for row in matched_rows
+        if math.isfinite(row["previous_ks"]) and row["previous_ks"] > 0.20
+    ]
+    high_ks_after = [
+        row
+        for row in matched_rows
+        if math.isfinite(row["selected_ks"]) and row["selected_ks"] > 0.20
+    ]
+    return {
+        "status": "compared" if matched_rows else "no_baseline",
+        "n_fits": len(rows),
+        "n_matched": matched,
+        "counts": {
+            "switched": len(switched),
+            "switched_to_new_mixture": len(switched_new),
+            "improved_by_more_than_2_aic": len(improved),
+            "worse_by_more_than_2_aic": len(worse),
+            "mixture_worse_than_previous": sum(
+                1 for row in matched_rows if row["mixture_worse"]
+            ),
+            "mixture_improves_previous": sum(
+                1 for row in matched_rows if row["mixture_improves_previous"]
+            ),
+            "mixture_unstable_fits": sum(
+                1 for row in matched_rows if row["new_mixture_unstable"]
+            ),
+            "high_ks_before": len(high_ks_before),
+            "high_ks_after": len(high_ks_after),
+        },
+        "selected_distributions_before": {
+            name: sum(
+                1 for row in matched_rows if row["previous_distribution"] == name
+            )
+            for name in sorted(
+                {row["previous_distribution"] for row in matched_rows}
+            )
+        },
+        "selected_distributions_after": {
+            name: sum(
+                1 for row in matched_rows if row["selected_distribution"] == name
+            )
+            for name in sorted({row["selected_distribution"] for row in matched_rows})
+        },
+        "high_ks_before": [
+            {"scope": row["scope"], "fit_id": row["fit_id"], "ks": row["previous_ks"]}
+            for row in high_ks_before
+        ],
+        "high_ks_after": [
+            {
+                "scope": row["scope"],
+                "fit_id": row["fit_id"],
+                "ks": row["selected_ks"],
+                "distribution": row["selected_distribution"],
+            }
+            for row in high_ks_after
+        ],
+        "rows": rows,
+    }
+
+
+def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, Any]:
+    """Summarise convergence, selection, and instability for mixture families."""
+    families = (
+        "mixture",
+        "mix_weibull_2",
+        "mix_weibull_gamma",
+        "mix_weibull_3",
+    )
+    counts: dict[str, dict[str, Any]] = {
+        family: {
+            "attempted": 0,
+            "ok": 0,
+            "converged": 0,
+            "failed": 0,
+            "selected": 0,
+            "aic_best": 0,
+        }
+        for family in families
+    }
+    unstable: list[dict[str, Any]] = []
+    degenerate: list[dict[str, Any]] = []
+    for fit in fits:
+        selected = fit.selected
+        for candidate in fit.candidates:
+            if candidate.distribution not in counts:
+                continue
+            record = counts[candidate.distribution]
+            record["attempted"] += 1
+            if candidate.fit_status == "ok":
+                record["ok"] += 1
+            else:
+                record["failed"] += 1
+            if candidate.converged:
+                record["converged"] += 1
+            if candidate is selected:
+                record["selected"] += 1
+            if candidate is fit.best_aic:
+                record["aic_best"] += 1
+            if candidate.fit_status != "ok" or not candidate.converged:
+                unstable.append(
+                    {
+                        "scope": fit.scope,
+                        "fit_id": fit.fit_id,
+                        "species": fit.species,
+                        "distribution": candidate.distribution,
+                        "fit_status": candidate.fit_status,
+                        "converged": candidate.converged,
+                        "iterations": candidate.iterations,
+                        "error": candidate.error,
+                    }
+                )
+            if candidate.error and "degenerate" in candidate.error.lower():
+                degenerate.append(
+                    {
+                        "fit_id": fit.fit_id,
+                        "distribution": candidate.distribution,
+                        "error": candidate.error,
+                    }
+                )
+    selected_families = {
+        family: sum(
+            1 for fit in fits if fit.selected.distribution == family
+        )
+        for family in families
+    }
+    return {
+        "families": list(families),
+        "counts": counts,
+        "selected_counts": selected_families,
+        "n_unstable": len(unstable),
+        "n_degenerate_rejections": len(degenerate),
+        "unstable": unstable[:50],
+        "degenerate_rejections": degenerate[:50],
+        "convergence_rule": (
+            "A mixture is synthesis-eligible only when its EM converged by the "
+            "likelihood/parameter tolerance or by a 12-iteration stall window; "
+            "unstable mixtures remain in the CSV but are not selected."
+        ),
+    }
+
+
+def _comparison_frame(comparison: Mapping[str, Any]) -> pd.DataFrame:
+    """Flatten the comparison rows into a CSV-safe table."""
+    rows: list[dict[str, Any]] = []
+    for row in comparison.get("rows", []):
+        flat = {
+            key: value
+            for key, value in row.items()
+            if not isinstance(value, (list, dict))
+        }
+        flat["new_mixture_unstable"] = ",".join(row.get("new_mixture_unstable", []))
+        flat["new_mixture_candidate_summary"] = json.dumps(
+            [
+                {
+                    "distribution": item["distribution"],
+                    "aic": item["aic"],
+                    "ks": item["ks"],
+                    "converged": item["converged"],
+                    "fit_status": item["fit_status"],
+                }
+                for item in row.get("new_mixture_candidates", [])
+            ],
+            sort_keys=True,
+            default=str,
+        )
+        rows.append(flat)
+    return pd.DataFrame(rows)
 
 
 def _composition_frame(
@@ -915,6 +1234,62 @@ def _build_report(
         f"- **{name}**: {'PASS' if bool(value.get('pass')) else 'FAIL'} — {value.get('detail', '')}"
         for name, value in checks.items()
     ]
+    comparison = summary["dbh_fits"].get("comparison_to_previous", {})
+    mixture_summary = summary["dbh_fits"].get("mixture_candidates", {})
+    comparison_rows = []
+    for row in comparison.get("rows", []):
+        interesting = (
+            row.get("switched_to_new_mixture")
+            or row.get("mixture_worse")
+            or (math.isfinite(row.get("previous_ks", math.nan)) and row["previous_ks"] > 0.20)
+            or (math.isfinite(row.get("selected_ks", math.nan)) and row["selected_ks"] > 0.20)
+        )
+        if not interesting:
+            continue
+        comparison_rows.append(
+            "| {fit} | {previous} | {selected} | {delta} | {delta_aicc} | {prev_ks} | {ks} | "
+            "{best_new} | {best_delta} |".format(
+                fit=row["fit_id"],
+                previous=row.get("previous_distribution") or "n/a",
+                selected=row["selected_distribution"],
+                delta=_fmt(row.get("delta_aic"), 1),
+                delta_aicc=_fmt(row.get("delta_aicc"), 1),
+                prev_ks=_fmt(row.get("previous_ks"), 3),
+                ks=_fmt(row.get("selected_ks"), 3),
+                best_new=row.get("best_new_mixture") or "n/a",
+                best_delta=_fmt(
+                    (
+                        row["best_new_mixture_aic"] - row["previous_aic"]
+                        if math.isfinite(row.get("previous_aic", math.nan))
+                        and math.isfinite(row.get("best_new_mixture_aic", math.nan))
+                        else math.nan
+                    ),
+                    1,
+                ),
+            )
+        )
+    mixture_rows = [
+        "| {family} | {attempted} | {ok} | {converged} | {selected} |".format(
+            family=family,
+            attempted=values["attempted"],
+            ok=values["ok"],
+            converged=values["converged"],
+            selected=values["selected"],
+        )
+        for family, values in mixture_summary.get("counts", {}).items()
+    ]
+    unstable = mixture_summary.get("unstable", [])
+    unstable_rows = [
+        "| {fit} | {distribution} | {status} | {converged} | {iterations} |".format(
+            fit=row["fit_id"],
+            distribution=row["distribution"],
+            status=row["fit_status"],
+            converged=row["converged"],
+            iterations=row["iterations"],
+        )
+        for row in unstable[:12]
+    ]
+    comparison_counts = comparison.get("counts", {})
     lines = [
         "# TSA24 stand-to-tree disaggregation — prototype validation",
         "",
@@ -983,6 +1358,51 @@ def _build_report(
         "The full per-candidate table is `distribution_fits.csv`; poor general strata "
         "are retained rather than hidden.",
         "",
+        "### 4b. Mixture candidates and previous-run comparison",
+        "",
+        f"- New Weibull mixture selections: **{comparison_counts.get('switched_to_new_mixture', 0)}** "
+        f"of **{comparison.get('n_matched', 0)}** matched strata.",
+        f"- Improved by >2 AIC: **{comparison_counts.get('improved_by_more_than_2_aic', 0)}**; "
+        f"worse by >2 AIC: **{comparison_counts.get('worse_by_more_than_2_aic', 0)}**; "
+        f"mixtures worse than the previous selected model: "
+        f"**{comparison_counts.get('mixture_worse_than_previous', 0)}**.",
+        f"- Unstable mixture fits reported: "
+        f"**{mixture_summary.get('n_unstable', 0)}**; new-family unstable fits are "
+        f"not selected; degenerate rejections: "
+        f"**{mixture_summary.get('n_degenerate_rejections', 0)}**.",
+        f"- High-KS (>0.20) selected strata before: "
+        f"**{comparison_counts.get('high_ks_before', 0)}**, after: "
+        f"**{comparison_counts.get('high_ks_after', 0)}**.",
+        "",
+        "| family | attempted | ok | converged | selected |",
+        "|---|---:|---:|---:|---:|",
+        *mixture_rows,
+        "",
+        "| fit | previous | selected | delta AIC | delta AICc | previous KS | selected KS | best new mixture | best new delta AIC |",
+        "|---|---|---|---:|---:|---:|---:|---|---:|",
+        *comparison_rows,
+        "",
+        "The new families are fitted by a left-truncated EM that delegates each "
+        "component M-step to `fit_censored_inventory` (Weibull) or the documented "
+        "gamma moment update. Components are sorted by scale after every update. "
+        "New Weibull mixtures are synthesis-eligible only when they converged. "
+        "The legacy two-gamma mixture remains available as a fallback and carries "
+        "a ten-unit AIC penalty when it did not converge; non-converged legacy "
+        "selections are flagged in `distribution_fits.csv`. Small AIC gains are "
+        "resolved in favour of the simpler model.",
+        "",
+    ]
+    if unstable_rows:
+        lines.extend(
+            [
+                "| unstable fit | family | status | converged | iterations |",
+                "|---|---|---|---:|---:|",
+                *unstable_rows,
+                "",
+            ]
+        )
+    lines.extend(
+        [
         "## 5. Height models",
         "",
         "| species | tier | level | n | a | b | RMSE m | bias m |",
@@ -1041,12 +1461,13 @@ def _build_report(
         "",
         "## 10. Artifacts",
         "",
-        "- `distribution_fits.csv`, `height_models.csv`, `height_models_general.csv`",
+        "- `distribution_fits.csv`, `dbh_mixture_comparison.csv`, `height_models.csv`, `height_models_general.csv`",
         "- `synthetic_trees.csv`, `species_composition.csv`, `target_stand.json`",
         "- `assortment_matrix.csv`, `bucked_logs.csv`, `residue_ledger.csv`",
         "- `dbh_validation.csv`, `btc_grade_proxy.csv`, `validation_summary.json`, `manifest.json`",
         "",
     ]
+    )
     return "\n".join(lines) + "\n"
 
 
@@ -1056,6 +1477,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     data_root = Path(args.data_root).resolve()
     out_dir = Path(args.out_dir).resolve()
     assert_no_unexpected_deletions(repo_root)
+    baseline_path = (
+        Path(args.baseline_fits).resolve()
+        if getattr(args, "baseline_fits", None)
+        else out_dir / "distribution_fits.csv"
+    )
+    baseline = _load_baseline_fits(baseline_path)
 
     data = load_tsa24_data(repo_root, data_root, tsa_name=args.tsa_name)
     mapped_trees = data.trees[data.trees["mapped"]].copy()
@@ -1197,6 +1624,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             f"expected {len(species_weights)} AU fits, got {len(au_fits)}"
         )
 
+    all_dbh_fits = list(general_fits) + list(au_fits)
+    previous_comparison = compare_to_previous(baseline, all_dbh_fits)
+    mixture_candidates = summarise_mixture_candidates(all_dbh_fits)
+
     height_obs = data.trees[data.trees["mapped"] & data.trees["height_m"].notna()].copy()
     height_obs = height_obs[height_obs["height_m"] > 1.3].copy()
     general_heights = fit_height_models(
@@ -1236,6 +1667,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 support=(float(fit.dbh_limit_cm), float(fit.support_upper_cm)),
                 component_weights=candidate.component_weights,
                 component_parameters=candidate.component_parameters,
+                component_names=candidate.component_names,
                 fit_id=fit.fit_id,
                 evidence_tier=fit.evidence_tier,
             )
@@ -1364,6 +1796,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ),
             "detail": "checked matrix volume, residue, ODT, AGB proxy, and log counts",
         },
+        "selected_mixtures_converged": {
+            "pass": all(
+                item.selected.converged
+                for item in all_dbh_fits
+                if item.selected.distribution.startswith("mix_weibull")
+            ),
+            "detail": (
+                "every selected Weibull mixture converged; a non-converged "
+                "legacy two-gamma fallback may remain selected and is flagged "
+                "in distribution_fits.csv"
+            ),
+        },
     }
 
     summary = {
@@ -1433,6 +1877,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 },
             },
             "au": dbh_summary,
+            "mixture_candidates": mixture_candidates,
+            "comparison_to_previous": previous_comparison,
         },
         "height_models": {
             "general": {
@@ -1454,7 +1900,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "assumptions": {
             "dbh_fit": (
                 "Two-stage Weibull/gamma censored fits, grouped generalized beta, "
-                "and a two-component gamma mixture. Common AIC/KS are computed on "
+                "a two-component gamma mixture, and the mix_weibull_2 / "
+                "mix_weibull_gamma / mix_weibull_3 families. Mixtures are fitted "
+                "on the left-truncated grouped support and selected by common AIC "
+                "with a two-unit parsimony margin. Common AIC/KS are computed on "
                 "one support-conditioned binned likelihood."
             ),
             "dbh_limit": (
@@ -1493,6 +1942,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     fit_frame = pd.concat(fit_frames, ignore_index=True, sort=False) if fit_frames else pd.DataFrame()
     _write_csv(fit_frame, out_dir / "distribution_fits.csv")
     _write_csv(
+        _comparison_frame(previous_comparison),
+        out_dir / "dbh_mixture_comparison.csv",
+    )
+    _write_csv(
         pd.DataFrame([record.to_row() for record in general_heights.models] + list(general_heights.failures)),
         out_dir / "height_models_general.csv",
     )
@@ -1511,6 +1964,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     artifact_paths = [
         out_dir / "distribution_fits.csv",
+        out_dir / "dbh_mixture_comparison.csv",
         out_dir / "height_models.csv",
         out_dir / "height_models_general.csv",
         out_dir / "species_composition.csv",
@@ -1559,6 +2013,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "package": "workflows.national.assortments",
             "modules": [
                 "distributions.py",
+                "mixtures.py",
                 "height.py",
                 "synthesize.py",
                 "assortments.py",
@@ -1576,11 +2031,32 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "ecodistrict": target_ecodistrict,
             "seed": int(args.seed),
             "n_trees": int(args.n_trees),
+            "baseline_fits": (
+                str(baseline_path)
+                if repo_root in baseline_path.parents
+                else "previous_run_distribution_fits.csv"
+            ),
             "min_trees": int(args.min_trees),
             "min_plots": int(args.min_plots),
             "min_height_n": int(args.min_height_n),
             "min_species_share": float(args.min_species_share),
             "bin_width_cm": float(args.bin_width_cm),
+            "mixture": {
+                "families": [
+                    "mixture",
+                    "mix_weibull_2",
+                    "mix_weibull_gamma",
+                    "mix_weibull_3",
+                ],
+                "new_family_starts": 2,
+                "three_component_starts": 1,
+                "three_component_ks_trigger": 0.15,
+                "max_iter": 250,
+                "tol": 1e-6,
+                "min_component_weight": 1e-4,
+                "selection_aic_margin": 2.0,
+                "gamma_fallback": "censored",
+            },
             "basic_density_table": str(
                 repo_root / "workflows" / "national" / "bucking" / "rules" / "bc_basic_density.csv"
             ),
@@ -1601,6 +2077,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "Assortment sorts are dimension-only; no official BC grade is assigned.",
             "BTC grade shares are context only.",
             "Fail-closed on unexpected git deletions.",
+            (
+                "Weibull-containing mixtures are fitted on the left-truncated grouped "
+                "support; new-family unstable fits are reported but not selected, while "
+                "the legacy two-gamma fallback may remain selected and is flagged."
+            ),
         ],
     }
     _write_json(manifest, out_dir / "manifest.json")
@@ -1660,6 +2141,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--out-dir",
         default="data/derived/national/assortments/tsa24_prototype",
+    )
+    parser.add_argument(
+        "--baseline-fits",
+        default=None,
+        help=(
+            "Previous distribution_fits.csv for the selection comparison; "
+            "defaults to <out-dir>/distribution_fits.csv."
+        ),
     )
     parser.add_argument("--tsa-name", default=TSA_NAME)
     parser.add_argument("--au-id", type=int, default=DEFAULT_AU_ID)

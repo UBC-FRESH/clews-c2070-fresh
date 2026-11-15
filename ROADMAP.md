@@ -487,6 +487,7 @@ decide what blocks production readiness after the conceptual alpha.
 - [x] P7.3 Add explicit readiness gates for NFI access, climate predictors, residue yield policy, calibrated cost surfaces, species composition, and national scaling. Completed: Created `metadata/readiness-gates.yaml` with 8 gates (7 blocked, 1 in_progress).
 - [x] P7.4 Update roadmap, changelog, and gap surfaces so diagnostic alpha and production model states are visibly separate. Completed: Updated CHANGE_LOG.md and this ROADMAP.md.
 - [x] P7.5 Produce a production-readiness memo for post-`v0.1.0a1` work. Completed: Created `planning/phase-7-production-readiness-memo.md` documenting diagnostic-only boundary, 7 blocked gates, 1 in_progress gate, gate-by-gate post-alpha work program, and v0.1.0a1 release criteria met.
+- [x] P7.6 Extend the RSYC-stratified TSA24 DBH fits with multi-component Weibull and mixed Weibull/gamma candidates. Completed: added `mix_weibull_2`, `mix_weibull_gamma`, and optional `mix_weibull_3`; fitted them on the same left-truncated grouped support with two deterministic starts, canonical component ordering, degenerate-component rejection, and convergence diagnostics; re-ran TSA24 (45 of 75 targets switched to a new Weibull mixture, 42 improved by >2 AIC, one worse by >2 AIC; the two `CW` high-KS strata remain unresolved and the legacy two-gamma mixture remains the fallback); republished the comparison artifacts.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

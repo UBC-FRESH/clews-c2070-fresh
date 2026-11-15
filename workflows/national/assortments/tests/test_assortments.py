@@ -7,6 +7,8 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
+from nemora.core import MixtureComponentFit
+from nemora.fit.mixture import sample_mixture
 
 from workflows.national.assortments.assortments import (
     AssortmentError,
@@ -20,6 +22,13 @@ from workflows.national.assortments.facility import (
     assign_feedstock,
 )
 from workflows.national.assortments.height import HeightModelRecord
+from workflows.national.assortments.mixtures import (
+    MixtureComponent,
+    MixtureFitError,
+    canonical_component_order,
+    component_is_degenerate,
+    fit_truncated_mixture,
+)
 from workflows.national.assortments.synthesize import (
     DistributionSpec,
     SynthesisError,
@@ -103,6 +112,163 @@ def test_censored_fit_recovers_known_weibull() -> None:
     assert fit.selected.ks < 0.08
 
 
+def test_two_weibull_mixture_recovers_bimodal_components() -> None:
+    rng = np.random.default_rng(0)
+    low = 8.0 * rng.weibull(3.0, size=2600)
+    high = 20.0 * rng.weibull(6.0, size=1400)
+    dbh = np.concatenate([low, high])
+    dbh = dbh[dbh >= 5.0]
+    observations = pd.DataFrame(
+        {
+            "species": "SW",
+            "dbh_cm": dbh,
+            "height_m": 1.3 + 0.45 * dbh,
+            "expansion_factor": rng.uniform(1.0, 4.0, size=dbh.size),
+            "plot_id": [f"P{index % 40:03d}" for index in range(dbh.size)],
+            "age": 80.0,
+            "dbh_limit_cm": 5.0,
+            "ecodistrict": "D1",
+            "ecoregion": "R1",
+            "ecoprovince": "P1",
+            "ecozone": "Z1",
+        }
+    )
+    fit = fit_dbh_distributions(
+        observations,
+        scope="test",
+        targets=[{"species": "SW", "ecodistrict": "D1"}],
+        min_trees=30,
+        min_plots=5,
+        random_state=11,
+    )[0]
+    by_name = {candidate.distribution: candidate for candidate in fit.candidates}
+    mixture = by_name["mix_weibull_2"]
+    assert mixture.is_success
+    assert mixture.converged
+    assert mixture.component_names == ("weibull", "weibull")
+    weights = mixture.component_weights or ()
+    assert sum(weights) == pytest.approx(1.0)
+    assert all(weight >= 1e-4 for weight in weights)
+    components = mixture.component_parameters or ()
+    betas = [component["beta"] for component in components]
+    assert betas == sorted(betas)
+    assert components[0]["a"] == pytest.approx(3.0, rel=0.35)
+    assert components[0]["beta"] == pytest.approx(8.0, rel=0.25)
+    assert components[1]["a"] == pytest.approx(6.0, rel=0.35)
+    assert components[1]["beta"] == pytest.approx(20.0, rel=0.25)
+    assert weights[0] == pytest.approx(0.65, abs=0.15)
+    assert weights[1] == pytest.approx(0.35, abs=0.15)
+    assert mixture.aic < by_name["weibull"].aic - 20.0
+    assert fit.selected.distribution in {"mix_weibull_2", "mix_weibull_gamma"}
+
+
+def test_mixture_sampling_respects_dbh_limit() -> None:
+    target = SynthesisTarget(
+        target_id="mixture-support",
+        target_level="au",
+        species_weights={"SW": 1.0},
+        tph_total=900.0,
+        volume_m3ha=300.0,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=5.0,
+        max_dbh_cm=60.0,
+        seed=13,
+        n_trees=300,
+    )
+    spec = DistributionSpec(
+        species="SW",
+        distribution="mix_weibull_2",
+        parameters={},
+        support=(5.0, 60.0),
+        component_weights=(0.6, 0.4),
+        component_parameters=({"a": 2.5, "beta": 12.0}, {"a": 6.0, "beta": 24.0}),
+        component_names=("weibull", "weibull"),
+    )
+    stand = synthesize_tree_list(
+        target,
+        distributions=[spec],
+        height_models=[_height_model("SW")],
+        taper_registry=_FakeRegistry(),
+    )
+    diameters = np.array([tree.dbh_cm for tree in stand.trees])
+    assert diameters.size == target.n_trees
+    assert np.all(diameters >= 5.0)
+    assert np.all(diameters <= 60.0)
+    assert stand.achieved_taper_volume_m3 == pytest.approx(target.target_volume_m3, rel=1e-9)
+
+
+def test_component_ordering_carries_weights() -> None:
+    high = MixtureComponent(name="weibull", weight=0.3, parameters={"a": 6.0, "beta": 20.0})
+    low = MixtureComponent(name="weibull", weight=0.7, parameters={"a": 3.0, "beta": 8.0})
+    ordered, swaps = canonical_component_order((high, low))
+    assert swaps == 2
+    assert [component.parameters["beta"] for component in ordered] == [8.0, 20.0]
+    assert [component.weight for component in ordered] == [0.7, 0.3]
+
+
+def test_degenerate_mixture_components_are_rejected() -> None:
+    assert component_is_degenerate("weibull", 0.0, {"a": 2.0, "beta": 10.0})
+    assert component_is_degenerate("weibull", 0.5, {"a": math.nan, "beta": 10.0})
+    assert component_is_degenerate("gamma", 0.5, {"p": -1.0, "beta": 10.0})
+    assert not component_is_degenerate("gamma", 0.5, {"p": 3.0, "beta": 10.0})
+
+    rng = np.random.default_rng(4)
+    dbh = np.concatenate(
+        [8.0 * rng.weibull(3.0, size=500), 20.0 * rng.weibull(6.0, size=500)]
+    )
+    dbh = dbh[dbh >= 5.0]
+    edges = np.arange(5.0, 45.0, 2.0)
+    tallies, _ = np.histogram(dbh, bins=edges)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    with pytest.raises((MixtureFitError, ValueError)):
+        fit_truncated_mixture(
+            mids,
+            tallies,
+            ("weibull", "weibull"),
+            support_lower=5.0,
+            n_starts=1,
+            min_weight=0.9,
+        )
+
+
+def test_mixed_weibull_gamma_fit_runs_and_samples() -> None:
+    rng = np.random.default_rng(5)
+    weibull = 10.0 * rng.weibull(2.5, size=1600)
+    gamma = rng.gamma(shape=6.0, scale=3.0, size=900)
+    dbh = np.concatenate([weibull, gamma])
+    dbh = dbh[dbh >= 5.0]
+    edges = np.arange(5.0, 55.0, 2.0)
+    tallies, _ = np.histogram(dbh, bins=edges)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    fit = fit_truncated_mixture(
+        mids,
+        tallies,
+        ("weibull", "gamma"),
+        support_lower=5.0,
+        n_starts=2,
+        random_state=17,
+    )
+    assert fit.converged
+    assert fit.n_valid_starts >= 1
+    assert set(fit.component_names) == {"weibull", "gamma"}
+    assert sum(fit.weights) == pytest.approx(1.0)
+    assert all(weight >= 1e-4 for weight in fit.weights)
+    assert all(component.parameters["beta"] > 0.0 for component in fit.components)
+
+    components = [
+        MixtureComponentFit(
+            name=component.name,
+            weight=component.weight,
+            parameters=dict(component.parameters),
+        )
+        for component in fit.components
+    ]
+    samples = sample_mixture(2000, components, lower=5.0, random_state=19)
+    assert samples.size == 2000
+    assert np.all(np.isfinite(samples))
+    assert np.all(samples >= 5.0)
 def test_hierarchical_fallback_to_ecoregion() -> None:
     sparse = _observations(count=3, plots=1, ecodistrict="D1", ecoregion="R1")
     rich = _observations(count=300, plots=15, ecodistrict="D2", ecoregion="R1", seed=2)

@@ -2,6 +2,28 @@
 
 ## 2026-11-15
 
+- **Added multi-component Weibull/mixed mixtures to the RSYC-stratified DBH
+  fits and re-ran TSA24.** New `mix_weibull_2`, `mix_weibull_gamma`, and
+  optional `mix_weibull_3` families use a left-truncated EM that delegates each
+  component M-step to `fit_censored_inventory` (Weibull) or the documented
+  gamma moment update, canonicalises component order after every update, uses
+  two deterministic starts, rejects weights below `1e-4`/non-finite
+  parameters/collapsed components, and records convergence diagnostics.  The
+  legacy two-gamma mixture remains the fallback (with a ten-unit AIC penalty
+  when non-converged); new Weibull families are selected only when converged.
+  Mixture sampling carries component names and respects the DBH limit.  TSA24
+  re-fit: 45 of 75 DBH targets switched to a new Weibull mixture, 42 improved
+  by >2 AIC, one was worse by >2 AIC (`SB` AU, +6.7 AIC); high-KS selections
+  remain the two `CW` Montane Cordillera strata, where the new mixtures are
+  worse than the single Weibull; `AC` Montane Cordillera improved from KS
+  0.184 to 0.040 and `DG` Fraser Basin from 0.156 to 0.065.  The target AU
+  (`SBS_SX`, H, age 100) switched six of seven species to Weibull mixtures;
+  the volume target and conservation remain exact (311.6 m3; logs 252.58 +
+  residue 59.02), TPH rises from 1,062 to 1,225 and QMD falls from 19.57 to
+  18.72 cm.  Added `dbh_mixture_comparison.csv`, new distribution_fits.csv
+  fields, mixture tests, and updated the assortment README/report/manifest.
+  Tests: 13 assortment + 15 bucking = 28 passed.
+
 - **Added the national assortment/stand-to-tree disaggregation prototype and
   TSA24 demonstration.** New `workflows/national/assortments/` package fits
   RSYC-stratified DBH distributions (`fit_censored_inventory` Weibull/gamma,
