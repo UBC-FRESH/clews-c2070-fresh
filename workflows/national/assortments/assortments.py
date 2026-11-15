@@ -17,7 +17,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-import numpy as np
 import pandas as pd
 
 from workflows.national.bucking.validate_tsa24_btc import (

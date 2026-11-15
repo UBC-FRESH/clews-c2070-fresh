@@ -16,7 +16,6 @@ from workflows.national.assortments.assortments import (
 from workflows.national.assortments.distributions import fit_dbh_distributions
 from workflows.national.assortments.facility import (
     FacilityContract,
-    FacilityError,
     FeedstockOffer,
     assign_feedstock,
 )

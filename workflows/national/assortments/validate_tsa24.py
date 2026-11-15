@@ -20,15 +20,13 @@ import argparse
 import hashlib
 import json
 import math
-import os
 import subprocess
 import sys
 import time
-import zipfile
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -52,15 +50,9 @@ from workflows.national.assortments.height import (
     HeightModelBundle,
     fit_height_models,
 )
-from workflows.national.assortments.rsyc import (
-    assign_sites_to_ecostrata,
-    load_rsyc_volume_models,
-    rsyc_curve_table,
-    rsyc_species_code,
-)
+from workflows.national.assortments.rsyc import assign_sites_to_ecostrata
 from workflows.national.assortments.synthesize import (
     DistributionSpec,
-    SynthesisError,
     SynthesisTarget,
     SynthesizedStand,
     normalize_species_weights,
@@ -73,13 +65,11 @@ from workflows.national.bucking.bucking import (
     logs_frame,
     residue_frame,
 )
-from workflows.national.bucking.schema import TreeRecord
 from workflows.national.bucking.taper import (
     TaperRegistry,
     default_kozak_parameter_path,
     default_nemora_root,
 )
-from workflows.national.bucking.validate_tsa24_btc import load_basic_density_table
 
 __all__ = ["main"]
 

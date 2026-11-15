@@ -13,7 +13,6 @@ import zipfile
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-import numpy as np
 import pandas as pd
 
 __all__ = [
