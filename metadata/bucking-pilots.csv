@@ -1,0 +1,2 @@
+pilot,tsa,dataset,n_trees,n_logs,log_m3,residue_m3,odt,status,notes
+tsa24_bucking_phase0,TSA24,FAIB PSP,300,134,47.864,10.289,4.63,pilot_complete_with_gaps,20 stratified plots / 300 trees; Kozak taper + TIPSY interior dimension sorts; no grade/residue benchmark in TSA24 instance; density/moisture/chip assumptions flagged.

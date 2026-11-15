@@ -912,3 +912,50 @@ parent push: 8ba6dda..011ac6f feature/p7-source-triage-and-production-readiness 
 **Verification Timestamp**: 2026-11-15T10:19:00Z
 **Verified By**: git-annex 10.20240129; arbutus-s3 special remote; Git 2.45.2
 **Artifact Reference**: data commit `a77fdbc`; parent commit `011ac6f`; `data/raw/national/`; S3 remote `arbutus-s3`
+
+### Entry: EL-20261115-019
+**Claim**: The Phase 0 national bucking contracts pass their synthetic conservation, sort-mapping, ODT, negative-value, and unsupported-taper tests.
+**Status Symbol**: ✅
+**Evidence Type**: pytest execution output
+**Command**:
+```bash
+PYTHONPATH=/srv/shared-data/gep/ws4/nemora/src .venv/bin/pytest -q tests/test_bucking.py
+```
+**Exit Code**: 0
+**Output Summary**:
+```
+10 passed, 2 warnings in 2.88s
+```
+The two warnings are nemora package deprecation notices (`distfit` and `synthforest` compatibility shims), not bucking warnings. Tests cover: logs + residue ≈ taper total; no negative volumes or values; conifer/deciduous sort mapping; ODT/green-tonne/chip conversion; unsupported species/jurisdiction/BEC failures; proxy flags; batch skip recording; contract rejection of negative/inconsistent rows; and dead-tree rejection.
+**Verification Timestamp**: 2026-11-15T18:20:00Z
+**Verified By**: Python 3.12.3, pytest 9.1.1, nemora reference checkout
+**Artifact Reference**: `tests/test_bucking.py`; `workflows/national/bucking/`
+
+### Entry: EL-20261115-020
+**Claim**: The bounded TSA24 pilot produced a conserving bucked-log and residue ledger on a documented 20-plot / 300-tree stratified sample, with benchmark gaps stated.
+**Status Symbol**: ✅
+**Evidence Type**: generated artifacts + JSON summary
+**Command**:
+```bash
+PYTHONPATH=/srv/shared-data/gep/ws4/nemora/src .venv/bin/python \
+  -m workflows.national.bucking.validate_tsa24 \
+  --out-dir data/derived/national/bucking/tsa24_pilot \
+  --max-plots 20 --max-trees-per-plot 15 --seed 20261115 --timebox-seconds 900
+```
+**Exit Code**: 0
+**Output Summary**:
+```
+Loaded 155,903 live trees on 1,318 plots.
+Selected 20 plots and 300 trees.
+Bucked 134 logs; recovered 47.864 m3; residue 10.289 m3.
+Conservative pass true; 0 sampled trees skipped.
+PSP paired volume: relative bias -13.2%, MAE 5.76 m3/ha, median ratio 0.832.
+VDYP7 15/20 matched, observed-all relative bias -34.7%.
+TIPSY 11/20 matched, observed-all relative bias -20.8%; no grade/residue/value columns.
+RSYC 13/20 matched, observed-all relative bias +20.0%.
+Residue: 4.630 ODT; 8.418 green t at 45%; 6.614 green t at 30%; 7.576 chip green t.
+```
+The 0.45 ODT/m³ density, 45%/30% moisture, and 0.90 chip yield are flagged assumptions. No official grade is assigned. The TSA24 TIPSY instance has no grade, residue, or value columns; the sort/price profile is a placeholder. VDYP/TIPSY joins use within-stratum PSP site-index tertiles, not the FEMIC AU mapping. RSYC is a stand-level sanity check only.
+**Verification Timestamp**: 2026-11-15T18:20:00Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, pyarrow 26.0.1, geopandas 1.1.4, nemora reference checkout
+**Artifact Reference**: `data/derived/national/bucking/tsa24_pilot/{validation_summary.json,manifest.json,VALIDATION_REPORT.md}`; `metadata/bucking-pilots.csv`

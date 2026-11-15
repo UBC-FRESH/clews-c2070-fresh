@@ -2,6 +2,32 @@
 
 ## 2026-11-15
 
+- **Added national bucking Phase 0 contracts and the bounded TSA24 pilot.**
+  New `workflows/national/bucking/` package: `schema.py` (`TreeRecord`,
+  `BuckedLog`, `ResidueLedger`, `GradeRule`, `GradeRuleSet`), `taper.py`
+  (`TaperModel` protocol, `NemoraKozakTaper`, registry keyed by jurisdiction /
+  species / BEC zone with explicit unsupported failures), `bucking.py`
+  (`buck_stem_sorted` wrapper, `BuckedLog` + `ResidueLedger`, batch API),
+  `tree_lists.py` (FAIB PSP adapter with documented column mapping and
+  stratified sample selection), `rules/bc_interior.yaml` (TIPSY 4.5 interior
+  dimension sorts; geometry-only, not official grade), `validate_tsa24.py`,
+  and `README.md`. The pilot selected 20 plots / 300 live trees across SBS
+  (210 trees), ESSF (45), ICH (30), and SBPS (15) and the dominant species
+  (SW 91, BL 67, PL 42, AT 23, EP 23, SE 23, HW 12, FD 11, CW 5, AC 3).
+  Bucking produced 134 logs, 47.864 m³ recovered, 10.289 m³ residue (17.7% of
+  taper), and 4.630 ODT at the 0.45 ODT/m³ default density. Conservation
+  passes at abs 1e-7 m³ + rel 1e-5; the reference bucker's internal balance
+  passes at abs 1e-6 m³ + rel 1e-4. Paired sampled-tree merchantable volume is
+  875.73 m³/ha observed vs 760.53 m³/ha bucked (relative bias −13.2%, MAE 5.76
+  m³/ha, median ratio 0.832). VDYP7 matched 15/20 plots (observed-all relative
+  bias −34.7%); TIPSY matched 11/20 (observed-all −20.8%) and the TSA24
+  instance has no grade/residue/value columns; RSYC matched 13/20
+  (observed-all +20.0%). No official grade is assigned; density, moisture, and
+  chip yield are flagged assumptions. Added `metadata/bucking-pilots.csv`.
+  Outputs: `data/derived/national/bucking/tsa24_pilot/`. Tests:
+  `tests/test_bucking.py` (10 passed); `tests/conftest.py` makes the repository
+  root importable under plain `pytest`.
+
 - **Acquired RSYC national yield-curve artifacts and registered national
   bucking tool references.** Downloaded the RSYC `v20260923` model catalogue
   (`RSYC_models.zip`, 1,468,706 bytes, sha256 `86da5737…24940`), 150 km tile
