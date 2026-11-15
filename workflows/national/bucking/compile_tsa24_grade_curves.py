@@ -1,4 +1,4 @@
-"""CLI for compiling TSA24 managed-AU grade and residue curves."""
+"""CLI for compiling TSA24 managed-AU grade and residue curves from BTC output."""
 
 from __future__ import annotations
 
@@ -8,11 +8,8 @@ import os
 import sys
 from pathlib import Path
 
-from .tsa24_grade_curves import (
-    DEFAULT_AGE_MAX,
-    DEFAULT_AGE_STEP,
-    compile_grade_curves,
-)
+from .tsa24_grade_curves import DEFAULT_AGE_MAX, DEFAULT_AGE_STEP
+from .tsa24_grade_curves_btc import compile_grade_curves_from_btc
 
 __all__ = ["main"]
 
@@ -36,21 +33,12 @@ def _default_femic_root() -> Path:
     )
 
 
-def _default_tipsy_database() -> Path:
-    configured = os.environ.get("TIPSY_DATABASE")
-    if configured:
-        return Path(configured).expanduser().resolve()
-    install = os.environ.get("TIPSY_INSTALL")
-    if install:
-        candidate = Path(install).expanduser().resolve() / "Database"
-        if candidate.exists():
-            return candidate
-    raise SystemExit("set TIPSY_DATABASE (directory containing .tab/.taf pairs)")
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Compile TSA24 managed-AU grade and residue curves from TIPSY .taf tables."
+        description=(
+            "Compile TSA24 managed-AU grade and residue curves from refreshed "
+            "BTC /TSR output (log-grades and residual-fibre banks)."
+        )
     )
     parser.add_argument(
         "--femic-root",
@@ -62,7 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--tipsy-database",
         type=Path,
         default=None,
-        help="Directory containing TIPSY .tab/.taf pairs (default: TIPSY_DATABASE).",
+        help=(
+            "Deprecated and ignored. Kept only so older command lines fail "
+            "visibly instead of silently changing meaning."
+        ),
     )
     parser.add_argument(
         "--out-dir",
@@ -78,14 +69,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     femic_root = args.femic_root or _default_femic_root()
-    tipsy_database = args.tipsy_database or _default_tipsy_database()
-    print(
-        f"Compiling TSA24 grade curves from {femic_root} and {tipsy_database}",
-        file=sys.stderr,
-    )
-    manifest = compile_grade_curves(
+    if args.tipsy_database is not None:
+        print(
+            "warning: --tipsy-database is ignored; grades come from BTC output",
+            file=sys.stderr,
+        )
+    print(f"Compiling TSA24 grade curves from BTC artifacts under {femic_root}", file=sys.stderr)
+    manifest = compile_grade_curves_from_btc(
         femic_root=femic_root,
-        tipsy_database=tipsy_database,
         out_dir=args.out_dir,
         age_max=args.age_max,
         age_step=args.age_step,

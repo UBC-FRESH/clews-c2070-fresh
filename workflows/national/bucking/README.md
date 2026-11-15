@@ -195,26 +195,26 @@ data/derived/national/bucking/tsa24_grade_curves/
   manifest.json
 ```
 
-The AU grade volumes are share-preserving rescales to the FEMIC managed
-merchantable volume for the same AU and age.  The TIPSY tables are
-nominal-site-index surfaces (SW 20, PLI 23, FDI 25); SE and BL use the SW
-table as the interior volume surrogate.  The residual-fibre columns are
-TIPSY/SYLVER mill-processing residues, not harvest slash.
-
-The compile path requires `fresh-tipsy` importable (install the sibling
-checkout editable or put its `src/` on `PYTHONPATH`).
+The compile path now consumes the refreshed TSA24 BTC `/TSR` output.  It reads
+`data/tipsy_curves_tsa24.csv` (derived from `data/04_output-tsa24.csv`) and
+copies the AU-specific `Logs_Grade_*` and `Residual_*` columns directly.  No
+nominal site index, species surrogate, or grade-share rescale is applied.  The
+residual-fibre columns are TIPSY/SYLVER mill-processing residues, not harvest
+slash.
 
 ```bash
 .venv/bin/python -m workflows.national.bucking.compile_tsa24_grade_curves \
   --femic-root "$FEMIC_TSA24_ROOT" \
-  --tipsy-database "$TIPSY_DATABASE" \
   --out-dir data/derived/national/bucking/tsa24_grade_curves
 ```
 
+The old `.taf` compile path remains in `tsa24_grade_curves.py` for historical
+context, but the CLI no longer calls it and `--tipsy-database` is ignored.
+
 `validate_tsa24.py` reads that directory when present and reports the
-industrial-sort share comparison, the TIPSY grade-share proxy, and the
-residue semantic gap.  See
-`data/derived/national/bucking/tsa24_pilot/TSA24_GRADE_CURVES.md`.
+BTC grade-share proxy and residue semantic gap.  The industrial-sort share
+comparison is marked unavailable when the industrial-logs bank was not
+requested.  See `data/derived/national/bucking/tsa24_pilot/TSA24_GRADE_CURVES.md`.
 
 ## 8. Usage
 
@@ -246,8 +246,7 @@ PYTHONPATH=$NEMORA_ROOT/src \
 - No national defect, sweep, knot, or rot model.
 - No delivered chip, hog, or contamination model.
 - No TSA-wide expansion.  The 300-tree sample is a pilot.
-- No claim that the TSA24 TIPSY instance itself validates grade or residue.  The
-  grade/residue benchmark comes from the separate TIPSY `.taf` tables and is
-  reported with nominal-site-index, species-surrogate, and mill-vs-harvest
-  caveats.
+- No claim that the TSA24 BTC output validates grade or residue.  The
+  grade/residue benchmark is model output and is reported with
+  mill-vs-harvest and no-official-grade caveats.
 - No RSYC-driven bucking.  RSYC is a stand-level sanity check at most.

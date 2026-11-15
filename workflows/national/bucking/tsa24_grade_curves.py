@@ -1,11 +1,15 @@
-"""Compile TSA24 managed-AU grade and residue curves from TIPSY ``.taf`` tables.
+"""Historical TSA24 grade compiler from TIPSY ``.taf`` tables.
 
-The TSA24 FEMIC instance exposes only volume, height, DBH, TPH, gross yield,
-and crown cover.  Its TIPSY database does contain the full ``.taf`` product
-surface, including the eight BC log grades and the five residual-fibre
-components.  This module reads those tables directly, selects the untreated
-run block whose establishment density is closest to the AU's planted density,
-and writes an AU-keyed grade/residue table.
+.. deprecated::
+   The active compiler is
+   :mod:`workflows.national.bucking.tsa24_grade_curves_btc`, which reads the
+   refreshed BTC ``/TSR`` output.  This module is retained for provenance and
+   tests of the earlier nominal-site-index path; it is no longer called by
+   :mod:`workflows.national.bucking.compile_tsa24_grade_curves`.
+
+The earlier path read the TIPSY database directly, selected the untreated run
+block closest to each AU's planted density, and rescaled grade shares onto the
+FEMIC managed volume.
 
 The TIPSY ``.taf`` tables are nominal-site-index surfaces.  The AU-specific
 grade volumes here are therefore **share-preserving rescales**: the raw TAF

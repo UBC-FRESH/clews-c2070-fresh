@@ -2,8 +2,36 @@
 
 ## 2026-11-15
 
+- **Reran the TSA24 grade/residue benchmark from BTC `/TSR` output and
+  superseded the nominal-site-index `.taf` table.** Installed `wine` and
+  `xvfb` with non-interactive `sudo` and added Wine Mono, then ran the
+  documented FEMIC path: `femic tipsy run-btc` with `log-grades` and
+  `residual-fibre` banks, followed by `femic tsa btc-post-tipsy`. The BTC run
+  exited 0, wrote 16 rows × 685 columns to `04_output-tsa24.csv`, and produced
+  an empty error CSV (header only). The refreshed `tipsy_curves_tsa24.csv`
+  has 576 AU-age rows with `Logs_Grade_D/F/H/I/J/U/X/Y` and
+  `Residual_Chips/Sawdust/Shavings/Trim/Bark`. `D` and `F` are zero for every
+  AU; `H/I/J/U/X/Y` and all five residual components are populated. Added
+  `workflows/national/bucking/tsa24_grade_curves_btc.py` and pointed
+  `compile_tsa24_grade_curves.py` at it; no nominal site index, species
+  surrogate, or grade-share rescale is applied. The corrected AU join uses
+  the FEMIC AU crosswalk (BEC + leading species + FEMIC site-index class),
+  including combined-species strata such as `SBS_SX+AT`, and reports 14
+  AU-curve / 3 species-curve / 3 no-match pilot plots. TIPSY grade shares are
+  H 2.6%, I 0.2%, J 58.0%, U 29.9%, X 6.9%, Y 2.4%, D/F 0%; grade-group proxy
+  high-grade 2.8%, sawlog-group 60.8%, low-grade 39.2%. BTC residual fibre sums
+  to 768.55 ODT/ha against 50.83 pilot ODT/ha (18.45x, n=14); per m³ the ratio
+  is 3.47x. The industrial-sort comparison is marked unavailable because the
+  industrial-logs bank was not requested; the old nominal-SI industrial table
+  is replaced by a header-only file with a manifest supersede note. Hashes:
+  `04_output` `0b7d020b…d69f9`, `tipsy_curves` `ccb7bb0e…540a`,
+  `managed_au_curves` (grade table) `6fe02e12…2791c` in the data manifest.
+  Data commit `0d15a4b`; this parent entry is the accompanying code/documentation
+  commit.
+
 - **Compiled TSA24 grade/residue curves from TIPSY `.taf` tables and validated
-  the bucking pilot against them.** BTC remained unavailable on this host:
+  the bucking pilot against them (superseded later the same day by the BTC
+  `/TSR` entry above).** BTC remained unavailable on this host:
   the local `TIPSYbtc.exe` is a shell wrapper around
   `xvfb-run -a wine TIPSYbtc_real.exe`, and neither `xvfb-run` nor `wine` is
   installed; a bounded `femic tipsy run-btc` probe exited 127. The usable path

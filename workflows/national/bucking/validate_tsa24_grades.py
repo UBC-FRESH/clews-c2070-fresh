@@ -21,7 +21,6 @@ import argparse
 import json
 import math
 import re
-import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -53,8 +52,8 @@ _SORT_ALIASES: Mapping[str, str] = {"D125L50": "D125L5"}
 
 _SPECIES_TO_CURVE: Mapping[str, str] = {
     "SW": "SW",
-    "SE": "SW",
-    "BL": "SW",
+    "SE": "SE",
+    "BL": "BL",
     "S": "SW",
     "SB": "SW",
     "SX": "SW",
@@ -227,16 +226,18 @@ def _mean_class_distance(
 def _load_compiled(compiled_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     paths = {
         "managed": compiled_dir / "managed_au_curves.csv",
-        "industrial": compiled_dir / "managed_au_industrial_sorts.csv",
         "coverage": compiled_dir / "au_grade_coverage.csv",
-        "species": compiled_dir / "species_grade_curves.csv",
     }
     missing = [str(path) for path in paths.values() if not path.exists()]
     if missing:
         raise FileNotFoundError(
             "compiled TSA24 grade curves are missing: " + ", ".join(missing)
         )
-    return tuple(pd.read_csv(path) for path in paths.values())  # type: ignore[return-value]
+    industrial_path = compiled_dir / "managed_au_industrial_sorts.csv"
+    species_path = compiled_dir / "species_grade_curves.csv"
+    industrial = pd.read_csv(industrial_path) if industrial_path.exists() else pd.DataFrame()
+    species = pd.read_csv(species_path) if species_path.exists() else pd.DataFrame()
+    return pd.read_csv(paths["managed"]), industrial, pd.read_csv(paths["coverage"]), species
 
 
 def _au_lookup(coverage: pd.DataFrame) -> dict[tuple[str, str], int]:
@@ -369,11 +370,16 @@ def benchmark_grade_residue(
         int(au): group.sort_values("age") for au, group in managed.groupby("au_id")
     }
     industrial_by_au = {
-        int(au): group.sort_values("age") for au, group in industrial.groupby("au_id")
-    }
+        int(au): group.sort_values("age")
+        for au, group in industrial.groupby("au_id")
+    } if not industrial.empty else {}
     species_by_code = {
-        str(code): group.sort_values("age") for code, group in species.groupby("species_code")
-    }
+        str(code): group.sort_values("age")
+        for code, group in species.groupby("species_code")
+    } if not species.empty else {}
+    industrial_available = bool(industrial_by_au) and all(
+        f"Industrial_Logs_{code}" in industrial.columns for code in INDUSTRIAL_ORDER
+    )
     pilot_logs = logs.copy()
     pilot_logs["sort_code"] = pilot_logs["sort_code"].map(normalise_sort_code)
 
@@ -388,7 +394,12 @@ def benchmark_grade_residue(
         age = float(plot.stand_age) if pd.notna(plot.stand_age) else float("nan")
         stratum = str(attr["stratum_code"]) if attr and pd.notna(attr.get("stratum_code")) else None
         si_level = str(attr["si_level"]) if attr and pd.notna(attr.get("si_level")) else None
-        au_id = au_lookup.get((stratum, si_level)) if stratum and si_level else None
+        au_value = attr.get("au_id") if attr else None
+        au_id = (
+            int(au_value)
+            if au_value is not None and pd.notna(au_value)
+            else (au_lookup.get((stratum, si_level)) if stratum and si_level else None)
+        )
 
         match_tier = "no_match"
         matched_curve: dict[str, float] = {}
@@ -403,8 +414,16 @@ def benchmark_grade_residue(
 
         if au_id is not None and au_id in managed_by_au and math.isfinite(age):
             matched_curve = _row_at_age(managed_by_au[au_id], age)
-            industrial_row = _row_at_age(industrial_by_au[au_id], age)
-            tipsy_volume = float(matched_curve.get("volume", float("nan")))
+            industrial_row = (
+                _row_at_age(industrial_by_au[au_id], age)
+                if au_id in industrial_by_au
+                else {}
+            )
+            tipsy_volume = float(
+                matched_curve.get(
+                    "volume", matched_curve.get("taf_volume125_m3ha", float("nan"))
+                )
+            )
             tipsy_residue = float(matched_curve.get("residual_fibre_odt_ha", float("nan")))
             tipsy_residue_per_m3 = float(
                 matched_curve.get("residue_odt_per_m3", float("nan"))
@@ -418,17 +437,27 @@ def benchmark_grade_residue(
             grade_coverage = float(
                 matched_curve.get("grade_coverage_fraction", float("nan"))
             )
-            extrapolated = bool(matched_curve.get("taf_extrapolated", 0.0))
+            extrapolated = bool(
+                matched_curve.get(
+                    "age_extrapolated", matched_curve.get("taf_extrapolated", 0.0)
+                )
+            )
             match_tier = "au_curve"
         else:
             curve_code = _SPECIES_TO_CURVE.get(str(plot.leading_species).upper())
             if curve_code in species_by_code and math.isfinite(age):
                 matched_curve = _row_at_age(species_by_code[curve_code], age)
                 tipsy_volume = float(
-                    matched_curve.get("taf_volume125_m3ha", float("nan"))
+                    matched_curve.get(
+                        "volume",
+                        matched_curve.get("taf_volume125_m3ha", float("nan")),
+                    )
                 )
                 tipsy_residue = float(
-                    matched_curve.get("taf_residual_fibre_odt_ha", float("nan"))
+                    matched_curve.get(
+                        "residual_fibre_odt_ha",
+                        matched_curve.get("taf_residual_fibre_odt_ha", float("nan")),
+                    )
                 )
                 if tipsy_volume and tipsy_volume > 0:
                     tipsy_residue_per_m3 = tipsy_residue / tipsy_volume
@@ -442,8 +471,17 @@ def benchmark_grade_residue(
                     float(matched_curve.get(name, 0.0) or 0.0) for name in GRADE_NAMES
                 )
                 if tipsy_volume and tipsy_volume > 0:
-                    grade_coverage = grade_total / tipsy_volume
-                extrapolated = bool(matched_curve.get("taf_extrapolated", 0.0))
+                    grade_coverage = float(
+                        matched_curve.get(
+                            "grade_coverage_fraction", grade_total / tipsy_volume
+                        )
+                    )
+                extrapolated = bool(
+                    matched_curve.get(
+                        "age_extrapolated",
+                        matched_curve.get("taf_extrapolated", 0.0),
+                    )
+                )
                 match_tier = "species_curve"
 
         grade_groups = _grade_group_shares(tipsy_grade_shares)
@@ -520,12 +558,20 @@ def benchmark_grade_residue(
         )
 
     matched = frame[frame["match_tier"] != "no_match"].copy()
-    comparable_sort = matched[
+    comparable_grade = matched[
         (matched["bucked_log_m3"] > 0)
         & (matched["tipsy_volume_m3ha"] > 0)
-        & (matched["tipsy_grade_coverage"] >= 0.99)
+        & (matched["tipsy_grade_coverage"] > 0)
     ].copy()
-    comparable_grade = comparable_sort.copy()
+    comparable_sort = (
+        matched[
+            (matched["bucked_log_m3"] > 0)
+            & (matched["tipsy_volume_m3ha"] > 0)
+            & (matched["tipsy_grade_coverage"] >= 0.99)
+        ].copy()
+        if industrial_available
+        else matched.iloc[0:0].copy()
+    )
     frame["sort_comparable"] = frame.index.isin(comparable_sort.index)
     sort_distances = []
     for row in matched.itertuples(index=False):
@@ -626,6 +672,11 @@ def benchmark_grade_residue(
             ((frame["tipsy_volume_m3ha"] <= 0) & (frame["match_tier"] != "no_match")).sum()
         ),
         "sort_share_comparison": {
+            "status": (
+                "reported"
+                if industrial_available
+                else "not_available_no_industrial_logs_bank"
+            ),
             "n": int(len(comparable_sort)),
             "mean_tvd": _summary_metrics(
                 frame.loc[frame["sort_comparable"], "sort_tvd"].dropna().tolist()
@@ -635,12 +686,21 @@ def benchmark_grade_residue(
             ),
             "aggregate_pilot": aggregate_pilot_sort,
             "aggregate_tipsy": aggregate_tipsy_sort,
-            "aggregate_distance": _share_distance(
-                aggregate_pilot_sort, aggregate_tipsy_sort
-            )
-            if aggregate_pilot_sort and aggregate_tipsy_sort
-            else None,
+            "aggregate_distance": (
+                _share_distance(aggregate_pilot_sort, aggregate_tipsy_sort)
+                if industrial_available
+                and aggregate_pilot_sort
+                and aggregate_tipsy_sort
+                else None
+            ),
             "code_alias": dict(_SORT_ALIASES),
+            "note": (
+                "The refreshed TSA24 BTC run used log-grades and residual-fibre "
+                "banks; it did not request industrial-logs, so the industrial "
+                "sort surface is not comparable in this pass."
+                if not industrial_available
+                else "Pilot and TIPSY sort codes share the industrial code family."
+            ),
         },
         "diameter_share_comparison": {
             "n": int(len(comparable_sort)),
@@ -649,8 +709,10 @@ def benchmark_grade_residue(
             ),
             "aggregate_pilot": aggregate_pilot_diameter,
             "aggregate_tipsy": aggregate_tipsy_diameter,
-            "aggregate_distance": _share_distance(
-                aggregate_pilot_diameter, aggregate_tipsy_diameter
+            "aggregate_distance": (
+                _share_distance(aggregate_pilot_diameter, aggregate_tipsy_diameter)
+                if industrial_available
+                else None
             ),
         },
         "length_share_comparison": {
@@ -660,8 +722,10 @@ def benchmark_grade_residue(
             ),
             "aggregate_pilot": aggregate_pilot_length,
             "aggregate_tipsy": aggregate_tipsy_length,
-            "aggregate_distance": _share_distance(
-                aggregate_pilot_length, aggregate_tipsy_length
+            "aggregate_distance": (
+                _share_distance(aggregate_pilot_length, aggregate_tipsy_length)
+                if industrial_available
+                else None
             ),
         },
         "grade_share_comparison": {
@@ -673,7 +737,8 @@ def benchmark_grade_residue(
             "pilot_sawlog_product_share": pilot_product_aggregate.get("sawlog", 0.0),
             "note": (
                 "Pilot sort codes are dimension-only industrial sorts, not BC "
-                "log grades.  Compare TIPSY grade groups only as a proxy."
+                "log grades.  TIPSY Logs_Grade_* values are BTC model output, "
+                "not field grades; compare grade groups only as a proxy."
             ),
         },
         "residue_comparison": {
@@ -696,17 +761,24 @@ def benchmark_grade_residue(
             ),
         },
         "join_basis": (
-            "FAIB plot -> BEC+leading-species stratum -> within-stratum PSP "
-            "site-index tertile -> TSA24 managed AU; TIPSY curve interpolated "
-            "at FAIB stand age.  Species fallback uses the leading-species TAF "
-            "table and is labelled separately."
+            "FAIB plot -> BEC + leading species -> managed FEMIC AU stratum "
+            "(including combined-species strata) -> FEMIC AU site-index class -> "
+            "managed AU; BTC /TSR curve interpolated at FAIB stand age. Species "
+            "fallback uses a mean of the same-species managed AU curves and is "
+            "labelled separately."
         ),
         "caveats": [
-            "TAF tables are nominal-site-index surfaces (SW 20, PLI 23, FDI 25).",
-            "SE and BL use the SW table as the interior volume surrogate.",
+            (
+                "Grade and residue values are direct BTC /TSR model output at the "
+                "AU site index; no nominal-site-index TAF substitution is applied."
+            ),
+            "Logs_Grade_D and Logs_Grade_F are zero for every TSA24 AU in this run.",
             "Pilot sort codes are not official BC log grades.",
             "TIPSY residual fibre is mill residue, not harvest residue.",
-            "Grade volumes are share-preserving rescales to FEMIC managed volume.",
+            (
+                "Industrial sort comparison is unavailable because the "
+                "industrial-logs bank was not requested."
+            ),
         ],
     }
     return summary, frame
@@ -728,7 +800,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     from .tree_lists import load_faib_psp_tree_list
-    from .validate_tsa24 import _plot_benchmark_attributes
+    from .validate_tsa24 import _plot_benchmark_attributes, default_femic_root
 
     args = build_parser().parse_args(argv)
     pilot_dir = Path(args.pilot_dir)
@@ -736,7 +808,7 @@ def main(argv: list[str] | None = None) -> int:
     logs = pd.read_csv(pilot_dir / "bucked_logs.csv")
     tree_summary = pd.read_csv(pilot_dir / "tree_summary.csv")
     faib = load_faib_psp_tree_list(Path("data/raw"))
-    attrs = _plot_benchmark_attributes(faib)
+    attrs = _plot_benchmark_attributes(faib, default_femic_root())
     summary, frame = benchmark_grade_residue(
         attrs=attrs,
         plot_summary=plot_summary,

@@ -18,6 +18,7 @@ import hashlib
 import json
 import math
 import os
+from itertools import pairwise
 import subprocess
 import sys
 import time
@@ -665,13 +666,216 @@ def _assign_si_levels(plots: pd.DataFrame, stratum_column: str) -> pd.DataFrame:
     return frame
 
 
-def _plot_benchmark_attributes(faib: FaibTreeList) -> pd.DataFrame:
+_SPECIES_TOKEN: Mapping[str, str] = {
+    "SW": "SX",
+    "SE": "SX",
+    "SB": "SX",
+    "S": "SX",
+    "SX": "SX",
+    "PL": "PLI",
+    "PLI": "PLI",
+    "PLC": "PLI",
+    "FD": "FDI",
+    "FDI": "FDI",
+    "AT": "AT",
+    "BL": "BL",
+    "CW": "CW",
+    "HW": "HWI",
+    "HWI": "HWI",
+}
+
+_SI_SITE_INDEX_COLUMNS: Mapping[str, str] = {
+    "SW": "sw_si",
+    "SX": "sw_si",
+    "S": "sw_si",
+    "SB": "sw_si",
+    "SE": "se_si",
+    "BL": "bl_si",
+    "PL": "pl_si",
+    "PLI": "pl_si",
+    "FD": "fd_si",
+    "FDI": "fd_si",
+    "AT": "at_si",
+    "CW": "cw_si",
+    "HW": "hw_si",
+    "HWI": "hw_si",
+}
+
+
+def _species_token(species: str) -> str:
+    code = str(species).strip().upper()
+    return _SPECIES_TOKEN.get(code, code)
+
+
+def _stratum_species_tokens(stratum_code: str) -> frozenset[str]:
+    _, _, species_part = str(stratum_code).partition("_")
+    return frozenset(token.strip() for token in species_part.split("+") if token.strip())
+
+
+def _stratum_leading_species(stratum_code: str) -> str:
+    _, _, species_part = str(stratum_code).partition("_")
+    tokens = [token.strip() for token in species_part.split("+") if token.strip()]
+    return tokens[0] if tokens else ""
+
+
+def _site_index_for_species(row: pd.Series, species: str) -> float | None:
+    column = _SI_SITE_INDEX_COLUMNS.get(str(species).strip().upper())
+    if column is None:
+        return None
+    value = row.get(column)
+    if pd.notna(value) and float(value) > 0:
+        return float(value)
+    return None
+
+
+def _load_au_join(femic_root: Path | None) -> pd.DataFrame | None:
+    """Build the managed FEMIC AU crosswalk used by all TSA24 benchmarks."""
+    if femic_root is None:
+        return None
+    input_path = femic_root / "data" / "03_input-tsa24.csv"
+    au_path = femic_root / "data" / "model_input_bundle" / "au_table.csv"
+    if not input_path.exists() or not au_path.exists():
+        return None
+    inputs = pd.read_csv(input_path)
+    au_table = pd.read_csv(au_path)
+    managed = au_table[
+        pd.to_numeric(au_table["source_managed_local_au_id"], errors="coerce").notna()
+    ].copy()
+    merged = managed.merge(
+        inputs,
+        left_on="source_managed_local_au_id",
+        right_on="feature_id",
+        how="inner",
+    )
+    if merged.empty:
+        return None
+    # The AU stratum code is the authoritative BEC/species identity.  The
+    # 03_input BEC can differ from the untreated stratum attached to a managed
+    # planted feature (for example an ICH opening whose managed curve is SBS_SX).
+    merged["bec_zone"] = merged["stratum_code"].astype(str).str.partition("_")[0]
+    merged["species_token"] = merged["stratum_code"].map(_stratum_leading_species)
+    merged["au_site_index"] = [
+        _site_index_for_species(
+            row,
+            _stratum_leading_species(str(row["stratum_code"])),
+        )
+        for _, row in merged.iterrows()
+    ]
+    return merged[
+        [
+            "au_id",
+            "stratum_code",
+            "si_level",
+            "bec_zone",
+            "species_token",
+            "au_site_index",
+            "feature_id",
+        ]
+    ].copy()
+
+
+def _best_au_stratum(
+    join: pd.DataFrame,
+    bec_zone: str,
+    leading_species: str,
+) -> str | None:
+    """Pick the managed AU stratum for a plot, including combined-species AUs."""
+    token = _species_token(leading_species)
+    bec = str(bec_zone).strip().upper()
+    candidates = [
+        str(stratum)
+        for stratum in join.loc[join["bec_zone"].astype(str).str.upper() == bec, "stratum_code"].unique()
+        if token in _stratum_species_tokens(stratum)
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda stratum: (
+            len(_stratum_species_tokens(stratum)),
+            -int(
+                (
+                    (join["stratum_code"].astype(str) == stratum)
+                    & (join["bec_zone"].astype(str).str.upper() == bec)
+                ).sum()
+            ),
+            stratum,
+        ),
+    )
+
+
+def _assign_si_level_from_join(
+    join: pd.DataFrame,
+    stratum_code: str | None,
+    site_index: float | None,
+) -> str | None:
+    """Assign a plot to the nearest FEMIC AU site-index class."""
+    if stratum_code is None or site_index is None or not math.isfinite(float(site_index)):
+        return None
+    rows = join[join["stratum_code"].astype(str) == str(stratum_code)]
+    level_means: dict[str, float] = {}
+    for level in ("L", "M", "H"):
+        values = rows.loc[rows["si_level"].astype(str) == level, "au_site_index"].dropna()
+        if not values.empty:
+            level_means[level] = float(values.astype(float).mean())
+    if not level_means:
+        return None
+    ordered = sorted(level_means, key=lambda level: level_means[level])
+    for left, right in pairwise(ordered):
+        midpoint = 0.5 * (level_means[left] + level_means[right])
+        if float(site_index) <= midpoint:
+            return left
+    return ordered[-1]
+
+
+def _au_id_from_join(
+    join: pd.DataFrame,
+    stratum_code: str | None,
+    si_level: str | None,
+) -> int | None:
+    if stratum_code is None or si_level is None:
+        return None
+    matches = join[
+        (join["stratum_code"].astype(str) == str(stratum_code))
+        & (join["si_level"].astype(str) == str(si_level))
+    ]
+    if matches.empty:
+        return None
+    return int(matches.iloc[0]["feature_id"])
+
+
+def _plot_benchmark_attributes(
+    faib: FaibTreeList,
+    femic_root: Path | None = None,
+) -> pd.DataFrame:
+    """Join FAIB plots to FEMIC managed AUs by BEC, species, and SI class.
+
+    The join uses the FEMIC AU crosswalk (``au_table.csv`` + ``03_input``)
+    rather than re-deriving independent site-index tertiles.  Combined-species
+    AUs such as ``SBS_SX+AT`` are eligible when their species set contains the
+    plot-leading token.
+    """
     frame = faib.plots.copy()
+    join = _load_au_join(femic_root)
+    if join is None:
+        frame["stratum_code"] = [
+            _vdyp_stratum(bec, species)
+            for bec, species in zip(frame["bec_zone"], frame["leading_species"])
+        ]
+        return _assign_si_levels(frame, "stratum_code")
+
     frame["stratum_code"] = [
-        _vdyp_stratum(bec, species)
+        _best_au_stratum(join, bec, species)
         for bec, species in zip(frame["bec_zone"], frame["leading_species"])
     ]
-    frame = _assign_si_levels(frame, "stratum_code")
+    frame["si_level"] = [
+        _assign_si_level_from_join(join, stratum, site_index)
+        for stratum, site_index in zip(frame["stratum_code"], frame["site_index"])
+    ]
+    frame["au_id"] = [
+        _au_id_from_join(join, stratum, level)
+        for stratum, level in zip(frame["stratum_code"], frame["si_level"])
+    ]
     return frame
 
 
@@ -722,7 +926,7 @@ def _run_vdyp(
             "status": "schema_error",
             "missing": sorted(required.difference(curves.columns)),
         }, pd.DataFrame()
-    attrs = _plot_benchmark_attributes(faib)
+    attrs = _plot_benchmark_attributes(faib, femic_root)
     attrs = attrs.dropna(subset=["stratum_code", "si_level"])
     curve_groups = {
         (stratum, level): group.sort_values("age")
@@ -774,9 +978,10 @@ def _run_vdyp(
         ),
         "input": "vdyp_curves_smooth-tsa24.feather",
         "join_basis": (
-            "BEC + leading supported species -> VDYP stratum_code; within-stratum "
-            "PSP site-index tertiles -> L/M/H. This is a benchmark stratification, "
-            "not the FEMIC AU SI-level mapping."
+            "BEC + leading supported species -> managed FEMIC AU stratum "
+            "(including combined-species strata) -> FEMIC AU site-index class -> "
+            "VDYP stratum_code + L/M/H. This is the FEMIC AU crosswalk used as a "
+            "benchmark join, not an operational AU assignment."
         ),
         "caveat": (
             "VDYP smooth volume units are assumed m3/ha; the curve may represent gross "
@@ -810,9 +1015,9 @@ def _tipsy_grade_columns(femic_root: Path) -> dict[str, Any]:
             token in " ".join(lower) for token in ("grade", "resid", "value", "price", "sort")
         ),
         "note": (
-            "The TSA24 instance exposes only conifer/deciduous merchantable volume, "
-            "height, gross volume, and crown cover by age. It has no grade, residue, "
-            "or value columns."
+            "The refreshed TSA24 BTC /TSR output now exposes Logs_Grade_D/F/H/I/J/"
+            "U/X/Y and Residual_Chips/Sawdust/Shavings/Trim/Bark by age. It still "
+            "has no value, price, or sort columns."
         ),
     }
 
@@ -875,7 +1080,9 @@ def _run_tipsy(
         .to_dict()
     )
     available_au = set(curves["AU"].astype(int).unique())
-    attrs = _plot_benchmark_attributes(faib).dropna(subset=["stratum_code", "si_level"])
+    attrs = _plot_benchmark_attributes(faib, femic_root).dropna(
+        subset=["stratum_code", "si_level"]
+    )
     curve_groups = {
         int(au): group.sort_values("Age") for au, group in curves.groupby("AU")
     }
@@ -885,7 +1092,12 @@ def _run_tipsy(
         if attr.empty:
             continue
         attr_row = attr.iloc[0]
-        au = au_lookup.get((attr_row["stratum_code"], attr_row["si_level"]))
+        au_value = attr_row.get("au_id") if "au_id" in attr_row else None
+        au = (
+            int(au_value)
+            if au_value is not None and pd.notna(au_value)
+            else au_lookup.get((attr_row["stratum_code"], attr_row["si_level"]))
+        )
         if au is None or int(au) not in available_au or pd.isna(plot.stand_age):
             continue
         curve = curve_groups[int(au)]
@@ -922,14 +1134,16 @@ def _run_tipsy(
         ),
         "grade_residue_value_inspection": inspection,
         "join_basis": (
-            "BEC + leading species -> stratum_code; within-stratum PSP site-index "
-            "tertiles -> L/M/H; au_table managed source AU (falling back to "
-            "unmanaged/source AU) -> TIPSY AU. Not the FEMIC AU assignment."
+            "BEC + leading species -> managed FEMIC AU stratum (including "
+            "combined-species strata such as SBS_SX+AT) -> FEMIC AU site-index "
+            "class -> managed source AU in au_table -> TIPSY curve at FAIB stand "
+            "age."
         ),
         "caveat": (
-            "The TSA24 TIPSY instance has no grade, residue, or value columns. "
-            "No grade/residue benchmark is possible from this instance. The sort and "
-            "price profile is a placeholder. TIPSY Yield is treated as m3/ha."
+            "TIPSY Yield is treated as m3/ha. Grade and residue surfaces are "
+            "reported separately by the TSA24 grade benchmark; this volume join "
+            "does not assert grade equivalence. The sort and price profile is a "
+            "placeholder."
         ),
     }
     return summary, frame
@@ -1242,11 +1456,10 @@ def _build_report(
         f"| Elapsed | {elapsed_seconds:.1f} s |",
         "",
         "> This is the Phase 0/1 pilot. It is **not** the pre-registered three-way",
-        "> validation gate. The TSA24 FEMIC instance has no grade, residue, or value",
-        "> columns, but the TIPSY 4.5 `.taf` database exposes `Logs_Grade_*` and",
-        "> `Residual_*` surfaces. A TAF-derived grade/residue benchmark is reported",
-        "> with nominal-site-index, species-surrogate, and mill-vs-harvest caveats.",
-        "> No official BC log grade is assigned.",
+        "> validation gate. The refreshed TSA24 FEMIC BTC /TSR output exposes",
+        "> `Logs_Grade_*` and `Residual_*` surfaces at each managed AU and age. A",
+        "> BTC-derived grade/residue benchmark is reported with model-output and",
+        "> mill-vs-harvest caveats. No official BC log grade is assigned.",
         "",
         "## 1. Scope and contracts",
         "",
@@ -1384,7 +1597,7 @@ def _build_report(
         f"- Grade/residue/value inspection: {json.dumps(tipsy.get('grade_residue_value_inspection', {}), default=str)}",
         f"- Caveat: {tipsy.get('caveat', 'n/a')}",
         "",
-        "### TSA24 grade and residue benchmark (TIPSY 4.5 `.taf`)",
+        "### TSA24 grade and residue benchmark (BTC /TSR)",
         "",
         f"- Status: **{tsa24_grades.get('status')}**",
         f"- Compiled curves: `{tsa24_grades.get('compiled_dir', 'n/a')}`",
@@ -1398,11 +1611,11 @@ def _build_report(
         f"n={tsa24_grades.get('sort_share_comparison', {}).get('n', 0)}, "
         f"mean TVD={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('mean_tvd', {}).get('mean'), 3)}, "
         f"mean overlap={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('mean_overlap', {}).get('mean'), 3)}, "
-        f"aggregate TVD={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('aggregate_distance', {}).get('total_variation_distance'), 3)}.",
+        f"aggregate TVD={_fmt((tsa24_grades.get('sort_share_comparison', {}).get('aggregate_distance') or {}).get('total_variation_distance'), 3)}.",
         f"- Diameter marginal shares: aggregate TVD="
-        f"{_fmt(tsa24_grades.get('diameter_share_comparison', {}).get('aggregate_distance', {}).get('total_variation_distance'), 3)}; "
+        f"{_fmt((tsa24_grades.get('diameter_share_comparison', {}).get('aggregate_distance') or {}).get('total_variation_distance'), 3)}; "
         f"length marginal shares: aggregate TVD="
-        f"{_fmt(tsa24_grades.get('length_share_comparison', {}).get('aggregate_distance', {}).get('total_variation_distance'), 3)}.",
+        f"{_fmt((tsa24_grades.get('length_share_comparison', {}).get('aggregate_distance') or {}).get('total_variation_distance'), 3)}.",
         f"- TIPSY grade shares (proxy; `Logs_Grade_*`): "
         f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('aggregate_tipsy_grades'))}",
         f"- TIPSY grade-group proxy: "
@@ -1421,11 +1634,10 @@ def _build_report(
         f"- Join basis: {tsa24_grades.get('join_basis', 'n/a')}",
         f"- Caveat: {tsa24_grades.get('residue_comparison', {}).get('note', 'n/a')}",
         f"- Caveat: {tsa24_grades.get('grade_share_comparison', {}).get('note', 'n/a')}",
-        "- Interpretation: the exact-code TVD is sensitive to within-class length",
-        "  splits.  The marginal diameter and length TVDs are about 0.23 each: the",
-        "  pilot bucker concentrates volume in the 8 m and 6.3 m length classes,",
-        "  while TIPSY concentrates in 5.1 m.  That is a bucking-policy difference,",
-        "  not an official grade validation.",
+        "- Interpretation: the grade comparison is a model-output proxy.  The",
+        "  pilot bucker assigns dimension-only sorts; the BTC surface assigns",
+        "  TIPSY log grades from its own interior rules.  Agreement in grade-group",
+        "  shares is informative but is not an official grade validation.",
         "",
         "### RSYC",
         "",
@@ -1471,7 +1683,7 @@ def _build_report(
         "| FAIB PSP tree list | measured plot data |",
         "| Kozak 2004 taper | published_table |",
         "| TIPSY interior dimension sorts | published_table, adapted to geometry-only |",
-        "| TIPSY 4.5 `.taf` grade/residue | model_output; nominal site index; share-scaled to FEMIC volume |",
+        "| TSA24 BTC /TSR grade/residue | model_output; AU and site-index specific |",
         "| BC Interior log prices | published product averages; placeholder for grade value |",
         "| Residue density / moisture / chip yield | assumption |",
         "| Grade assignment | none (`not_assigned`) |",
@@ -1481,18 +1693,16 @@ def _build_report(
         "## 7. Gaps and next steps",
         "",
         "- No official grade benchmark: the pilot is dimension-only, so its sort",
-        "  shares are not BC log grades. The TIPSY `.taf` grade shares are a",
-        "  model-output proxy at nominal site index, not a field-grade gate.",
-        "- The TIPSY `.taf` tables are nominal-site-index surfaces (SW 20, PLI 23,",
-        "  FDI 25). Grade volumes are share-preserving rescales to FEMIC managed",
-        "  volume; they are not independent AU grade runs. SE and BL use the SW",
-        "  table as the interior volume surrogate.",
+        "  shares are not BC log grades. The BTC `Logs_Grade_*` shares are a",
+        "  model-output proxy, not a field-grade gate.",
+        "- Logs_Grade_D and Logs_Grade_F are zero for every TSA24 AU in this run.",
+        "  The grade comparison therefore covers the H/I/J/U/X/Y surface only.",
         "- TIPSY `Residual_*` is mill-processing residue (chips/sawdust/shavings/",
         "  trim/bark), not harvest slash. The pilot residue is",
         "  `taper total - recovered logs`; the two are not equivalent.",
-        "- VDYP and TIPSY joins use within-stratum PSP site-index tertiles. That is a",
-        "  benchmark stratification, not the FEMIC AU `si_level` assignment. Replace",
-        "  it with the FEMIC AU crosswalk before treating the comparison as a gate.",
+        "- The VDYP and TIPSY joins now use the FEMIC AU crosswalk (BEC + species",
+        "  + FEMIC site-index class), including combined-species AUs. The join is",
+        "  still a benchmark mapping, not an operational AU assignment.",
         "- The price profile has no pulpwood price for Hem-Bal or Cedar and no prices",
         "  for White Pine or Yellow Pine. Unpriced volume is reported separately.",
         "- Residue density, moisture, and chip yield are assumptions. Replace them with",
@@ -1667,8 +1877,8 @@ def _build_manifest(
         "notes": [
             "Pilot, not the pre-registered three-way validation gate.",
             "No official grade assigned.",
-            "TSA24 TIPSY instance has no grade/residue/value columns.",
-            "Grade/residue benchmark comes from TIPSY .taf tables at nominal site index.",
+            "Grade/residue benchmark comes from refreshed TSA24 BTC /TSR output.",
+            "Logs_Grade_D and Logs_Grade_F are zero for every TSA24 AU in this run.",
             "TIPSY residual fibre is mill residue, not harvest slash.",
         ],
     }
@@ -1785,7 +1995,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     grade_curves_dir = _resolve_path(args.grade_curves_dir, repo_root)
     if grade_curves_dir.exists():
         grade_benchmark, grade_frame = benchmark_grade_residue(
-            attrs=_plot_benchmark_attributes(faib),
+            attrs=_plot_benchmark_attributes(faib, femic_root),
             plot_summary=plot_summary,
             logs=logs,
             tree_summary=tree_summary,
@@ -1894,8 +2104,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "status": "pilot_complete_with_gaps",
         "notes": (
             f"{len(selection.plots)} stratified plots / {len(selection.trees)} trees; "
-            "Kozak taper + TIPSY interior dimension sorts; TIPSY .taf grade/residue "
-            "benchmark with nominal-site-index and mill-vs-harvest caveats; "
+            "Kozak taper + TIPSY interior dimension sorts; refreshed TSA24 BTC /TSR "
+            "grade/residue benchmark with model-output and mill-vs-harvest caveats; "
             "density/moisture/chip assumptions flagged."
         ),
     }

@@ -1027,3 +1027,70 @@ Value: not computed; no same-basis interior grade price vector.
 **Verification Timestamp**: 2026-11-15T19:00:00Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, fresh-tipsy 0.1.0, TIPSY 4.5 database (February 2022), nemora reference checkout
 **Artifact Reference**: data commit `91c2762`; parent commit `cdd15bf`; `data/derived/national/bucking/tsa24_grade_curves/`; `data/derived/national/bucking/tsa24_pilot/{VALIDATION_REPORT.md,validation_summary.json,grade_benchmark.csv,grade_benchmark_summary.json,TSA24_GRADE_CURVES.md}`
+**Superseded**: EL-20261115-023 reran the benchmark from BTC `/TSR` output and replaced the nominal-site-index `.taf` table. The numeric claims above are retained as historical evidence, not current results.
+
+---
+
+## 2026-11-15 — TSA24 BTC /TSR grade and residue run
+
+### Entry: EL-20261115-023
+**Claim**: The TSA24 grade/residue benchmark was rerun from the documented FEMIC BTC `/TSR` path with `log-grades` and `residual-fibre` indicator banks, replacing the nominal-site-index `.taf` table.
+**Status Symbol**: ✅
+**Evidence Type**: command output, file hashes, validation summary, git commit refs
+**Command**:
+```bash
+sudo apt-get update
+sudo apt-get install -y wine xvfb
+xvfb-run -a wine msiexec /i /tmp/wine-dl/wine-mono-9.0.0-x86.msi /qn
+xvfb-run -a wine "$TIPSY_INSTALL/TIPSYbtc_real.exe" /TSR \
+  Samples/ex1.csv /tmp/tsa24-smoke/smoke_out.csv /tmp/tsa24-smoke/smoke_err.csv
+
+export FEMIC_BATCHTIPSY_EXE="$TIPSY_INSTALL/TIPSYbtc.exe"
+export TIPSY_DATABASE="$TIPSY_INSTALL/Database"
+python -m femic tipsy run-btc data/03_input-tsa24.csv \
+  --indicator-bank log-grades --indicator-bank residual-fibre \
+  --run-id tsa24_grades
+python -m femic tsa btc-post-tipsy \
+  --instance-root "$FEMIC_TSA24_ROOT" \
+  --run-config config/run_profile.tsa24.yaml --tsa 24 --run-id tsa24_grades \
+  --indicator-bank log-grades --indicator-bank residual-fibre
+python -m workflows.national.bucking.compile_tsa24_grade_curves \
+  --femic-root "$FEMIC_TSA24_ROOT" \
+  --out-dir data/derived/national/bucking/tsa24_grade_curves
+python -m workflows.national.bucking.validate_tsa24 \
+  --out-dir data/derived/national/bucking/tsa24_pilot \
+  --grade-curves-dir data/derived/national/bucking/tsa24_grade_curves
+```
+**Exit Code**: 0 (smoke, BTC run, compile, validation)
+**Output Summary**:
+```
+Runtime: wine 9.0, xvfb, wine-mono 9.0.0 installed; wrapper
+  /srv/shared-data/gep/iversen-jamie-msc-thesis/btc_install_wine/TIPSYbtc.exe
+  execs xvfb-run -a wine TIPSYbtc_real.exe.
+BTC smoke: /TSR Samples/ex1.csv -> smoke_out.csv 103,283 bytes,
+  smoke_err.csv 7,140 bytes, exit 0.
+BTC TSA24: exit 0; 16 data rows x 685 columns; 04_error-tsa24.csv header-only.
+  Logs_Grade_D/F = 0 for all 16 AUs; H/I/J/U/X/Y nonzero; all five
+  Residual_* components nonzero.
+Post-TIPSY: au_rows=27, curves=43, curve_points=8,544; bundle regenerated.
+Grade compile: 16 AUs x 36 ages = 576 rows; direct BTC columns, no rescale.
+Benchmark join: 14 AU-curve, 3 species-curve, 3 no-match; 12 grade-comparable.
+TIPSY grades: H 2.6%, I 0.2%, J 58.0%, U 29.9%, X 6.9%, Y 2.4%, D/F 0%.
+Grade groups: high D/F/H/I 2.8%, sawlog D/F/H/I/J 60.8%, low U/X/Y 39.2%.
+Pilot sawlog product share 96.9% (proxy comparison only).
+Residue: pilot 50.83 ODT/ha vs BTC mill residue 768.55 ODT/ha (18.45x, n=14);
+  per m3 ratio 3.47x. Semantic mismatch, not equivalence.
+Industrial-sort comparison: not available (industrial-logs bank not requested).
+```
+**Hashes**:
+```
+03_input-tsa24.csv        e3c518bdad74a7b7897d44da6d36d93f513bcbfc29495123a7a91b5b24566042
+04_output-tsa24.csv       0b7d020b91e118fce4cc67d2d50680e33fa48afe0b429c0413226d846e1d69f9
+tipsy_curves_tsa24.csv    ccb7bb0ead30381c355646b3b1f1cb7668537b3f7dbe4d8e237c963df1ed540a
+au_table.csv              fbaeb44b241e73373dfa0cf9b730cafed0f3e6f15f944056d35268d4b06b3099
+managed_au_curves.csv     6fe02e124b842040fe463b2e94bf6a549db7203e74e403db787e1b616b72791c
+btc_manifest-tsa24_grades_tsa24.json d4a659b391b5b153de5b8af3f0772a8c84c029fd7f5a0dc604c3cd0c26d59587
+```
+**Verification Timestamp**: 2026-11-15T19:30:00Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, wine 9.0, wine-mono 9.0.0, TIPSY 4.7 BTC, nemora reference checkout
+**Artifact Reference**: data commit `0d15a4b`; `data/derived/national/bucking/tsa24_grade_curves/`; `data/derived/national/bucking/tsa24_pilot/{VALIDATION_REPORT.md,validation_summary.json,grade_benchmark.csv,grade_benchmark_summary.json,TSA24_GRADE_CURVES.md}`; BTC manifests under `femic-tsa24-instance/tipsy_io/logs/` and `vdyp_io/profile_logs/`
