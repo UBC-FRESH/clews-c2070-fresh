@@ -991,3 +991,39 @@ parent push: d6f2402..c408aca feature/p7-source-triage-and-production-readiness 
 **Verification Timestamp**: 2026-11-15T18:35:00Z
 **Verified By**: Git 2.45.2; git-annex 10.20240129; GitHub `origin`
 **Artifact Reference**: data commit `3056429`; parent commit `c408aca`; `data/derived/national/bucking/tsa24_pilot/`; `workflows/national/bucking/`
+
+### Entry: EL-20261115-022
+**Claim**: TSA24 grade and residue curves were compiled from TIPSY 4.5 `.taf` tables for all 16 managed AUs, and the bucking pilot was benchmarked against them without using MKRF or fabricating a BTC run.
+**Status Symbol**: ✅
+**Evidence Type**: command output, file hashes, validation summary, git commit refs
+**Command**:
+```bash
+command -v wine; command -v xvfb-run
+femic tipsy run-btc data/03_input-tsa24.csv \
+  --btc-exe "$TIPSY_INSTALL/TIPSYbtc.exe" --use-installed-btc ...
+python -m workflows.national.bucking.compile_tsa24_grade_curves \
+  --femic-root "$FEMIC_TSA24_ROOT" \
+  --tipsy-database "$TIPSY_DATABASE" \
+  --out-dir data/derived/national/bucking/tsa24_grade_curves
+python -m workflows.national.bucking.validate_tsa24 \
+  --out-dir data/derived/national/bucking/tsa24_pilot \
+  --grade-curves-dir data/derived/national/bucking/tsa24_grade_curves
+```
+**Exit Code**: 0 (compile and validation); 127 (BTC probe, expected blocker)
+**Output Summary**:
+```
+BTC: TIPSYbtc.exe wrapper needs xvfb-run + wine; both absent.
+     stderr: .../TIPSYbtc.exe: 2: exec: xvfb-run: not found; exit_code=127
+TAF: 16 AUs x 36 ages = 576 rows; tables sw 0530P00 (SI 20),
+     pli0530P00 (SI 23), fdi0535P00 (SI 25).
+Grade benchmark: 11 AU-curve, 7 species-curve, 2 no-match.
+Sort TVD aggregate 0.487; diameter marginal 0.232; length marginal 0.234.
+TIPSY grades: H 5.6%, I 0.3%, J 59.8%, U 27.8%, X 3.9%, Y 2.5%, D/F 0%.
+Pilot sawlog product share 96.8% (proxy comparison only).
+Residue: pilot 43.50 ODT/ha vs TIPSY mill residue 516.17 ODT/ha (13.39x);
+         per m3 ratio 2.90x.  Semantic mismatch, not equivalence.
+Value: not computed; no same-basis interior grade price vector.
+```
+**Verification Timestamp**: 2026-11-15T19:00:00Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, fresh-tipsy 0.1.0, TIPSY 4.5 database (February 2022), nemora reference checkout
+**Artifact Reference**: data commit `91c2762`; parent commit `cdd15bf`; `data/derived/national/bucking/tsa24_grade_curves/`; `data/derived/national/bucking/tsa24_pilot/{VALIDATION_REPORT.md,validation_summary.json,grade_benchmark.csv,grade_benchmark_summary.json,TSA24_GRADE_CURVES.md}`
