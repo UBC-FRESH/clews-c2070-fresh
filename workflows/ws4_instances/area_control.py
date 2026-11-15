@@ -479,6 +479,7 @@ def build_au_metrics(
     }
     return metrics, landbase
 
+
 def _eligible_mask(
     blocks: pd.DataFrame,
     start: int,
@@ -729,6 +730,7 @@ def build_schedule(
     if schedule.empty:
         warnings.append("no block was scheduled")
     return schedule, diagnostics_frame, warnings
+
 
 def add_selected_volumes(
     diagnostics: pd.DataFrame,
