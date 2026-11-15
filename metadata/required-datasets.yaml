@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-11-15T08:47:44Z"
+updated_utc: "2026-11-15T10:10:00Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -1063,6 +1063,76 @@ datasets:
     datalad_mirror:
       include: "yes"
       rationale: "Derived calibration payload is about 49 MB (tree_survival.csv.gz is the large object); keep it in the data submodule and annex the gzip CSV. Published to arbutus-s3 on 2026-11-15."
+
+  - id: rsyc_national_yield_curves
+    category: benchmark_product
+    status: archived
+    required_for:
+      - "national AGB and total-volume yield-curve prior for the bucking and biomass-supply architecture"
+      - "stand-age to AGB/volume screening by 150 km tile and nested ecological stratum"
+      - "independent benchmark for national growth-and-yield and inventory projections"
+    canonical_data_path: "raw/national/rsyc/"
+    preferred: true
+    source:
+      publisher: "Natural Resources Canada - Canadian Forest Service (P. Tompalski)"
+      title: "RSYC: Remote Sensing-Derived Yield Curves for Canada (model release v20260923; package v0.2.0)"
+      url: "https://github.com/ptompalski/RSYC"
+      access_mode: "direct_download"
+      license: "GPL-3.0-or-later (package and bundled model catalogue); Open Government Licence - Canada (ecological strata boundaries)"
+      provenance_notes: "Downloaded 2026-11-15 from the RSYC dev branch at package version 0.2.0.9000, model release v20260923. ZIP sha256 86da5737720613f686b3f14b3cdea43c18b5cde87a4b113a3cb0df6dcfe24940 (1,468,706 bytes), matching data-raw/RSYC_models_manifest.csv. Tiles sha256 f61e0ec06b29146264ff676c98fcfa1e431d6ddd5f1d97d17e957d4d9e77308b (278,528 bytes), 385 features. Ecostrat sha256 e425818f3c1db682f21a6eec6bebf4397761db46b08b13b8c4d3c780dc0d87a4 (15,421,440 bytes), boundary v2. The tagged v0.2.0 model ZIP differs only in 32 corrected strata_id spelling cells (Betsiamiles -> Betsiamites); coefficients and predictions are unchanged. All artifacts are model parameters or boundaries, not plot data. See data/raw/national/rsyc/ACQUISITION.md and CONTENTS.md."
+      metadata_created: "2026-10-21T02:48:20Z"
+      metadata_modified: "2026-11-13T22:27:01Z"
+      resources:
+        - format: "ZIP/CSV"
+          name: "RSYC_models.zip (27,208 x 42 model catalogue)"
+          url: "https://raw.githubusercontent.com/ptompalski/RSYC/dev/data-raw/RSYC_models.zip"
+        - format: "GeoPackage"
+          name: "RSYC_tiles.gpkg (385 150 km tiles)"
+          url: "https://raw.githubusercontent.com/ptompalski/RSYC/dev/inst/extdata/RSYC_tiles.gpkg"
+        - format: "GeoPackage"
+          name: "RSYC_ecostrat.gpkg (12 ecozones / 36 ecoprovinces / 138 ecoregions / 672 ecodistricts)"
+          url: "https://github.com/ptompalski/RSYC/releases/download/ecostrat-v2/RSYC_ecostrat.gpkg"
+    coverage:
+      spatial: "Canada; 150 km tiles and the 12 forested ecozones used by RSYC"
+      temporal: "static model release v20260923; curves evaluated over stand ages 1-600, with 1-150 documented as the fitted/operational range"
+      resolution: "stand-level yield curve by 150 km tile and four nested ecological levels"
+    package_inventory:
+      observed_utc: "2026-11-15T10:02:26Z"
+      manifest_path: "raw/national/rsyc/PROVENANCE.csv"
+      model_rows: 27208
+      model_columns: 42
+      tile_count: 385
+      tile_region_count: 264
+      ecozone_count: 12
+      ecoprovince_count: 36
+      ecoregion_count: 138
+      ecodistrict_count: 672
+      species_code_count: 32
+      model_group_count: 3
+      curve_count_agb: 13646
+      curve_count_volume: 13562
+      curve_count_national: 17292
+      curve_count_regional: 9916
+      age_min: 1
+      age_max: 600
+      operational_age_max: 150
+      validation_curve_count: 6434
+      validation_median_r2_min: 0.57
+      validation_median_r2_max: 0.80
+      validation_median_bias_pct_min: -31.4
+      validation_median_bias_pct_max: 9.3
+      validation_median_rmse_pct_min: 31.3
+      validation_median_rmse_pct_max: 53.3
+      archive_path: "raw/national/rsyc/"
+    suitability: "Benchmark/prior layer only. Provides stand-age to AGB or total-volume curves, not tree lists, taper, log grades, or prices. Join on tile/strata_id; one ecodistrict-438 spelling mismatch must be corrected explicitly."
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "recorded per artifact in PROVENANCE.csv"
+      target_artifact: "raw/national/rsyc/PROVENANCE.csv"
+    datalad_mirror:
+      include: "yes"
+      rationale: "About 17 MB across three open artifacts; annex the binary ZIP and GeoPackages in the data submodule and publish to arbutus-s3. GPL-3+ and OGL-Canada terms permit redistribution with attribution; retain ACQUISITION.md and PROVENANCE.csv."
 
     # End of curated registry.
 

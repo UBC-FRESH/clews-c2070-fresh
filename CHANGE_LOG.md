@@ -2,6 +2,27 @@
 
 ## 2026-11-15
 
+- **Acquired RSYC national yield-curve artifacts and registered national
+  bucking tool references.** Downloaded the RSYC `v20260923` model catalogue
+  (`RSYC_models.zip`, 1,468,706 bytes, sha256 `86da5737…24940`), 150 km tile
+  grid (`RSYC_tiles.gpkg`, 278,528 bytes, `f61e0ec0…7308b`), and ecological
+  boundary v2 (`RSYC_ecostrat.gpkg`, 15,421,440 bytes, `e425818f…d87a4`) into
+  `data/raw/national/rsyc/`. All three hashes match the upstream release
+  manifests; ZIP and GeoPackage integrity checks pass; the 385 tile IDs join
+  exactly to the 385 tile models. The catalogue is 27,208 × 42: 13,646 AGB +
+  13,562 volume curves; 385 tiles, 12 ecozones, 36 ecoprovinces, 138
+  ecoregions, 672 ecodistricts; 32 species codes + 3 model groups; catalogue
+  age bounds 1–600 with 1–150 documented as the operational range. Recorded
+  `ACQUISITION.md`, `PROVENANCE.csv`, and `CONTENTS.md`, including the
+  published median validation ranges (R² 0.57–0.80, RMSE 31.3–53.3%, bias
+  −31.4 to +9.3%) and the ecodistrict-438 `Betsiamiles`/`Betsiamites` spelling
+  caveat. Added metadata-only `data/raw/national/bucking/REFERENCES.md`
+  covering BuckR, FSvolLib, biomasscan, CFSForestTools, and the FVS Canadian
+  variants (citation, licence, input/output contract, architecture role); no
+  upstream code was cloned or vendored. Registered RSYC in
+  `metadata/national-plot-data-inventory.csv` and
+  `metadata/required-datasets.yaml`.
+
 - **Added the WS4 TSA instance factory and the first TSA24 pilot instance.**
   `workflows/ws4_instances/` now carries the standard (`README.md`), instance
   templates, `make_instance.py`, and the area-control runner

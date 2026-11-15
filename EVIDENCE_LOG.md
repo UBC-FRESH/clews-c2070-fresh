@@ -834,3 +834,48 @@ Each entry follows the structure defined in [docs/agent-integrity-protocol.md](d
 ---
 
 *This log is append-only. Entries must not be modified after creation. Corrections are added as new entries referencing the original. (Sole exception: the 2026-08-17 pre-publication integrity repair above, performed while this file was still untracked, and recorded in full in the Corrections section.)*
+
+---
+
+## 2026-11-15 — RSYC acquisition and bucking-reference registration
+
+### Entry: EL-20261115-017
+**Claim**: The three RSYC `v20260923` artifacts were acquired intact, their SHA-256 values match the upstream release manifests, and the model-catalogue inventory counts were verified from the artifact.
+**Status Symbol**: ✅
+**Evidence Type**: Download audit, checksum comparison, archive/GeoPackage integrity checks, and tabular count verification
+**Command**:
+```bash
+cd data/raw/national/rsyc
+curl -fL --retry 4 -o RSYC_models.zip https://raw.githubusercontent.com/ptompalski/RSYC/dev/data-raw/RSYC_models.zip
+curl -fL --retry 4 -o RSYC_tiles.gpkg https://raw.githubusercontent.com/ptompalski/RSYC/dev/inst/extdata/RSYC_tiles.gpkg
+curl -fL --retry 4 -o RSYC_ecostrat.gpkg https://github.com/ptompalski/RSYC/releases/download/ecostrat-v2/RSYC_ecostrat.gpkg
+sha256sum RSYC_models.zip RSYC_tiles.gpkg RSYC_ecostrat.gpkg
+unzip -t RSYC_models.zip
+.venv/bin/python -c "import sqlite3; print(sqlite3.connect('RSYC_tiles.gpkg').execute('PRAGMA integrity_check').fetchone())"
+.venv/bin/python -c "import sqlite3; print(sqlite3.connect('RSYC_ecostrat.gpkg').execute('PRAGMA integrity_check').fetchone())"
+```
+**Exit Code**: 0
+**Output Summary**:
+```
+RSYC_models.zip      1,468,706 bytes  86da5737720613f686b3f14b3cdea43c18b5cde87a4b113a3cb0df6dcfe24940
+RSYC_tiles.gpkg        278,528 bytes  f61e0ec06b29146264ff676c98fcfa1e431d6ddd5f1d97d17e957d4d9e77308b
+RSYC_ecostrat.gpkg  15,421,440 bytes  e425818f3c1db682f21a6eec6bebf4397761db46b08b13b8c4d3c780dc0d87a4
+unzip -t: No errors detected; 1 member RSYC_models.csv (16,768,740 bytes)
+tiles PRAGMA integrity_check: ok; 1 layer RSYC_tiles, 385 Polygon features, EPSG:3978
+ecostrat PRAGMA integrity_check: ok; ecozones 12, ecoprovinces 36, ecoregions 138, ecodistricts 672; EPSG:3978
+model CSV: 27,208 rows x 42 columns; 27,208 unique model_id; model_version v20260923 on all rows
+responses: agb 13,646; volume 13,562
+scale: national 17,292; regional 9,916
+levels: tile 4,886; tile_region 1,750; ecozone 461; ecoprovince 1,118; ecoregion 3,602; ecodistrict 15,391
+unique units: tiles 385; tile_region 264; ecozone 12; ecoprovince 36; ecoregion 138; ecodistrict 672
+species column: 32 scientific codes + generic/coniferous/broadleaf = 35 distinct values
+age_min 1; age_max 600 on all rows (README operational range 1-150)
+publication flags: publish_ok/fit_ok/converged = TRUE on all 27,208 rows; singular_or_boundary TRUE on 88
+upstream manifests: model 86da5737...24940; tiles f61e0ec0...7308b; ecostrat e425818f...d87a4
+tile join: 385/385 exact; ecozone 12/12, ecoprovince 36/36, ecoregion 138/138 exact
+ecodistrict join: 671/672 exact; known Betsiamiles/Betsiamites spelling mismatch for ecodistrict 438
+validation article: 60 summary rows, 6,434 validated curves; median R2 0.57-0.80, bias -31.4 to +9.3%, RMSE 31.3-53.3%
+```
+**Verification Timestamp**: 2026-11-15T10:10:00Z
+**Verified By**: curl 8.x, unzip 6.00, Python 3.12.3 (pandas 3.0.3, pyogrio 0.13.0), SQLite integrity_check
+**Artifact Reference**: `data/raw/national/rsyc/{ACQUISITION.md,PROVENANCE.csv,CONTENTS.md}`; upstream manifests `data-raw/{RSYC_models_manifest.csv,tiles-manifest.csv,ecostrat-manifest.csv}` at RSYC `dev`
