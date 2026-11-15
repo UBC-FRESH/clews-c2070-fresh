@@ -25,7 +25,7 @@ import warnings
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -52,6 +52,7 @@ from .tree_lists import (
     load_faib_psp_tree_list,
     select_stratified_sample,
 )
+from .validate_tsa24_grades import benchmark_grade_residue
 
 __all__ = ["main"]
 
@@ -192,6 +193,22 @@ def _fmt(value: Any, digits: int = 2) -> str:
     if not math.isfinite(number):
         return "n/a"
     return f"{number:,.{digits}f}"
+
+
+def _format_shares(
+    shares: Mapping[str, float] | None,
+    keys: Sequence[str] | None = None,
+) -> str:
+    if not shares:
+        return "n/a"
+    selected = list(keys) if keys is not None else list(shares)
+    parts = []
+    for key in selected:
+        value = shares.get(key)
+        if value is None:
+            continue
+        parts.append(f"{key}={_fmt(float(value) * 100, 1)}%")
+    return ", ".join(parts) if parts else "n/a"
 
 
 def _markdown_table(frame: pd.DataFrame, digits: int = 2) -> str:
@@ -1169,6 +1186,7 @@ def _build_report(
     residue: dict[str, Any],
     vdyp: dict[str, Any],
     tipsy: dict[str, Any],
+    tsa24_grades: dict[str, Any],
     rsyc: dict[str, Any],
     taper_warnings: Sequence[str],
     elapsed_seconds: float,
@@ -1218,15 +1236,17 @@ def _build_report(
         f"| Pilot | `{PILOT_NAME}` |",
         f"| TSA | {TSA_NUMBER} — {TSA_NAME} |",
         f"| Generated (UTC) | {datetime.now(timezone.utc).isoformat(timespec='seconds')} |",
-        f"| Status | pilot complete; benchmark gaps stated |",
+        f"| Status | pilot complete; grade benchmark with stated assumptions |",
         f"| Sample | {len(selection.plots)} plots, {len(selection.trees)} live trees |",
         f"| Logs | {len(logs)} |",
         f"| Elapsed | {elapsed_seconds:.1f} s |",
         "",
         "> This is the Phase 0/1 pilot. It is **not** the pre-registered three-way",
-        "> validation gate. The TSA24 TIPSY instance has no grade, residue, or value",
-        "> columns, so no grade or residue benchmark is claimed. No official BC log",
-        "> grade is assigned.",
+        "> validation gate. The TSA24 FEMIC instance has no grade, residue, or value",
+        "> columns, but the TIPSY 4.5 `.taf` database exposes `Logs_Grade_*` and",
+        "> `Residual_*` surfaces. A TAF-derived grade/residue benchmark is reported",
+        "> with nominal-site-index, species-surrogate, and mill-vs-harvest caveats.",
+        "> No official BC log grade is assigned.",
         "",
         "## 1. Scope and contracts",
         "",
@@ -1364,6 +1384,49 @@ def _build_report(
         f"- Grade/residue/value inspection: {json.dumps(tipsy.get('grade_residue_value_inspection', {}), default=str)}",
         f"- Caveat: {tipsy.get('caveat', 'n/a')}",
         "",
+        "### TSA24 grade and residue benchmark (TIPSY 4.5 `.taf`)",
+        "",
+        f"- Status: **{tsa24_grades.get('status')}**",
+        f"- Compiled curves: `{tsa24_grades.get('compiled_dir', 'n/a')}`",
+        f"- Match tiers: **{tsa24_grades.get('n_au_curve', 0)}** AU-curve, "
+        f"**{tsa24_grades.get('n_species_curve', 0)}** species-curve, "
+        f"**{tsa24_grades.get('n_no_match', 0)}** no-match; "
+        f"**{tsa24_grades.get('n_zero_pilot_logs', 0)}** plots with no pilot logs, "
+        f"**{tsa24_grades.get('n_zero_tipsy_volume', 0)}** with zero TIPSY volume, "
+        f"**{tsa24_grades.get('n_grade_comparable', 0)}** grade-comparable.",
+        f"- Industrial sort shares (exact codes): "
+        f"n={tsa24_grades.get('sort_share_comparison', {}).get('n', 0)}, "
+        f"mean TVD={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('mean_tvd', {}).get('mean'), 3)}, "
+        f"mean overlap={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('mean_overlap', {}).get('mean'), 3)}, "
+        f"aggregate TVD={_fmt(tsa24_grades.get('sort_share_comparison', {}).get('aggregate_distance', {}).get('total_variation_distance'), 3)}.",
+        f"- Diameter marginal shares: aggregate TVD="
+        f"{_fmt(tsa24_grades.get('diameter_share_comparison', {}).get('aggregate_distance', {}).get('total_variation_distance'), 3)}; "
+        f"length marginal shares: aggregate TVD="
+        f"{_fmt(tsa24_grades.get('length_share_comparison', {}).get('aggregate_distance', {}).get('total_variation_distance'), 3)}.",
+        f"- TIPSY grade shares (proxy; `Logs_Grade_*`): "
+        f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('aggregate_tipsy_grades'))}",
+        f"- TIPSY grade-group proxy: "
+        f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('aggregate_tipsy_groups'))}",
+        f"- Pilot product shares (comparable plots): "
+        f"{_format_shares(tsa24_grades.get('grade_share_comparison', {}).get('pilot_product_shares'))}",
+        f"- Residue (absolute ODT/ha): "
+        f"n={tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('n', 0)}, "
+        f"pilot sum={_fmt(tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('observed_sum'), 2)}, "
+        f"TIPSY sum={_fmt(tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('predicted_sum'), 2)}, "
+        f"mean ratio={_fmt(tsa24_grades.get('residue_comparison', {}).get('absolute_odt_ha', {}).get('mean_ratio'), 2)}; "
+        f"per m³ mean ratio="
+        f"{_fmt(tsa24_grades.get('residue_comparison', {}).get('per_m3', {}).get('mean_ratio'), 2)}.",
+        f"- Value: **{tsa24_grades.get('value_comparison', {}).get('status', 'n/a')}** — "
+        f"{tsa24_grades.get('value_comparison', {}).get('note', 'n/a')}",
+        f"- Join basis: {tsa24_grades.get('join_basis', 'n/a')}",
+        f"- Caveat: {tsa24_grades.get('residue_comparison', {}).get('note', 'n/a')}",
+        f"- Caveat: {tsa24_grades.get('grade_share_comparison', {}).get('note', 'n/a')}",
+        "- Interpretation: the exact-code TVD is sensitive to within-class length",
+        "  splits.  The marginal diameter and length TVDs are about 0.23 each: the",
+        "  pilot bucker concentrates volume in the 8 m and 6.3 m length classes,",
+        "  while TIPSY concentrates in 5.1 m.  That is a bucking-policy difference,",
+        "  not an official grade validation.",
+        "",
         "### RSYC",
         "",
         f"- Status: **{rsyc.get('status')}**",
@@ -1408,6 +1471,7 @@ def _build_report(
         "| FAIB PSP tree list | measured plot data |",
         "| Kozak 2004 taper | published_table |",
         "| TIPSY interior dimension sorts | published_table, adapted to geometry-only |",
+        "| TIPSY 4.5 `.taf` grade/residue | model_output; nominal site index; share-scaled to FEMIC volume |",
         "| BC Interior log prices | published product averages; placeholder for grade value |",
         "| Residue density / moisture / chip yield | assumption |",
         "| Grade assignment | none (`not_assigned`) |",
@@ -1416,9 +1480,16 @@ def _build_report(
         "",
         "## 7. Gaps and next steps",
         "",
-        "- No grade benchmark: the TSA24 TIPSY instance has no grade, residue, or value",
-        "  columns. The sort/price profile is a placeholder. Do not report these",
-        "  shares as official BC grades or as a grade-validation result.",
+        "- No official grade benchmark: the pilot is dimension-only, so its sort",
+        "  shares are not BC log grades. The TIPSY `.taf` grade shares are a",
+        "  model-output proxy at nominal site index, not a field-grade gate.",
+        "- The TIPSY `.taf` tables are nominal-site-index surfaces (SW 20, PLI 23,",
+        "  FDI 25). Grade volumes are share-preserving rescales to FEMIC managed",
+        "  volume; they are not independent AU grade runs. SE and BL use the SW",
+        "  table as the interior volume surrogate.",
+        "- TIPSY `Residual_*` is mill-processing residue (chips/sawdust/shavings/",
+        "  trim/bark), not harvest slash. The pilot residue is",
+        "  `taper total - recovered logs`; the two are not equivalent.",
         "- VDYP and TIPSY joins use within-stratum PSP site-index tertiles. That is a",
         "  benchmark stratification, not the FEMIC AU `si_level` assignment. Replace",
         "  it with the FEMIC AU crosswalk before treating the comparison as a gate.",
@@ -1512,6 +1583,18 @@ def _build_manifest(
             "femic-tsa24-instance/data/model_input_bundle/au_table.csv",
         ),
         _hash_record(
+            "tsa24_grade_curves",
+            _resolve_path(args.grade_curves_dir, Path(args.repo_root))
+            / "managed_au_curves.csv",
+            "tsa24_grade_curves/managed_au_curves.csv",
+        ),
+        _hash_record(
+            "tsa24_grade_industrial_sorts",
+            _resolve_path(args.grade_curves_dir, Path(args.repo_root))
+            / "managed_au_industrial_sorts.csv",
+            "tsa24_grade_curves/managed_au_industrial_sorts.csv",
+        ),
+        _hash_record(
             "rsyc_models",
             Path(args.repo_root) / "data" / "raw" / "national" / "rsyc" / "RSYC_models.zip",
             "raw/national/rsyc/RSYC_models.zip",
@@ -1585,6 +1668,8 @@ def _build_manifest(
             "Pilot, not the pre-registered three-way validation gate.",
             "No official grade assigned.",
             "TSA24 TIPSY instance has no grade/residue/value columns.",
+            "Grade/residue benchmark comes from TIPSY .taf tables at nominal site index.",
+            "TIPSY residual fibre is mill residue, not harvest slash.",
         ],
     }
 
@@ -1696,6 +1781,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     rsyc, rsyc_curves, rsyc_plots = _run_rsyc(
         repo_root, femic_root, faib, plot_summary, deadline
     )
+    print("Benchmark: TSA24 grade/residue...", file=sys.stderr)
+    grade_curves_dir = _resolve_path(args.grade_curves_dir, repo_root)
+    if grade_curves_dir.exists():
+        grade_benchmark, grade_frame = benchmark_grade_residue(
+            attrs=_plot_benchmark_attributes(faib),
+            plot_summary=plot_summary,
+            logs=logs,
+            tree_summary=tree_summary,
+            compiled_dir=grade_curves_dir,
+        )
+        grade_benchmark["compiled_dir"] = str(args.grade_curves_dir)
+    else:
+        grade_benchmark = {
+            "status": "missing_compiled_curves",
+            "compiled_dir": str(grade_curves_dir),
+            "note": (
+                "Run workflows.national.bucking.compile_tsa24_grade_curves "
+                "to build the TSA24 grade/residue table."
+            ),
+        }
+        grade_frame = pd.DataFrame()
 
     elapsed = time.monotonic() - started
     summary = {
@@ -1715,6 +1821,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "benchmarks": {
             "vdyp": vdyp,
             "tipsy": tipsy,
+            "tsa24_grades": grade_benchmark,
             "rsyc": rsyc,
         },
         "assumptions": {
@@ -1741,6 +1848,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         _write_csv(vdyp_frame, out_dir / "vdyp_benchmark.csv")
     if not tipsy_frame.empty:
         _write_csv(tipsy_frame, out_dir / "tipsy_benchmark.csv")
+    if not grade_frame.empty:
+        _write_csv(grade_frame, out_dir / "grade_benchmark.csv")
+    (out_dir / "grade_benchmark_summary.json").write_text(
+        json.dumps(_jsonable(grade_benchmark), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     if not rsyc_curves.empty:
         _write_csv(rsyc_curves, out_dir / "rsyc_curves.csv")
     if not rsyc_plots.empty:
@@ -1759,6 +1872,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         residue_summary,
         vdyp,
         tipsy,
+        grade_benchmark,
         rsyc,
         taper_warnings,
         elapsed,
@@ -1780,8 +1894,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "status": "pilot_complete_with_gaps",
         "notes": (
             f"{len(selection.plots)} stratified plots / {len(selection.trees)} trees; "
-            "Kozak taper + TIPSY interior dimension sorts; no grade/residue benchmark "
-            "in TSA24 instance; density/moisture/chip assumptions flagged."
+            "Kozak taper + TIPSY interior dimension sorts; TIPSY .taf grade/residue "
+            "benchmark with nominal-site-index and mill-vs-harvest caveats; "
+            "density/moisture/chip assumptions flagged."
         ),
     }
     (out_dir / "pilot_row.json").write_text(
@@ -1841,6 +1956,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--species-crosswalk", default=str(default_species_crosswalk()))
     parser.add_argument("--rules", default=str(default_rules_path()))
     parser.add_argument("--femic-root", default=str(default_femic_root()))
+    parser.add_argument(
+        "--grade-curves-dir",
+        default="data/derived/national/bucking/tsa24_grade_curves",
+        help=(
+            "Compiled TSA24 grade/residue curve directory from "
+            "compile_tsa24_grade_curves (default: "
+            "data/derived/national/bucking/tsa24_grade_curves)."
+        ),
+    )
     parser.add_argument("--max-plots", type=int, default=20)
     parser.add_argument("--max-trees-per-plot", type=int, default=15)
     parser.add_argument("--seed", type=int, default=20261115)

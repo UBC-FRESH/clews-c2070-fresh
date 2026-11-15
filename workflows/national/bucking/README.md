@@ -168,6 +168,8 @@ estimate and carries no contamination or moisture segregation.
 | `sort_value_summary.csv` | Sort/code/product/market-group volume and value |
 | `product_summary.csv`, `market_group_summary.csv` | Product and market rollups |
 | `vdyp_benchmark.csv`, `tipsy_benchmark.csv`, `rsyc_benchmark.csv` | Matched benchmark rows, when the join exists |
+| `grade_benchmark.csv` | Plot-level TSA24 TIPSY grade/residue comparison |
+| `grade_benchmark_summary.json` | Machine-readable grade/residue benchmark summary |
 | `rsyc_curves.csv` | RSYC volume curves at ages 20–140, when available |
 | `validation_summary.json` | Machine-readable results and gaps |
 | `VALIDATION_REPORT.md` | Human-readable report |
@@ -177,7 +179,41 @@ estimate and carries no contamination or moisture segregation.
 The runner also upserts the row into `metadata/bucking-pilots.csv` unless
 `--metadata-csv ""` is passed.
 
-## 7. Usage
+## 7. TSA24 grade and residue curves
+
+The TSA24 FEMIC instance does not carry grade or residue columns.  Its TIPSY
+4.5 `.taf` tables under the local TIPSY database do.  The compile step reads
+those tables directly (no BTC runtime required), selects the untreated run
+block closest to each AU's planted density, and writes:
+
+```text
+data/derived/national/bucking/tsa24_grade_curves/
+  managed_au_curves.csv
+  managed_au_industrial_sorts.csv
+  species_grade_curves.csv
+  au_grade_coverage.csv
+  manifest.json
+```
+
+The AU grade volumes are share-preserving rescales to the FEMIC managed
+merchantable volume for the same AU and age.  The TIPSY tables are
+nominal-site-index surfaces (SW 20, PLI 23, FDI 25); SE and BL use the SW
+table as the interior volume surrogate.  The residual-fibre columns are
+TIPSY/SYLVER mill-processing residues, not harvest slash.
+
+```bash
+.venv/bin/python -m workflows.national.bucking.compile_tsa24_grade_curves \
+  --femic-root "$FEMIC_TSA24_ROOT" \
+  --tipsy-database "$TIPSY_DATABASE" \
+  --out-dir data/derived/national/bucking/tsa24_grade_curves
+```
+
+`validate_tsa24.py` reads that directory when present and reports the
+industrial-sort share comparison, the TIPSY grade-share proxy, and the
+residue semantic gap.  See
+`data/derived/national/bucking/tsa24_pilot/TSA24_GRADE_CURVES.md`.
+
+## 8. Usage
 
 ```bash
 PYTHONPATH=$NEMORA_ROOT/src \
@@ -186,6 +222,7 @@ PYTHONPATH=$NEMORA_ROOT/src \
   --max-plots 20 \
   --max-trees-per-plot 15 \
   --seed 20261115 \
+  --grade-curves-dir data/derived/national/bucking/tsa24_grade_curves \
   --timebox-seconds 900
 ```
 
@@ -199,13 +236,15 @@ PYTHONPATH=$NEMORA_ROOT/src \
   .venv/bin/pytest -q tests/test_bucking.py
 ```
 
-## 8. Non-goals
+## 9. Non-goals
 
 - No official BC log grade.  The rule set is dimension-only.
 - No national taper set.  Phase 0 implements BC Kozak only.
 - No national defect, sweep, knot, or rot model.
 - No delivered chip, hog, or contamination model.
 - No TSA-wide expansion.  The 300-tree sample is a pilot.
-- No claim that the TSA24 TIPSY instance validates grade or residue.  That
-  instance has no grade, residue, or value columns.
+- No claim that the TSA24 TIPSY instance itself validates grade or residue.  The
+  grade/residue benchmark comes from the separate TIPSY `.taf` tables and is
+  reported with nominal-site-index, species-surrogate, and mill-vs-harvest
+  caveats.
 - No RSYC-driven bucking.  RSYC is a stand-level sanity check at most.

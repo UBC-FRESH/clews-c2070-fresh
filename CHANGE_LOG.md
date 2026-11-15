@@ -2,6 +2,31 @@
 
 ## 2026-11-15
 
+- **Compiled TSA24 grade/residue curves from TIPSY `.taf` tables and validated
+  the bucking pilot against them.** BTC remained unavailable on this host:
+  the local `TIPSYbtc.exe` is a shell wrapper around
+  `xvfb-run -a wine TIPSYbtc_real.exe`, and neither `xvfb-run` nor `wine` is
+  installed; a bounded `femic tipsy run-btc` probe exited 127. The usable path
+  was `fresh-tipsy`'s 151-field `.taf` parser. Added
+  `workflows/national/bucking/tsa24_grade_curves.py`,
+  `compile_tsa24_grade_curves.py`, and `validate_tsa24_grades.py`. The compile
+  covers all 16 TSA24 managed AUs (576 AU-age rows) using `sw 0530P00` (SW
+  SI 20; SE/BL surrogate), `pli0530P00` (PLI SI 23), and `fdi0535P00` (FDI
+  SI 25), selecting the untreated run block closest to each AU's planted
+  density. Grade volumes are share-preserving rescales to FEMIC managed
+  volume; residual fibre is TIPSY/SYLVER mill residue, not harvest slash.
+  `validate_tsa24.py` now reports an 11 AU-curve / 7 species-curve / 2
+  no-match join. Exact industrial-sort TVD is 0.487 aggregate (0.670 mean,
+  overlap 0.330); diameter and length marginal TVDs are 0.232 and 0.234.
+  TIPSY grade shares are H 5.6%, I 0.3%, J 59.8%, U 27.8%, X 3.9%, Y 2.5%,
+  D/F 0%; the pilot sawlog product share is 96.8% on comparable plots, a
+  proxy gap because the pilot is dimension-only. TIPSY residual fibre sums to
+  516.2 ODT/ha against 43.5 pilot ODT/ha (13.4x); per m³ the ratio is 2.9x.
+  No value comparison: no same-basis interior grade price vector. Outputs:
+  `data/derived/national/bucking/tsa24_grade_curves/` and the pilot report,
+  summary, `grade_benchmark.csv`, and `TSA24_GRADE_CURVES.md`. Tests:
+  `tests/test_bucking.py` (10 passed); `compileall` clean.
+
 - **Added national bucking Phase 0 contracts and the bounded TSA24 pilot.**
   New `workflows/national/bucking/` package: `schema.py` (`TreeRecord`,
   `BuckedLog`, `ResidueLedger`, `GradeRule`, `GradeRuleSet`), `taper.py`
