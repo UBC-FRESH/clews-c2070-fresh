@@ -2,6 +2,28 @@
 
 ## 2026-11-15
 
+- **Added the `fresh-fvsca` BC prototype, parity report, and consumer dataset.**
+  `workflows/national/fvsca/` now contains the multi-variant contract
+  (`VariantProfile`: BC implemented; ON and ACD stubs; AB, SK, MB, YT, NT
+  explicitly unrepresented and needing non-FVS backends), the `PlotSource`
+  protocol with `HarmonizedV0Source`, the BC consumer adapter, a build CLI, a
+  parity harness against the read-only `fresh_fvsbc.calibration` builder, and
+  seven focused tests. The BC dataset is
+  `data/derived/fvsca_calibration/bc_faib_fvsbc_schema/` (data commit
+  `097e5e7`): 7,341 source sites (7,337 with live visits), 24,962 plot-visit
+  rows, 17,151 intervals, 1,814,527 tree-survival rows, 45 observed source
+  species (13 direct JSP, 7 donor aliases, 25 unmapped), and 1,522 multi-plot
+  visit rows with null volume and an explicit `volume_basis`. Parity against
+  `fresh-fvsbc` 0.21.4 is exact for visit/interval/tree-survival rows, sites,
+  plots, interval years, TPH, and post-filter tree rows; the report explains
+  the one-endpoint dead-DBH difference, donor species, BEC handling, TSA
+  enrichment, and multi-plot volume. Fixed four adapter/profile bugs exposed by
+  tests: an interval-start `year` merge collision, a missing `TSA_DESC` column
+  in tree survival, duplicate visit identifier columns, and a BEC zone parser
+  that swallowed lower-case subzones. Output hashes are recorded in the dataset
+  manifest; the gzip tree-survival table is published to `arbutus-s3`. Raw
+  inputs unchanged.
+
 - **FVSCA calibration v0 corrected and rebuilt after harmonization review.**
   The 2026-11-14 v0 (`0654864`, `e22dc2f`) is **invalid**: QC PEP
   `plot_area_ha` used `10000 / tige_ha`, so a 25 stems/ha plot was stored as

@@ -691,6 +691,62 @@ git-annex:
 
 ---
 
+### Entry: EL-20261115-015
+**Claim**: The `fresh-fvsca` BC prototype builds the FVSbc consumer schema from the corrected v0 `faib_psp` subset, matches the read-only `fresh_fvsbc.calibration.build_dataset` row counts for visits/intervals/tree-survival, documents every material difference in `PARITY_REPORT.md`, passes focused and repository tests, and publishes the gzip tree-survival table to `arbutus-s3`.
+**Status Symbol**: ✅
+**Evidence Type**: Reproducible build + parity comparison against a read-only reference + focused tests + full repository tests + manifest hash audit + git-annex S3 verification
+**Command**: `.venv/bin/python -m workflows.national.fvsca.build --variant bc --source faib_psp --v0-root data/derived/fvsca_calibration/v0 --raw-root data/raw --out data/derived/fvsca_calibration/bc_faib_fvsbc_schema`; `.venv/bin/python -m workflows.national.fvsca.parity --raw-root data/raw --v0-root data/derived/fvsca_calibration/v0`; `.venv/bin/python -m pytest -q tests/test_fvsca_bc.py`; `.venv/bin/python -m pytest -q tests`; `git -C data annex add derived/fvsca_calibration/bc_faib_fvsbc_schema`; `git -C data commit -m "Add FVSCA BC FAIB PSP consumer schema dataset"`; `cd data && ~/bin/git-annex-s3 copy --to arbutus-s3 derived/fvsca_calibration/bc_faib_fvsbc_schema`; `git -C data annex whereis derived/fvsca_calibration/bc_faib_fvsbc_schema/tree_survival.csv.gz`; `git -C data annex find --not --in arbutus-s3`; `git -C data push origin main`; `git -C data push origin git-annex`
+**Exit Code**: 0
+**Output Summary**:
+```
+build (2m48s):
+  sites selected            7,341 (all in the twelve resolved BEC zones)
+  plot-visit rows          24,962 (23,956 source visits; 509 multi-plot units)
+  intervals                17,151 (years 2-35)
+  tree-survival rows    1,814,527 (dead 272,292; known 1,793,037; missing 21,490)
+  species crosswalk            45 (13 direct JSP, 7 donor aliases, 25 unmapped;
+                                 261,472 unmapped calibration rows)
+  TSA matched sites         7,304 site-level (7,300 with live visits)
+  warnings                      2 (multi-plot volume null; unmapped species)
+
+parity versus fresh-fvsbc 0.21.4:
+  visits                 24,962 / 24,962
+  intervals              17,151 / 17,151
+  tree-survival       1,814,527 / 1,814,527
+  unique sites            7,337 / 7,337
+  unique site/plot pairs  7,806 / 7,806
+  interval years min/med/max 2 / 10 / 35 in both
+  mean BA                  46.5423 / 46.5423 m2/ha
+  mean TPH              1,880.3325 / 1,880.3325 stems/ha
+  mean QMD                 21.3971 / 21.3971 cm
+  dead endpoints          272,291 / 272,292 (+1 retained known death)
+  known endpoints       1,793,036 / 1,793,037
+  species resolved             13 / 20 (7 donor aliases)
+  species unmapped             32 / 25
+  null visit-volume rows        0 / 1,522 (509 multi-plot visit units)
+
+tests:
+  focused tests                 7 passed
+  repository tests            203 passed + 29 subtests
+
+output SHA-256:
+  visits.csv              24,962 rows  5,051,096 bytes  8169df68...c6a6f916
+  intervals.csv           17,151 rows  4,658,304 bytes  d125cebe...34e6f07
+  tree_survival.csv.gz 1,814,527 rows 39,312,661 bytes  ad19a21d...443f60d
+  species_crosswalk_fvsbc.csv 45 rows      5,646 bytes  a69c03a4...26fc3c
+  manifest.json                             3,727 bytes  75eee741...c2259932
+
+git-annex:
+  tree_survival.csv.gz: 2 copies [here], [arbutus-s3]
+  git annex find --not --in arbutus-s3 = 0
+  data commit 097e5e7 pushed to origin/main; git-annex 3acc8a7 pushed
+```
+**Verification Timestamp**: 2026-11-15T08:57:00Z
+**Verified By**: Python 3.12.3 / pandas 3.0.3; fresh-fvsbc 0.21.4; pytest 9.1.1; git-annex 10.20240129; Arbutus S3
+**Artifact Reference**: `workflows/national/fvsca/{README.md,PARITY_REPORT.md,build.py,parity.py,profiles.py,plot_sources.py,bc.py}`; `tests/test_fvsca_bc.py`; data-submodule commit `097e5e7`; `data/derived/fvsca_calibration/bc_faib_fvsbc_schema/{visits.csv,intervals.csv,tree_survival.csv.gz,species_crosswalk_fvsbc.csv,manifest.json}`
+
+---
+
 ## Evidence Log Format Reference
 
 Each entry follows the structure defined in [docs/agent-integrity-protocol.md](docs/agent-integrity-protocol.md#evidence-log-format):

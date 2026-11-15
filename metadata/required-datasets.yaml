@@ -1,5 +1,5 @@
 schema_version: 1
-updated_utc: "2026-11-15T07:47:21Z"
+updated_utc: "2026-11-15T08:47:44Z"
 owner: "UBC FRESH / CLEWs-C2070 forestry data maintainers"
 notes:
   - "Curated registry for datasets accepted into the CLEWs-C2070 FRESH data foundation."
@@ -1019,6 +1019,50 @@ datasets:
     datalad_mirror:
       include: "yes"
       rationale: "Derived calibration payload is about 196 MB uncompressed/gzip; keep it in the data submodule and annex large CSV.GZ outputs. Published to arbutus-s3 on 2026-11-15."
+
+  - id: fvsca_bc_faib_fvsbc_schema
+    category: derived_product
+    status: generated
+    required_for:
+      - "BC calibration-table input for the FVSbc consumer schema"
+      - "parity-tested adapter output for the fresh-fvsca BC path"
+    canonical_data_path: "derived/fvsca_calibration/bc_faib_fvsbc_schema/"
+    preferred: true
+    source:
+      publisher: "UBC FRESH / CLEWs-C2070"
+      title: "BC FAIB PSP consumer schema for FVSbc calibration"
+      url: null
+      access_mode: "derived_product"
+      license: "inherited from input sources; see fvsca_calibration_v0"
+      provenance_notes: "Built 2026-11-15 by workflows/national/fvsca/build.py from the corrected fvsca_calibration_v0 faib_psp subset and the archived FAIB PSP header, with TSA_DESC enrichment. This is a calibration-table boundary output, not an FVS run or a fitted model. Differences from fresh_fvsbc.calibration.build_dataset are measured and explained in workflows/national/fvsca/PARITY_REPORT.md. Published to arbutus-s3 on 2026-11-15."
+    coverage:
+      spatial: "British Columbia"
+      temporal: "1921-2025"
+      resolution: "ground plot, plot visit, individual tree, and consecutive-visit interval"
+    package_inventory:
+      observed_utc: "2026-11-15T08:45:00Z"
+      manifest_path: "derived/fvsca_calibration/bc_faib_fvsbc_schema/manifest.json"
+      site_count: 7341
+      sites_with_visits: 7337
+      visit_count: 24962
+      interval_count: 17151
+      tree_survival_count: 1814527
+      species_crosswalk_rows: 45
+      species_direct_codes: 13
+      species_donor_codes: 7
+      species_unmapped_codes: 25
+      multi_plot_visit_units: 509
+      source_labels:
+        - faib_psp
+      archive_path: "derived/fvsca_calibration/bc_faib_fvsbc_schema/"
+    checksum:
+      algorithm: "sha256"
+      value: null
+      status: "recorded per output in manifest.json"
+      target_artifact: "derived/fvsca_calibration/bc_faib_fvsbc_schema/manifest.json"
+    datalad_mirror:
+      include: "yes"
+      rationale: "Derived calibration payload is about 49 MB (tree_survival.csv.gz is the large object); keep it in the data submodule and annex the gzip CSV. Published to arbutus-s3 on 2026-11-15."
 
     # End of curated registry.
 
