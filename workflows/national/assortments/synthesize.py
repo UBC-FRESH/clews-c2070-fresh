@@ -27,7 +27,12 @@ from workflows.national.bucking.schema import TreeRecord
 from workflows.national.bucking.taper import TaperDomainError, TaperRegistry, UnsupportedTaperError
 
 from .height import HeightModelRecord
-from .mixtures import MIXTURE_FAMILY_COMPONENTS
+from .mixtures import (
+    MIXTURE_FAMILY_COMPONENTS,
+    SPIKE_FAMILIES,
+    SPIKE_FAMILY_COMPONENTS,
+    sample_spike_mixture,
+)
 
 __all__ = [
     "DistributionSpec",
@@ -76,6 +81,10 @@ class DistributionSpec:
             "mix_weibull_2",
             "mix_weibull_gamma",
             "mix_weibull_3",
+            "spike_weibull",
+            "spike_gamma",
+            "spike_weibull_constrained",
+            "spike_gamma_constrained",
             "gb1",
             "gb2",
             "gg",
@@ -95,6 +104,22 @@ class DistributionSpec:
             if unknown:
                 raise ValueError(f"unsupported mixture component names: {unknown}")
             object.__setattr__(self, "component_names", tuple(str(item) for item in names))
+        if name in SPIKE_FAMILIES:
+            weight = float(self.parameters.get("spike_weight", math.nan))
+            width = float(self.parameters.get("spike_bin_width", math.nan))
+            if not math.isfinite(weight) or not 0.0 < weight < 1.0:
+                raise ValueError("spike distributions require spike_weight in (0, 1)")
+            if not math.isfinite(width) or width <= 0.0:
+                raise ValueError("spike distributions require a positive spike_bin_width")
+            if lower + width > upper:
+                raise ValueError("spike first-bin width exceeds the sampling support")
+            component = SPIKE_FAMILY_COMPONENTS[name]
+            required = {"a", "beta"} if component == "weibull" else {"p", "beta"}
+            missing = sorted(required.difference(self.parameters))
+            if missing:
+                raise ValueError(
+                    f"{name} is missing continuous component parameters: {missing}"
+                )
 
 
 @dataclass(frozen=True, slots=True)
@@ -324,7 +349,25 @@ def _allocate_tree_counts(weights: Mapping[str, float], n_trees: int) -> dict[st
 
 def _sample_dbh(spec: DistributionSpec, size: int, rng: np.random.Generator) -> np.ndarray:
     lower, upper = spec.support
-    if spec.distribution in {"weibull", "gamma"}:
+    if spec.distribution in SPIKE_FAMILIES:
+        width = float(spec.parameters["spike_bin_width"])
+        first_bin_upper = min(lower + width, upper)
+        continuous = {
+            key: float(value)
+            for key, value in spec.parameters.items()
+            if key not in {"spike_weight", "spike_bin_width"}
+        }
+        draws = sample_spike_mixture(
+            size,
+            spike_weight=float(spec.parameters["spike_weight"]),
+            component_name=SPIKE_FAMILY_COMPONENTS[spec.distribution],
+            component_parameters=continuous,
+            support_lower=lower,
+            support_upper=upper,
+            first_bin_upper=first_bin_upper,
+            random_state=rng,
+        )
+    elif spec.distribution in {"weibull", "gamma"}:
         draws = sample_truncated(
             spec.distribution,
             spec.parameters,
@@ -380,7 +423,12 @@ def _sample_dbh(spec: DistributionSpec, size: int, rng: np.random.Generator) -> 
         )
     if np.any(~np.isfinite(draws)) or np.any(draws <= 0.0):
         raise SynthesisError(f"{spec.species}: sampler produced non-positive DBH")
-    return draws
+    if np.any(draws < lower - 1e-9) or np.any(draws > upper + 1e-9):
+        raise SynthesisError(
+            f"{spec.species}: sampler produced DBH outside the fitted support "
+            f"[{lower:g}, {upper:g}]"
+        )
+    return np.clip(draws, lower, upper)
 
 
 def _taper_model(registry: TaperRegistry, species: str, bec_zone: str):

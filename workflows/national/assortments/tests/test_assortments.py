@@ -15,7 +15,10 @@ from workflows.national.assortments.assortments import (
     build_assortment_matrix,
     conservation_summary,
 )
-from workflows.national.assortments.distributions import fit_dbh_distributions
+from workflows.national.assortments.distributions import (
+    _fit_candidates,
+    fit_dbh_distributions,
+)
 from workflows.national.assortments.facility import (
     FacilityContract,
     FeedstockOffer,
@@ -23,11 +26,18 @@ from workflows.national.assortments.facility import (
 )
 from workflows.national.assortments.height import HeightModelRecord
 from workflows.national.assortments.mixtures import (
+    SPIKE_CONSTRAINED_FAMILIES,
+    SPIKE_DIAGNOSTIC_FAMILIES,
+    SPIKE_FAMILIES,
     MixtureComponent,
     MixtureFitError,
     canonical_component_order,
     component_is_degenerate,
+    fit_spike_mixture,
     fit_truncated_mixture,
+    sample_spike_mixture,
+    spike_tail_bounds,
+    spike_tail_has_finite_mean,
 )
 from workflows.national.assortments.synthesize import (
     DistributionSpec,
@@ -106,10 +116,22 @@ def test_censored_fit_recovers_known_weibull() -> None:
     assert len(fits) == 1
     fit = fits[0]
     assert fit.evidence_tier == "stratum_fit"
-    assert fit.selected.distribution == "weibull"
-    assert fit.selected.parameters["a"] == pytest.approx(true_shape, rel=0.15)
-    assert fit.selected.parameters["beta"] == pytest.approx(true_scale, rel=0.20)
-    assert fit.selected.ks < 0.08
+    # The simple Weibull candidate must still recover the generating shape and
+    # scale.  A spike can win this binned comparison by a small AIC margin
+    # because it represents the lower-truncation pile-up as a first-bin mass;
+    # when it does, it must be a valid, non-boundary fit.
+    weibull = next(
+        candidate for candidate in fit.candidates if candidate.distribution == "weibull"
+    )
+    assert weibull.is_success
+    assert weibull.parameters["a"] == pytest.approx(true_shape, rel=0.15)
+    assert weibull.parameters["beta"] == pytest.approx(true_scale, rel=0.20)
+    assert weibull.ks < 0.08
+    if fit.selected.distribution.startswith("spike_"):
+        assert fit.selected.spike_boundary_status == "ok"
+        assert fit.selected.n_parameters == 3
+    else:
+        assert fit.selected.distribution == "weibull"
 
 
 def test_two_weibull_mixture_recovers_bimodal_components() -> None:
@@ -508,3 +530,425 @@ def test_facility_interface_rejects_insufficient_capacity() -> None:
     assert len(bundle.unassigned) == 1
     assert "capacity" in bundle.unassigned[0].reason
     assert bundle.contract_totals[0]["assigned_volume_m3"] == 0.0
+
+
+def _spike_observations(
+    *,
+    spike_weight: float = 0.45,
+    count: int = 4000,
+    plots: int = 40,
+    limit: float = 2.0,
+    tail: str = "weibull",
+    seed: int = 23,
+) -> pd.DataFrame:
+    """Synthetic first-bin spike plus a smooth tail above the first bin."""
+    rng = np.random.default_rng(seed)
+    spike_count = int(round(count * spike_weight))
+    first_bin_upper = limit + 2.0
+    spike = rng.uniform(limit, first_bin_upper, spike_count)
+    if tail == "weibull":
+        tail_draws = first_bin_upper + 12.0 * rng.weibull(1.6, count - spike_count)
+    elif tail == "gamma":
+        tail_draws = first_bin_upper + rng.gamma(2.0, 3.0, count - spike_count)
+    else:
+        raise ValueError("tail must be 'weibull' or 'gamma'")
+    dbh = np.concatenate([spike, tail_draws])
+    return pd.DataFrame(
+        {
+            "species": "CW",
+            "dbh_cm": dbh,
+            "height_m": 1.3 + 0.45 * dbh,
+            "expansion_factor": rng.uniform(1.0, 4.0, size=dbh.size),
+            "plot_id": [f"P{index % plots:03d}" for index in range(dbh.size)],
+            "age": 80.0,
+            "dbh_limit_cm": limit,
+            "ecodistrict": "D1",
+            "ecoregion": "R1",
+            "ecoprovince": "P1",
+            "ecozone": "Z1",
+        }
+    )
+
+
+def test_spike_weibull_recovers_weight_and_beats_single_weibull() -> None:
+    true_weight = 0.45
+    observations = _spike_observations(spike_weight=true_weight, seed=23)
+    fit = fit_dbh_distributions(
+        observations,
+        scope="test",
+        targets=[{"species": "CW", "ecodistrict": "D1"}],
+        min_trees=30,
+        min_plots=5,
+        random_state=5,
+    )[0]
+    by_name = {candidate.distribution: candidate for candidate in fit.candidates}
+    assert "spike_weibull" in by_name
+    spike = by_name["spike_weibull"]
+    assert spike.is_success
+    assert spike.converged
+    assert spike.n_parameters == 3
+    assert spike.spike_weight == pytest.approx(true_weight, abs=0.04)
+    assert spike.spike_component == "weibull"
+    assert spike.ks < 0.10
+    assert spike.aic < by_name["weibull"].aic - 2.0
+
+    samples = sample_spike_mixture(
+        6000,
+        spike_weight=spike.spike_weight,
+        component_name="weibull",
+        component_parameters={
+            key: value
+            for key, value in spike.parameters.items()
+            if key not in {"spike_weight", "spike_bin_width"}
+        },
+        support_lower=2.0,
+        support_upper=60.0,
+        first_bin_upper=4.0,
+        random_state=31,
+    )
+    assert samples.size == 6000
+    assert np.all(np.isfinite(samples))
+    assert np.all(samples >= 2.0)
+    assert np.all(samples <= 60.0)
+    assert float(np.mean(samples < 4.0)) == pytest.approx(spike.spike_weight, abs=0.03)
+
+
+def test_spike_gamma_recovers_weight() -> None:
+    observations = _spike_observations(spike_weight=0.40, tail="gamma", seed=29)
+    fit = fit_dbh_distributions(
+        observations,
+        scope="test",
+        targets=[{"species": "CW", "ecodistrict": "D1"}],
+        min_trees=30,
+        min_plots=5,
+        random_state=7,
+    )[0]
+    by_name = {candidate.distribution: candidate for candidate in fit.candidates}
+    assert "spike_gamma" in by_name
+    spike = by_name["spike_gamma"]
+    assert spike.is_success
+    assert spike.converged
+    assert spike.spike_component == "gamma"
+    assert spike.spike_weight == pytest.approx(0.40, abs=0.04)
+    assert spike.ks < 0.12
+
+    samples = sample_spike_mixture(
+        4000,
+        spike_weight=spike.spike_weight,
+        component_name="gamma",
+        component_parameters={
+            key: value
+            for key, value in spike.parameters.items()
+            if key not in {"spike_weight", "spike_bin_width"}
+        },
+        support_lower=2.0,
+        support_upper=60.0,
+        first_bin_upper=4.0,
+        random_state=37,
+    )
+    assert np.all(samples >= 2.0)
+    assert float(np.mean(samples < 4.0)) == pytest.approx(spike.spike_weight, abs=0.03)
+
+
+def test_constrained_spike_tail_is_interior_and_finite_mean() -> None:
+    """A finite-mean synthetic Weibull tail is recovered under the box."""
+    rng = np.random.default_rng(101)
+    true_shape = 1.8
+    true_scale = 14.0
+    tail = true_scale * rng.weibull(true_shape, size=80000)
+    tail = tail[tail > 4.0][:20000]
+    spike = rng.uniform(2.0, 4.0, 12000)
+    values = np.concatenate([spike, tail])
+    edges = np.arange(2.0, float(values.max()) + 3.0, 2.0)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    tallies, _ = np.histogram(values, bins=edges)
+
+    fit = fit_spike_mixture(
+        mids,
+        tallies,
+        "weibull",
+        support_lower=2.0,
+        first_bin_upper=4.0,
+        constrained=True,
+    )
+    assert fit.distribution == "spike_weibull_constrained"
+    assert fit.boundary_status == "ok"
+    assert fit.at_bound == ()
+    assert fit.converged
+    assert fit.spike_weight == pytest.approx(12000 / values.size, abs=0.02)
+    assert fit.parameters["a"] == pytest.approx(true_shape, rel=0.15)
+    assert fit.parameters["beta"] == pytest.approx(true_scale, rel=0.15)
+    mean = float(fit.parameters["beta"]) * math.gamma(
+        1.0 + 1.0 / float(fit.parameters["a"])
+    )
+    assert math.isfinite(mean)
+    assert mean < 100.0
+
+    samples = sample_spike_mixture(
+        8000,
+        spike_weight=fit.spike_weight,
+        component_name="weibull",
+        component_parameters=fit.parameters,
+        support_lower=2.0,
+        support_upper=float(edges[-1]),
+        first_bin_upper=4.0,
+        random_state=103,
+    )
+    assert np.all(samples >= 2.0)
+    assert np.all(samples <= float(edges[-1]))
+    assert float(np.mean(samples < 4.0)) == pytest.approx(fit.spike_weight, abs=0.03)
+
+
+def test_constrained_spike_weight_is_first_bin_share() -> None:
+    edges = np.arange(2.0, 42.0, 2.0)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    tallies = 100.0 + 20.0 * np.exp(-0.15 * np.arange(mids.size))
+    fit = fit_spike_mixture(
+        mids,
+        tallies,
+        "gamma",
+        support_lower=2.0,
+        first_bin_upper=4.0,
+        constrained=True,
+    )
+    assert fit.spike_weight == pytest.approx(float(tallies[0] / tallies.sum()))
+    assert fit.n_parameters == 3
+
+
+def test_constrained_spike_boundary_reject_is_not_selected() -> None:
+    """A tail that wants shape < 1 lands on the finite-mean bound and is rejected."""
+    edges = np.arange(2.0, 42.0, 2.0)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    tallies = np.zeros(mids.size)
+    tallies[0] = 500.0
+    tallies[1:] = 1000.0 / np.arange(1.0, tallies.size) ** 1.5
+
+    candidates = _fit_candidates(
+        mids,
+        tallies,
+        edges,
+        support_lower=2.0,
+        upper_cap=42.0,
+        seed=19,
+    )
+    by_name = {candidate.distribution: candidate for candidate in candidates}
+    for family in (
+        "spike_weibull_constrained",
+        "spike_gamma_constrained",
+    ):
+        candidate = by_name[family]
+        assert candidate.fit_status == "boundary_reject"
+        assert candidate.spike_boundary_status == "boundary_reject"
+        assert candidate.spike_at_bound
+        assert not candidate.is_success
+        assert not candidate.synthesis_compatible
+    selected = min(
+        (candidate for candidate in candidates if candidate.is_success),
+        key=lambda candidate: candidate.aic,
+    )
+    assert selected.distribution not in SPIKE_CONSTRAINED_FAMILIES
+
+
+def test_unconstrained_spike_is_synthesis_eligible_within_support() -> None:
+    observations = _spike_observations(spike_weight=0.45, seed=23)
+    fit = fit_dbh_distributions(
+        observations,
+        scope="test",
+        targets=[{"species": "CW", "ecodistrict": "D1"}],
+        min_trees=30,
+        min_plots=5,
+        random_state=5,
+    )[0]
+    by_name = {candidate.distribution: candidate for candidate in fit.candidates}
+    assert by_name["spike_weibull"].is_success
+    assert by_name["spike_weibull"].synthesis_compatible
+    assert by_name["spike_gamma"].synthesis_compatible
+    assert by_name["spike_weibull_constrained"].synthesis_compatible
+    assert by_name["spike_gamma_constrained"].synthesis_compatible
+
+    bounds = spike_tail_bounds("weibull")
+    assert bounds["a"][0] == pytest.approx(1.0)
+    assert bounds["beta"][0] == pytest.approx(0.1)
+    # Advisory for the *untruncated* tail; synthesis always samples on the
+    # finite fitted support.
+    assert spike_tail_has_finite_mean("weibull", {"a": 1.2, "beta": 4.0})
+    assert not spike_tail_has_finite_mean("weibull", {"a": 0.8, "beta": 4.0})
+
+
+def test_degenerate_spike_weights_are_rejected() -> None:
+    edges = np.arange(2.0, 42.0, 2.0)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+
+    empty_first = np.zeros(mids.size)
+    empty_first[2:] = 100.0
+    with pytest.raises(MixtureFitError):
+        fit_spike_mixture(
+            mids,
+            empty_first,
+            "weibull",
+            support_lower=2.0,
+            first_bin_upper=4.0,
+        )
+
+    dominated = np.ones(mids.size)
+    dominated[0] = 100000.0
+    with pytest.raises(MixtureFitError):
+        fit_spike_mixture(
+            mids,
+            dominated,
+            "weibull",
+            support_lower=2.0,
+            first_bin_upper=4.0,
+        )
+
+    no_spike = np.ones(mids.size)
+    no_spike[0] = 0.0001
+    with pytest.raises(MixtureFitError):
+        fit_spike_mixture(
+            mids,
+            no_spike,
+            "gamma",
+            support_lower=2.0,
+            first_bin_upper=4.0,
+        )
+
+
+def test_spike_gating_uses_first_bin_share() -> None:
+    low_first_bin = _observations(count=1200, plots=30, limit=2.0, seed=41)
+    low_fit = fit_dbh_distributions(
+        low_first_bin,
+        scope="test",
+        targets=[{"species": "SW", "ecodistrict": "D1"}],
+        min_trees=30,
+        min_plots=5,
+        random_state=3,
+    )[0]
+    assert not [
+        candidate
+        for candidate in low_fit.candidates
+        if candidate.distribution in SPIKE_FAMILIES
+    ]
+
+    high_first_bin = _spike_observations(spike_weight=0.50, count=1200, plots=30, seed=43)
+    high_fit = fit_dbh_distributions(
+        high_first_bin,
+        scope="test",
+        targets=[{"species": "CW", "ecodistrict": "D1"}],
+        min_trees=30,
+        min_plots=5,
+        random_state=3,
+    )[0]
+    assert {
+        candidate.distribution
+        for candidate in high_fit.candidates
+        if candidate.distribution in SPIKE_FAMILIES
+    } == {
+        "spike_weibull",
+        "spike_gamma",
+        "spike_weibull_constrained",
+        "spike_gamma_constrained",
+    }
+
+
+def test_spike_gating_uses_high_ks_trigger() -> None:
+    """A low first-bin share but a high-KS bimodal tail still attempts spikes."""
+    edges = np.arange(2.0, 42.0, 2.0)
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    tallies = np.zeros(mids.size)
+    tallies[0] = 40.0
+    tallies[4:7] = 200.0
+    tallies[14:17] = 200.0
+    candidates = _fit_candidates(
+        mids,
+        tallies,
+        edges,
+        support_lower=2.0,
+        upper_cap=42.0,
+        seed=11,
+    )
+    spike_candidates = [
+        candidate
+        for candidate in candidates
+        if candidate.distribution in SPIKE_FAMILIES
+    ]
+    assert {candidate.distribution for candidate in spike_candidates} == {
+        "spike_weibull",
+        "spike_gamma",
+        "spike_weibull_constrained",
+        "spike_gamma_constrained",
+    }
+
+
+def test_spike_synthesis_conserves_volume_and_assortment() -> None:
+    target = SynthesisTarget(
+        target_id="spike-stand",
+        target_level="au",
+        species_weights={"CW": 1.0},
+        tph_total=900.0,
+        volume_m3ha=300.0,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=2.0,
+        max_dbh_cm=60.0,
+        seed=17,
+        n_trees=300,
+    )
+    spec = DistributionSpec(
+        species="CW",
+        distribution="spike_weibull",
+        parameters={
+            "spike_weight": 0.55,
+            "spike_bin_width": 2.0,
+            "a": 1.4,
+            "beta": 10.0,
+        },
+        support=(2.0, 60.0),
+        fit_id="test-spike-CW",
+        evidence_tier="stratum_fit",
+    )
+    stand = synthesize_tree_list(
+        target,
+        distributions=[spec],
+        height_models=[_height_model("CW")],
+        taper_registry=_FakeRegistry(),
+    )
+    assert stand.achieved_taper_volume_m3 == pytest.approx(target.target_volume_m3, rel=1e-9)
+    diameters = np.array([tree.dbh_cm for tree in stand.trees])
+    assert np.all(diameters >= 2.0)
+    assert np.all(diameters <= 60.0)
+    assert float(np.mean(diameters < 4.0)) == pytest.approx(0.55, abs=0.08)
+
+    tree_frame = stand.to_frame()[["tree_id", "species", "expansion_factor"]]
+    logs = pd.DataFrame(
+        {
+            "tree_id": tree_frame["tree_id"],
+            "species": tree_frame["species"],
+            "length_m": 5.0,
+            "large_end_dib_cm": diameters,
+            "small_end_dib_cm": np.maximum(diameters - 2.0, 0.0),
+            "volume_m3": np.array(stand.tree_volumes_m3) * 0.8,
+            "sort_code": "D125L50",
+            "product": "pulpwood",
+            "price_cad_m3": 40.0,
+            "value_cad": np.array(stand.tree_volumes_m3) * 0.8 * 40.0,
+            "evidence": "synthetic_test",
+            "grade_status": "not_assigned",
+        }
+    )
+    residue = pd.DataFrame(
+        {
+            "tree_id": tree_frame["tree_id"],
+            "species": tree_frame["species"],
+            "residue_volume_m3": np.array(stand.tree_volumes_m3) * 0.2,
+            "recovered_log_m3": np.array(stand.tree_volumes_m3) * 0.8,
+            "taper_total_m3": np.array(stand.tree_volumes_m3),
+        }
+    )
+    matrix = build_assortment_matrix(logs, residue, tree_frame)
+    conservation = conservation_summary(matrix)
+    assert conservation["pass"] is True
+    assert conservation["total_row_pass"] is True
+    assert conservation["taper_total_m3"] == pytest.approx(
+        stand.achieved_taper_volume_m3, rel=1e-9
+    )

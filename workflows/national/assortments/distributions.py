@@ -51,10 +51,19 @@ from nemora.workflows.censoring import fit_censored_inventory
 
 from .mixtures import (
     MIXTURE_FAMILY_COMPONENTS,
+    SPIKE_CONSTRAINED_FAMILIES,
+    SPIKE_CONSTRAINED_SCALE_LOWER,
+    SPIKE_CONSTRAINED_SHAPE_LOWER,
+    SPIKE_FAMILIES,
+    SPIKE_FAMILY_COMPONENTS,
     MixtureComponent,
     MixtureFitError,
+    SpikeMixtureFit,
     canonical_component_order,
+    component_is_degenerate,
+    fit_spike_mixture,
     fit_truncated_mixture,
+    spike_tail_bounds,
 )
 
 __all__ = [
@@ -62,6 +71,8 @@ __all__ = [
     "DistributionFit",
     "DistributionFitError",
     "FitCandidate",
+    "SPIKE_FIRST_BIN_SHARE_TRIGGER",
+    "SPIKE_KS_TRIGGER",
     "fit_dbh_distributions",
     "fit_distribution_for_target",
 ]
@@ -76,12 +87,16 @@ DEFAULT_LEVELS: tuple[str, ...] = (
 _CANDIDATE_ORDER = {
     "weibull": 0,
     "gamma": 1,
-    "mixture": 2,
-    "mix_weibull_2": 3,
-    "mix_weibull_gamma": 4,
-    "mix_weibull_3": 5,
-    "gb1": 6,
-    "gb2": 7,
+    "spike_weibull": 2,
+    "spike_gamma": 3,
+    "spike_weibull_constrained": 4,
+    "spike_gamma_constrained": 5,
+    "mixture": 6,
+    "mix_weibull_2": 7,
+    "mix_weibull_gamma": 8,
+    "mix_weibull_3": 9,
+    "gb1": 10,
+    "gb2": 11,
 }
 
 #: Minimum common AIC improvement required before a mixture replaces a
@@ -102,6 +117,14 @@ _NEW_MIXTURE_FAMILIES = {"mix_weibull_2", "mix_weibull_gamma", "mix_weibull_3"}
 #: A three-component Weibull family is only attempted when the two-component
 #: candidates leave a high-KS stratum, because it is the least stable family.
 _THREE_COMPONENT_KS_TRIGGER = 0.15
+
+#: Spike families are only attempted when the first DBH bin carries more than
+#: this share of the expansion-factor tally, or when the best single-component
+#: fit still leaves a high KS.  The first condition targets the CW
+#: first-bin-dominated case directly; the second catches a first-bin problem
+#: that a pooled threshold would miss.
+SPIKE_FIRST_BIN_SHARE_TRIGGER = 0.20
+SPIKE_KS_TRIGGER = 0.15
 
 
 class DistributionFitError(RuntimeError):
@@ -136,6 +159,11 @@ class FitCandidate:
     n_valid_starts: int = 0
     ordering_swaps: int = 0
     fit_diagnostics: str = ""
+    spike_weight: float = math.nan
+    spike_component: str = ""
+    spike_constrained: bool = False
+    spike_boundary_status: str = ""
+    spike_at_bound: str = ""
     error: str | None = None
 
     @property
@@ -149,11 +177,18 @@ class FitCandidate:
         Generalized beta is kept as a diagnostic candidate.  The nemora
         registry does not expose an inverse CDF for it, and the grouped
         curve-fit can land on a numerically valid but practically unsampleable
-        parameter set.  Synthesis therefore uses Weibull, gamma, or the
-        two-component gamma mixture, all of which have documented samplers.
+        parameter set.  Synthesis therefore uses Weibull, gamma, the finite
+        mixtures, or a spike-plus-tail family.  Both spike variants are
+        eligible: the sampler always draws the tail on the finite fitted
+        support, so an unconstrained power-law tail is used only inside
+        ``support_upper`` and is never extrapolated.  A constrained spike whose
+        tail parameters sit on a declared bound is marked ``boundary_reject``
+        and is not a successful candidate.
         """
         if not self.is_success:
             return False
+        if self.distribution in SPIKE_FAMILIES:
+            return self.spike_boundary_status in {"", "ok"}
         supported = {"weibull", "gamma"} | set(MIXTURE_FAMILY_COMPONENTS)
         return self.distribution in supported
 
@@ -255,13 +290,18 @@ class DistributionFit:
     def selected(self) -> FitCandidate:
         """Return the synthesis-selected candidate.
 
-        Selection uses the common-support AIC.  A mixture replaces a
-        single-component distribution only when it improves AIC by at least
-        two units; smaller gains are treated as negligible and the simpler
-        model wins.  Among mixtures, the same two-AIC-unit rule prefers fewer
-        components.  A non-converged legacy gamma mixture remains available as
-        the documented fallback with a ten-unit stability penalty; new Weibull
-        families must converge before they can be selected.
+        Selection uses the common-support AIC.  A mixture or spike model
+        replaces a single-component distribution only when it improves AIC by
+        at least two units; smaller gains are treated as negligible and the
+        simpler model wins.  Among flexible models, the same two-AIC-unit rule
+        prefers fewer parameters, so a three-parameter spike beats a
+        five-parameter mixture when their AICs are within two units.  A
+        non-converged legacy gamma mixture remains available as the documented
+        fallback with a ten-unit stability penalty; new Weibull families and
+        constrained spike families must converge before they can be selected.
+        Unconstrained spike rows and constrained rows marked ``boundary_reject``
+        are excluded by ``synthesis_compatible``; a rejected constrained spike
+        leaves the best non-spike model in force.
         """
         compatible = [
             candidate
@@ -281,7 +321,10 @@ class DistributionFit:
         flexible = [
             candidate
             for candidate in compatible
-            if candidate.distribution in MIXTURE_FAMILY_COMPONENTS
+            if (
+                candidate.distribution in MIXTURE_FAMILY_COMPONENTS
+                or candidate.distribution in SPIKE_FAMILIES
+            )
             and (candidate.converged or candidate.distribution == "mixture")
         ]
         best_simple = min(simple, key=_aic_key, default=None)
@@ -359,6 +402,11 @@ class DistributionFit:
                     "n_valid_starts": candidate.n_valid_starts,
                     "ordering_swaps": candidate.ordering_swaps,
                     "fit_diagnostics": candidate.fit_diagnostics,
+                    "spike_weight": candidate.spike_weight,
+                    "spike_component": candidate.spike_component,
+                    "spike_constrained": candidate.spike_constrained,
+                    "spike_boundary_status": candidate.spike_boundary_status,
+                    "spike_at_bound": candidate.spike_at_bound,
                     "selected": candidate is selected,
                     "selected_distribution": selected.distribution,
                     "synthesis_compatible": candidate.synthesis_compatible,
@@ -519,6 +567,62 @@ def _mixture_component(name: str, weight: float, parameters: Mapping[str, float]
     )
 
 
+def _spike_parameters(
+    distribution: str,
+    parameters: Mapping[str, float],
+) -> tuple[float, str, dict[str, float], float]:
+    """Split a spike candidate into weight, component, parameters, and width."""
+    component = SPIKE_FAMILY_COMPONENTS[distribution]
+    try:
+        weight = float(parameters["spike_weight"])
+        width = float(parameters["spike_bin_width"])
+    except KeyError as error:
+        raise DistributionFitError(
+            f"{distribution} requires spike_weight and spike_bin_width"
+        ) from error
+    if not math.isfinite(weight) or not 0.0 < weight < 1.0:
+        raise DistributionFitError(
+            f"{distribution} spike_weight must be in (0, 1), got {weight!r}"
+        )
+    if not math.isfinite(width) or width <= 0.0:
+        raise DistributionFitError(
+            f"{distribution} spike_bin_width must be positive, got {width!r}"
+        )
+    continuous = {
+        key: float(value)
+        for key, value in parameters.items()
+        if key not in {"spike_weight", "spike_bin_width"}
+    }
+    if component_is_degenerate(component, 1.0 - weight, continuous):
+        raise DistributionFitError(
+            f"{distribution} has a degenerate continuous component: {continuous!r}"
+        )
+    return weight, component, continuous, width
+
+
+def _continuous_conditional_cdf(
+    name: str,
+    parameters: Mapping[str, float],
+    support_lower: float,
+    points: np.ndarray,
+) -> np.ndarray:
+    """CDF of a Weibull/gamma component conditioned on ``DBH >= support_lower``."""
+    values = np.asarray(points, dtype=float)
+    if name == "weibull":
+        shape = float(parameters["a"])
+        scale = float(parameters["beta"])
+        lower_mass = float(weibull_min.cdf(support_lower, shape, scale=scale))
+        raw = weibull_min.cdf(values, shape, scale=scale)
+    elif name == "gamma":
+        shape = float(parameters["p"])
+        scale = float(parameters["beta"])
+        lower_mass = float(gamma_dist.cdf(support_lower, shape, scale=scale))
+        raw = gamma_dist.cdf(values, shape, scale=scale)
+    else:
+        raise DistributionFitError(f"no continuous conditional CDF for {name!r}")
+    return np.clip((raw - lower_mass) / max(1.0 - lower_mass, 1e-12), 0.0, 1.0)
+
+
 def _conditional_cdf(
     distribution: str,
     parameters: Mapping[str, float],
@@ -538,6 +642,22 @@ def _conditional_cdf(
     second estimator.
     """
     values = np.asarray(points, dtype=float)
+    if distribution in SPIKE_FAMILIES:
+        weight, component, continuous, width = _spike_parameters(
+            distribution, parameters
+        )
+        first_bin_upper = float(support_lower) + width
+        tail = _continuous_conditional_cdf(
+            component, continuous, first_bin_upper, values
+        )
+        # The spike is a point mass at the lower bound.  Return its left limit
+        # (zero) at the bound so the first bin's probability includes the atom.
+        cdf = np.where(
+            values <= float(support_lower),
+            0.0,
+            weight + (1.0 - weight) * tail,
+        )
+        return np.clip(cdf, 0.0, 1.0)
     if distribution == "weibull":
         shape = float(parameters["a"])
         scale = float(parameters["beta"])
@@ -760,6 +880,104 @@ def _candidate_from_mixture(
     )
 
 
+def _candidate_from_spike(
+    result: SpikeMixtureFit,
+    *,
+    tallies: np.ndarray,
+    edges: np.ndarray,
+    support_lower: float,
+    upper_cap: float,
+) -> FitCandidate:
+    """Build a scored candidate from a spike-plus-tail fit."""
+    parameters = {
+        "spike_weight": float(result.spike_weight),
+        "spike_bin_width": float(result.first_bin_upper - support_lower),
+        **{key: float(value) for key, value in result.parameters.items()},
+    }
+    n_parameters = int(result.n_parameters)
+    aic, aicc, bic, ks, log_likelihood = _common_metrics(
+        distribution=result.distribution,
+        parameters=parameters,
+        component_weights=None,
+        component_parameters=None,
+        component_names=None,
+        tallies=tallies,
+        edges=edges,
+        support_lower=support_lower,
+        upper_cap=upper_cap,
+        n_parameters=n_parameters,
+    )
+    diagnostics = {
+        "spike_weight": float(result.spike_weight),
+        "continuous_component": result.component_name,
+        "continuous_parameters": {
+            key: float(value) for key, value in result.parameters.items()
+        },
+        "first_bin_share": float(result.first_bin_share),
+        "first_bin_upper_cm": float(result.first_bin_upper),
+        "n_bins": int(result.n_bins),
+        "n_observations": float(result.n_observations),
+        "converged": bool(result.converged),
+        "iterations": int(result.iterations),
+        "native_log_likelihood": float(result.log_likelihood),
+        "constrained": bool(result.constrained),
+        "boundary_status": result.boundary_status,
+        "at_bound": list(result.at_bound),
+        "tail_bounds": {
+            key: [float(low), float(high)]
+            for key, (low, high) in spike_tail_bounds(result.component_name).items()
+        },
+        "estimator": result.estimator,
+        "start_diagnostics": list(result.diagnostics),
+    }
+    boundary_reject = result.boundary_status != "ok"
+    error = None
+    if boundary_reject:
+        bounds = {
+            key: [float(low), float(high)]
+            for key, (low, high) in spike_tail_bounds(result.component_name).items()
+        }
+        selected_bounds = {key: bounds[key] for key in result.at_bound}
+        error = (
+            f"boundary_reject: tail parameters {result.parameters!r} sit on "
+            f"the {', '.join(result.at_bound) or 'declared'} bound "
+            f"{selected_bounds!r}"
+        )
+    return FitCandidate(
+        distribution=result.distribution,
+        parameters=parameters,
+        n_parameters=n_parameters,
+        aic=aic,
+        aicc=aicc,
+        bic=bic,
+        ks=ks,
+        native_aic=2.0 * n_parameters - 2.0 * float(result.log_likelihood),
+        native_aicc=math.nan,
+        native_bic=math.nan,
+        native_ks=math.nan,
+        rss=math.nan,
+        log_likelihood=log_likelihood,
+        method=(
+            "spike-constrained-grouped-mle"
+            if result.constrained
+            else "spike-truncated-mstep"
+        ),
+        fit_status="boundary_reject" if boundary_reject else "ok",
+        converged=bool(result.converged),
+        iterations=int(result.iterations),
+        n_starts=int(result.n_starts),
+        n_valid_starts=int(result.n_valid_starts),
+        ordering_swaps=0,
+        fit_diagnostics=json.dumps(diagnostics, sort_keys=True, default=str),
+        spike_weight=float(result.spike_weight),
+        spike_component=result.component_name,
+        spike_constrained=bool(result.constrained),
+        spike_boundary_status=result.boundary_status,
+        spike_at_bound=",".join(result.at_bound),
+        error=error,
+    )
+
+
 def _failed_candidate(name: str, error: Exception) -> FitCandidate:
     return FitCandidate(
         distribution=name,
@@ -889,7 +1107,71 @@ def _fit_candidates(
             )
         )
 
+    total_tally = float(np.sum(tallies))
+    first_bin_share = float(tallies[0] / total_tally) if total_tally > 0.0 else 0.0
+    best_simple_ks = min(
+        (
+            candidate.ks
+            for candidate in candidates
+            if candidate.is_success
+            and candidate.distribution in {"weibull", "gamma"}
+        ),
+        default=math.inf,
+    )
+    if tallies.size > 1 and tallies[0] > 0.0 and (
+        first_bin_share > SPIKE_FIRST_BIN_SHARE_TRIGGER
+        or best_simple_ks > SPIKE_KS_TRIGGER
+    ):
+        for family in (
+            "spike_weibull",
+            "spike_gamma",
+            "spike_weibull_constrained",
+            "spike_gamma_constrained",
+        ):
+            candidates.append(
+                _fit_spike_family(
+                    family,
+                    mids,
+                    tallies,
+                    edges,
+                    support_lower=support_lower,
+                    upper_cap=upper_cap,
+                )
+            )
+
     return candidates
+
+
+def _fit_spike_family(
+    family: str,
+    mids: np.ndarray,
+    tallies: np.ndarray,
+    edges: np.ndarray,
+    *,
+    support_lower: float,
+    upper_cap: float,
+) -> FitCandidate:
+    """Fit one spike-plus-tail family and convert failures to audit rows."""
+    component = SPIKE_FAMILY_COMPONENTS[family]
+    constrained = family in SPIKE_CONSTRAINED_FAMILIES
+    try:
+        result = fit_spike_mixture(
+            mids,
+            tallies,
+            component,
+            support_lower=support_lower,
+            first_bin_upper=float(edges[1]),
+            constrained=constrained,
+        )
+    except Exception as error:  # noqa: BLE001 - keep the failed family for audit
+        return _failed_candidate(family, error)
+    return _candidate_from_spike(
+        result,
+        tallies=tallies,
+        edges=edges,
+        support_lower=support_lower,
+        upper_cap=upper_cap,
+    )
 
 
 def _fit_truncated_family(

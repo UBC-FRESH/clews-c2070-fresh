@@ -43,6 +43,8 @@ from workflows.national.assortments.assortments import (
     conservation_summary,
 )
 from workflows.national.assortments.distributions import (
+    SPIKE_FIRST_BIN_SHARE_TRIGGER,
+    SPIKE_KS_TRIGGER,
     DistributionFit,
     FitCandidate,
     fit_dbh_distributions,
@@ -51,7 +53,16 @@ from workflows.national.assortments.height import (
     HeightModelBundle,
     fit_height_models,
 )
-from workflows.national.assortments.mixtures import MIXTURE_FAMILY_COMPONENTS
+from workflows.national.assortments.mixtures import (
+    MIXTURE_FAMILY_COMPONENTS,
+    SPIKE_CONSTRAINED_FAMILIES,
+    SPIKE_CONSTRAINED_SCALE_LOWER,
+    SPIKE_CONSTRAINED_SHAPE_LOWER,
+    SPIKE_DIAGNOSTIC_FAMILIES,
+    SPIKE_FAMILIES,
+    SPIKE_FAMILY_COMPONENTS,
+    spike_tail_bounds,
+)
 from workflows.national.assortments.rsyc import assign_sites_to_ecostrata
 from workflows.national.assortments.synthesize import (
     DistributionSpec,
@@ -76,7 +87,7 @@ from workflows.national.bucking.taper import (
 __all__ = ["main"]
 
 PILOT_NAME = "tsa24_assortment_disaggregation"
-PILOT_VERSION = "0.2.0"
+PILOT_VERSION = "0.3.0"
 TSA_NAME = "Prince George"
 DEFAULT_AU_ID = 23000
 DEFAULT_AGE = 100.0
@@ -525,6 +536,29 @@ def _fitted_quantiles(fit: DistributionFit, probabilities: Sequence[float]) -> n
     candidate = fit.selected
     lower, upper = float(fit.dbh_limit_cm), float(fit.support_upper_cm)
     probabilities = np.asarray(probabilities, dtype=float)
+    if candidate.distribution in SPIKE_FAMILIES:
+        weight = float(candidate.parameters["spike_weight"])
+        width = float(candidate.parameters["spike_bin_width"])
+        first_bin_upper = min(lower + width, upper)
+        component = SPIKE_FAMILY_COMPONENTS[candidate.distribution]
+        continuous = {
+            key: float(value)
+            for key, value in candidate.parameters.items()
+            if key not in {"spike_weight", "spike_bin_width"}
+        }
+        fitted = np.empty_like(probabilities)
+        in_spike = probabilities <= weight
+        # Match the sampler: the spike mass is reported as uniform inside the
+        # first bin, so the fitted quantiles are comparable to the tallies.
+        fitted[in_spike] = lower + (probabilities[in_spike] / max(weight, 1e-12)) * width
+        tail = (probabilities[~in_spike] - weight) / max(1.0 - weight, 1e-12)
+        fitted[~in_spike] = truncated_quantile(
+            component,
+            continuous,
+            (first_bin_upper, upper),
+            tail,
+        )
+        return np.clip(fitted, lower, upper)
     if candidate.distribution in {"weibull", "gamma"}:
         return truncated_quantile(
             candidate.distribution,
@@ -685,6 +719,14 @@ def _candidate_record(candidate: FitCandidate) -> dict[str, Any]:
         "n_valid_starts": candidate.n_valid_starts,
         "ordering_swaps": candidate.ordering_swaps,
         "method": candidate.method,
+        "spike_weight": candidate.spike_weight,
+        "spike_component": candidate.spike_component,
+        "spike_constrained": candidate.spike_constrained,
+        "spike_boundary_status": candidate.spike_boundary_status,
+        "spike_at_bound": candidate.spike_at_bound,
+        "parameters": {
+            key: float(value) for key, value in candidate.parameters.items()
+        },
         "error": candidate.error,
     }
 
@@ -694,7 +736,9 @@ def compare_to_previous(
     fits: Sequence[DistributionFit],
 ) -> dict[str, Any]:
     """Compare the new selection against the previous run's selected models."""
-    new_families = {"mix_weibull_2", "mix_weibull_gamma", "mix_weibull_3"}
+    new_families = {"mix_weibull_2", "mix_weibull_gamma", "mix_weibull_3"} | set(
+        SPIKE_FAMILIES
+    )
     rows: list[dict[str, Any]] = []
     matched = 0
     for fit in fits:
@@ -712,6 +756,34 @@ def compare_to_previous(
             for item in new_candidates
             if item.fit_status != "ok" or not item.converged
         ]
+        unconstrained_spikes = [
+            item
+            for item in fit.candidates
+            if item.distribution in SPIKE_DIAGNOSTIC_FAMILIES
+        ]
+        constrained_spikes = [
+            item
+            for item in fit.candidates
+            if item.distribution in SPIKE_CONSTRAINED_FAMILIES
+        ]
+        best_unconstrained = min(
+            (item for item in unconstrained_spikes if item.is_success),
+            key=lambda item: item.aic,
+            default=None,
+        )
+        best_constrained = min(
+            (item for item in constrained_spikes if item.is_success),
+            key=lambda item: item.aic,
+            default=None,
+        )
+        best_constrained_any = min(
+            constrained_spikes,
+            key=lambda item: item.aic if math.isfinite(item.aic) else math.inf,
+            default=None,
+        )
+        boundary_rejected = [
+            item for item in constrained_spikes if item.fit_status == "boundary_reject"
+        ]
         row: dict[str, Any] = {
             "scope": fit.scope,
             "fit_id": fit.fit_id,
@@ -727,6 +799,10 @@ def compare_to_previous(
             "selected_aicc": candidate.aicc,
             "selected_ks": candidate.ks,
             "selected_converged": candidate.converged,
+            "selected_spike_weight": candidate.spike_weight,
+            "selected_spike_component": candidate.spike_component,
+            "selected_spike_constrained": candidate.spike_constrained,
+            "selected_spike_boundary_status": candidate.spike_boundary_status,
             "best_new_mixture": best_new.distribution if best_new else None,
             "best_new_mixture_aic": best_new.aic if best_new else math.nan,
             "best_new_mixture_ks": best_new.ks if best_new else math.nan,
@@ -734,6 +810,26 @@ def compare_to_previous(
             "new_mixture_unstable": unstable,
             "new_mixture_candidates": [
                 _candidate_record(item) for item in new_candidates
+            ],
+            "unconstrained_spike_candidates": [
+                _candidate_record(item) for item in unconstrained_spikes
+            ],
+            "constrained_spike_candidates": [
+                _candidate_record(item) for item in constrained_spikes
+            ],
+            "best_unconstrained_spike": (
+                _candidate_record(best_unconstrained) if best_unconstrained else None
+            ),
+            "best_constrained_spike": (
+                _candidate_record(best_constrained) if best_constrained else None
+            ),
+            "best_constrained_spike_any": (
+                _candidate_record(best_constrained_any)
+                if best_constrained_any
+                else None
+            ),
+            "constrained_spike_boundary_rejects": [
+                _candidate_record(item) for item in boundary_rejected
             ],
             "matched_previous": previous is not None,
         }
@@ -750,6 +846,23 @@ def compare_to_previous(
             row["switched_to_new_mixture"] = (
                 candidate.distribution in new_families
                 and previous["distribution"] not in new_families
+            )
+            row["switched_to_spike"] = (
+                candidate.distribution in SPIKE_FAMILIES
+                and previous["distribution"] not in SPIKE_FAMILIES
+            )
+            row["switched_to_constrained_spike"] = (
+                candidate.distribution in SPIKE_CONSTRAINED_FAMILIES
+                and previous["distribution"] not in SPIKE_CONSTRAINED_FAMILIES
+            )
+            row["switched_to_unconstrained_spike"] = (
+                candidate.distribution in SPIKE_DIAGNOSTIC_FAMILIES
+                and previous["distribution"] not in SPIKE_DIAGNOSTIC_FAMILIES
+            )
+            row["constrained_spike_boundary_reject"] = bool(boundary_rejected)
+            row["switched_to_finite_mixture"] = (
+                candidate.distribution in MIXTURE_FAMILY_COMPONENTS
+                and previous["distribution"] not in MIXTURE_FAMILY_COMPONENTS
             )
             row["mixture_worse"] = (
                 best_new is not None and best_new.aic > previous["aic"] + 2.0
@@ -769,6 +882,11 @@ def compare_to_previous(
                     "delta_ks": math.nan,
                     "switched": False,
                     "switched_to_new_mixture": False,
+                    "switched_to_spike": False,
+                    "switched_to_finite_mixture": False,
+                    "switched_to_constrained_spike": False,
+                    "switched_to_unconstrained_spike": False,
+                    "constrained_spike_boundary_reject": bool(boundary_rejected),
                     "mixture_worse": False,
                     "mixture_improves_previous": False,
                 }
@@ -778,6 +896,29 @@ def compare_to_previous(
     matched_rows = [row for row in rows if row["matched_previous"]]
     switched = [row for row in matched_rows if row["switched"]]
     switched_new = [row for row in matched_rows if row["switched_to_new_mixture"]]
+    switched_spike = [row for row in matched_rows if row["switched_to_spike"]]
+    switched_constrained = [
+        row for row in matched_rows if row["switched_to_constrained_spike"]
+    ]
+    switched_unconstrained = [
+        row for row in matched_rows if row["switched_to_unconstrained_spike"]
+    ]
+    switched_finite = [
+        row for row in matched_rows if row["switched_to_finite_mixture"]
+    ]
+    selected_spike = [
+        row for row in matched_rows if row["selected_distribution"] in SPIKE_FAMILIES
+    ]
+    selected_constrained_spike = [
+        row
+        for row in matched_rows
+        if row["selected_distribution"] in SPIKE_CONSTRAINED_FAMILIES
+    ]
+    boundary_reject_rows = [
+        row
+        for row in rows
+        if row.get("constrained_spike_boundary_rejects")
+    ]
     improved = [
         row
         for row in matched_rows
@@ -805,6 +946,16 @@ def compare_to_previous(
         "counts": {
             "switched": len(switched),
             "switched_to_new_mixture": len(switched_new),
+            "switched_to_spike": len(switched_spike),
+            "switched_to_constrained_spike": len(switched_constrained),
+            "switched_to_unconstrained_spike": len(switched_unconstrained),
+            "switched_to_finite_mixture": len(switched_finite),
+            "selected_spike": len(selected_spike),
+            "selected_constrained_spike": len(selected_constrained_spike),
+            "selected_spike_unique": len(
+                {(row["scope"], row["fit_id"]) for row in selected_spike}
+            ),
+            "constrained_spike_boundary_rejects": len(boundary_reject_rows),
             "improved_by_more_than_2_aic": len(improved),
             "worse_by_more_than_2_aic": len(worse),
             "mixture_worse_than_previous": sum(
@@ -846,6 +997,55 @@ def compare_to_previous(
             }
             for row in high_ks_after
         ],
+        "spike_selected": [
+            {
+                "scope": row["scope"],
+                "fit_id": row["fit_id"],
+                "species": row["species"],
+                "previous_distribution": row.get("previous_distribution"),
+                "selected_distribution": row["selected_distribution"],
+                "spike_weight": row["selected_spike_weight"],
+                "spike_component": row["selected_spike_component"],
+                "spike_constrained": row["selected_spike_constrained"],
+                "spike_boundary_status": row["selected_spike_boundary_status"],
+                "previous_aic": row.get("previous_aic"),
+                "selected_aic": row["selected_aic"],
+                "delta_aic": row.get("delta_aic"),
+                "previous_ks": row.get("previous_ks"),
+                "selected_ks": row["selected_ks"],
+                "delta_ks": row.get("delta_ks"),
+            }
+            for row in selected_spike
+        ],
+        "constrained_spike_boundary_rejects": [
+            {
+                "scope": row["scope"],
+                "fit_id": row["fit_id"],
+                "species": row["species"],
+                "candidates": row["constrained_spike_boundary_rejects"],
+                "selected_distribution": row["selected_distribution"],
+                "selected_aic": row["selected_aic"],
+                "selected_ks": row["selected_ks"],
+            }
+            for row in boundary_reject_rows
+        ],
+        "spike_comparison": [
+            {
+                "scope": row["scope"],
+                "fit_id": row["fit_id"],
+                "species": row["species"],
+                "unconstrained": row.get("best_unconstrained_spike"),
+                "constrained": row.get("best_constrained_spike_any"),
+                "boundary_rejects": row["constrained_spike_boundary_rejects"],
+                "selected_distribution": row["selected_distribution"],
+                "selected_aic": row["selected_aic"],
+                "selected_ks": row["selected_ks"],
+            }
+            for row in rows
+            if row.get("best_unconstrained_spike")
+            or row.get("best_constrained_spike")
+            or row.get("constrained_spike_boundary_rejects")
+        ],
         "rows": rows,
     }
 
@@ -857,6 +1057,10 @@ def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, A
         "mix_weibull_2",
         "mix_weibull_gamma",
         "mix_weibull_3",
+        "spike_weibull",
+        "spike_gamma",
+        "spike_weibull_constrained",
+        "spike_gamma_constrained",
     )
     counts: dict[str, dict[str, Any]] = {
         family: {
@@ -864,12 +1068,14 @@ def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, A
             "ok": 0,
             "converged": 0,
             "failed": 0,
+            "boundary_reject": 0,
             "selected": 0,
             "aic_best": 0,
         }
         for family in families
     }
     unstable: list[dict[str, Any]] = []
+    boundary_rejected: list[dict[str, Any]] = []
     degenerate: list[dict[str, Any]] = []
     for fit in fits:
         selected = fit.selected
@@ -880,6 +1086,27 @@ def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, A
             record["attempted"] += 1
             if candidate.fit_status == "ok":
                 record["ok"] += 1
+            elif candidate.fit_status == "boundary_reject":
+                record["boundary_reject"] += 1
+                boundary_rejected.append(
+                    {
+                        "scope": fit.scope,
+                        "fit_id": fit.fit_id,
+                        "species": fit.species,
+                        "distribution": candidate.distribution,
+                        "spike_weight": candidate.spike_weight,
+                        "spike_component": candidate.spike_component,
+                        "parameters": {
+                            key: float(value)
+                            for key, value in candidate.parameters.items()
+                        },
+                        "at_bound": candidate.spike_at_bound,
+                        "aic": candidate.aic,
+                        "ks": candidate.ks,
+                        "converged": candidate.converged,
+                        "error": candidate.error,
+                    }
+                )
             else:
                 record["failed"] += 1
             if candidate.converged:
@@ -888,7 +1115,10 @@ def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, A
                 record["selected"] += 1
             if candidate is fit.best_aic:
                 record["aic_best"] += 1
-            if candidate.fit_status != "ok" or not candidate.converged:
+            if (
+                candidate.fit_status not in {"ok", "boundary_reject"}
+                or not candidate.converged
+            ):
                 unstable.append(
                     {
                         "scope": fit.scope,
@@ -915,18 +1145,151 @@ def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, A
         )
         for family in families
     }
+    spike_selected = [
+        {
+            "scope": fit.scope,
+            "fit_id": fit.fit_id,
+            "species": fit.species,
+            "distribution": fit.selected.distribution,
+            "spike_weight": fit.selected.spike_weight,
+            "spike_component": fit.selected.spike_component,
+            "spike_constrained": fit.selected.spike_constrained,
+            "spike_boundary_status": fit.selected.spike_boundary_status,
+            "aic": fit.selected.aic,
+            "ks": fit.selected.ks,
+            "converged": fit.selected.converged,
+        }
+        for fit in fits
+        if fit.selected.distribution in SPIKE_FAMILIES
+    ]
+    spike_comparison: list[dict[str, Any]] = []
+    for fit in fits:
+        unconstrained = [
+            candidate
+            for candidate in fit.candidates
+            if candidate.distribution in SPIKE_DIAGNOSTIC_FAMILIES
+        ]
+        constrained = [
+            candidate
+            for candidate in fit.candidates
+            if candidate.distribution in SPIKE_CONSTRAINED_FAMILIES
+        ]
+        if not unconstrained and not constrained:
+            continue
+        best_unconstrained = min(
+            (candidate for candidate in unconstrained if candidate.is_success),
+            key=lambda candidate: candidate.aic,
+            default=None,
+        )
+        best_constrained = min(
+            (candidate for candidate in constrained if candidate.is_success),
+            key=lambda candidate: candidate.aic,
+            default=None,
+        )
+        best_constrained_any = min(
+            constrained,
+            key=lambda candidate: candidate.aic
+            if math.isfinite(candidate.aic)
+            else math.inf,
+            default=None,
+        )
+        rejected = [
+            candidate
+            for candidate in constrained
+            if candidate.fit_status == "boundary_reject"
+        ]
+        weight_candidates = unconstrained + constrained
+        first_bin_share = next(
+            (
+                float(candidate.spike_weight)
+                for candidate in weight_candidates
+                if math.isfinite(float(candidate.spike_weight))
+            ),
+            math.nan,
+        )
+        spike_comparison.append(
+            {
+                "scope": fit.scope,
+                "fit_id": fit.fit_id,
+                "species": fit.species,
+                "first_bin_share": first_bin_share,
+                "unconstrained": (
+                    _candidate_record(best_unconstrained)
+                    if best_unconstrained
+                    else None
+                ),
+                "constrained": (
+                    _candidate_record(best_constrained_any)
+                    if best_constrained_any
+                    else None
+                ),
+                "boundary_rejects": [
+                    _candidate_record(candidate) for candidate in rejected
+                ],
+                "selected_distribution": fit.selected.distribution,
+                "selected_aic": fit.selected.aic,
+                "selected_ks": fit.selected.ks,
+            }
+        )
     return {
         "families": list(families),
         "counts": counts,
         "selected_counts": selected_families,
         "n_unstable": len(unstable),
         "n_degenerate_rejections": len(degenerate),
+        "n_boundary_rejections": len(boundary_rejected),
         "unstable": unstable[:50],
         "degenerate_rejections": degenerate[:50],
+        "boundary_rejections": boundary_rejected[:50],
+        "spike": {
+            "families": sorted(SPIKE_FAMILIES),
+            "constrained_families": sorted(SPIKE_CONSTRAINED_FAMILIES),
+            "diagnostic_families": sorted(SPIKE_DIAGNOSTIC_FAMILIES),
+            "constrained_shape_lower": SPIKE_CONSTRAINED_SHAPE_LOWER,
+            "constrained_scale_lower": SPIKE_CONSTRAINED_SCALE_LOWER,
+            "constrained_bounds": {
+                family: {
+                    key: [float(low), float(high)]
+                    for key, (low, high) in spike_tail_bounds(
+                        SPIKE_FAMILY_COMPONENTS[family]
+                    ).items()
+                }
+                for family in sorted(SPIKE_CONSTRAINED_FAMILIES)
+            },
+            "first_bin_share_trigger": SPIKE_FIRST_BIN_SHARE_TRIGGER,
+            "ks_trigger": SPIKE_KS_TRIGGER,
+            "attempted": sum(
+                counts[family]["attempted"] for family in SPIKE_FAMILIES
+            ),
+            "attempted_constrained": sum(
+                counts[family]["attempted"] for family in SPIKE_CONSTRAINED_FAMILIES
+            ),
+            "boundary_rejected": sum(
+                counts[family]["boundary_reject"]
+                for family in SPIKE_CONSTRAINED_FAMILIES
+            ),
+            "selected": len(spike_selected),
+            "selected_constrained": sum(
+                1
+                for row in spike_selected
+                if row["distribution"] in SPIKE_CONSTRAINED_FAMILIES
+            ),
+            "selected_unique": len(
+                {(row["scope"], row["fit_id"]) for row in spike_selected}
+            ),
+            "selected_rows": spike_selected,
+            "comparison_rows": spike_comparison,
+            "model": (
+                "two-part spike at dbh_limit plus one continuous component "
+                "left-truncated at the first bin upper edge; spike weight is "
+                "the first-bin share and counts as one AIC parameter"
+            ),
+        },
         "convergence_rule": (
-            "A mixture is synthesis-eligible only when its EM converged by the "
-            "likelihood/parameter tolerance or by a 12-iteration stall window; "
-            "unstable mixtures remain in the CSV but are not selected."
+            "A mixture or spike model is synthesis-eligible only when it "
+            "converged and, for a constrained spike, no tail parameter sits on "
+            "a declared bound. Unconstrained spike tails are eligible on the "
+            "finite fitted support but are never extrapolated beyond it."
         ),
     }
 
@@ -941,6 +1304,26 @@ def _comparison_frame(comparison: Mapping[str, Any]) -> pd.DataFrame:
             if not isinstance(value, (list, dict))
         }
         flat["new_mixture_unstable"] = ",".join(row.get("new_mixture_unstable", []))
+        for prefix, key in (
+            ("unconstrained_spike", "best_unconstrained_spike"),
+            ("constrained_spike", "best_constrained_spike"),
+        ):
+            candidate = row.get(key) or {}
+            flat[f"{prefix}_distribution"] = candidate.get("distribution")
+            flat[f"{prefix}_aic"] = candidate.get("aic", math.nan)
+            flat[f"{prefix}_ks"] = candidate.get("ks", math.nan)
+            flat[f"{prefix}_boundary_status"] = candidate.get(
+                "spike_boundary_status"
+            )
+            flat[f"{prefix}_at_bound"] = candidate.get("spike_at_bound")
+            flat[f"{prefix}_parameters"] = json.dumps(
+                candidate.get("parameters", {}), sort_keys=True, default=str
+            )
+        flat["constrained_spike_boundary_rejects"] = json.dumps(
+            row.get("constrained_spike_boundary_rejects", []),
+            sort_keys=True,
+            default=str,
+        )
         flat["new_mixture_candidate_summary"] = json.dumps(
             [
                 {
@@ -1164,6 +1547,35 @@ def _fmt(value: Any, digits: int = 2) -> str:
     return f"{number:,.{digits}f}"
 
 
+def _spike_parameter_text(parameters: Mapping[str, Any] | None) -> str:
+    """Format a spike row's weight, shape, and scale for the report."""
+    if not parameters:
+        return "n/a"
+    parts: list[str] = []
+    if "spike_weight" in parameters:
+        parts.append(f"w={_fmt(parameters['spike_weight'], 4)}")
+    for key in ("a", "p", "beta"):
+        if key in parameters:
+            parts.append(f"{key}={_fmt(parameters[key], 4)}")
+    return ", ".join(parts) if parts else "n/a"
+
+
+def _spike_candidate_text(candidate: Mapping[str, Any] | None) -> str:
+    """Format one audit candidate for the CW before/after table."""
+    if not candidate:
+        return "n/a"
+    status = str(candidate.get("spike_boundary_status") or "ok")
+    at_bound = str(candidate.get("spike_at_bound") or "")
+    if status != "ok":
+        status = f"{status} ({at_bound or 'bound'})"
+    return (
+        f"{candidate.get('distribution')} · "
+        f"{_spike_parameter_text(candidate.get('parameters'))} · "
+        f"AIC {_fmt(candidate.get('aic'), 1)} · "
+        f"KS {_fmt(candidate.get('ks'), 4)} · {status}"
+    )
+
+
 def _build_report(
     *,
     data: Tsa24Data,
@@ -1240,6 +1652,7 @@ def _build_report(
     for row in comparison.get("rows", []):
         interesting = (
             row.get("switched_to_new_mixture")
+            or row.get("switched_to_spike")
             or row.get("mixture_worse")
             or (math.isfinite(row.get("previous_ks", math.nan)) and row["previous_ks"] > 0.20)
             or (math.isfinite(row.get("selected_ks", math.nan)) and row["selected_ks"] > 0.20)
@@ -1277,6 +1690,78 @@ def _build_report(
             selected=values["selected"],
         )
         for family, values in mixture_summary.get("counts", {}).items()
+    ]
+    spike_summary = mixture_summary.get("spike", {})
+    spike_selected_rows = comparison.get("spike_selected", [])
+    unique_spike_rows: list[dict[str, Any]] = []
+    seen_spike_keys: set[tuple[str, str]] = set()
+    for row in spike_selected_rows:
+        key = (str(row.get("scope")), str(row.get("fit_id")))
+        if key in seen_spike_keys:
+            continue
+        seen_spike_keys.add(key)
+        unique_spike_rows.append(row)
+    cw_spike_rows = [
+        row for row in unique_spike_rows if "|CW" in str(row.get("fit_id", ""))
+    ]
+    spike_comparison_rows = spike_summary.get("comparison_rows", [])
+    cw_spike_comparison = []
+    seen_cw_keys: set[tuple[str, str]] = set()
+    for row in spike_comparison_rows:
+        if "|CW" not in str(row.get("fit_id", "")):
+            continue
+        key = (str(row.get("scope")), str(row.get("fit_id")))
+        if key in seen_cw_keys:
+            continue
+        seen_cw_keys.add(key)
+        cw_spike_comparison.append(row)
+    boundary_rejections = mixture_summary.get("boundary_rejections", [])
+    boundary_reject_rows = [
+        "| {fit} | {family} | {weight} | {params} | {aic} | {ks} | {at_bound} |".format(
+            fit=row["fit_id"],
+            family=row["distribution"],
+            weight=_fmt(row.get("spike_weight"), 4),
+            params=_spike_parameter_text(row.get("parameters", {})),
+            aic=_fmt(row.get("aic"), 1),
+            ks=_fmt(row.get("ks"), 4),
+            at_bound=row.get("at_bound") or "n/a",
+        )
+        for row in boundary_rejections
+    ]
+    cw_comparison_rows = [
+        "| {fit} | {share} | {unconstrained} | {constrained} | {selected} |".format(
+            fit=row["fit_id"],
+            share=_fmt(row.get("first_bin_share"), 4),
+            unconstrained=_spike_candidate_text(row.get("unconstrained")),
+            constrained=_spike_candidate_text(row.get("constrained")),
+            selected=(
+                f"{row.get('selected_distribution')} · "
+                f"AIC {_fmt(row.get('selected_aic'), 1)} · "
+                f"KS {_fmt(row.get('selected_ks'), 4)}"
+            ),
+        )
+        for row in cw_spike_comparison
+    ]
+    spike_regressions = [
+        row
+        for row in unique_spike_rows
+        if math.isfinite(row.get("delta_aic", math.nan)) and row["delta_aic"] > 2.0
+    ]
+    spike_rows = [
+        "| {fit} | {previous} | {selected} | {weight} | {component} | {previous_aic} | "
+        "{selected_aic} | {delta_aic} | {previous_ks} | {selected_ks} |".format(
+            fit=row.get("fit_id"),
+            previous=row.get("previous_distribution") or "n/a",
+            selected=row.get("selected_distribution"),
+            weight=_fmt(row.get("spike_weight"), 4),
+            component=row.get("spike_component") or "n/a",
+            previous_aic=_fmt(row.get("previous_aic"), 1),
+            selected_aic=_fmt(row.get("selected_aic"), 1),
+            delta_aic=_fmt(row.get("delta_aic"), 1),
+            previous_ks=_fmt(row.get("previous_ks"), 3),
+            selected_ks=_fmt(row.get("selected_ks"), 3),
+        )
+        for row in unique_spike_rows
     ]
     unstable = mixture_summary.get("unstable", [])
     unstable_rows = [
@@ -1360,8 +1845,10 @@ def _build_report(
         "",
         "### 4b. Mixture candidates and previous-run comparison",
         "",
-        f"- New Weibull mixture selections: **{comparison_counts.get('switched_to_new_mixture', 0)}** "
-        f"of **{comparison.get('n_matched', 0)}** matched strata.",
+        f"- Switches: **{comparison_counts.get('switched', 0)}** of "
+        f"**{comparison.get('n_matched', 0)}** matched strata "
+        f"(spike **{comparison_counts.get('switched_to_spike', 0)}**; "
+        f"new finite mixtures **{comparison_counts.get('switched_to_finite_mixture', 0)}**).",
         f"- Improved by >2 AIC: **{comparison_counts.get('improved_by_more_than_2_aic', 0)}**; "
         f"worse by >2 AIC: **{comparison_counts.get('worse_by_more_than_2_aic', 0)}**; "
         f"mixtures worse than the previous selected model: "
@@ -1378,7 +1865,7 @@ def _build_report(
         "|---|---:|---:|---:|---:|",
         *mixture_rows,
         "",
-        "| fit | previous | selected | delta AIC | delta AICc | previous KS | selected KS | best new mixture | best new delta AIC |",
+        "| fit | previous | selected | delta AIC | delta AICc | previous KS | selected KS | best new flexible | best new delta AIC |",
         "|---|---|---|---:|---:|---:|---:|---|---:|",
         *comparison_rows,
         "",
@@ -1391,7 +1878,101 @@ def _build_report(
         "selections are flagged in `distribution_fits.csv`. Small AIC gains are "
         "resolved in favour of the simpler model.",
         "",
+        "### 4c. Spike (first-bin) mixtures",
+        "",
+        f"- Spike families are attempted only when the first 2 cm bin carries more "
+        f"than **{100 * float(spike_summary.get('first_bin_share_trigger', 0.0)):.0f}%** "
+        f"of the expansion-factor tally, or the best single-component KS exceeds "
+        f"**{_fmt(spike_summary.get('ks_trigger'), 2)}**. Attempted fits: "
+        f"**{spike_summary.get('attempted', 0)}** across four families "
+        f"(**{spike_summary.get('attempted_constrained', 0)}** constrained); "
+        f"constrained boundary rejects: "
+        f"**{spike_summary.get('boundary_rejected', 0)}**; selected fits: "
+        f"**{spike_summary.get('selected', 0)}** "
+        f"(**{comparison_counts.get('selected_spike_unique', 0)}** unique "
+        f"`scope`/`fit_id` pairs).",
+        "- The spike is a point mass at the plot DBH limit that carries the first "
+        "bin; the continuous Weibull/gamma tail is left-truncated at the first bin "
+        "upper edge. The spike weight is the first-bin share (the disjoint-support "
+        "multinomial MLE), counts as one AIC parameter, and is sampled uniformly "
+        "inside the first bin so synthesis keeps a physical diameter. The spike "
+        "never sets the volume scale.",
+        "- Constrained `spike_weibull_constrained`/`spike_gamma_constrained` tails "
+        "are fitted by a bounded grouped MLE on the bins above the first bin, with "
+        f"shape >= {SPIKE_CONSTRAINED_SHAPE_LOWER:g} and scale >= "
+        f"{SPIKE_CONSTRAINED_SCALE_LOWER:g} cm. A constrained fit whose tail "
+        "parameters sit on any declared bound is reported as `boundary_reject` in "
+        "`distribution_fits.csv` and is never selected.",
+        "- Unconstrained `spike_weibull`/`spike_gamma` rows are also "
+        "synthesis-eligible when valid. Their tails can reach the two-stage scale "
+        "floor with a Weibull shape below one, so the *untruncated* mean can be "
+        "infinite; `sample_spike_mixture` always draws on the finite fitted "
+        "support `(first_bin_upper, support_upper]`, and the tail must not be "
+        "extrapolated beyond `support_upper`.",
+        "",
     ]
+    if cw_spike_rows:
+        lines.extend(
+            [
+                "- CW high-KS strata: "
+                + "; ".join(
+                    f"`{row['fit_id']}` → `{row['selected_distribution']}` "
+                    f"(spike {_fmt(row['spike_weight'], 3)}, KS "
+                    f"{_fmt(row['previous_ks'], 3)} → {_fmt(row['selected_ks'], 3)}, "
+                    f"ΔAIC {_fmt(row['delta_aic'], 1)})"
+                    for row in cw_spike_rows
+                )
+                + ".",
+                "",
+            ]
+        )
+    if spike_regressions:
+        lines.extend(
+            [
+                "- Spike selections whose raw AIC is more than two units worse than "
+                "the previous model: "
+                + "; ".join(
+                    f"`{row['fit_id']}` (ΔAIC {_fmt(row['delta_aic'], 1)}, KS "
+                    f"{_fmt(row['previous_ks'], 3)} → {_fmt(row['selected_ks'], 3)})"
+                    for row in spike_regressions
+                )
+                + ". These reflect the documented ten-unit penalty on a "
+                "non-converged legacy two-gamma fallback and are kept for audit; "
+                "the KS improved in each case.",
+                "",
+            ]
+        )
+    if cw_comparison_rows:
+        lines.extend(
+            [
+                "#### CW before/after (unconstrained vs constrained tail)",
+                "",
+                "| fit | first-bin share | unconstrained spike | constrained spike | selected |",
+                "|---|---:|---|---|---|",
+                *cw_comparison_rows,
+                "",
+            ]
+        )
+    if boundary_reject_rows:
+        lines.extend(
+            [
+                "#### Constrained boundary rejections",
+                "",
+                "| fit | family | spike weight | tail parameters | AIC | KS | at bound |",
+                "|---|---|---:|---|---:|---:|---|",
+                *boundary_reject_rows,
+                "",
+            ]
+        )
+    if spike_rows:
+        lines.extend(
+            [
+                "| fit | previous | selected | spike weight | tail component | previous AIC | selected AIC | delta AIC | previous KS | selected KS |",
+                "|---|---|---|---:|---|---:|---:|---:|---:|---:|",
+                *spike_rows,
+                "",
+            ]
+        )
     if unstable_rows:
         lines.extend(
             [
@@ -1800,12 +2381,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "pass": all(
                 item.selected.converged
                 for item in all_dbh_fits
-                if item.selected.distribution.startswith("mix_weibull")
+                if item.selected.distribution.startswith(("mix_weibull", "spike_"))
             ),
             "detail": (
-                "every selected Weibull mixture converged; a non-converged "
-                "legacy two-gamma fallback may remain selected and is flagged "
-                "in distribution_fits.csv"
+                "every selected Weibull mixture and spike model converged; a "
+                "non-converged legacy two-gamma fallback may remain selected "
+                "and is flagged in distribution_fits.csv"
             ),
         },
     }
@@ -1900,11 +2481,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "assumptions": {
             "dbh_fit": (
                 "Two-stage Weibull/gamma censored fits, grouped generalized beta, "
-                "a two-component gamma mixture, and the mix_weibull_2 / "
-                "mix_weibull_gamma / mix_weibull_3 families. Mixtures are fitted "
-                "on the left-truncated grouped support and selected by common AIC "
-                "with a two-unit parsimony margin. Common AIC/KS are computed on "
-                "one support-conditioned binned likelihood."
+                "a two-component gamma mixture, the mix_weibull_2 / "
+                "mix_weibull_gamma / mix_weibull_3 families, and the spike_weibull "
+                "/ spike_gamma two-part models. Mixtures are fitted on the "
+                "left-truncated grouped support and selected by common AIC with a "
+                "two-unit parsimony margin. Common AIC/KS are computed on one "
+                "support-conditioned binned likelihood. Spike models carry the "
+                "first bin as a point mass and fit the tail from the first bin "
+                "upper edge; the spike weight is one AIC parameter."
             ),
             "dbh_limit": (
                 "Plots with the modal DBH limit are used for the shape fit; other "
@@ -2057,6 +2641,38 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "selection_aic_margin": 2.0,
                 "gamma_fallback": "censored",
             },
+            "spike": {
+                "families": sorted(SPIKE_FAMILIES),
+                "constrained_families": sorted(SPIKE_CONSTRAINED_FAMILIES),
+                "diagnostic_families": sorted(SPIKE_DIAGNOSTIC_FAMILIES),
+                "first_bin_share_trigger": SPIKE_FIRST_BIN_SHARE_TRIGGER,
+                "ks_trigger": SPIKE_KS_TRIGGER,
+                "min_spike_weight": 0.001,
+                "max_spike_weight": 0.95,
+                "spike_location": "dbh_limit",
+                "tail_support": "first_bin_upper",
+                "sampling": "uniform_in_first_bin",
+                "selection_aic_margin": 2.0,
+                "constrained_estimator": "grouped_mle_lbfgsb",
+                "constrained_shape_lower": SPIKE_CONSTRAINED_SHAPE_LOWER,
+                "constrained_scale_lower": SPIKE_CONSTRAINED_SCALE_LOWER,
+                "constrained_bounds": {
+                    family: {
+                        key: [float(low), float(high)]
+                        for key, (low, high) in spike_tail_bounds(
+                            SPIKE_FAMILY_COMPONENTS[family]
+                        ).items()
+                    }
+                    for family in sorted(SPIKE_CONSTRAINED_FAMILIES)
+                },
+                "boundary_rule": "reject and never select a tail at any bound",
+                "unconstrained_rule": (
+                    "unconstrained spike tails are synthesis-eligible on the "
+                    "finite fitted support and are never extrapolated beyond "
+                    "support_upper even though their untruncated mean can be "
+                    "infinite"
+                ),
+            },
             "basic_density_table": str(
                 repo_root / "workflows" / "national" / "bucking" / "rules" / "bc_basic_density.csv"
             ),
@@ -2081,6 +2697,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "Weibull-containing mixtures are fitted on the left-truncated grouped "
                 "support; new-family unstable fits are reported but not selected, while "
                 "the legacy two-gamma fallback may remain selected and is flagged."
+            ),
+            (
+                "Spike families are attempted only when the first DBH bin exceeds the "
+                "documented share or the best simple fit leaves a high KS. The spike "
+                "carries the first bin and the continuous tail starts at the first bin "
+                "upper edge; the spike weight is an AIC parameter and does not set the "
+                "volume scale. Unconstrained spike tails are eligible only on the "
+                "finite fitted support and are never extrapolated. Constrained spike "
+                "tails use a bounded grouped MLE (shape >= 1, scale >= 0.1 cm); a fit "
+                "at any bound is reported as boundary_reject and is not selected."
             ),
         ],
     }

@@ -22,19 +22,33 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
+from nemora.sampling import sample_truncated
 from nemora.workflows.censoring import fit_censored_inventory
+from scipy.optimize import minimize
 from scipy.special import logsumexp
 from scipy.stats import gamma as gamma_dist
 from scipy.stats import weibull_min
 
 __all__ = [
     "MIXTURE_FAMILY_COMPONENTS",
+    "SPIKE_CONSTRAINED_FAMILIES",
+    "SPIKE_CONSTRAINED_SCALE_LOWER",
+    "SPIKE_CONSTRAINED_SHAPE_LOWER",
+    "SPIKE_DIAGNOSTIC_FAMILIES",
+    "SPIKE_FAMILIES",
+    "SPIKE_FAMILY_COMPONENTS",
+    "SPIKE_UNCONSTRAINED_FAMILIES",
     "MixtureComponent",
     "MixtureFit",
     "MixtureFitError",
+    "SpikeMixtureFit",
     "canonical_component_order",
     "component_is_degenerate",
+    "fit_spike_mixture",
     "fit_truncated_mixture",
+    "sample_spike_mixture",
+    "spike_tail_bounds",
+    "spike_tail_has_finite_mean",
 ]
 
 #: Component composition of every supported assortment mixture family.
@@ -48,6 +62,83 @@ MIXTURE_FAMILY_COMPONENTS: dict[str, tuple[str, ...]] = {
     "mix_weibull_gamma": ("weibull", "gamma"),
     "mix_weibull_3": ("weibull", "weibull", "weibull"),
 }
+
+#: Spike (point-mass) family to its single continuous component.
+#:
+#: A spike family is a two-part model, not a finite mixture on overlapping
+#: supports.  The spike carries the first DBH bin ``[dbh_limit,
+#: dbh_limit + bin_width)``; the continuous component is left-truncated at the
+#: first bin's upper edge.  This is the stable EM solution for tallies whose
+#: first bin dominates: the spike has no density to fit, and the continuous
+#: component sees only the tail it is meant to describe.
+#:
+#: ``*_constrained`` variants fit the tail with a grouped multinomial MLE under
+#: a finite-mean box constraint (shape >= 1, scale >= 0.1 cm).  The
+#: unconstrained variants use the documented two-stage censored fit and can
+#: reach a power-law boundary; their untruncated mean can be infinite.  Both
+#: are synthesis-eligible because ``sample_spike_mixture`` always draws on the
+#: finite fitted support ``(first_bin_upper, support_upper]``; the unconstrained
+#: rows carry that caveat in their diagnostics and must not be extrapolated
+#: beyond ``support_upper``.
+SPIKE_FAMILY_COMPONENTS: dict[str, str] = {
+    "spike_weibull": "weibull",
+    "spike_gamma": "gamma",
+    "spike_weibull_constrained": "weibull",
+    "spike_gamma_constrained": "gamma",
+}
+SPIKE_UNCONSTRAINED_FAMILIES = frozenset({"spike_weibull", "spike_gamma"})
+#: Backward-compatible name for the unconstrained audit rows.
+SPIKE_DIAGNOSTIC_FAMILIES = SPIKE_UNCONSTRAINED_FAMILIES
+SPIKE_CONSTRAINED_FAMILIES = frozenset(
+    {"spike_weibull_constrained", "spike_gamma_constrained"}
+)
+SPIKE_FAMILIES = frozenset(SPIKE_FAMILY_COMPONENTS)
+
+#: Box constraints for the constrained grouped-MLE tail.  The lower bounds make
+#: the mean finite (Weibull shape >= 1; gamma shape >= 1) and keep the scale
+#: physical.  The upper guards are numerical only: a fit that reaches one is a
+#: boundary estimate and is rejected exactly like a lower-bound hit.
+SPIKE_CONSTRAINED_SHAPE_LOWER = 1.0
+SPIKE_CONSTRAINED_SCALE_LOWER = 0.1
+_SPIKE_CONSTRAINED_SHAPE_UPPER = 50.0
+_SPIKE_CONSTRAINED_SCALE_UPPER = 500.0
+_SPIKE_BOUND_RTOL = 1e-6
+_SPIKE_BOUND_ATOL = 1e-9
+
+
+def spike_tail_bounds(component_name: str) -> dict[str, tuple[float, float]]:
+    """Return the constrained-tail box for ``weibull`` or ``gamma``."""
+    name = str(component_name).strip().lower()
+    if name not in _SUPPORTED_COMPONENTS:
+        raise ValueError(f"unsupported spike continuous component {component_name!r}")
+    shape_key = "a" if name == "weibull" else "p"
+    return {
+        shape_key: (SPIKE_CONSTRAINED_SHAPE_LOWER, _SPIKE_CONSTRAINED_SHAPE_UPPER),
+        "beta": (SPIKE_CONSTRAINED_SCALE_LOWER, _SPIKE_CONSTRAINED_SCALE_UPPER),
+    }
+
+
+def spike_tail_has_finite_mean(
+    component_name: str,
+    parameters: Mapping[str, float],
+) -> bool:
+    """Return whether the continuous tail has a finite distribution mean.
+
+    A Weibull mean is finite only when its shape is at least one.  A gamma mean
+    is finite for every positive shape, but the prototype treats shape < 1 as
+    the same boundary/degenerate regime because the conditional tail collapses
+    onto its lower support and cannot be sampled robustly.  The constrained
+    candidates always satisfy the finite-mean side by construction.
+    """
+    name = str(component_name).strip().lower()
+    if name == "weibull":
+        shape = float(parameters.get("a", math.nan))
+    elif name == "gamma":
+        shape = float(parameters.get("p", math.nan))
+    else:
+        return False
+    return math.isfinite(shape) and shape >= SPIKE_CONSTRAINED_SHAPE_LOWER
+
 
 _SUPPORTED_COMPONENTS = frozenset({"weibull", "gamma"})
 _DUPLICATE_RELATIVE_TOL = 1e-3
@@ -97,6 +188,39 @@ class MixtureFit:
     @property
     def component_parameters(self) -> tuple[dict[str, float], ...]:
         return tuple(component.parameters for component in self.components)
+
+
+@dataclass(frozen=True, slots=True)
+class SpikeMixtureFit:
+    """A fitted spike-plus-continuous two-part DBH model.
+
+    ``parameters`` holds only the continuous component's parameters.  The
+    spike weight is separate because it is a probability mass, not a density
+    parameter.  ``first_bin_upper`` is the upper edge of the first DBH bin; the
+    spike is a point mass at ``support_lower`` in the likelihood and is sampled
+    uniformly over ``[support_lower, first_bin_upper)`` so the synthetic stems
+    retain a physical diameter inside the observed first bin.
+    """
+
+    distribution: str
+    spike_weight: float
+    component_name: str
+    parameters: dict[str, float]
+    log_likelihood: float
+    n_parameters: int
+    converged: bool
+    iterations: int
+    n_starts: int
+    n_valid_starts: int
+    first_bin_share: float
+    first_bin_upper: float
+    n_bins: int
+    n_observations: float
+    constrained: bool = False
+    boundary_status: str = "ok"
+    at_bound: tuple[str, ...] = ()
+    estimator: str = "closed_form_m_step"
+    diagnostics: tuple[dict[str, object], ...] = field(default_factory=tuple)
 
 
 @dataclass(slots=True)
@@ -636,3 +760,677 @@ def fit_truncated_mixture(
         selected_start=int(selected_start),
         diagnostics=diagnostics,
     )
+
+
+def _validate_spike_grouped(
+    bins: np.ndarray,
+    tallies: np.ndarray,
+    component_name: str,
+) -> tuple[str, np.ndarray, np.ndarray]:
+    """Validate and parse grouped tallies for a spike mixture."""
+    name = str(component_name).strip().lower()
+    if name not in _SUPPORTED_COMPONENTS:
+        raise ValueError(
+            f"spike continuous component must be one of "
+            f"{', '.join(sorted(_SUPPORTED_COMPONENTS))}, got {component_name!r}"
+        )
+    x = np.asarray(bins, dtype=float)
+    y = np.asarray(tallies, dtype=float)
+    if x.ndim != 1 or y.ndim != 1 or x.size != y.size:
+        raise ValueError("bins and tallies must be one-dimensional and aligned")
+    if x.size < 4:
+        raise ValueError("spike fitting needs at least four DBH bins")
+    if np.any(~np.isfinite(x)) or np.any(~np.isfinite(y)):
+        raise ValueError("bins and tallies must be finite")
+    if np.any(y < 0.0):
+        raise ValueError("tallies must be non-negative")
+    if float(np.sum(y)) <= 0.0:
+        raise ValueError("tallies must sum to a positive value")
+    order = np.argsort(x)
+    return name, x[order], y[order]
+
+
+def _component_interval_mass(
+    name: str,
+    parameters: Mapping[str, float],
+    lower: float,
+    upper: float,
+    *,
+    support_lower: float,
+) -> float:
+    """Conditional mass in ``[lower, upper]`` given ``DBH >= support_lower``."""
+    retained = _component_retained_mass(name, parameters, support_lower)
+    if math.isinf(upper):
+        raw = 1.0 - _component_cdf(name, parameters, lower)
+    else:
+        raw = _component_cdf(name, parameters, upper) - _component_cdf(name, parameters, lower)
+    return max(float(raw) / retained, 0.0)
+
+
+def _spike_bin_edges(
+    x: np.ndarray,
+    support_lower: float,
+    first_bin_upper: float,
+) -> np.ndarray:
+    """Reconstruct bin edges with the first bin closed at ``support_lower``.
+
+    The fitting boundary receives bin midpoints.  The first bin is pinned to
+    ``[support_lower, first_bin_upper)``; later bins are rebuilt from the
+    midpoint spacing.  The final edge is open-ended and is folded into the last
+    bin by the likelihood.
+    """
+    width = float(x[1] - x[0])
+    if width <= 0.0:
+        raise ValueError("bin midpoints must be strictly increasing")
+    inner = x[2:] - 0.5 * width if x.size > 2 else np.empty(0, dtype=float)
+    edges = np.concatenate(
+        [
+            np.array([float(support_lower), float(first_bin_upper)], dtype=float),
+            inner,
+            np.array([float(x[-1] + 0.5 * width)], dtype=float),
+        ]
+    )
+    if np.any(np.diff(edges) <= 0.0):
+        raise ValueError("reconstructed bin edges are not strictly increasing")
+    return edges
+
+
+def _spike_bin_probabilities(
+    x: np.ndarray,
+    spike_weight: float,
+    component_name: str,
+    parameters: Mapping[str, float],
+    *,
+    support_lower: float,
+    first_bin_upper: float,
+) -> np.ndarray:
+    """Return the grouped bin probabilities of the spike two-part model."""
+    edges = _spike_bin_edges(x, support_lower, first_bin_upper)
+    probabilities = np.zeros(x.size, dtype=float)
+    probabilities[0] = float(spike_weight)
+    continuous_weight = 1.0 - float(spike_weight)
+    for index in range(1, x.size):
+        upper = math.inf if index == x.size - 1 else float(edges[index + 1])
+        mass = _component_interval_mass(
+            component_name,
+            parameters,
+            float(edges[index]),
+            upper,
+            support_lower=float(first_bin_upper),
+        )
+        probabilities[index] = continuous_weight * mass
+    total = float(np.sum(probabilities))
+    if not math.isfinite(total) or total <= 0.0:
+        raise MixtureFitError("spike mixture produced degenerate bin probabilities")
+    return probabilities / total
+
+
+def _spike_log_likelihood(
+    y: np.ndarray,
+    probabilities: np.ndarray,
+) -> float:
+    """Grouped multinomial log-likelihood (the multinomial coefficient is fixed)."""
+    values = y * np.log(np.clip(probabilities, 1e-300, None))
+    value = float(np.sum(values))
+    return value if math.isfinite(value) else -math.inf
+
+
+def _component_logcdf(
+    name: str,
+    parameters: Mapping[str, float],
+    values: np.ndarray,
+) -> np.ndarray:
+    if name == "weibull":
+        return np.asarray(
+            weibull_min.logcdf(values, parameters["a"], scale=parameters["beta"]),
+            dtype=float,
+        )
+    if name == "gamma":
+        return np.asarray(
+            gamma_dist.logcdf(values, parameters["p"], scale=parameters["beta"]),
+            dtype=float,
+        )
+    raise ValueError(f"no mixture log-CDF for component {name!r}")
+
+
+def _component_logsf(
+    name: str,
+    parameters: Mapping[str, float],
+    values: np.ndarray,
+) -> np.ndarray:
+    if name == "weibull":
+        return np.asarray(
+            weibull_min.logsf(values, parameters["a"], scale=parameters["beta"]),
+            dtype=float,
+        )
+    if name == "gamma":
+        return np.asarray(
+            gamma_dist.logsf(values, parameters["p"], scale=parameters["beta"]),
+            dtype=float,
+        )
+    raise ValueError(f"no mixture log-survival for component {name!r}")
+
+
+def _logdiffexp(log_a: np.ndarray | float, log_b: np.ndarray | float):
+    """Return ``log(exp(log_a) - exp(log_b))`` for ``log_a >= log_b``."""
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        return np.asarray(log_a) + np.log1p(-np.exp(np.asarray(log_b) - np.asarray(log_a)))
+
+
+def _constrained_tail_log_probabilities(
+    name: str,
+    parameters: Mapping[str, float],
+    edges: np.ndarray,
+    first_bin_upper: float,
+) -> np.ndarray:
+    """Log conditional bin probabilities above the first DBH bin.
+
+    The vector has one entry per tail bin.  It is the exact grouped likelihood
+    used by the constrained MLE and matches ``_component_interval_mass``'s
+    conditioning on ``DBH >= first_bin_upper``.  CDF or survival differences are
+    selected by which tail is numerically stable; the open-ended last bin uses
+    the survival function directly.
+    """
+    lower = np.asarray(edges[1:-1], dtype=float)
+    upper = np.asarray(edges[2:], dtype=float)
+    if lower.size != upper.size or lower.size < 1:
+        raise ValueError("constrained tail needs at least one bin above the first bin")
+    upper[-1] = math.inf
+    log_sf1 = float(_component_logsf(name, parameters, np.array([first_bin_upper]))[0])
+    if not math.isfinite(log_sf1):
+        return np.full(lower.size, -math.inf)
+
+    finite = np.isfinite(upper)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        log_cdf_lower = _component_logcdf(name, parameters, lower)
+        log_cdf_upper = _component_logcdf(name, parameters, upper[finite])
+        log_sf_lower = _component_logsf(name, parameters, lower)
+        log_sf_upper = _component_logsf(name, parameters, upper[finite])
+        cdf_branch = _logdiffexp(log_cdf_upper, log_cdf_lower[finite])
+        sf_branch = _logdiffexp(log_sf_lower[finite], log_sf_upper)
+        finite_log = np.where(log_cdf_upper < -math.log(2.0), cdf_branch, sf_branch)
+
+    finite_log = np.nan_to_num(
+        np.asarray(finite_log, dtype=float),
+        nan=-math.inf,
+        posinf=0.0,
+        neginf=-math.inf,
+    )
+    last_log = float(_component_logsf(name, parameters, np.array([lower[-1]]))[0]) - log_sf1
+    log_probabilities = np.empty(lower.size, dtype=float)
+    log_probabilities[:-1] = finite_log - log_sf1
+    log_probabilities[-1] = last_log
+    return np.minimum(log_probabilities, 0.0)
+
+
+def _tail_bound_hits(
+    component_name: str,
+    parameters: Mapping[str, float],
+) -> tuple[str, ...]:
+    """Return parameter names whose values sit on a constrained-tail bound."""
+    hits: list[str] = []
+    for key, (lower, upper) in spike_tail_bounds(component_name).items():
+        value = float(parameters[key])
+        if not math.isfinite(value):
+            hits.append(key)
+            continue
+        if math.isclose(value, lower, rel_tol=_SPIKE_BOUND_RTOL, abs_tol=_SPIKE_BOUND_ATOL):
+            hits.append(key)
+        elif math.isclose(
+            value, upper, rel_tol=_SPIKE_BOUND_RTOL, abs_tol=_SPIKE_BOUND_ATOL
+        ):
+            hits.append(key)
+    return tuple(hits)
+
+
+def _constrained_tail_objective(
+    theta: Sequence[float],
+    component_name: str,
+    edges: np.ndarray,
+    tail_tallies: np.ndarray,
+    first_bin_upper: float,
+) -> float:
+    """Negative grouped multinomial log-likelihood for the tail."""
+    shape_key = "a" if component_name == "weibull" else "p"
+    parameters = {
+        shape_key: float(theta[0]),
+        "beta": float(theta[1]),
+    }
+    if (
+        not math.isfinite(parameters[shape_key])
+        or not math.isfinite(parameters["beta"])
+        or parameters[shape_key] <= 0.0
+        or parameters["beta"] <= 0.0
+    ):
+        return 1e100
+    log_probabilities = _constrained_tail_log_probabilities(
+        component_name, parameters, edges, first_bin_upper
+    )
+    safe = np.where(tail_tallies > 0.0, log_probabilities, 0.0)
+    if np.any(~np.isfinite(safe)):
+        return 1e100
+    value = -float(np.dot(tail_tallies, safe))
+    return value if math.isfinite(value) else 1e100
+
+
+def _constrained_tail_starts(
+    component_name: str,
+    edges: np.ndarray,
+    tail_tallies: np.ndarray,
+    first_bin_upper: float,
+) -> tuple[tuple[float, float], ...]:
+    """Deterministic starting grid for the bounded tail MLE."""
+    populated = tail_tallies > 0.0
+    if int(np.sum(populated)) < 3:
+        raise MixtureFitError(
+            "constrained spike mixture needs at least three populated tail bins"
+        )
+    mids = 0.5 * (edges[:-1] + edges[1:])
+    tail_mids = mids[1:]
+    weights = tail_tallies[populated]
+    mean_tail = float(np.dot(tail_mids[populated], weights) / max(float(weights.sum()), 1e-12))
+    mean_tail = max(mean_tail, float(first_bin_upper) + 0.5)
+    scale0 = max(float(first_bin_upper) * 0.5, mean_tail * 0.6, 1.0)
+    shape_lower = SPIKE_CONSTRAINED_SHAPE_LOWER
+    return (
+        (shape_lower + 1e-6, scale0),
+        (1.2, scale0),
+        (1.6, scale0 * 0.8),
+        (2.5, scale0 * 0.5),
+        (4.0, scale0 * 0.35),
+    )
+
+
+def _fit_constrained_tail(
+    component_name: str,
+    edges: np.ndarray,
+    tail_tallies: np.ndarray,
+    first_bin_upper: float,
+) -> tuple[
+    dict[str, float],
+    float,
+    int,
+    int,
+    int,
+    tuple[str, ...],
+    tuple[dict[str, object], ...],
+]:
+    """Fit the continuous tail with a bounded grouped multinomial MLE.
+
+    ``fit_censored_inventory`` is a two-stage estimator: its stage-one scaling
+    factor is fixed before the shape/scale fit and it does not expose the exact
+    grouped likelihood under a box constraint.  The spike tail therefore uses a
+    small, documented local MLE at this boundary: L-BFGS-B on the exact grouped
+    bin likelihood, with a deterministic start grid.  This is the estimator
+    layer for the constrained two-part model, not a replacement for nemora's
+    unconditional fits.
+    """
+    name = str(component_name).strip().lower()
+    bounds_map = spike_tail_bounds(name)
+    shape_key = "a" if name == "weibull" else "p"
+    bounds = [bounds_map[shape_key], bounds_map["beta"]]
+    starts = _constrained_tail_starts(
+        name, edges, tail_tallies, first_bin_upper
+    )
+    results: list[dict[str, object]] = []
+    valid: list[tuple[float, object]] = []
+    for start_index, start in enumerate(starts):
+        result = minimize(
+            _constrained_tail_objective,
+            np.array(start, dtype=float),
+            args=(name, edges, tail_tallies, first_bin_upper),
+            method="L-BFGS-B",
+            bounds=bounds,
+            options={"maxiter": 5000, "ftol": 1e-12, "gtol": 1e-8, "maxls": 80},
+        )
+        parameters = {
+            shape_key: float(result.x[0]),
+            "beta": float(result.x[1]),
+        }
+        at_bound = _tail_bound_hits(name, parameters)
+        results.append(
+            {
+                "start": start_index,
+                "initial": [float(value) for value in start],
+                "parameters": parameters,
+                "at_bound": list(at_bound),
+                "log_likelihood": float(-result.fun) if math.isfinite(result.fun) else -math.inf,
+                "converged": bool(result.success),
+                "iterations": int(getattr(result, "nit", 0)),
+                "message": str(result.message),
+            }
+        )
+        if result.success and math.isfinite(result.fun):
+            valid.append((float(result.fun), result))
+
+    if not valid:
+        messages = "; ".join(
+            f"start {item['start']}: {item['message']}" for item in results
+        )
+        raise MixtureFitError(
+            f"constrained {name} tail did not converge: {messages}"
+        )
+
+    best_fun, best = min(valid, key=lambda item: item[0])
+    parameters = {
+        shape_key: float(best.x[0]),
+        "beta": float(best.x[1]),
+    }
+    at_bound = _tail_bound_hits(name, parameters)
+    return (
+        parameters,
+        -float(best_fun),
+        int(getattr(best, "nit", 0)),
+        len(starts),
+        len(valid),
+        at_bound,
+        tuple(results),
+    )
+
+
+
+def fit_spike_mixture(
+    bins: Sequence[float],
+    tallies: Sequence[float],
+    component_name: str,
+    *,
+    support_lower: float,
+    first_bin_upper: float | None = None,
+    min_spike_weight: float = 0.001,
+    max_spike_weight: float = 0.95,
+    constrained: bool = False,
+    random_state: int = 20261115,
+) -> SpikeMixtureFit:
+    """Fit a spike at the lower DBH bound plus one truncated continuous tail.
+
+    The model is the stable two-part (hurdle) limit of a zero-inflated mixture:
+
+    * the spike carries the first bin ``[dbh_limit, first_bin_upper)`` as a
+      point mass at ``dbh_limit`` for likelihood purposes;
+    * the continuous component is left-truncated at ``first_bin_upper`` and
+      fitted to the remaining tallies with ``fit_censored_inventory``.
+
+    Because the two parts have disjoint support, the E-step is exact:
+    first-bin tallies have spike responsibility one and all later bins have
+    continuous responsibility one.  The M-step therefore sets the spike
+    weight to the observed first-bin share (the multinomial MLE for a
+    disjoint-support spike) and refits the continuous component once.  This
+    avoids the weak identifiability of a spike and a continuous component that
+    both cover the first bin, which is what made earlier continuous mixtures
+    collapse onto a boundary spike.
+
+    With ``constrained=True`` the tail is fitted only to bins above the first
+    bin by a grouped multinomial MLE under the finite-mean box
+
+    * Weibull ``a >= 1.0`` and ``beta >= 0.1`` cm,
+    * gamma ``p >= 1.0`` and ``beta >= 0.1`` cm,
+
+    with generous upper guards used only to detect a degenerate runaway.  A
+    fit whose tail parameters sit on any bound is returned with
+    ``boundary_status="boundary_reject"`` and ``at_bound`` naming the
+    parameters; callers must not select it.  AIC counts the spike weight plus
+    the two continuous parameters, so the constrained and unconstrained
+    variants are comparable at three parameters.
+
+    Parameters
+    ----------
+    bins, tallies:
+        Active bin midpoints and expansion-factor tallies.  The first bin must
+        be populated and must start at ``support_lower``.
+    component_name:
+        ``weibull`` or ``gamma`` for the continuous tail.
+    support_lower:
+        Plot DBH limit, the spike location and lower support bound.
+    first_bin_upper:
+        Upper edge of the first bin.  Defaults to the first midpoint plus half
+        the first midpoint spacing.
+    min_spike_weight, max_spike_weight:
+        Admissible spike range.  A solution outside the range is rejected as
+        degenerate rather than clipped silently.
+    constrained:
+        Use the bounded grouped MLE for a finite-mean tail instead of the
+        unconstrained two-stage censored fit.  The unconstrained variant is
+        retained for audit because its power-law tail can have an infinite
+        mean and is not synthesis-safe.
+    random_state:
+        Retained for API parity with the finite-mixture fitter; this fit is
+        deterministic.
+    """
+    del random_state  # the two-part M-step is deterministic
+    name, x, y = _validate_spike_grouped(np.asarray(bins), np.asarray(tallies), component_name)
+    lower = float(support_lower)
+    if not math.isfinite(lower) or lower < 0.0:
+        raise ValueError("support_lower must be finite and non-negative")
+    if float(x[0]) < lower - 1e-9:
+        raise ValueError("the first bin midpoint must lie at or above support_lower")
+    if float(x[0]) - lower > float(x[1] - x[0]):
+        raise ValueError("the first bin midpoint is more than one bin above support_lower")
+
+    width = float(x[1] - x[0])
+    edge1 = float(first_bin_upper) if first_bin_upper is not None else float(x[0] + 0.5 * width)
+    if not (lower < edge1 <= float(x[1]) + 1e-9):
+        raise ValueError(
+            "first_bin_upper must lie above support_lower and no higher than the "
+            "second bin midpoint"
+        )
+    if not 0.0 < float(min_spike_weight) < float(max_spike_weight) < 1.0:
+        raise ValueError("spike weight bounds must satisfy 0 < min < max < 1")
+
+    total = float(np.sum(y))
+    if float(y[0]) <= 0.0:
+        raise MixtureFitError("spike mixture needs a populated first bin")
+    first_bin_share = float(y[0] / total)
+    if not (float(min_spike_weight) < first_bin_share < float(max_spike_weight)):
+        raise MixtureFitError(
+            f"spike weight {first_bin_share:.6f} is outside "
+            f"({min_spike_weight:g}, {max_spike_weight:g}); rejecting degenerate spike"
+        )
+
+    tail_x = x[1:]
+    tail_y = y[1:]
+    populated = tail_y > 0.0
+    if int(np.sum(populated)) < 3:
+        raise MixtureFitError(
+            "spike mixture needs at least three populated bins above the first bin"
+        )
+
+    at_bound: tuple[str, ...] = ()
+    start_diagnostics: tuple[dict[str, object], ...]
+    if constrained:
+        parameters, tail_log_likelihood, iterations, n_starts, n_valid_starts, at_bound, start_diagnostics = (
+            _fit_constrained_tail(name, _spike_bin_edges(x, lower, edge1), tail_y, edge1)
+        )
+        boundary_status = "boundary_reject" if at_bound else "ok"
+        estimator = "grouped_mle_lbfgsb"
+        converged = True
+    else:
+        try:
+            result = fit_censored_inventory(
+                tail_x[populated],
+                tail_y[populated],
+                support=(edge1, float("inf")),
+                distributions=(name,),
+            )[0]
+        except Exception as error:  # noqa: BLE001 - report the documented boundary failure
+            raise MixtureFitError(
+                f"continuous {name} tail fit failed above {edge1:g} cm: {error}"
+            ) from error
+        parameters = {
+            key: float(value) for key, value in result.parameters.items() if key != "s"
+        }
+        tail_log_likelihood = math.nan
+        iterations = 1
+        n_starts = 1
+        n_valid_starts = 1
+        boundary_status = "ok"
+        estimator = "closed_form_m_step"
+        converged = True
+        start_diagnostics = (
+            {
+                "start": 0,
+                "converged": True,
+                "valid": True,
+                "iterations": 1,
+                "log_likelihood": math.nan,
+                "m_step_failures": 0,
+                "ordering_swaps": 0,
+                "convergence": "closed_form_m_step",
+                "reason": "ok",
+            },
+        )
+
+    continuous_weight = 1.0 - first_bin_share
+    if component_is_degenerate(name, continuous_weight, parameters):
+        raise MixtureFitError(
+            f"continuous {name} tail is degenerate: {parameters!r}"
+        )
+    retained = _component_retained_mass(name, parameters, edge1)
+    if not math.isfinite(retained) or retained <= 1e-12:
+        raise MixtureFitError(
+            f"continuous {name} tail has no retained mass above {edge1:g} cm"
+        )
+    first_tail_mass = _component_interval_mass(
+        name,
+        parameters,
+        edge1,
+        edge1 + width,
+        support_lower=edge1,
+    )
+    boundary_reject = boundary_status == "boundary_reject"
+    if first_tail_mass > 0.98 and not boundary_reject:
+        raise MixtureFitError(
+            "continuous component collapses onto the first tail bin; "
+            "the two-part model is not identifiable"
+        )
+
+    probabilities = _spike_bin_probabilities(
+        x,
+        first_bin_share,
+        name,
+        parameters,
+        support_lower=lower,
+        first_bin_upper=edge1,
+    )
+    log_likelihood = _spike_log_likelihood(y, probabilities)
+    if not math.isfinite(log_likelihood):
+        raise MixtureFitError("spike mixture produced a non-finite log-likelihood")
+    diagnostics = tuple(
+        {
+            "start": item.get("start", 0),
+            "converged": bool(item.get("converged", True)),
+            "valid": bool(item.get("valid", True)),
+            "iterations": int(item.get("iterations", iterations)),
+            "log_likelihood": item.get("log_likelihood", log_likelihood),
+            "m_step_failures": int(item.get("m_step_failures", 0)),
+            "ordering_swaps": int(item.get("ordering_swaps", 0)),
+            "convergence": item.get("convergence", estimator),
+            "reason": item.get("reason", "ok"),
+            "n_bins": int(x.size),
+            "n_observations": total,
+            "n_populated_tail_bins": int(np.sum(populated)),
+            "first_bin_share": first_bin_share,
+            "first_bin_upper_cm": edge1,
+            "continuous_retained_mass": retained,
+            "continuous_first_tail_bin_mass": first_tail_mass,
+            "estimator": estimator,
+            "constrained": bool(constrained),
+            "tail_bounds": {
+                key: [float(low), float(high)]
+                for key, (low, high) in spike_tail_bounds(name).items()
+            },
+            "at_bound": list(at_bound),
+            "boundary_status": boundary_status,
+            "tail_log_likelihood": float(tail_log_likelihood),
+        }
+        for item in start_diagnostics
+    )
+    return SpikeMixtureFit(
+        distribution=(
+            f"spike_{name}_constrained" if constrained else f"spike_{name}"
+        ),
+        spike_weight=first_bin_share,
+        component_name=name,
+        parameters=parameters,
+        log_likelihood=log_likelihood,
+        n_parameters=3,
+        converged=converged,
+        iterations=iterations,
+        n_starts=n_starts,
+        n_valid_starts=n_valid_starts,
+        first_bin_share=first_bin_share,
+        first_bin_upper=edge1,
+        n_bins=int(x.size),
+        n_observations=total,
+        constrained=bool(constrained),
+        boundary_status=boundary_status,
+        at_bound=at_bound,
+        estimator=estimator,
+        diagnostics=diagnostics,
+    )
+
+
+def sample_spike_mixture(
+    size: int,
+    *,
+    spike_weight: float,
+    component_name: str,
+    component_parameters: Mapping[str, float],
+    support_lower: float,
+    support_upper: float,
+    first_bin_upper: float,
+    random_state: np.random.Generator | int | None = None,
+) -> np.ndarray:
+    """Draw DBH values from a fitted spike-plus-tail model.
+
+    Spike draws are uniform over ``[support_lower, first_bin_upper)``.  This is
+    the documented reporting convention for a point mass that represents a
+    binned first interval: it preserves the fitted first-bin probability while
+    keeping every synthetic stem at a physical diameter above the plot limit.
+    Continuous draws use the existing truncated sampler on
+    ``(first_bin_upper, support_upper]``.
+    """
+    count = int(size)
+    if count < 0:
+        raise ValueError("size must be non-negative")
+    weight = float(spike_weight)
+    if not math.isfinite(weight) or not 0.0 < weight < 1.0:
+        raise ValueError("spike_weight must be finite and in (0, 1)")
+    name = str(component_name).strip().lower()
+    if name not in _SUPPORTED_COMPONENTS:
+        raise ValueError(f"unsupported spike continuous component {component_name!r}")
+    low = float(support_lower)
+    high = float(support_upper)
+    edge1 = float(first_bin_upper)
+    if not math.isfinite(low) or low < 0.0:
+        raise ValueError("support_lower must be finite and non-negative")
+    if not math.isfinite(high) or high <= low:
+        raise ValueError("support_upper must be finite and above support_lower")
+    if not (low < edge1 <= high):
+        raise ValueError("first_bin_upper must lie inside the sampling support")
+    if count == 0:
+        return np.empty(0, dtype=float)
+
+    if isinstance(random_state, np.random.Generator):
+        rng = random_state
+    elif isinstance(random_state, (int, np.integer)):
+        rng = np.random.default_rng(int(random_state))
+    else:
+        rng = np.random.default_rng()
+
+    spike_count = int(rng.binomial(count, weight))
+    spike_draws = rng.uniform(low, edge1, spike_count)
+    tail_draws = sample_truncated(
+        name,
+        dict(component_parameters),
+        (edge1, high),
+        count - spike_count,
+        random_state=rng,
+    )
+    draws = np.concatenate([spike_draws, tail_draws])
+    rng.shuffle(draws)
+    draws = np.clip(np.asarray(draws, dtype=float), low, high)
+    if draws.size != count:
+        raise MixtureFitError(
+            f"spike sampler returned {draws.size} values, expected {count}"
+        )
+    return draws

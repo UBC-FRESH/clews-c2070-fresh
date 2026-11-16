@@ -1,5 +1,31 @@
 # Change Log
 
+## 2026-11-16
+
+- **Added spike/zero-inflated first-bin mixtures to the RSYC DBH fits and
+  re-ran TSA24.** `spike_weibull` / `spike_gamma` add a point mass at the plot
+  DBH limit plus one Weibull/gamma tail left-truncated at the first bin upper
+  edge.  The disjoint-support EM sets the spike weight to the first-bin share,
+  counts it as one AIC parameter, rejects weights outside `(0.001, 0.95)`, and
+  samples the spike uniformly inside the first bin so every stem stays above
+  the plot limit.  `spike_weibull_constrained` / `spike_gamma_constrained`
+  add a bounded grouped-MLE finite-mean tail with shape >= 1 and scale >=
+  0.1 cm; a tail at any declared bound is reported as `boundary_reject` and is
+  never selected.  Spike families are gated on first-bin share > 20% or best
+  simple KS > 0.15, and selection keeps the two-AIC parsimony rule.  TSA24
+  re-fit (68 general + 7 AU): 15 selected spike fits (14 unique; 8 constrained,
+  7 unconstrained) of 116 attempted; 28 constrained boundary rejects.  Both
+  CW high-KS strata switch from the legacy gamma mixture to `spike_weibull`
+  (ecozone KS 0.221 -> 0.034, AIC -795.2, spike 0.657; ecoprovince KS 0.217 ->
+  0.036, AIC -271.7, spike 0.564).  General high-KS selections fall from 3 to
+  0 (max 0.146).  One switch (`Hart Ranges|SW`) is 8.6 raw AIC worse than the
+  non-converged legacy fallback but 1.4 better after its ten-unit penalty; KS
+  improves 0.046 -> 0.023.  The AU (`SBS_SX`, H, age 100) changes only `BL`
+  to `spike_weibull_constrained`; the 311.6 m3 target and volume conservation
+  remain exact (TPH 1,189; QMD 18.84 cm; recovered 253.16 + residue 58.44 m3).
+  Added spike tests, `distribution_fits.csv` spike diagnostics, the
+  constrained-tail audit table, and updated the README/report/manifest.
+
 ## 2026-11-15
 
 - **Added multi-component Weibull/mixed mixtures to the RSYC-stratified DBH
