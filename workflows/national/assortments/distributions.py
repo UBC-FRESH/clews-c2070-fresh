@@ -1010,31 +1010,41 @@ def _fit_candidates(
     support_lower: float,
     upper_cap: float,
     seed: int,
+    families: Sequence[str] | None = None,
+    mixture_n_starts: int = 2,
+    mixture_max_iter: int = 250,
 ) -> list[FitCandidate]:
+    allowed = None if families is None else {str(name) for name in families}
+
+    def enabled(name: str) -> bool:
+        return allowed is None or name in allowed
+
     candidates: list[FitCandidate] = []
 
-    try:
-        censored = fit_censored_inventory(
-            mids,
-            tallies,
-            support=(float(support_lower), float("inf")),
-            distributions=("weibull", "gamma"),
-        )
-    except Exception as error:  # noqa: BLE001 - report the documented failure
-        for name in ("weibull", "gamma"):
-            candidates.append(_failed_candidate(name, error))
-    else:
-        for result in censored:
-            candidates.append(
-                _candidate_from_fit(
-                    result,
-                    method="censored-two-stage",
-                    tallies=tallies,
-                    edges=edges,
-                    support_lower=support_lower,
-                    upper_cap=upper_cap,
-                )
+    censored_names = tuple(name for name in ("weibull", "gamma") if enabled(name))
+    if censored_names:
+        try:
+            censored = fit_censored_inventory(
+                mids,
+                tallies,
+                support=(float(support_lower), float("inf")),
+                distributions=censored_names,
             )
+        except Exception as error:  # noqa: BLE001 - report the documented failure
+            for name in censored_names:
+                candidates.append(_failed_candidate(name, error))
+        else:
+            for result in censored:
+                candidates.append(
+                    _candidate_from_fit(
+                        result,
+                        method="censored-two-stage",
+                        tallies=tallies,
+                        edges=edges,
+                        support_lower=support_lower,
+                        upper_cap=upper_cap,
+                    )
+                )
 
     inventory = InventorySpec(
         name="assortment-dbh",
@@ -1044,6 +1054,8 @@ def _fit_candidates(
         metadata={"grouped": True, "support": [float(support_lower), float("inf")]},
     )
     for name in ("gb1", "gb2"):
+        if not enabled(name):
+            continue
         try:
             result = fit_inventory(inventory, [name], {})[0]
         except Exception as error:  # noqa: BLE001 - report the documented failure
@@ -1060,29 +1072,32 @@ def _fit_candidates(
             )
         )
 
-    try:
-        mixture = fit_mixture_grouped(
-            mids,
-            tallies,
-            [MixtureComponentSpec("gamma"), MixtureComponentSpec("gamma")],
-            max_iter=200,
-            tol=1e-6,
-            random_state=seed,
-        )
-        candidates.append(
-            _candidate_from_mixture(
-                mixture,
-                family="mixture",
-                tallies=tallies,
-                edges=edges,
-                support_lower=support_lower,
-                upper_cap=upper_cap,
+    if enabled("mixture"):
+        try:
+            mixture = fit_mixture_grouped(
+                mids,
+                tallies,
+                [MixtureComponentSpec("gamma"), MixtureComponentSpec("gamma")],
+                max_iter=200,
+                tol=1e-6,
+                random_state=seed,
             )
-        )
-    except Exception as error:  # noqa: BLE001 - report the documented failure
-        candidates.append(_failed_candidate("mixture", error))
+            candidates.append(
+                _candidate_from_mixture(
+                    mixture,
+                    family="mixture",
+                    tallies=tallies,
+                    edges=edges,
+                    support_lower=support_lower,
+                    upper_cap=upper_cap,
+                )
+            )
+        except Exception as error:  # noqa: BLE001 - report the documented failure
+            candidates.append(_failed_candidate("mixture", error))
 
     for family in ("mix_weibull_2", "mix_weibull_gamma"):
+        if not enabled(family):
+            continue
         candidates.append(
             _fit_truncated_family(
                 family,
@@ -1092,8 +1107,8 @@ def _fit_candidates(
                 support_lower=support_lower,
                 upper_cap=upper_cap,
                 seed=seed,
-                n_starts=2,
-                max_iter=250,
+                n_starts=mixture_n_starts,
+                max_iter=mixture_max_iter,
             )
         )
 
@@ -1106,7 +1121,7 @@ def _fit_candidates(
         ),
         default=math.inf,
     )
-    if best_mixture_ks > _THREE_COMPONENT_KS_TRIGGER:
+    if enabled("mix_weibull_3") and best_mixture_ks > _THREE_COMPONENT_KS_TRIGGER:
         candidates.append(
             _fit_truncated_family(
                 "mix_weibull_3",
@@ -1142,6 +1157,8 @@ def _fit_candidates(
             "spike_weibull_constrained",
             "spike_gamma_constrained",
         ):
+            if not enabled(family):
+                continue
             candidates.append(
                 _fit_spike_family(
                     family,
@@ -1242,6 +1259,9 @@ def _attempt_fit(
     width_cm: float,
     max_dbh_cm: float | None,
     seed: int,
+    families: Sequence[str] | None = None,
+    mixture_n_starts: int = 2,
+    mixture_max_iter: int = 250,
 ) -> _Attempt:
     if subset.empty:
         return _Attempt(0, 0, 0, math.nan, math.nan, error="no observations")
@@ -1278,6 +1298,9 @@ def _attempt_fit(
         support_lower=limit,
         upper_cap=cap,
         seed=seed,
+        families=families,
+        mixture_n_starts=mixture_n_starts,
+        mixture_max_iter=mixture_max_iter,
     )
     attempt = _Attempt(
         n_trees=tree_count,
@@ -1336,12 +1359,18 @@ def fit_distribution_for_target(
     max_dbh_cm: float | None = None,
     random_state: int = 20261115,
     levels: Sequence[str] = DEFAULT_LEVELS,
+    families: Sequence[str] | None = None,
+    mixture_n_starts: int = 2,
+    mixture_max_iter: int = 250,
 ) -> DistributionFit:
     """Fit one target through the ecodistrict -> ecozone -> default hierarchy.
 
     The fit stops at the first level that has at least ``min_trees`` trees and
     ``min_plots`` plots and at least three populated bins.  A fit that reaches
     the species-only TSA24 pool is labelled ``default``.
+
+    ``families`` optionally restricts the candidate set by distribution name.
+    ``None`` preserves the historical full candidate set.
     """
     if min_trees < 3 or min_plots < 1:
         raise ValueError("min_trees must be at least 3 and min_plots at least 1")
@@ -1372,6 +1401,9 @@ def fit_distribution_for_target(
             width_cm=bin_width_cm,
             max_dbh_cm=max_dbh_cm,
             seed=random_state,
+            families=families,
+            mixture_n_starts=mixture_n_starts,
+            mixture_max_iter=mixture_max_iter,
         )
         last_attempt = attempt
         enough = (
@@ -1399,6 +1431,9 @@ def fit_distribution_for_target(
         width_cm=bin_width_cm,
         max_dbh_cm=max_dbh_cm,
         seed=random_state,
+        families=families,
+        mixture_n_starts=mixture_n_starts,
+        mixture_max_iter=mixture_max_iter,
     )
     last_attempt = attempt
     if attempt.n_trees < min_plot_trees or attempt.n_bins < 3 or not attempt.has_success:
@@ -1475,6 +1510,9 @@ def fit_dbh_distributions(
     max_dbh_cm: float | None = None,
     random_state: int = 20261115,
     levels: Sequence[str] = DEFAULT_LEVELS,
+    families: Sequence[str] | None = None,
+    mixture_n_starts: int = 2,
+    mixture_max_iter: int = 250,
     failures: list[dict[str, Any]] | None = None,
 ) -> list[DistributionFit]:
     """Fit DBH distributions for explicit targets or all ecodistrict groups.
@@ -1546,6 +1584,9 @@ def fit_dbh_distributions(
                     max_dbh_cm=max_dbh_cm,
                     random_state=random_state,
                     levels=levels,
+                    families=families,
+                    mixture_n_starts=mixture_n_starts,
+                    mixture_max_iter=mixture_max_iter,
                 )
             )
         except DistributionFitError as error:

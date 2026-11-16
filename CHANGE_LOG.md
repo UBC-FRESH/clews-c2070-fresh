@@ -2,6 +2,35 @@
 
 ## 2026-11-16
 
+- **Built and ran the first national hierarchical DBH/height fit.** Added
+  `workflows/national/assortments/national_fit.py`, a resumable 8-worker
+  workflow that treats the coverage audit as the sampling frame, fits local
+  DBH distributions only for `direct_fit`/`pooled_fit` cells, and resolves
+  `no_data` cells through the nested parent chain (`pooled_parent`) or the
+  national species fit (`species_national`). Borrowed shapes are never labelled
+  local; direct/pooled failures are reported as `no_fit`. Each cell records the
+  selected distribution, parameters, spike weight, support, AIC/AICc/BIC/KS,
+  DBH limit, evidence tier and sources, plus a height model
+  (`H = 1.3 + exp(a) * DBH^b`) and the publishable RSYC volume/AGB curve at age
+  100 as a scale prior. Added an optional candidate-family filter to
+  `distributions.py` so this pass uses the specified single Weibull/gamma,
+  `mix_weibull_2`, `mix_weibull_gamma`, and constrained-spike candidates
+  (legacy two-gamma, generalized beta, three-component Weibull, and
+  unconstrained spikes remain available to other callers). Ecoprovince run:
+  1,260 target cells in 321.6 s — 319 direct / 29 pooled / 132 parent /
+  761 species-national / 19 no_fit, with 0 timebox-pending. Ecoregion run
+  (resumed 560 coarser cells): 4,830 target cells in 525.2 s — 757 direct /
+  154 pooled / 1,142 parent / 2,705 species-national / 72 no_fit, with
+  0 timebox-pending. Validation: 1,252 support-level direct fits (median KS
+  0.040, p90 0.138, 67 flagged KS > 0.20), 193 support-level pooled fits
+  (110 flagged `low_support`), 0 borrowed rows labelled local, 0 no_data cells
+  without an RSYC prior, and 1,337 local / 5,208 borrowed height models. The
+  98 deterministic local failures are retained in `remaining_cells.csv` with
+  `resumable=false`; they are not timebox work. Published
+  `data/derived/national/assortments/national_fit/` (distribution and height
+  CSVs, summary JSON, report, evidence heatmap, remaining-cell list, 1,543 cell
+  partials, manifest) and `metadata/national-fit.csv`.
+
 - **Built the national plot-to-RSYC-stratum coverage audit.** Added
   `workflows/national/assortments/national_coverage.py`, a reproducible
   fail-closed audit that spatially joins the harmonized national plot extract

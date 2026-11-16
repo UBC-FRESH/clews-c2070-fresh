@@ -1284,3 +1284,76 @@ manifest.json                            94ba974b8e6aa50d65858b445d96581eae6d2e9
 **Verification Timestamp**: 2026-11-16T06:27:46Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, geopandas 1.1.4, pyogrio 0.13.0, matplotlib 3.11.0
 **Artifact Reference**: data commit `3630df834e2948507971ab7799edd1f2ca4dcdf3`; parent commit `0a3015e031a9107761970978ec92f0fcafcd0aca`; `data/derived/national/assortments/national_coverage/`; `metadata/national-coverage.csv`; `workflows/national/assortments/national_coverage.py`
+
+---
+
+## 2026-11-16 — First national hierarchical DBH/height fit
+
+### Entry: EL-20261116-002
+**Claim**: The national hierarchical DBH/height workflow fits the ecoprovince and ecoregion coverage grids fail-closed, distinguishes local, parent, national-species, and no-fit evidence, attaches RSYC reference-age scale priors, and resumes from cell-level partials inside the timebox.
+**Status Symbol**: ✅
+**Evidence Type**: Workflow execution output
+**Command**:
+```
+.venv/bin/python -m workflows.national.assortments.national_fit \
+  --level ecoprovince \
+  --out data/derived/national/assortments/national_fit \
+  --workers 8 --resume --timebox-seconds 780
+
+.venv/bin/python -m workflows.national.assortments.national_fit \
+  --level ecoregion \
+  --out data/derived/national/assortments/national_fit \
+  --workers 8 --resume --timebox-seconds 780
+
+.venv/bin/ruff check workflows/national/assortments/national_fit.py \
+  workflows/national/assortments/distributions.py
+.venv/bin/python -m py_compile \
+  workflows/national/assortments/national_fit.py \
+  workflows/national/assortments/distributions.py
+.venv/bin/python -m pytest workflows/national/assortments/tests -q
+.venv/bin/python -m pytest tests -q
+```
+**Exit Code**: 0 (fits, lint, compile, tests)
+**Duration**: ecoprovince 321.6 s; ecoregion 525.2 s (560 coarser cells resumed); final report regeneration 165.6 s; pytest 28 passed (assortment suite) and 224 passed / 29 subtests (full suite)
+**Output Summary**:
+```
+Ecoprovince pass (1,260 target cells):
+  319 direct_fit / 29 pooled_fit / 132 pooled_parent /
+  761 species_national / 19 no_fit; 0 timebox-pending; 26 local
+  failures across support levels.
+Ecoregion pass (4,830 target cells; 1,543 cells resumed):
+  757 direct_fit / 154 pooled_fit / 1,142 pooled_parent /
+  2,705 species_national / 72 no_fit; 0 timebox-pending; 98 local
+  failures across support levels.
+Support-level validation:
+  direct fits 1,252; median KS 0.040; p90 KS 0.138; 67 flagged KS > 0.20;
+  10 flagged low_support.
+  pooled fits 193; 110 flagged low_support.
+  borrowed shapes 1,274 parent + 3,728 national species; 0 labelled local.
+  no_data cells: 0 without an RSYC prior; basis group 3,967, species 667,
+  parent_group 274, parent_species 94.
+  height models: 1,337 local, 5,208 borrowed, 0 missing; median local
+  RMSE 2.765 m.
+  one row per coverage cell at every support level; 0 duplicate keys;
+  0 negative support or RSYC values.
+Candidate set: weibull, gamma, mix_weibull_2, mix_weibull_gamma,
+  spike_weibull_constrained, spike_gamma_constrained; finite mixtures use
+  one start and 80 EM iterations. No legacy two-gamma, generalized beta,
+  three-component Weibull, or unconstrained spike candidates were attempted.
+Fail-closed checks: no unexpected git deletions in parent or data; all
+  remaining cells carry resumable=false except timebox-pending rows.
+```
+**Hashes**:
+```
+national_distribution_parameters.csv  82996707356b4226c79debdf216ee8b22120c3f764972705e5fd1a4604288723
+national_height_models.csv            f9bb0dffc256833f089684808f2674116ffbb7a0267fc10ffb6739aa5dbfd77f
+national_evidence_summary.json        5c5e1c10243677bb2de9c48a79d2aaf151cc321c52f0fcd9852de8c585f9a291
+NATIONAL_FIT_REPORT.md                b53cb9490fbdd376733be67685a57ceb3c4f167ec00218cef0a93cea24622145
+evidence_map.png                      2528b75c6ba196e407e205a4d8637551c8786626a1d2a36beff2e52248ce9122
+remaining_cells.csv                   95d9e47c6bb4ee2cdfff314781e610eff04162553c070758d5519f55220539a5
+manifest.json                         57b12389c14c1e05dfbe1999e68740f108b6d38bed7eb44a1feb6724c54e176d
+metadata/national-fit.csv             c4b83483df42f8f2682c3c3166b8745366fae590229eb9ce3a054f7876ffa619
+```
+**Verification Timestamp**: 2026-11-16T08:02:52Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, scipy 1.18.0, nemora reference checkout (`ws4/nemora`), matplotlib 3.11.0
+**Artifact Reference**: `data/derived/national/assortments/national_fit/`; `metadata/national-fit.csv`; `workflows/national/assortments/national_fit.py`; `workflows/national/assortments/distributions.py`; parent branch `feature/p7-source-triage-and-production-readiness`; data branch `main`
