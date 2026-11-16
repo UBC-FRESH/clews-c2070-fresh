@@ -295,8 +295,8 @@ spike weight 0.657 (KS 0.221 -> 0.034, AIC -795.2) and
 `ecoprovince:Columbia Montane Cordillera` at 0.564 (KS 0.217 -> 0.036, AIC
 -271.7).  General high-KS selections (>0.20) fall from 3 to 0; the maximum
 selected general KS is 0.146.  The other switches are `BL`, `SW`, `SB`, `PL`,
-`AC`, and `HW` strata where the first bin exceeds the 20% trigger or the
-simple fit leaves KS above 0.15.  One switch (`ecodistrict:Hart Ranges|SW`)
+and `AC` strata where the first bin exceeds the 20% trigger or the simple fit
+leaves KS above 0.15.  One switch (`ecodistrict:Hart Ranges|SW`)
 is 8.6 raw AIC worse than the previous legacy mixture but 1.4 better after the
 documented ten-unit non-convergence penalty; its KS improves from 0.046 to
 0.023, and the row is retained for audit.
