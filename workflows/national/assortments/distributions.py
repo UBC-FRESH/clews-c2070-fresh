@@ -52,8 +52,8 @@ from nemora.workflows.censoring import fit_censored_inventory
 from .mixtures import (
     MIXTURE_FAMILY_COMPONENTS,
     SPIKE_CONSTRAINED_FAMILIES,
-    SPIKE_CONSTRAINED_SCALE_LOWER,
-    SPIKE_CONSTRAINED_SHAPE_LOWER,
+    SPIKE_CONSTRAINED_SCALE_LOWER,  # noqa: F401 - public re-export for validate_tsa24
+    SPIKE_CONSTRAINED_SHAPE_LOWER,  # noqa: F401 - public re-export for validate_tsa24
     SPIKE_FAMILIES,
     SPIKE_FAMILY_COMPONENTS,
     SPIKE_UNCONSTRAINED_FAMILIES,
@@ -1390,7 +1390,6 @@ def fit_distribution_for_target(
     if species_data.empty:
         raise DistributionFitError(f"no observations for species {species!r}")
 
-    last_attempt: _Attempt | None = None
     for level in levels:
         key = resolved.get(level)
         if key is None:
@@ -1405,7 +1404,6 @@ def fit_distribution_for_target(
             mixture_n_starts=mixture_n_starts,
             mixture_max_iter=mixture_max_iter,
         )
-        last_attempt = attempt
         enough = (
             attempt.n_trees >= min_trees
             and attempt.n_plots >= min_plots
@@ -1435,7 +1433,6 @@ def fit_distribution_for_target(
         mixture_n_starts=mixture_n_starts,
         mixture_max_iter=mixture_max_iter,
     )
-    last_attempt = attempt
     if attempt.n_trees < min_plot_trees or attempt.n_bins < 3 or not attempt.has_success:
         detail = attempt.error or "below the default reporting threshold"
         raise DistributionFitError(
