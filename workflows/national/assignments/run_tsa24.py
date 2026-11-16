@@ -343,6 +343,85 @@ def _report_markdown(
         ],
     )
 
+    assigned_volume = sum(item.volume_m3 for item in result.assignments)
+    average_components = {
+        "product_revenue_cad_m3": 0.0,
+        "supply_cost_cad_m3": 0.0,
+        "transport_cost_cad_m3": 0.0,
+        "gate_cost_cad_m3": 0.0,
+        "processing_cost_cad_m3": 0.0,
+        "net_contribution_cad_m3": 0.0,
+    }
+    if assigned_volume > 0.0:
+        for item in result.assignments:
+            average_components["product_revenue_cad_m3"] += (
+                item.volume_m3 * item.product_revenue_cad_m3
+            )
+            average_components["supply_cost_cad_m3"] += (
+                item.volume_m3 * item.supply_cost_cad_m3
+            )
+            average_components["transport_cost_cad_m3"] += (
+                item.volume_m3 * item.transport_cost_cad_m3
+            )
+            average_components["gate_cost_cad_m3"] += (
+                item.volume_m3 * item.gate_cost_cad_m3
+            )
+            average_components["processing_cost_cad_m3"] += (
+                item.volume_m3 * item.processing_cost_cad_m3
+            )
+            average_components["net_contribution_cad_m3"] += (
+                item.volume_m3 * item.net_contribution_cad_m3
+            )
+        average_components = {
+            name: value / assigned_volume for name, value in average_components.items()
+        }
+    delivered_cost = (
+        average_components["supply_cost_cad_m3"]
+        + average_components["transport_cost_cad_m3"]
+        + average_components["gate_cost_cad_m3"]
+        + average_components["processing_cost_cad_m3"]
+    )
+    delivered_table = _markdown_table(
+        ["Component", "CAD/m3", "Notes"],
+        [
+            (
+                "product revenue",
+                _fmt(average_components["product_revenue_cad_m3"], 2),
+                "assigned volume weighted",
+            ),
+            (
+                "supply (roadside proxy)",
+                _fmt(average_components["supply_cost_cad_m3"], 2),
+                "assigned volume weighted",
+            ),
+            (
+                "transport (diagnostic road)",
+                _fmt(average_components["transport_cost_cad_m3"], 2),
+                "assigned volume weighted",
+            ),
+            (
+                "gate",
+                _fmt(average_components["gate_cost_cad_m3"], 2),
+                "assigned volume weighted",
+            ),
+            (
+                "processing",
+                _fmt(average_components["processing_cost_cad_m3"], 2),
+                "assigned volume weighted",
+            ),
+            (
+                "delivered cost",
+                _fmt(delivered_cost, 2),
+                "supply + transport + gate + processing",
+            ),
+            (
+                "net contribution",
+                _fmt(average_components["net_contribution_cad_m3"], 2),
+                "revenue - delivered cost",
+            ),
+        ],
+    )
+
     validation_table = _markdown_table(
         ["Check", "Pass", "Detail"],
         [
@@ -609,11 +688,15 @@ basis. The multi-period key is present, but the pilot uses one period.
 {contract_ok} of {len(contract_rows)} diagnostic contracts satisfy both bounds.
 All contracts are marked `diagnostic`.
 
-### 4.6 Objective decomposition
+### 4.6 Delivered cost per m3
+
+{delivered_table}
+
+### 4.7 Objective decomposition
 
 {objective_table}
 
-### 4.7 Facility-class mix versus FFCM
+### 4.8 Facility-class mix versus FFCM
 
 {class_mix_table}
 
