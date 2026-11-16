@@ -1226,3 +1226,61 @@ manifest.json          d2cb1a154c367085ae24d2ce0176387faf1a7e8aad3fd6ba1df2c3f24
 **Verification Timestamp**: 2026-11-15T21:30:00Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, scipy 1.18.0, nemora reference checkout (`ws4/nemora`)
 **Artifact Reference**: data commit `2b60f8a8849e8b9a4db33c6ea6096d0bce42d8be`; parent commit `909456a742689b1cecec3505ed6706f259d5e98b`; `data/derived/national/assortments/tsa24_prototype/`; `workflows/national/assortments/`; `metadata/assortment-pilots.csv`
+
+---
+
+## 2026-11-16 — National plot-to-RSYC-stratum coverage audit
+
+### Entry: EL-20261116-001
+**Claim**: The national plot-to-RSYC-stratum coverage audit runs fail-closed and reproduces the published coverage inventory without fitting distributions.
+**Status Symbol**: ✅
+**Evidence Type**: Workflow execution output
+**Command**:
+```
+PYTHONPATH=/srv/shared-data/gep/ws4/nemora/src \
+  .venv/bin/python -m workflows.national.assortments.national_coverage \
+  --repo-root . --verbose
+
+.venv/bin/ruff check workflows/national/assortments/national_coverage.py
+.venv/bin/ruff format --check workflows/national/assortments/national_coverage.py
+.venv/bin/python -m py_compile workflows/national/assortments/national_coverage.py
+```
+**Exit Code**: 0 (audit, lint, format check, compile)
+**Duration**: 454.5 s audit runtime
+**Output Summary**:
+```
+Sites: 72,975 total; 68,544 valid coordinates (93.9%); 67,477 mapped to
+  RSYC (92.5%); 3,404 missing coordinates; 1,027 -1/-1 sentinel;
+  1,067 valid-coordinate sites outside the forested RSYC ecozones.
+Tree rows: 15,639,840 all; 11,374,601 live valid at mapped sites.
+Coverage classes (all strata x species rows):
+  national     35 direct / 0 pooled / 0 no_data
+  ecodistrict  2,001 / 768 / 20,751 (2,001 / 768 / 7,766 in 301 data-bearing
+               ecodistricts of 672)
+  ecoregion    765 / 218 / 3,847 (91 data-bearing ecoregions of 138)
+  ecoprovince  321 / 46 / 893 (27 data-bearing ecoprovinces of 36)
+  ecozone      142 / 16 / 262 (10 data-bearing ecozones of 12)
+Species crosswalk: 355 observed source codes; 113 exact species, 2 aliases,
+  202 functional-group fallbacks, 38 generic, 0 unmapped; 240 unresolved
+  codes (1,089,465 tree rows; 376,636 live trees).
+Gaps: 371 plotless ecodistricts; 2 plotless ecozones (Taiga Cordillera,
+  Taiga Shield West); AB, ON, NS, and NU absent; MB has 2 sites.
+RSYC overlap at ecodistrict: 1,280 direct cells with a national volume model;
+  721 direct cells without one; 3,072 no_data cells with a model.
+Checks: unique level/stratum/species keys; non-negative counts; n_trees <=
+  n_tree_rows; n_sites <= n_sites_all; DBH quantiles ordered; years ordered;
+  literal class rule reproduced; tree/tree-row sums additive across levels.
+```
+**Hashes**:
+```
+coverage.csv                             12f85f85a8c803d1c841d5e817881c7277628ee69a170c45100076633b08fd5d
+coverage_summary.json                    e2eaba2408a135e4e757efbf01414741e5fef884b22499ea9ede4e187aafcb63
+species_crosswalk_national.csv           246a87400ddfba1227b3615dcb81c1b7bb23eb0554db03b5e5bb13164657ca73
+COVERAGE_REPORT.md                       82eaa010197d56f1d4496d14c943fb013ec1b4a11d4da93d4f2b60cfe6fe96f7
+coverage_heatmap.png                     adf2411f40f65efa6e610d520eb4e536e7bcb36172723d00e853f550e1eb4081
+metadata/national-coverage.csv           1fcef99971c45ed97fe34eac1899190e79a14ca832e9b73cf9c117c80d10d9c8
+manifest.json                            94ba974b8e6aa50d65858b445d96581eae6d2e9a93887171263ee6f103b4f077
+```
+**Verification Timestamp**: 2026-11-16T06:27:46Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, geopandas 1.1.4, pyogrio 0.13.0, matplotlib 3.11.0
+**Artifact Reference**: data commit `3630df834e2948507971ab7799edd1f2ca4dcdf3`; parent commit `0a3015e031a9107761970978ec92f0fcafcd0aca`; `data/derived/national/assortments/national_coverage/`; `metadata/national-coverage.csv`; `workflows/national/assortments/national_coverage.py`
