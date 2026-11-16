@@ -25,7 +25,7 @@
   `data/derived/national/assortments/national_coverage/` (`coverage.csv`,
   `coverage_summary.json`, `species_crosswalk_national.csv`,
   `COVERAGE_REPORT.md`, `coverage_heatmap.png`, `manifest.json`) and
-  `metadata/national-coverage.csv`. Runtime 431 s.
+  `metadata/national-coverage.csv`. Runtime 454.5 s.
 
 - **Added dual volume+TPH constraint scaling to synthetic tree lists and
   re-ran the TSA24 target AU.** `SynthesisTarget.target_tph` fixes expansion
