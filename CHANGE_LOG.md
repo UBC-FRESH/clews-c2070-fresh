@@ -2,6 +2,31 @@
 
 ## 2026-11-16
 
+- **Built the national plot-to-RSYC-stratum coverage audit.** Added
+  `workflows/national/assortments/national_coverage.py`, a reproducible
+  fail-closed audit that spatially joins the harmonized national plot extract
+  to the RSYC ecodistrict hierarchy, maps source species codes to the 32 RSYC
+  scientific species plus its `coniferous`/`broadleaf`/`generic` model groups,
+  and classifies every stratum × species cell as `direct_fit` (n_trees >= 100
+  and n_plots >= 5), `pooled_fit` (not direct and 30 <= n_trees < 100 or
+  2 <= n_plots < 5), or `no_data`. Results: 67,477 of 72,975 sites (92.5%)
+  mapped to 301 of 672 ecodistricts; 3,404 sites missing coordinates, 1,027
+  `-1/-1` sentinel sites, and 1,067 valid-coordinate sites outside the RSYC
+  forested ecozones reported rather than dropped. At ecodistrict level the
+  audit classifies 2,001 direct / 768 pooled / 20,751 no_data cells
+  (2,001 / 768 / 7,766 in data-bearing districts); ecoregion 765 / 218 /
+  3,847; ecoprovince 321 / 46 / 893; ecozone 142 / 16 / 262; national rollup
+  35 / 0 / 0. The crosswalk resolves 355 observed source codes: 113 exact
+  species, 2 documented aliases, 202 functional-group fallbacks, 38 generic,
+  and 0 unmapped; 240 codes (376,636 live trees) do not resolve to an RSYC
+  scientific species. The report identifies 371 plotless ecodistricts, two
+  plotless ecozones (Taiga Cordillera, Taiga Shield West), and the absent
+  AB/ON/NS/NU jurisdictions. No distribution was fitted. Published
+  `data/derived/national/assortments/national_coverage/` (`coverage.csv`,
+  `coverage_summary.json`, `species_crosswalk_national.csv`,
+  `COVERAGE_REPORT.md`, `coverage_heatmap.png`, `manifest.json`) and
+  `metadata/national-coverage.csv`. Runtime 431 s.
+
 - **Added dual volume+TPH constraint scaling to synthetic tree lists and
   re-ran the TSA24 target AU.** `SynthesisTarget.target_tph` fixes expansion
   factors at the target TPH (`phf_i = target_tph * w_i / sum(w)`) and a

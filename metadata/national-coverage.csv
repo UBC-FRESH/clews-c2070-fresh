@@ -1,0 +1,6 @@
+level,strata_total,strata_with_sites,rows,direct_fit,pooled_fit,no_data,direct_fit_in_strata_with_sites,pooled_fit_in_strata_with_sites,no_data_in_strata_with_sites,species_total,species_with_direct,live_trees_mapped_species,artifact_path,generated_at_utc
+national,1,1,35,35,0,0,35,0,0,35,35,11374601,data/derived/national/assortments/national_coverage/coverage.csv,2026-11-16T06:26:53Z
+ecodistrict,672,301,23520,2001,768,20751,2001,768,7766,35,35,11374601,data/derived/national/assortments/national_coverage/coverage.csv,2026-11-16T06:26:53Z
+ecoregion,138,91,4830,765,218,3847,765,218,2202,35,35,11374601,data/derived/national/assortments/national_coverage/coverage.csv,2026-11-16T06:26:53Z
+ecoprovince,36,27,1260,321,46,893,321,46,578,35,35,11374601,data/derived/national/assortments/national_coverage/coverage.csv,2026-11-16T06:26:53Z
+ecozone,12,10,420,142,16,262,142,16,192,35,35,11374601,data/derived/national/assortments/national_coverage/coverage.csv,2026-11-16T06:26:53Z
