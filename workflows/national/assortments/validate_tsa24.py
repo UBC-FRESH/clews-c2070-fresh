@@ -6,9 +6,9 @@ Run from the repository root with nemora on ``PYTHONPATH``::
       .venv/bin/python -m workflows.national.assortments.validate_tsa24
 
 The prototype fits RSYC-stratified DBH distributions, fits hierarchical
-height-diameter models, synthesizes a volume-constrained tree list, bucks it
-with the existing BC interior layer, and writes the assortment matrix and
-validation report.
+height-diameter models, synthesizes a TPH- and volume-constrained tree list,
+bucks it with the existing BC interior layer, and writes the assortment matrix
+and validation report.
 
 Fail-closed rule: any unexpected ``D`` in the parent or data repository status
 halts the run immediately.
@@ -65,6 +65,10 @@ from workflows.national.assortments.mixtures import (
 )
 from workflows.national.assortments.rsyc import assign_sites_to_ecostrata
 from workflows.national.assortments.synthesize import (
+    DIAMETER_SCALE_BRACKET,
+    DIAMETER_SCALE_EXPANDED_BRACKET,
+    DIAMETER_SCALE_RTOL,
+    DIAMETER_SCALE_XTOL,
     DistributionSpec,
     SynthesisTarget,
     SynthesizedStand,
@@ -87,7 +91,7 @@ from workflows.national.bucking.taper import (
 __all__ = ["main"]
 
 PILOT_NAME = "tsa24_assortment_disaggregation"
-PILOT_VERSION = "0.3.0"
+PILOT_VERSION = "0.4.0"
 TSA_NAME = "Prince George"
 DEFAULT_AU_ID = 23000
 DEFAULT_AGE = 100.0
@@ -1286,10 +1290,10 @@ def summarise_mixture_candidates(fits: Sequence[DistributionFit]) -> dict[str, A
             ),
         },
         "convergence_rule": (
-            "A mixture or spike model is synthesis-eligible only when it "
-            "converged and, for a constrained spike, no tail parameter sits on "
-            "a declared bound. Unconstrained spike tails are eligible on the "
-            "finite fitted support but are never extrapolated beyond it."
+            "A mixture or constrained spike model is synthesis-eligible only "
+            "when it converged and, for a constrained spike, no tail parameter "
+            "sits on a declared bound. Unconstrained spike families remain in "
+            "the candidate table for audit but are never selected."
         ),
     }
 
@@ -1791,7 +1795,9 @@ def _build_report(
         "- DBH shape comes from the selected RSYC-stratified distribution.",
         "- Height comes from the hierarchical height-diameter model.",
         "- Species composition comes from the TSA24 plot subset.",
-        "- Volume scale comes from the BTC managed-AU target, not from the distribution.",
+        "- TPH and volume scale come from the BTC managed-AU target, not from the",
+        "  distribution. Expansion factors are fixed at the target TPH and a",
+        "  positive diameter multiplier is solved for the target taper total.",
         "- The bucking layer is the existing BC interior rule set and Kozak taper.",
         "- `StandDBHSampler` is not used for the censored fit because it has no support",
         "  bound; the documented `sample_truncated`/`sample_mixture` samplers are used",
@@ -1814,7 +1820,7 @@ def _build_report(
         f"- Target volume: **{target.volume_m3ha:,.1f} m3/ha** × "
         f"{target.area_ha:g} ha = **{target.target_volume_m3:,.1f} m3**.",
         f"- Target ecodistrict: **{target_context['ecodistrict']}**; "
-        f"initial TPH: **{target.tph_total:,.1f}**.",
+        f"target TPH: **{target.tph_total:,.1f}**.",
         f"- Species weights (retained, sum=1): "
         f"{', '.join(f'{k}={v:.3f}' for k, v in sorted(target.species_weights.items()))}.",
         f"- Composition exclusions: {target_context['composition_exclusions']}.",
@@ -1903,12 +1909,11 @@ def _build_report(
         f"{SPIKE_CONSTRAINED_SCALE_LOWER:g} cm. A constrained fit whose tail "
         "parameters sit on any declared bound is reported as `boundary_reject` in "
         "`distribution_fits.csv` and is never selected.",
-        "- Unconstrained `spike_weibull`/`spike_gamma` rows are also "
-        "synthesis-eligible when valid. Their tails can reach the two-stage scale "
-        "floor with a Weibull shape below one, so the *untruncated* mean can be "
-        "infinite; `sample_spike_mixture` always draws on the finite fitted "
-        "support `(first_bin_upper, support_upper]`, and the tail must not be "
-        "extrapolated beyond `support_upper`.",
+        "- Unconstrained `spike_weibull`/`spike_gamma` rows remain as audit "
+        "diagnostics only. Their tails can reach the two-stage scale floor with "
+        "a Weibull shape below one, so the *untruncated* mean can be infinite; "
+        "they are not synthesis-eligible even though the sampler would clip "
+        "draws to the fitted support.",
         "",
     ]
     if cw_spike_rows:
@@ -1992,11 +1997,20 @@ def _build_report(
         "",
         "## 6. Synthetic tree list",
         "",
-        f"- Trees: **{len(stand.trees):,}**; scale factor: "
-        f"**{stand.scale_factor:.6f}**; achieved taper total: "
-        f"**{stand.achieved_taper_volume_m3:,.3f} m3**.",
-        f"- TPH: **{stand.tph:,.1f}**; basal area: "
-        f"**{stand.basal_area_m2ha:,.2f} m2/ha**; QMD: **{stand.qmd_cm:,.2f} cm**.",
+        f"- Constraint mode: **{stand.constraint_mode}**; trees: "
+        f"**{len(stand.trees):,}**.",
+        f"- TPH: achieved **{stand.tph:,.1f}** vs target "
+        f"**{float(target.target_tph) if target.target_tph is not None else math.nan:,.1f}**.",
+        f"- Taper total: achieved **{stand.achieved_taper_volume_m3:,.3f} m3** vs "
+        f"target **{stand.target_volume_m3:,.3f} m3**; expansion-factor scale "
+        f"**{stand.scale_factor:.6f}**; diameter scale "
+        f"**{stand.diameter_scale_factor:.9f}**.",
+        f"- Root search: bracket "
+        f"**{stand.diameter_scale_bracket if stand.diameter_scale_bracket is not None else 'n/a'}**; "
+        f"iterations **{stand.root_find_iterations}**; residual "
+        f"**{stand.diameter_scale_residual_m3:.3e} m3**.",
+        f"- Basal area: **{stand.basal_area_m2ha:,.2f} m2/ha**; QMD: "
+        f"**{stand.qmd_cm:,.2f} cm**.",
         "",
         "| species | weight | trees | TPH | QMD cm | taper m3/ha |",
         "|---|---:|---:|---:|---:|---:|",
@@ -2267,6 +2281,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_dbh_cm=max_dbh,
         seed=int(args.seed),
         n_trees=int(args.n_trees),
+        target_tph=tph_total,
         target_agb_odt_ha=target_agb_odt_ha,
         source=f"BTC managed_au_curves.csv au_id={args.au_id} age={args.age:g}",
     )
@@ -2323,6 +2338,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "volume_m3ha": target_volume_m3ha,
         "target_agb_odt_ha": target_agb_odt_ha,
         "tph_total": tph_total,
+        "target_tph": tph_total,
         "dbh_limit_cm": dbh_limit,
         "species_weights": species_weights,
         "composition_exclusions": composition_exclusions,
@@ -2347,7 +2363,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             <= max(1e-6, 1e-8 * abs(stand.target_volume_m3)),
             "detail": (
                 f"achieved {stand.achieved_taper_volume_m3:.6f} m3 vs target "
-                f"{stand.target_volume_m3:.6f} m3; scale {stand.scale_factor:.9f}"
+                f"{stand.target_volume_m3:.6f} m3; expansion scale "
+                f"{stand.scale_factor:.9f}; diameter scale "
+                f"{stand.diameter_scale_factor:.9f}"
+            ),
+        },
+        "target_tph": {
+            "pass": (
+                target.target_tph is None
+                or abs(stand.tph - float(target.target_tph))
+                <= max(1e-6, 1e-9 * abs(float(target.target_tph)))
+            ),
+            "detail": (
+                f"constraint {stand.constraint_mode}; achieved TPH "
+                f"{stand.tph:.6f} vs target "
+                f"{float(target.target_tph) if target.target_tph is not None else math.nan:.6f}"
             ),
         },
         "volume_conservation": {
@@ -2498,6 +2528,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "BTC managed_au_curves volume is treated as the taper-total target "
                 "for one hectare. Recovered log volume is lower by residue."
             ),
+            "tph_target": (
+                "BTC managed_au_curves TPH is treated as a fixed stand density. "
+                "Expansion factors sum to the target TPH and a positive diameter "
+                "multiplier is solved so the taper total still equals the target "
+                "volume; height is recomputed from the scaled DBH."
+            ),
             "composition": (
                 "Species weights are expansion-factor shares in the target "
                 "ecodistrict, BEC zone, and age window. Species below the minimum "
@@ -2615,6 +2651,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "ecodistrict": target_ecodistrict,
             "seed": int(args.seed),
             "n_trees": int(args.n_trees),
+            "synthesis_scaling": {
+                "mode": "volume_and_tph",
+                "target_tph_source": "BTC managed_au_curves.csv",
+                "target_volume_source": "BTC managed_au_curves.csv",
+                "expansion_factors": "target_tph * relative_weight / sum(relative_weight)",
+                "height_recomputed_from_scaled_dbh": True,
+                "root_finder": "scipy.optimize.brentq",
+                "diameter_scale_bracket": list(DIAMETER_SCALE_BRACKET),
+                "diameter_scale_expanded_bracket": list(
+                    DIAMETER_SCALE_EXPANDED_BRACKET
+                ),
+                "root_xtol": DIAMETER_SCALE_XTOL,
+                "root_rtol": DIAMETER_SCALE_RTOL,
+                "failure_rule": "expand bracket once, then fail loudly",
+            },
             "baseline_fits": (
                 str(baseline_path)
                 if repo_root in baseline_path.parents
@@ -2667,10 +2718,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 },
                 "boundary_rule": "reject and never select a tail at any bound",
                 "unconstrained_rule": (
-                    "unconstrained spike tails are synthesis-eligible on the "
-                    "finite fitted support and are never extrapolated beyond "
-                    "support_upper even though their untruncated mean can be "
-                    "infinite"
+                    "unconstrained spike tails are audit-only diagnostics and "
+                    "are never synthesis-eligible because their untruncated "
+                    "mean can be infinite"
                 ),
             },
             "basic_density_table": str(
@@ -2694,6 +2744,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "BTC grade shares are context only.",
             "Fail-closed on unexpected git deletions.",
             (
+                "Expansion factors are fixed to the BTC target TPH and a positive "
+                "diameter multiplier is solved by a bracketed root search so the "
+                "taper total still equals the BTC target volume; height is "
+                "recomputed from the scaled DBH."
+            ),
+            (
                 "Weibull-containing mixtures are fitted on the left-truncated grouped "
                 "support; new-family unstable fits are reported but not selected, while "
                 "the legacy two-gamma fallback may remain selected and is flagged."
@@ -2703,10 +2759,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "documented share or the best simple fit leaves a high KS. The spike "
                 "carries the first bin and the continuous tail starts at the first bin "
                 "upper edge; the spike weight is an AIC parameter and does not set the "
-                "volume scale. Unconstrained spike tails are eligible only on the "
-                "finite fitted support and are never extrapolated. Constrained spike "
-                "tails use a bounded grouped MLE (shape >= 1, scale >= 0.1 cm); a fit "
-                "at any bound is reported as boundary_reject and is not selected."
+                "volume scale. Unconstrained spike rows are audit-only and are never "
+                "synthesis-eligible because their untruncated tail mean can be "
+                "infinite. Constrained spike tails use a bounded grouped MLE "
+                "(shape >= 1, scale >= 0.1 cm); a fit at any bound is reported as "
+                "boundary_reject and is not selected."
             ),
         ],
     }
@@ -2734,6 +2791,9 @@ def _update_metadata(
         "dataset": "FAIB PSP + RSYC strata + BTC managed AU",
         "target_au": f"{summary['target_context']['au_id']}@{summary['target_context']['age']:g}",
         "target_volume_m3ha": target.volume_m3ha,
+        "target_tph": target.target_tph,
+        "diameter_scale_factor": stand.diameter_scale_factor,
+        "constraint_mode": stand.constraint_mode,
         "n_species": len(target.species_weights),
         "n_trees": len(stand.trees),
         "tph": stand.tph,
@@ -2743,8 +2803,8 @@ def _update_metadata(
         "status": summary["status"],
         "notes": (
             "RSYC-stratified censored DBH fits; hierarchical height models; "
-            "BTC volume-constrained tree list; BC interior dimension sorts; "
-            "dimension-only grade status; not an operational national model."
+            "BTC TPH- and volume-constrained tree list; BC interior dimension "
+            "sorts; dimension-only grade status; not an operational national model."
         ),
     }
     columns = list(row)

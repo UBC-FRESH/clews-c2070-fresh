@@ -7,7 +7,7 @@ bucked assortment matrix.  It is deliberately split into five boundaries:
 RSYC / BTC stand target
   -> DBH distribution by RSYC stratum and species   (distributions.py)
   -> hierarchical height-diameter model             (height.py)
-  -> volume-constrained synthetic tree list         (synthesize.py)
+  -> TPH- and volume-constrained synthetic tree list (synthesize.py)
   -> existing BC taper + bucking layer              (../bucking/)
   -> assortment matrix + residue / AGB ledger       (assortments.py)
   -> facility feedstock interface                   (facility.py)
@@ -25,19 +25,43 @@ This is the load-bearing rule of the package:
 | Fitted DBH distribution | Distribution **shape**, support, relative frequencies | Stand volume, TPH, assortment totals |
 | Height-diameter model | **Height** at a given DBH | Diameter distribution or volume |
 | Species composition weights | **Stem allocation** across species | Total volume or diameter shape |
-| RSYC / BTC target volume | **Scale** of the whole tree list | Distribution shape |
+| RSYC / BTC target volume | **Volume scale** of the whole tree list | Distribution shape |
+| RSYC / BTC target TPH | **Stem density** of the whole tree list | Distribution shape or volume |
 | Bucking rules + taper | Log dimensions, recovery, residue | Stand volume or species composition |
 
-The synthesizer draws a tree list, computes each stem's taper total, then
-scales every expansion factor by
+The synthesizer supports two explicit modes:
 
-```
-scale = target_volume_m3 / sum(taper_total_i * expansion_factor_i)
-```
+- **Volume only** (`target_tph` absent).  Every expansion factor is scaled by
 
-so the achieved taper total equals the target exactly.  The distribution can
-never make the stand larger or smaller.  The resulting TPH is an **output** of
-the target volume and the fitted shape, not an independent input.
+  ```
+  scale = target_volume_m3 / sum(taper_total_i * expansion_factor_i)
+  ```
+
+  so the achieved taper total equals the target exactly.  TPH is an output.
+
+- **Volume and TPH** (`target_tph` present).  Relative expansion weights `w_i`
+  are fixed so that
+
+  ```
+  phf_i = target_tph * w_i / sum(w)
+  ```
+
+  and `sum(phf) == target_tph` exactly.  A positive diameter multiplier `k` is
+  then found by a bracketed root search:
+
+  ```
+  f(k) = sum(phf_i * taper_volume(k * dbh_i, height_model(k * dbh_i)))
+         - target_volume
+  ```
+
+  Height is recomputed from the scaled DBH through the fitted height model; it
+  is never linearly scaled.  The first bracket is `[0.10, 10]`; if it has no
+  sign change one wider `[0.01, 25]` search is attempted, then synthesis fails
+  loudly.  `diameter_scale_factor=k`, the bracket, the root-find iterations,
+  and the residual are recorded in `synthesis` / `validation_summary.json`.
+
+The distribution can never make the stand larger or smaller, and it cannot
+override the target TPH or volume.
 
 ## Evidence tiers
 
@@ -172,8 +196,11 @@ and evidence tier.  It does not refit or smooth the coefficients.
   of the fitting or tree-synthesis estimators.
 - Height is predicted from the selected hierarchical model.
 - Taper total is computed with the existing `TaperRegistry`.
-- Expansion factors are scaled to the target volume.  `TreeRecord` output is
-  directly consumable by `workflows.national.bucking`.
+- Expansion factors are scaled to the target.  With `target_tph` present they
+  are fixed at the target TPH and a bracketed root search finds the positive
+  diameter multiplier that matches the target volume; with `target_tph` absent
+  the legacy volume-only expansion-factor scale is used.  `TreeRecord` output
+  is directly consumable by `workflows.national.bucking`.
 
 ## 4. Assortment matrix (`assortments.py`)
 
@@ -280,41 +307,83 @@ expansion-factor tally.  The `AC` Montane Cordillera fit improved from KS
 For the target AU (`SBS_SX`, site class H, age 100), six of seven species
 switched to a Weibull mixture (`BL`, `EP`, `PL` to `mix_weibull_2`; `FD`,
 `SB`, `SW` to `mix_weibull_gamma`); `AT` kept the legacy gamma mixture.
-The volume-constrained tree list still hits the 311.6 m3 target and volume
+The volume-only tree list still hits the 311.6 m3 target and volume
 conservation is exact.  The changed shapes raise TPH from 1,062 to 1,225 and
 lower QMD from 19.57 to 18.72 cm; recovered logs fall from 259.96 to
 252.58 m3 and residue rises from 51.64 to 59.02 m3.
 
-The 2026-11-16 spike re-fit added the four spike families to the same 75
-targets.  Spike fits are attempted on 29 gated strata (116 candidate fits);
-28 constrained tails are rejected at a declared shape/scale bound.  Fifteen
-selected fits (14 unique `scope`/`fit_id` pairs) are spikes: eight constrained
-and seven unconstrained.  The two CW high-KS strata both switch from the
-legacy gamma mixture to `spike_weibull`: `ecozone:Montane Cordillera` at
-spike weight 0.657 (KS 0.221 -> 0.034, AIC -795.2) and
-`ecoprovince:Columbia Montane Cordillera` at 0.564 (KS 0.217 -> 0.036, AIC
--271.7).  General high-KS selections (>0.20) fall from 3 to 0; the maximum
-selected general KS is 0.146.  The other switches are `BL`, `SW`, `SB`, `PL`,
-and `AC` strata where the first bin exceeds the 20% trigger or the simple fit
-leaves KS above 0.15.  One switch (`ecodistrict:Hart Ranges|SW`)
-is 8.6 raw AIC worse than the previous legacy mixture but 1.4 better after the
-documented ten-unit non-convergence penalty; its KS improves from 0.046 to
-0.023, and the row is retained for audit.
+The 2026-11-16 constrained-spike re-fit added the four spike families to the
+same 75 targets.  Spike fits are attempted on 29 gated strata (116 candidate
+fits, 58 constrained); 28 constrained tails are rejected at a declared
+shape/scale bound and never selected.  Eight fits select a constrained spike
+(four Weibull, four gamma); no unconstrained spike is selected because its
+untruncated mean can be infinite.  The two CW high-KS strata are
+`boundary_reject` at the finite-mean shape bound (`a = 1` / `p = 1`): the
+constrained Weibull/gamma fits have AIC -98,533 / -29,673 and KS 0.094 / 0.108,
+while the unconstrained audit rows have AIC -99,709 / -30,253 and KS
+0.034 / 0.036 but infinite-mean tails.  The legacy two-gamma selections remain
+(AIC -98,914 / -29,981, KS 0.221 / 0.217).
 
-For the target AU only `BL` changes: `mix_weibull_2` ->
-`spike_weibull_constrained`, spike weight 0.315, AIC -389.9, KS 0.0229 ->
-0.0100.  The 311.6 m3 target and volume conservation remain exact; TPH falls
-from 1,225 to 1,189, QMD rises from 18.72 to 18.84 cm, recovered logs rise
-from 252.58 to 253.16 m3, and residue falls from 59.02 to 58.44 m3.  The
-unconstrained CW tails reach the two-stage scale floor and must not be
-extrapolated beyond `support_upper`; the constrained variants remain the
-finite-mean alternative where they are interior.
+Five fallbacks are more than 2 raw AIC worse than the previous unconstrained
+spike selection: `ecozone:Montane Cordillera|CW` (+795.2), `ecodistrict:Nazko
+Upland|BL` (+382.6), `ecoprovince:Columbia Montane Cordillera|CW` (+271.7),
+`ecodistrict:Hart Ranges|BL` (+85.0), and `ecodistrict:Upper Fraser
+Trench|SW` (+20.4).  These are the price of excluding infinite-mean spike
+tails; the selected non-spike models pass the same convergence and support
+checks and are retained for audit.  The maximum selected general KS returns to
+0.221 on the two CW strata because no finite-mean constrained spike passes
+there.
+
+For the target AU only `BL` changes distribution:
+`mix_weibull_2` -> `spike_weibull_constrained`, spike weight 0.315,
+AIC -389.9, KS 0.0229 -> 0.0100.  The run also carries the new
+`volume_and_tph` synthesis mode: expansion factors are fixed at the BTC target
+TPH and a diameter multiplier is solved so the taper total still equals the
+311.6 m3 target.  The final stand is 1,463.55 TPH (target 1,463.55), QMD
+17.52 cm, basal area 35.28 m2/ha, expansion-factor scale 1.000000, and
+diameter scale 0.9298.  Volume conservation is exact: recovered logs 240.74 +
+residue 70.86 = 311.60 m3.  Product volumes are sawlog 219.06 m3, other
+21.07 m3, and pulpwood 0.60 m3.  Against the volume-only constrained-spike run
+(TPH 1,189.39, QMD 18.84 cm, logs 253.16 m3, residue 58.44 m3, sawlog
+228.72 m3), the dual TPH constraint raises TPH by 274.16 and residue by 12.42
+m3, and lowers QMD by 1.32 cm and sawlog by 9.66 m3; both runs conserve the
+311.60 m3 taper total exactly.  The TPH constraint is documented in
+`synthesize.py`/`validate_tsa24.py` and is recorded as `constraint_mode` in the
+summary.
 
 The target composition is filtered to plots whose leading species belongs to
 the AU's leading-species group (for `SX`: SW/SE/S/SB).  This keeps an SBS_SX
 target from being driven by mixed or deciduous-leading plots elsewhere in the
 ecodistrict.  The filter and fallback are recorded in `target_stand.json` and
 `validation_summary.json`.
+
+### TSA24 dual-constraint run (2026-11-16)
+
+The target AU is now scaled to both BTC targets.  The 600-stem list carries the
+target **1,463.6 TPH** exactly (previous volume-only run: 1,189.4 TPH) and the
+**311.6 m3** taper total is still exact.  The root search converged in 16
+iterations on the narrow bracket `[0.10, 10]` with
+`diameter_scale_factor = 0.929783` and a residual of `-1.1e-13 m3`.  Height is
+recomputed from the scaled DBH, so the stem list is 7% thinner than the sampled
+shape at fixed TPH.  QMD falls from 18.84 to **17.52 cm** while basal area rises
+from 33.17 to **35.28 m2/ha**.
+
+The thinner stand shifts volume out of sawlogs and into residue:
+
+| stream | previous (volume-only) | dual constraint | change |
+|---|---:|---:|---:|
+| sawlog | 228.72 | 219.06 | -9.66 |
+| other | 24.11 | 21.07 | -3.04 |
+| pulpwood | 0.33 | 0.60 | +0.27 |
+| recovered logs | 253.16 | 240.74 | -12.42 |
+| residue | 58.44 | 70.86 | +12.42 |
+| taper total | 311.60 | 311.60 | 0.00 |
+
+Log count falls from 515 to 385.  Volume conservation is exact
+(240.735518 + 70.864482 = 311.600000 m3).  The species taper shares now equal
+the target weights by construction (AT 0.1163, BL 0.1126, EP 0.0223, FD 0.0282,
+PL 0.1019, SB 0.0126, SW 0.6063); recovered-log shares remain close but are not
+constrained (SW 0.6278, PL 0.2362, AT 0.0642).
 
 ## 7. Tests
 
@@ -331,8 +400,11 @@ rejection, mixed Weibull/gamma fitting, truncated mixture sampling, spike
 weight recovery for the Weibull and gamma variants, degenerate spike
 rejection, first-bin/KS gating, spike support bounds, constrained-tail box
 bounds, boundary rejection and non-selection, first-bin weight equality,
-truncated spike sampling, finite-mean synthetic spike+Weibull recovery, and
-volume plus assortment conservation after spike synthesis.
+truncated spike sampling, finite-mean synthetic spike+Weibull recovery,
+volume plus assortment conservation after spike synthesis, dual volume+TPH
+scaling, unchanged volume-only scaling, loud failure when the dual root has no
+sign change, species-weight and per-species expansion-factor sums, and
+conservation after dual-constraint scaling.
 
 ## 8. Known limits
 
@@ -369,8 +441,11 @@ volume plus assortment conservation after spike synthesis.
   three AIC units because the spike absorbs the lower-truncation pile-up; the
   two-unit rule may select it.  The simple Weibull candidate remains in the
   table for audit.
-- The target volume is treated as a taper-total target.  Recovered log volume
-  is lower by residue; it is not forced to equal the BTC volume.
+- The target volume is treated as a taper-total target and the target TPH as a
+  fixed stem density.  Recovered log volume is lower by residue; it is not
+  forced to equal the BTC volume.  The diameter multiplier is a synthesis
+  diagnostic, not a measured stand attribute; scaled DBH can leave the fitted
+  distribution support, and the taper domain is the physical guardrail.
 - The wood AGB proxy excludes bark, branches, and foliage, so it is not
   expected to equal BTC `agb_odt_ha`.
 - The sort mix is a dimension-only recovery, not an official grade

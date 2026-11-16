@@ -2,29 +2,62 @@
 
 ## 2026-11-16
 
-- **Added spike/zero-inflated first-bin mixtures to the RSYC DBH fits and
-  re-ran TSA24.** `spike_weibull` / `spike_gamma` add a point mass at the plot
-  DBH limit plus one Weibull/gamma tail left-truncated at the first bin upper
-  edge.  The disjoint-support EM sets the spike weight to the first-bin share,
-  counts it as one AIC parameter, rejects weights outside `(0.001, 0.95)`, and
-  samples the spike uniformly inside the first bin so every stem stays above
-  the plot limit.  `spike_weibull_constrained` / `spike_gamma_constrained`
-  add a bounded grouped-MLE finite-mean tail with shape >= 1 and scale >=
-  0.1 cm; a tail at any declared bound is reported as `boundary_reject` and is
-  never selected.  Spike families are gated on first-bin share > 20% or best
-  simple KS > 0.15, and selection keeps the two-AIC parsimony rule.  TSA24
-  re-fit (68 general + 7 AU): 15 selected spike fits (14 unique; 8 constrained,
-  7 unconstrained) of 116 attempted; 28 constrained boundary rejects.  Both
-  CW high-KS strata switch from the legacy gamma mixture to `spike_weibull`
-  (ecozone KS 0.221 -> 0.034, AIC -795.2, spike 0.657; ecoprovince KS 0.217 ->
-  0.036, AIC -271.7, spike 0.564).  General high-KS selections fall from 3 to
-  0 (max 0.146).  One switch (`Hart Ranges|SW`) is 8.6 raw AIC worse than the
-  non-converged legacy fallback but 1.4 better after its ten-unit penalty; KS
-  improves 0.046 -> 0.023.  The AU (`SBS_SX`, H, age 100) changes only `BL`
-  to `spike_weibull_constrained`; the 311.6 m3 target and volume conservation
-  remain exact (TPH 1,189; QMD 18.84 cm; recovered 253.16 + residue 58.44 m3).
-  Added spike tests, `distribution_fits.csv` spike diagnostics, the
-  constrained-tail audit table, and updated the README/report/manifest.
+- **Added dual volume+TPH constraint scaling to synthetic tree lists and
+  re-ran the TSA24 target AU.** `SynthesisTarget.target_tph` fixes expansion
+  factors at the target TPH (`phf_i = target_tph * w_i / sum(w)`) and a
+  bracketed `scipy.optimize.brentq` search finds the positive diameter
+  multiplier that keeps the taper total at the target volume; height is
+  recomputed from the scaled DBH, never linearly scaled.  The documented
+  bracket is `[0.10, 10]`, with one `[0.01, 25]` retry before a loud failure;
+  `diameter_scale_factor`, bracket, iterations, and residual are carried in the
+  synthesis manifest and validation summary.  With `target_tph` absent the
+  legacy volume-only expansion-factor scale is unchanged.  TSA24 (`SBS_SX`, H,
+  age 100) now matches **1,463.5502 TPH** and **311.6 m3** exactly; the diameter
+  scale is **0.929782671** (16 root iterations), QMD falls from 18.84 to
+  **17.52 cm**, and basal area rises from 33.17 to **35.28 m2/ha**.  Thinner
+  stems move volume from sawlogs to residue: sawlog 228.72 -> 219.06, other
+  24.11 -> 21.07, pulpwood 0.33 -> 0.60, recovered 253.16 -> 240.74, residue
+  58.44 -> 70.86 m3; 385 logs and exact conservation (240.735518 + 70.864482 =
+  311.600000 m3).  Added tests for dual matching, the unchanged volume-only
+  path, no-sign-change failure, species weights/per-species expansion factors,
+  and post-scaling conservation; updated `synthetic_trees.csv`,
+  `assortment_matrix.csv`, `residue_ledger.csv`, `validation_summary.json`,
+  `VALIDATION_REPORT.md`, `manifest.json`, `metadata/assortment-pilots.csv`,
+  and the synthetic/assortment plots.
+
+- **Added constrained finite-mean spike/zero-inflated first-bin mixtures to the
+  RSYC DBH fits and re-ran TSA24.** `spike_weibull` / `spike_gamma` add a point
+  mass at the plot DBH limit plus one Weibull/gamma tail left-truncated at the
+  first bin upper edge.  The disjoint-support EM sets the spike weight to the
+  first-bin share, counts it as one AIC parameter, rejects weights outside
+  `(0.001, 0.95)`, and samples the spike uniformly inside the first bin so every
+  stem stays above the plot limit.  `spike_weibull_constrained` /
+  `spike_gamma_constrained` add a bounded grouped-MLE finite-mean tail with
+  shape >= 1 and scale >= 0.1 cm; a tail at any declared bound is reported as
+  `boundary_reject` and is never selected.  The unconstrained variants remain
+  audit-only because their untruncated tail mean can be infinite.  Spike
+  families are gated on first-bin share > 20% or best simple KS > 0.15, and
+  selection keeps the two-AIC parsimony rule.  TSA24 re-fit (68 general + 7 AU):
+  spike fits attempted on 29 gated strata (116 candidates, 58 constrained); 28
+  constrained boundary rejects; 8 constrained spikes selected and no
+  unconstrained spike selected.  Both CW high-KS strata land on the exponential
+  shape bound (`a = 1` / `p = 1`), are `boundary_reject`, and keep the legacy
+  two-gamma selection (AIC -98,914 / -29,981; KS 0.221 / 0.217).  Five fallbacks
+  are more than 2 AIC worse than the previous unconstrained spike selection:
+  CW ecozone +795.2, Nazko Upland BL +382.6, CW ecoprovince +271.7, Hart Ranges
+  BL +85.0, and Upper Fraser Trench SW +20.4.  The AU (`SBS_SX`, H, age 100)
+  changes only `BL` to `spike_weibull_constrained`.  The run also uses the
+  `volume_and_tph` synthesis mode: TPH 1,463.55 matches the BTC target, QMD is
+  17.52 cm, basal area 35.28 m2/ha, and the 311.6 m3 taper target is still met
+  exactly (recovered 240.74 + residue 70.86 m3; sawlog 219.06 m3).  Against the
+  volume-only constrained-spike run (TPH 1,189.39, QMD 18.84 cm, logs 253.16,
+  residue 58.44 m3), the dual constraint raises TPH by 274.2 and residue by
+  12.4 m3 and lowers sawlog by 9.7 m3, with zero volume error in both runs.
+  Added constrained-bound, boundary-rejection,
+  first-bin-weight, truncated-sampling, and finite-mean recovery tests; updated
+  `distribution_fits.csv`, `dbh_mixture_comparison.csv`,
+  `validation_summary.json`, `manifest.json`, `VALIDATION_REPORT.md`, the
+  assortment README, and the working-tree `--working` plot generator.
 
 ## 2026-11-15
 

@@ -394,6 +394,264 @@ def test_synthesized_tree_list_matches_target_volume() -> None:
     assert math.isclose(sum(target.species_weights.values()), 1.0, rel_tol=1e-12)
 
 
+def test_synthesized_tree_list_matches_target_volume_and_tph() -> None:
+    target = SynthesisTarget(
+        target_id="dual-stand",
+        target_level="au",
+        species_weights={"SW": 0.7, "PL": 0.3},
+        tph_total=900.0,
+        target_tph=900.0,
+        volume_m3ha=300.0,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=5.0,
+        max_dbh_cm=60.0,
+        seed=11,
+        n_trees=240,
+    )
+    distributions = [
+        DistributionSpec(
+            species="SW",
+            distribution="weibull",
+            parameters={"a": 2.2, "beta": 12.0},
+            support=(5.0, 60.0),
+            fit_id="test-SW",
+            evidence_tier="stratum_fit",
+        ),
+        DistributionSpec(
+            species="PL",
+            distribution="gamma",
+            parameters={"p": 4.0, "beta": 2.4},
+            support=(5.0, 60.0),
+            fit_id="test-PL",
+            evidence_tier="stratum_fit",
+        ),
+    ]
+    height_models = [_height_model("SW"), _height_model("PL", a=0.9, b=0.6)]
+    stand = synthesize_tree_list(
+        target,
+        distributions=distributions,
+        height_models=height_models,
+        taper_registry=_FakeRegistry(),
+    )
+    assert stand.constraint_mode == "volume_and_tph"
+    assert stand.achieved_taper_volume_m3 == pytest.approx(target.target_volume_m3, rel=1e-9)
+    assert stand.tph == pytest.approx(target.target_tph, rel=1e-9)
+    assert stand.diameter_scale_factor > 0.0
+    assert stand.diameter_scale_bracket is not None
+    assert stand.root_find_iterations > 0
+    assert abs(stand.diameter_scale_residual_m3) < 1e-6
+    assert len(stand.trees) == target.n_trees
+    assert all(tree.height_m > 1.3 for tree in stand.trees)
+
+    model_by_species = {model.species: model for model in height_models}
+    for tree in stand.trees:
+        model = model_by_species[tree.species]
+        expected_height = 1.3 + math.exp(model.a) * tree.dbh_cm**model.b
+        assert tree.height_m == pytest.approx(expected_height, rel=1e-12)
+
+
+def test_synthesized_tree_list_volume_only_path_is_unchanged() -> None:
+    target = SynthesisTarget(
+        target_id="volume-only-stand",
+        target_level="au",
+        species_weights={"SW": 0.7, "PL": 0.3},
+        tph_total=900.0,
+        volume_m3ha=300.0,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=5.0,
+        max_dbh_cm=60.0,
+        seed=11,
+        n_trees=240,
+    )
+    stand = synthesize_tree_list(
+        target,
+        distributions=[
+            DistributionSpec(
+                species="SW",
+                distribution="weibull",
+                parameters={"a": 2.2, "beta": 12.0},
+                support=(5.0, 60.0),
+            ),
+            DistributionSpec(
+                species="PL",
+                distribution="gamma",
+                parameters={"p": 4.0, "beta": 2.4},
+                support=(5.0, 60.0),
+            ),
+        ],
+        height_models=[_height_model("SW"), _height_model("PL", a=0.9, b=0.6)],
+        taper_registry=_FakeRegistry(),
+    )
+    assert stand.constraint_mode == "volume_only"
+    assert stand.target.target_tph is None
+    assert stand.diameter_scale_factor == pytest.approx(1.0)
+    assert stand.diameter_scale_bracket is None
+    assert stand.root_find_iterations == 0
+    assert stand.achieved_taper_volume_m3 == pytest.approx(target.target_volume_m3, rel=1e-9)
+    # The legacy path scales expansion factors from tph_total; it does not fix TPH.
+    assert stand.tph == pytest.approx(stand.scale_factor * target.tph_total, rel=1e-12)
+    assert not math.isclose(stand.tph, target.tph_total, rel_tol=1e-3)
+
+
+def test_dual_constraint_no_solution_fails_loudly() -> None:
+    target = SynthesisTarget(
+        target_id="impossible-stand",
+        target_level="au",
+        species_weights={"SW": 1.0},
+        tph_total=900.0,
+        target_tph=900.0,
+        volume_m3ha=1.0e9,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=5.0,
+        max_dbh_cm=60.0,
+        seed=11,
+        n_trees=120,
+    )
+    with pytest.raises(SynthesisError, match="no sign change"):
+        synthesize_tree_list(
+            target,
+            distributions=[
+                DistributionSpec(
+                    species="SW",
+                    distribution="weibull",
+                    parameters={"a": 2.2, "beta": 12.0},
+                    support=(5.0, 60.0),
+                )
+            ],
+            height_models=[_height_model("SW")],
+            taper_registry=_FakeRegistry(),
+        )
+
+
+def test_dual_constraint_species_weights_and_per_species_phf() -> None:
+    target = SynthesisTarget(
+        target_id="species-stand",
+        target_level="au",
+        species_weights={"SW": 0.7, "PL": 0.3},
+        tph_total=880.0,
+        target_tph=950.0,
+        volume_m3ha=300.0,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=5.0,
+        max_dbh_cm=60.0,
+        seed=11,
+        n_trees=200,
+    )
+    stand = synthesize_tree_list(
+        target,
+        distributions=[
+            DistributionSpec(
+                species="SW",
+                distribution="weibull",
+                parameters={"a": 2.2, "beta": 12.0},
+                support=(5.0, 60.0),
+            ),
+            DistributionSpec(
+                species="PL",
+                distribution="gamma",
+                parameters={"p": 4.0, "beta": 2.4},
+                support=(5.0, 60.0),
+            ),
+        ],
+        height_models=[_height_model("SW"), _height_model("PL", a=0.9, b=0.6)],
+        taper_registry=_FakeRegistry(),
+    )
+    rows = {row["species"]: row for row in stand.species_summary}
+    assert sum(row["target_tph"] for row in rows.values()) == pytest.approx(
+        target.target_tph, rel=1e-12
+    )
+    assert sum(row["expansion_factor_sum"] for row in rows.values()) == pytest.approx(
+        target.target_tph, rel=1e-12
+    )
+    assert rows["SW"]["target_tph"] == pytest.approx(target.target_tph * 0.7, rel=1e-12)
+    assert rows["PL"]["target_tph"] == pytest.approx(target.target_tph * 0.3, rel=1e-12)
+    assert rows["SW"]["tph"] == pytest.approx(target.target_tph * 0.7, rel=1e-12)
+    assert rows["PL"]["tph"] == pytest.approx(target.target_tph * 0.3, rel=1e-12)
+    assert rows["SW"]["expansion_factor_sum"] == pytest.approx(rows["SW"]["tph"])
+    assert sum(row["share_of_taper_volume"] for row in rows.values()) == pytest.approx(1.0)
+
+
+def test_dual_constraint_conserves_volume_and_assortment() -> None:
+    target = SynthesisTarget(
+        target_id="dual-conservation",
+        target_level="au",
+        species_weights={"SW": 0.6, "PL": 0.4},
+        tph_total=900.0,
+        target_tph=1000.0,
+        volume_m3ha=300.0,
+        area_ha=1.0,
+        bec_zone="SBS",
+        age=100.0,
+        dbh_limit_cm=5.0,
+        max_dbh_cm=60.0,
+        seed=19,
+        n_trees=250,
+    )
+    stand = synthesize_tree_list(
+        target,
+        distributions=[
+            DistributionSpec(
+                species="SW",
+                distribution="weibull",
+                parameters={"a": 2.2, "beta": 12.0},
+                support=(5.0, 60.0),
+            ),
+            DistributionSpec(
+                species="PL",
+                distribution="gamma",
+                parameters={"p": 4.0, "beta": 2.4},
+                support=(5.0, 60.0),
+            ),
+        ],
+        height_models=[_height_model("SW"), _height_model("PL", a=0.9, b=0.6)],
+        taper_registry=_FakeRegistry(),
+    )
+    tree_frame = stand.to_frame()[["tree_id", "species", "expansion_factor"]]
+    taper_per_tree = np.array(stand.tree_volumes_m3)
+    diameters = np.array([tree.dbh_cm for tree in stand.trees])
+    logs = pd.DataFrame(
+        {
+            "tree_id": tree_frame["tree_id"],
+            "species": tree_frame["species"],
+            "length_m": 5.0,
+            "large_end_dib_cm": diameters,
+            "small_end_dib_cm": np.maximum(diameters - 2.0, 0.0),
+            "volume_m3": taper_per_tree * 0.8,
+            "sort_code": "D125L50",
+            "product": "pulpwood",
+            "price_cad_m3": 40.0,
+            "value_cad": taper_per_tree * 0.8 * 40.0,
+            "evidence": "synthetic_test",
+            "grade_status": "not_assigned",
+        }
+    )
+    residue = pd.DataFrame(
+        {
+            "tree_id": tree_frame["tree_id"],
+            "species": tree_frame["species"],
+            "residue_volume_m3": taper_per_tree * 0.2,
+            "recovered_log_m3": taper_per_tree * 0.8,
+            "taper_total_m3": taper_per_tree,
+        }
+    )
+    matrix = build_assortment_matrix(logs, residue, tree_frame)
+    conservation = conservation_summary(matrix)
+    assert conservation["pass"] is True
+    assert conservation["total_row_pass"] is True
+    assert conservation["taper_total_m3"] == pytest.approx(
+        stand.achieved_taper_volume_m3, rel=1e-9
+    )
+    assert stand.tph == pytest.approx(target.target_tph, rel=1e-12)
+
+
 def test_species_weights_sum_and_minor_species_drop() -> None:
     weights = normalize_species_weights(
         {"SW": 0.5, "PL": 0.3, "AT": 0.15, "SB": 0.045, "AC": 0.005},
@@ -749,7 +1007,7 @@ def test_constrained_spike_boundary_reject_is_not_selected() -> None:
     assert selected.distribution not in SPIKE_CONSTRAINED_FAMILIES
 
 
-def test_unconstrained_spike_is_synthesis_eligible_within_support() -> None:
+def test_unconstrained_spike_is_diagnostic_only() -> None:
     observations = _spike_observations(spike_weight=0.45, seed=23)
     fit = fit_dbh_distributions(
         observations,
@@ -761,16 +1019,16 @@ def test_unconstrained_spike_is_synthesis_eligible_within_support() -> None:
     )[0]
     by_name = {candidate.distribution: candidate for candidate in fit.candidates}
     assert by_name["spike_weibull"].is_success
-    assert by_name["spike_weibull"].synthesis_compatible
-    assert by_name["spike_gamma"].synthesis_compatible
+    assert not by_name["spike_weibull"].synthesis_compatible
+    assert not by_name["spike_gamma"].synthesis_compatible
     assert by_name["spike_weibull_constrained"].synthesis_compatible
     assert by_name["spike_gamma_constrained"].synthesis_compatible
 
     bounds = spike_tail_bounds("weibull")
     assert bounds["a"][0] == pytest.approx(1.0)
     assert bounds["beta"][0] == pytest.approx(0.1)
-    # Advisory for the *untruncated* tail; synthesis always samples on the
-    # finite fitted support.
+    # The finite-mean helper gates constrained spike synthesis; an
+    # unconstrained shape below one is audit-only.
     assert spike_tail_has_finite_mean("weibull", {"a": 1.2, "beta": 4.0})
     assert not spike_tail_has_finite_mean("weibull", {"a": 0.8, "beta": 4.0})
 

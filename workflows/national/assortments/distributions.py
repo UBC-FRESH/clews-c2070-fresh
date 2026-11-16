@@ -56,6 +56,7 @@ from .mixtures import (
     SPIKE_CONSTRAINED_SHAPE_LOWER,
     SPIKE_FAMILIES,
     SPIKE_FAMILY_COMPONENTS,
+    SPIKE_UNCONSTRAINED_FAMILIES,
     MixtureComponent,
     MixtureFitError,
     SpikeMixtureFit,
@@ -64,6 +65,7 @@ from .mixtures import (
     fit_spike_mixture,
     fit_truncated_mixture,
     spike_tail_bounds,
+    spike_tail_has_finite_mean,
 )
 
 __all__ = [
@@ -178,17 +180,29 @@ class FitCandidate:
         registry does not expose an inverse CDF for it, and the grouped
         curve-fit can land on a numerically valid but practically unsampleable
         parameter set.  Synthesis therefore uses Weibull, gamma, the finite
-        mixtures, or a spike-plus-tail family.  Both spike variants are
-        eligible: the sampler always draws the tail on the finite fitted
-        support, so an unconstrained power-law tail is used only inside
-        ``support_upper`` and is never extrapolated.  A constrained spike whose
-        tail parameters sit on a declared bound is marked ``boundary_reject``
-        and is not a successful candidate.
+        mixtures, or a *constrained* spike-plus-tail family.  The unconstrained
+        ``spike_weibull``/``spike_gamma`` rows remain in the candidate table for
+        audit only: their two-stage tail can reach the power-law scale floor
+        with shape below one, so its untruncated mean is infinite and it is not
+        a safe stand distribution even though the sampler clips draws to the
+        fitted support.  A constrained spike marked ``boundary_reject`` is not a
+        successful candidate and is never selected.
         """
         if not self.is_success:
             return False
         if self.distribution in SPIKE_FAMILIES:
-            return self.spike_boundary_status in {"", "ok"}
+            if self.distribution in SPIKE_UNCONSTRAINED_FAMILIES:
+                return False
+            component = SPIKE_FAMILY_COMPONENTS[self.distribution]
+            continuous = {
+                key: float(value)
+                for key, value in self.parameters.items()
+                if key not in {"spike_weight", "spike_bin_width"}
+            }
+            return (
+                self.spike_boundary_status in {"", "ok"}
+                and spike_tail_has_finite_mean(component, continuous)
+            )
         supported = {"weibull", "gamma"} | set(MIXTURE_FAMILY_COMPONENTS)
         return self.distribution in supported
 
