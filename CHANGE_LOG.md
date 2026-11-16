@@ -2,6 +2,25 @@
 
 ## 2026-11-16
 
+- **Built the Stage A facility-assignment pilot and ran TSA24/BC.** Added
+  `workflows/national/assignments/` with a typed supply/facility/transport/
+  contract contract, a PuLP transportation LP, a fail-closed validator, a
+  TSA24 fixture builder, a pilot driver, and nine synthetic LP tests. The
+  fixture keeps BC SAW/PAP/PEL/BIO lines, normalizes m3/y and odt/y capacity,
+  rejects bdmt/y capacity lines, converts processing cost and product revenue
+  through same-line outfeed ratios, and uses a documented 150 km diagnostic
+  TSA24 access leg plus the minimum FFCM facility-to-TL road distance. The
+  1,000 ha base run is diagnostic: 311,600 m3 supply, all assigned, objective
+  +CAD 2.57M, no capacity binding. The optional ws4-quota sensitivity
+  (306,047.3 ha/period) assigns 78.8M m3, leaves 16.5M m3 unassigned with
+  capacity-exhausted reasons, and binds 130 facilities; it is a period-scale
+  diagnostic, not an annual forecast. Validation passes all 14 checks, and
+  `tests/test_assignment.py` covers conservation, capacity binding, grade
+  eligibility, contract min/max, unassigned penalty, moisture, unit rejection,
+  and objective reconciliation. Published under
+  `data/derived/national/assignments/tsa24_pilot/`. No MKRF input or output is
+  used; assortment sorts remain dimension-only.
+
 - **Built and ran the first national hierarchical DBH/height fit.** Added
   `workflows/national/assortments/national_fit.py`, a resumable 8-worker
   workflow that treats the coverage audit as the sampling frame, fits local
