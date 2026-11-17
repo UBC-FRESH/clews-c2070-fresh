@@ -1256,9 +1256,10 @@ def build_sensitivity() -> dict[str, object]:
                 "BC residue to BC."
             ),
             (
-                "PWRBIO stays at zero in both sensitivity runs because wind is "
-                "cheaper than generic BIO; the generic-BIO bypass is latent, not "
-                "active."
+                "PWRBIO stays at zero in both sensitivity runs because the model's "
+                "wind cost (about 86.03 $/MWh including the $3/GJ RNW resource "
+                "placeholder) is marginally below generic BIO (86.28 $/MWh); the "
+                "generic-BIO bypass is latent, not active."
             ),
         ],
     }
@@ -1493,6 +1494,13 @@ def _sensitivity_markdown(sensitivity: Mapping[str, object]) -> list[str]:
         "(3.21 TWh), or 0.35% of 2050 generation. Wind supplies 977.3 PJ in",
         "2050, gas 32.7 PJ, and PWRBIO remains zero. The objective rises by",
         "40,266.10 M$.",
+        "",
+        "These dispatch comparisons use the model's costs, not the reduced",
+        "LCOE table. The model charges the $3/GJ `RNW` resource placeholder,",
+        "so hydro is about 67.85 $/MWh and wind about 86.03 $/MWh; the",
+        "reduced table's 57.05 $/MWh hydro figure excludes that placeholder.",
+        "Wind is only 0.25 $/MWh below generic BIO, which is why PWRBIO is",
+        "just behind wind rather than far behind it.",
         "",
         "### Conditions for BCW dispatch",
         "",
