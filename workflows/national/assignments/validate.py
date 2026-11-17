@@ -382,16 +382,22 @@ def validate_assignment(
         else "; ".join(transport_errors[:5]),
     )
 
+    allowed_diagnostic_sources = {
+        "diagnostic_absent",
+        "bc_fibre_db_2018_diagnostic",
+        "apportionment_derived_diagnostic",
+    }
     contract_source_errors = [
         f"{contract.contract_id}: diagnostic contract has contract_source "
         f"{contract.contract_source!r}"
         for contract in inputs.contracts
-        if contract.diagnostic and contract.contract_source != "diagnostic_absent"
+        if contract.diagnostic
+        and contract.contract_source not in allowed_diagnostic_sources
     ]
     add(
         "contract_source",
         not contract_source_errors,
-        "diagnostic contracts declare diagnostic_absent"
+        "diagnostic contracts declare a known diagnostic source"
         if not contract_source_errors
         else "; ".join(contract_source_errors[:5]),
     )

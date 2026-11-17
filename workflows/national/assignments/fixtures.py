@@ -7,8 +7,9 @@ The fixture is intentionally conservative:
   and coordinate provenance (Mills DB, suppliers.dbf, TL/water hub proxy, missing);
 * transport is the parsed FFCM TL graph from a documented TSA24 Prince George
   mill proxy anchor, with road/rail modes and transload costs;
-* contracts remain diagnostic zero-minimum/nameplate-maximum records and are
-  labelled ``diagnostic_absent``.
+* contracts are diagnostic zero-minimum records.  Facilities with a unique
+  2018 apportionment match use an apportionment-derived maximum entitlement;
+  all others keep the nameplate maximum and ``diagnostic_absent`` label.
 
 Every non-archive conversion is recorded in the returned assumption table.
 """
@@ -468,18 +469,127 @@ def _load_diagnostic_contracts(
     return tuple(contracts)
 
 
+def _load_apportionment_contracts(
+    path: Path,
+    facilities: Sequence[FacilityCapacity],
+    *,
+    period: str,
+) -> tuple[Contract, ...]:
+    """Load apportionment-derived maximum entitlements as diagnostic contracts.
+
+    The table is generated from 2018 TSA licence rows that could be matched to
+    exactly one facility.  It is a maximum entitlement, never a supply
+    agreement; min=0 and gate=0 are diagnostic placeholders.
+    """
+    if not path.exists():
+        return ()
+    rows = _read_csv(path)
+    _require_columns(
+        path,
+        rows,
+        {
+            "facility_id",
+            "grade",
+            "min_volume",
+            "max_volume",
+            "gate_cost",
+            "source",
+            "evidence_tier",
+        },
+    )
+    facility_by_id = {facility.facility_id: facility for facility in facilities}
+    contracts: list[Contract] = []
+    seen: set[str] = set()
+    for row in rows:
+        facility_id = str(row["facility_id"]).strip()
+        if not facility_id:
+            continue
+        if facility_id in seen:
+            raise FixtureError(
+                f"apportionment contract table has duplicate facility_id {facility_id}"
+            )
+        facility = facility_by_id.get(facility_id)
+        if facility is None:
+            continue
+        grade = str(row["grade"]).strip().lower()
+        if grade != "all_logs":
+            raise FixtureError(
+                f"apportionment contract {facility_id} has unexpected grade {grade!r}"
+            )
+        evidence_tier = str(row["evidence_tier"]).strip()
+        if evidence_tier != "apportionment_derived_diagnostic":
+            raise FixtureError(
+                f"apportionment contract {facility_id} has unexpected evidence_tier "
+                f"{evidence_tier!r}"
+            )
+        minimum = float(str(row["min_volume"]).strip())
+        maximum = float(str(row["max_volume"]).strip())
+        gate = float(str(row["gate_cost"]).strip())
+        if not math.isfinite(minimum) or minimum < 0.0:
+            raise FixtureError(
+                f"apportionment contract {facility_id} has invalid min_volume"
+            )
+        if not math.isfinite(maximum) or maximum <= 0.0:
+            raise FixtureError(
+                f"apportionment contract {facility_id} has invalid max_volume"
+            )
+        if maximum < minimum:
+            raise FixtureError(
+                f"apportionment contract {facility_id} has max_volume below min_volume"
+            )
+        if not math.isfinite(gate) or gate < 0.0:
+            raise FixtureError(
+                f"apportionment contract {facility_id} has invalid gate_cost"
+            )
+        seen.add(facility_id)
+        contracts.append(
+            Contract(
+                contract_id=f"APPT-{facility_id}",
+                period=period,
+                facility_id=facility_id,
+                accepted_grades=facility.eligible_grades,
+                min_volume_m3=minimum,
+                max_volume_m3=maximum,
+                gate_cost_cad_m3=gate,
+                evidence=(
+                    f"evidence_tier={evidence_tier};"
+                    f"source={row['source']};"
+                    "apportionment_derived_maximum_entitlement_not_a_supply_agreement"
+                ),
+                diagnostic=True,
+                notes=(
+                    "Apportionment-derived maximum entitlement from a 2018 TSA "
+                    "licence row matched to exactly one facility; min=0 and "
+                    "gate=0 are diagnostic placeholders, not contract terms."
+                ),
+                contract_source=str(
+                    row.get("contract_source", "apportionment_derived_diagnostic")
+                ).strip()
+                or "apportionment_derived_diagnostic",
+            )
+        )
+    return tuple(contracts)
+
+
 def _diagnostic_contracts(
     facilities: Sequence[FacilityCapacity],
     period: str,
     *,
     diagnostic_table: Path | None = None,
+    apportionment_table: Path | None = None,
 ) -> tuple[Contract, ...]:
     populated: dict[str, list[Contract]] = defaultdict(list)
+    if apportionment_table is not None:
+        for contract in _load_apportionment_contracts(
+            apportionment_table, facilities, period=period
+        ):
+            populated[contract.facility_id].append(contract)
     if diagnostic_table is not None:
         for contract in _load_diagnostic_contracts(
             diagnostic_table, facilities, period=period
         ):
-            populated[contract.facility_id].append(contract)
+            if contract.facility_id not in populated:
+                populated[contract.facility_id].append(contract)
     contracts: list[Contract] = []
     for facility in facilities:
         facility_contracts = populated.get(facility.facility_id)
@@ -525,6 +635,8 @@ def _assumption_rows(
     target_stand: Mapping[str, Any],
     facility_table: FacilityTable,
     transport_table: TransportTable,
+    *,
+    apportionment_contracts_used: bool = False,
 ) -> list[dict[str, Any]]:
     coverage = facility_table.coverage
     coverage_in_scope = facility_table.coverage_in_scope
@@ -639,11 +751,22 @@ def _assumption_rows(
         ),
         _assumption(
             "contracts",
-            "Contracts are diagnostic: min=0 and max=facility nameplate. The BC Fibre Database contributes TSA apportionment volumes without facility IDs and residue shares without volumes, so no facility-level contract volume is inferred.",
+            (
+                "Contracts are diagnostic: min=0. Matched facilities use "
+                "apportionment-derived maximum entitlements; unmatched facilities "
+                "use nameplate maxima. These are caps, not supply agreements."
+                if apportionment_contracts_used
+                else "Contracts are diagnostic: min=0 and max=facility nameplate. "
+                "No facility-level apportionment match was available for this run."
+            ),
             "",
             "m3",
-            "diagnostic_absent;bc_fibre_db_2018_diagnostic",
-            "contract_source=diagnostic_absent on every contract; compliance is a bound check, not commercial evidence.",
+            (
+                "apportionment_derived_diagnostic;diagnostic_absent"
+                if apportionment_contracts_used
+                else "diagnostic_absent"
+            ),
+            "Compliance is a bound check, not commercial evidence.",
         ),
         _assumption(
             "objective",
@@ -682,6 +805,7 @@ def build_tsa24_fixture(
     real_road_links: Path | None = None,
     recovered_coordinates: Path | None = None,
     diagnostic_contracts: Path | None = None,
+    apportionment_contracts: Path | None = None,
 ) -> Tsa24Fixture:
     """Build the TSA24/BC Stage A problem from parsed archive and derived tables."""
     if not math.isfinite(float(area_ha)) or float(area_ha) <= 0.0:
@@ -754,6 +878,17 @@ def build_tsa24_fixture(
             raise FixtureError(
                 f"diagnostic contract table is missing: {contract_table}"
             )
+    apportionment_table: Path | None = None
+    if apportionment_contracts is not None:
+        apportionment_table = (
+            apportionment_contracts
+            if apportionment_contracts.is_absolute()
+            else repo_root / apportionment_contracts
+        )
+        if not apportionment_table.exists():
+            raise FixtureError(
+                f"apportionment contract table is missing: {apportionment_table}"
+            )
     grades, supplies, _ = _supply_grade_rows(
         matrix_path, ledger_path, float(area_ha), period
     )
@@ -793,11 +928,21 @@ def build_tsa24_fixture(
     facility_table = facility_table.with_transport_status(status_by_facility)
     links = transport_table.to_transport_links(period)
     contracts = _diagnostic_contracts(
-        facilities, period, diagnostic_table=contract_table
+        facilities,
+        period,
+        diagnostic_table=contract_table,
+        apportionment_table=apportionment_table,
     )
 
     assumptions = _assumption_rows(
-        float(area_ha), target_stand, facility_table, transport_table
+        float(area_ha),
+        target_stand,
+        facility_table,
+        transport_table,
+        apportionment_contracts_used=any(
+            contract.contract_source == "apportionment_derived_diagnostic"
+            for contract in contracts
+        ),
     )
     assumptions.extend(
         _assumption(

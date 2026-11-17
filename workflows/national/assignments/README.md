@@ -9,7 +9,8 @@ TSA24 assortment matrix + residue ledger
   -> BC facility table + coordinate provenance      (facilities.py)
   -> unit-normalized facility capacity              (units.py)
   -> FFCM TL graph transport + transload costs      (transport.py)
-  -> diagnostic contracts                           (fixtures.py)
+  -> tenure workbook -> facility crosswalk          (tenure_crosswalk.py)
+  -> apportionment-derived diagnostic contracts     (tenure_crosswalk.py)
   -> PuLP transportation LP                         (model.py)
   -> assignment, utilization, contract, unassigned,
      objective, and validation tables               (run_tsa24.py)
@@ -51,7 +52,9 @@ not be read as an annual TSA supply forecast.
 | `derived_tsa24_matrix` | TSA24 assortment matrix / residue ledger | grade volumes, matrix prices |
 | `ledger_assumption` | Residue ledger assumption | 0.45 ODT/m3, 0.45 wet-basis moisture |
 | `graph_proxy` | Documented FFCM graph proxy | TSA24 Prince George mill anchor, TL hub coordinate proxy |
-| `diagnostic` | Documented pilot assumption, not a source value | diagnostic contracts, unassigned penalty |
+| `parsed_apportionment_2018` | Directly parsed 2018 licence row | tenure class, licence number, holder, volume |
+| `apportionment_derived_diagnostic` | Diagnostic maximum entitlement built from a unique licence-to-facility match | apportionment contract caps |
+| `diagnostic` | Documented pilot assumption, not a source value | unassigned penalty |
 | `assumption` | Generic placeholder | reserved hog-fuel grade with no supply |
 
 Every non-archive conversion is written to `assumptions.csv`; rejected lines
@@ -204,24 +207,46 @@ by normalized company, city, mill-name, or coordinate evidence.  Rejected
 code collisions are written to `bc_facility_match_conflicts.csv`; unmatched
 facilities keep the low-confidence TL hub proxy or `missing`.
 
-The same module parses the BC Fibre Database sawmill allocation input and TSA
-tenure apportionment workbooks into `contracts_bc_diagnostic.csv`:
+The same module also parses the BC Fibre Database sawmill allocation input and
+TSA tenure apportionment workbooks into `contracts_bc_diagnostic.csv` and the
+full parsed long table.  The TSA apportionment workbook reports licence volumes
+by TSA and holder, not by facility, so `tenure_crosswalk.py` builds a separate
+auditable crosswalk:
 
-- TSA apportionment rows carry real 2018 AAC volumes but no facility ID.
-- Sawmill allocation rows carry dimensionless residue shares but no volume.
-- No row has both a facility ID and a volume, so `fixtures.py` keeps
-  `contract_source=diagnostic_absent` for every Stage A facility.
+- `normalize_entity_name` strips case, punctuation, and legal-form suffixes
+  (`Ltd`, `Limited`, `Inc`, `LP`, `GP`, `Partnership`, `ULC`, ...) but keeps
+  industry words that distinguish corporate families.
+- An explicit alias table covers the major BC holders (Canfor, West Fraser,
+  Tolko, Domtar, Paper Excellence, Catalyst, Interfor, Conifex, Western Forest
+  Products, Teal Jones, and others).
+- Facility TSA is a point-in-polygon join against the FADM TSA view.  The join
+  is cached in `bc_facility_tsa.csv`; TL-hub proxy coordinates are flagged.
+- Matching order is exact company -> alias family in the same TSA -> unique
+  alias family province-wide -> ambiguous/unmatched.  Ambiguous rows never
+  receive a facility ID.
 
-The evidence tier is `bc_fibre_db_2018_diagnostic`; these are
-diagnostic/project-legacy values, not real supply agreements.
+Only positive 2018 licence rows enter the crosswalk.  Apportionment-class,
+AAC, green-AAC, BCTS, woodlot, community-forest, First Nation woodland, and
+unapportioned rows are reported but not converted into facility contracts.
+The resulting `contracts_bc_apportionment.csv` rows are **maximum
+entitlements**, not supply agreements: `min_volume=0`, `gate_cost=0`, and
+`max_volume=sum(matched licence volume)`.  Unmatched facilities keep
+`min=0`, `max=nameplate`, and `contract_source=diagnostic_absent`.  The facility
+nameplate still caps Stage A even when the entitlement exceeds it.
+
+The evidence tier is `parsed_apportionment_2018` for the crosswalk and
+`apportionment_derived_diagnostic` for the contract bounds.
 
 ### Contracts
 
-No populated contract table exists. Each facility receives a diagnostic
-contract with `min=0`, `max=nameplate`, and `gate=0`. `Contract.diagnostic` is
-true, `contract_source=diagnostic_absent` is written on every contract, and the
-notes say to replace it with real terms. The test suite covers non-zero minima
-and tighter maxima.
+No commercial contract table exists.  A facility with a unique 2018
+apportionment match receives a diagnostic contract with `min=0`,
+`max=apportionment entitlement`, and `gate=0`.  Every other facility receives
+`min=0`, `max=nameplate`, `gate=0`, and `contract_source=diagnostic_absent`.
+`Contract.diagnostic` is true in both cases.  The entitlement caps are derived
+from the workbook and are not commercial terms; the facility nameplate remains
+the hard physical cap.  The test suite covers non-zero minima, tighter maxima,
+ambiguous rejection, and the apportionment loader.
 
 ## Validation (`validate.py`)
 
@@ -245,14 +270,29 @@ and exits non-zero.
 
 ## Running
 
+Rebuild the BC facility recovery, tenure crosswalk, and contract bounds first
+(the optional `--tsa-boundaries` argument points at a local FADM TSA
+GeoJSON/GeoPackage; without it the committed `bc_facility_tsa.csv` cache is
+reused):
+
 ```bash
-.venv/bin/python -m workflows.national.assignments.run_tsa24
+.venv/bin/python -m workflows.national.assignments.bc_fibre
+```
+
+Then run the assignment (the default contract table is
+`contracts_bc_apportionment.csv`; `--diagnostic-contracts` remains available
+for the legacy table):
+
+```bash
+.venv/bin/python -m workflows.national.assignments.run_tsa24 \
+  --real-road-links data/derived/national/assignments/tsa24_pilot/transport_links_bc_real.csv
 ```
 
 Optional period-scale sensitivity:
 
 ```bash
 .venv/bin/python -m workflows.national.assignments.run_tsa24 \
+  --real-road-links data/derived/national/assignments/tsa24_pilot/transport_links_bc_real.csv \
   --sensitivity-ws4-quota
 ```
 
@@ -284,6 +324,13 @@ The pilot writes to `data/derived/national/assignments/tsa24_pilot/`:
 | `transport_links.csv` | fixture transport table consumed by the LP |
 | `transport_links_bc.csv` | auditable path table: nodes, legs, mode, distance, line-haul, transload, confidence, capacity source |
 | `contracts.csv` | fixture contract table |
+| `facility_tenure_crosswalk.csv` | matched 2018 licence rows with method/confidence |
+| `facility_tenure_crosswalk_candidates.csv` | every licence row with candidate facilities, status, and reason |
+| `contracts_bc_apportionment.csv` | apportionment-derived maximum-entitlement contracts |
+| `bc_facility_tsa.csv` | facility-to-FADM-TSA point-in-polygon cache |
+| `tsa_apportionment_2018.csv` | positive 2018 parsed rows |
+| `tsa_apportionment_2018_rejected.csv` | zero/negative 2018 rows |
+| `tenure_crosswalk_summary.json` | parsed, matched, ambiguous, unmatched, and contract summary |
 | `assumptions.csv` | all diagnostic assumptions |
 | `line_screen.csv` | accepted/rejected processing lines |
 | `transport_screen.csv` | accepted/missing facility paths |
@@ -309,7 +356,12 @@ fabricate them.
   in-scope facilities use a low-confidence TL hub proxy and 41 have no
   coordinate. Euclidean distance is not used.
 - No route or transload capacity in the parsed route table; links are uncapped.
-- No populated contract table; contracts are `diagnostic_absent`.
+- No commercial contract table.  A subset of facilities carry
+  apportionment-derived maximum entitlements; the rest remain
+  `diagnostic_absent`.  Neither is a real supply agreement.
+- Holder-only tenure rows cannot be split across sibling mills.  When a holder
+  has more than one facility in the licence TSA, the row stays ambiguous rather
+  than being allocated by guesswork.
 - Mixed capacity units: `bdmt/y` converts at the declared 0.45 density,
   `admt/y` needs a declared moisture, `mbf/y` needs a declared recovery factor,
   and energy units never convert to volume.

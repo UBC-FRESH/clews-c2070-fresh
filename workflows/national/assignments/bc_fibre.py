@@ -14,9 +14,10 @@ Two BC Fibre Database workbooks are parsed for diagnostic evidence:
   licence volumes.  It has no facility identifier.
 
 Consequently the diagnostic contract table can carry real TSA volumes and real
-residue shares, but it cannot fabricate facility-level contract volumes.  Stage
-A keeps its ``diagnostic_absent`` fallback unless a row supplies both a matched
-facility and a volume.
+residue shares, but it cannot fabricate facility-level contract volumes.  The
+separate :mod:`tenure_crosswalk` module matches licence rows to facilities only
+when the holder evidence is unique; unmatched facilities keep the Stage A
+``diagnostic_absent`` fallback.
 """
 
 from __future__ import annotations
@@ -1456,6 +1457,7 @@ def write_bc_fibre_outputs(
     ffcm_registry_path: Path | None = None,
     sawmill_path: Path | None = None,
     tsa_path: Path | None = None,
+    tsa_boundaries_path: Path | None = None,
     period_year: int = 2018,
 ) -> dict[str, Any]:
     """Parse, match, write the recovered facility table and diagnostic contracts."""
@@ -1680,6 +1682,20 @@ def write_bc_fibre_outputs(
         list(contract_rows[0].to_dict()),
     )
 
+    from .tenure_crosswalk import build_tenure_crosswalk
+
+    crosswalk_summary = build_tenure_crosswalk(
+        repo_root,
+        out_dir,
+        apportionments=apportionments,
+        recovered_path=out_dir / "facilities_bc_recovered.csv",
+        stage_a_path=out_dir / "facilities_bc.csv",
+        ffcm_registry_path=ffcm_registry_path,
+        tsa_boundaries_path=tsa_boundaries_path,
+        workbook_path=tsa_path,
+        period_year=period_year,
+    )
+
     tsa_rows = [row for row in contract_rows if row.allocated_volume is not None]
     share_rows = [row for row in contract_rows if row.allocation_share is not None]
     matched_destination_ids = sorted(
@@ -1701,15 +1717,18 @@ def write_bc_fibre_outputs(
         "sawmill_share_sum": sum(row.allocation_share or 0.0 for row in share_rows),
         "matched_diagnostic_destination_count": len(matched_destination_ids),
         "matched_diagnostic_destination_ids": matched_destination_ids,
-        "facility_level_contract_volume_count": sum(
-            1
-            for row in contract_rows
-            if row.facility_id and row.allocated_volume is not None
-        ),
+        "facility_level_contract_volume_count": crosswalk_summary["crosswalk"][
+            "contract_rows"
+        ],
+        "apportionment_stage_a_contract_count": crosswalk_summary["crosswalk"][
+            "stage_a_contract_rows"
+        ],
+        "tenure_crosswalk": crosswalk_summary["crosswalk"],
+        "contracts_bc_apportionment": crosswalk_summary["contracts"],
         "notes": [
-            "TSA volumes are real 2018 benchmark AAC apportionment values but have no facility identifier.",
-            "Sawmill allocation values are dimensionless residue shares, not volumes.",
-            "No facility-level contract volume is derived; Stage A keeps diagnostic_absent fallbacks.",
+            "TSA apportionment-class volumes are real 2018 benchmark values but have no facility identifier.",
+            "Licence-level rows carry holders and volumes; they enter the crosswalk only when the holder-to-facility evidence is unique.",
+            "Apportionment-derived contracts are maximum entitlements, not supply agreements; unmatched facilities keep diagnostic_absent fallbacks.",
         ],
     }
 
@@ -1730,17 +1749,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--period-year", type=int, default=2018)
+    parser.add_argument(
+        "--tsa-boundaries",
+        type=Path,
+        default=None,
+        help=(
+            "Optional FADM TSA boundary file (GeoJSON/GPKG). When absent, the "
+            "committed bc_facility_tsa.csv cache is reused."
+        ),
+    )
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
     out_dir = args.out_dir
     if not out_dir.is_absolute():
         out_dir = (repo_root / out_dir).resolve()
+    tsa_boundaries = args.tsa_boundaries
+    if tsa_boundaries is not None and not tsa_boundaries.is_absolute():
+        tsa_boundaries = (repo_root / tsa_boundaries).resolve()
     summary = write_bc_fibre_outputs(
         repo_root,
         out_dir,
+        tsa_boundaries_path=tsa_boundaries,
         period_year=args.period_year,
     )
+    crosswalk = summary["tenure_crosswalk"]
     print(
         "bc fibre: "
         f"facilities={summary['facility_crosswalk']['facility_count']} "
@@ -1750,7 +1783,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"tsa_rows={summary['tsa_rows']} "
         f"tsa_volume={summary['tsa_total_allocated_volume_m3_y']:,.0f} "
         f"shares={summary['sawmill_allocation_rows']} "
-        f"matched_destinations={summary['matched_diagnostic_destination_count']}"
+        f"crosswalk_matched={crosswalk['matched_rows']} "
+        f"crosswalk_volume={crosswalk['matched_volume_m3_y']:,.0f} "
+        f"contracts={crosswalk['contract_rows']} "
+        f"stage_a_contracts={crosswalk['stage_a_contract_rows']}"
     )
     return 0
 

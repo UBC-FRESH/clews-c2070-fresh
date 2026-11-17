@@ -2,6 +2,44 @@
 
 ## 2026-11-17
 
+- **Built the BC mill-to-tenure crosswalk and re-ran Stage A with
+  apportionment-derived maximum bounds.** Added
+  `workflows/national/assignments/tenure_crosswalk.py`, which parses the 2018
+  TSA Tenure Apportionment workbook, normalizes holder/company names while
+  keeping industry words, applies an explicit major-holder alias table, joins
+  facilities to FADM TSA polygons (cached in `bc_facility_tsa.csv`), and accepts
+  a match only by exact company, same-TSA alias, or province-wide unique
+  holder. Ambiguous holder/TSA combinations never receive a facility ID.
+  - Parsed 52 workbook sheets (40 TSA sheets), 146 positive 2018
+    apportionment-class rows across 32 TSAs (38,726,439 m3/y), and 152
+    positive licence rows across 33 TSAs / 77 holders (18,438,022 m3/y).
+    Rejected 130 zero/negative 2018 rows to
+    `tsa_apportionment_2018_rejected.csv`.
+  - Matched 28 licence rows to 20 facilities (8,134,098 m3/y: 21.0% of
+    apportionment-class volume, 44.1% of licence-detail volume).  Method mix:
+    13 alias same-TSA, 9 exact same-TSA, 5 exact unique, 1 alias unique.
+    Confidence: 10 high, 17 medium, 1 low.  50 rows / 7,376,469 m3/y stayed
+    ambiguous and 74 rows / 2,927,455 m3/y had no candidate.  TL-hub proxy
+    coordinates are kept for audit but never used to disambiguate a match.
+  - Published `facility_tenure_crosswalk.csv`,
+    `facility_tenure_crosswalk_candidates.csv`,
+    `contracts_bc_apportionment.csv` (20 maximum entitlements; 16 Stage A,
+    4 out-of-scope PLY; 4 exceed nameplate), and
+    `tenure_crosswalk_summary.json`.  Unmatched facilities keep `min=0`,
+    `max=nameplate`, and `contract_source=diagnostic_absent`.
+  - Re-ran Stage A with the real NRN links.  Base 1,000 ha is unchanged
+    (311,600 m3 assigned, 0 unassigned, +CAD 4.960M, CAD 125.35/m3) because no
+    entitlement binds at that scale.  ws4-quota sensitivity: 70,625,268 m3
+    assigned / 24,739,071 unassigned (was 77,461,964 / 17,902,375), objective
+    -CAD 25,943,496,439.84 (was -CAD 19,233,509,115.39), delivered CAD
+    146.83/m3 (was 150.20), utilization 77.5% (was 85.0%), 115 nameplate-binding
+    facilities (was 129), and 14 of 16 apportionment contracts binding.  Class
+    mix SAW/PAP/PEL/BIO 45.4/33.9/9.7/10.9% versus 50.2/30.9/8.9/10.0%
+    previously and FFCM nameplate 49.6/33.8/7.5/9.1%.  The tighter caps add
+    6.84M m3 of unassigned SAWLOG; they were not relaxed.
+  - Added normalization, alias-family, same-TSA, ambiguous-rejection,
+    contract-construction, and loader tests; 65 tests pass.
+
 - **Recovered BC facility coordinates and built the BC Fibre Database
   diagnostic contract table, then re-ran Stage A.** Added
   `workflows/national/assignments/bc_fibre.py`, which parses the 2015 CFS Mills

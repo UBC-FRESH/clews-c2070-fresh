@@ -47,6 +47,9 @@ DEFAULT_RECOVERED_COORDINATES = (
 DEFAULT_DIAGNOSTIC_CONTRACTS = (
     DEFAULT_OUT_DIR / "contracts_bc_diagnostic.csv"
 )
+DEFAULT_APPORTIONMENT_CONTRACTS = (
+    DEFAULT_OUT_DIR / "contracts_bc_apportionment.csv"
+)
 
 ASSIGNMENT_COLUMNS = [
     "assignment_id",
@@ -956,6 +959,32 @@ def _report_markdown(
     contract_sources = sorted(
         {str(row.get("contract_source", "")) for row in contract_rows}
     )
+    apportionment_contract_count = sum(
+        1
+        for row in contract_rows
+        if row.get("contract_source") == "apportionment_derived_diagnostic"
+    )
+    fallback_contract_count = sum(
+        1
+        for row in contract_rows
+        if row.get("contract_source") == "diagnostic_absent"
+    )
+    apportionment_contract_text = (
+        (
+            f"{apportionment_contract_count} facilities use apportionment-derived "
+            "maximum entitlements from the 2018 TSA licence crosswalk. These are "
+            "**not real supply contracts**: they are diagnostic caps built from a "
+            "licence row that matched exactly one facility. "
+            f"{fallback_contract_count} facilities retain `min=0`, `max=nameplate` "
+            "and `contract_source=diagnostic_absent`."
+        )
+        if apportionment_contract_count
+        else (
+            "No apportionment-derived contract bound was applied in this run; "
+            "all facilities keep `min=0`, `max=nameplate` and "
+            "`contract_source=diagnostic_absent`."
+        )
+    )
     binding_rows = [
         row for row in result.facility_utilization if row["capacity_binding"]
     ]
@@ -1153,15 +1182,12 @@ fabricated distance. Rejected facilities (first 20):
 
 {contract_ok} of {len(contract_rows)} diagnostic contracts satisfy both bounds.
 Contract sources in this run: `{";".join(contract_sources)}`.
-The BC Fibre Database diagnostic table contributes real TSA-level 2018
-apportionment volumes (no facility identifier) and dimensionless residue
-allocation shares (no volume).  It does **not** contribute a facility-level
-contract volume, so Stage A keeps `min=0`, `max=nameplate` and
-`contract_source=diagnostic_absent` for every facility.  These are diagnostic
-and project-legacy bounds, not real supply agreements.  Transport links carry
-`capacity=None` and `capacity_source=absent`; route and transload capacities
-are not present in the parsed tables. These are data gaps, not modelled
-constraints.
+{apportionment_contract_text}  The TSA apportionment table also carries
+dimensionless residue allocation shares and TSA-class totals without holders;
+neither is converted into a facility contract.  All contract bounds are
+diagnostic, not commercial evidence.  Transport links carry `capacity=None` and
+`capacity_source=absent`; route and transload capacities are not present in the
+parsed tables. These are data gaps, not modelled constraints.
 
 ## 7. Validation
 
@@ -1338,8 +1364,11 @@ def _write_outputs(
             ),
             "route capacity absent from routes.csv; all transport links use capacity=None and capacity_source=absent",
             (
-                "BC Fibre Database has TSA apportionment volumes without facility IDs and residue allocation shares without volumes; "
-                "no facility-level contract volume is available"
+                "BC Fibre Database apportionment: "
+                f"{sum(1 for row in result.contract_compliance if row.get('contract_source') == 'apportionment_derived_diagnostic')} "
+                "facility contracts use apportionment-derived maximum entitlements; "
+                f"{sum(1 for row in result.contract_compliance if row.get('contract_source') == 'diagnostic_absent')} "
+                "facilities keep diagnostic_absent nameplate maxima. The caps are not real supply agreements."
             ),
             "admt/y and mbf/y capacity units require declared moisture/recovery factors and are rejected without them",
             "no hogfuel supply in the TSA24 assortment matrix",
@@ -1364,6 +1393,7 @@ def run_pilot(
     real_road_links: Path | None = None,
     recovered_coordinates: Path | None = None,
     diagnostic_contracts: Path | None = None,
+    apportionment_contracts: Path | None = None,
 ) -> tuple[AssignmentResult, ValidationReport, Tsa24Fixture]:
     """Build, solve, validate, and write one Stage A pilot run."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1376,6 +1406,7 @@ def run_pilot(
         real_road_links=real_road_links,
         recovered_coordinates=recovered_coordinates,
         diagnostic_contracts=diagnostic_contracts,
+        apportionment_contracts=apportionment_contracts,
     )
     result = solve_assignment(fixture.inputs)
     validation = validate_assignment(fixture.inputs, result)
@@ -1443,6 +1474,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             "and a volume can replace the diagnostic_absent fallback."
         ),
     )
+    parser.add_argument(
+        "--apportionment-contracts",
+        type=Path,
+        default=DEFAULT_APPORTIONMENT_CONTRACTS,
+        help=(
+            "contracts_bc_apportionment.csv. Unique 2018 apportionment "
+            "matches become diagnostic maximum entitlements; unmatched "
+            "facilities keep the diagnostic_absent nameplate fallback."
+        ),
+    )
     parser.add_argument("--msg", action="store_true", help="Show CBC solver output.")
     args = parser.parse_args(argv)
 
@@ -1457,6 +1498,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     diagnostic = args.diagnostic_contracts
     if diagnostic is not None and not diagnostic.is_absolute():
         diagnostic = (Path.cwd() / diagnostic).resolve()
+    apportionment = args.apportionment_contracts
+    if apportionment is not None and not apportionment.is_absolute():
+        apportionment = (Path.cwd() / apportionment).resolve()
 
     result, validation, fixture = run_pilot(
         repo_root,
@@ -1467,6 +1511,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         real_road_links=args.real_road_links,
         recovered_coordinates=recovered,
         diagnostic_contracts=diagnostic,
+        apportionment_contracts=apportionment,
     )
     print(
         f"base: status={result.status} objective={result.objective_value_cad:,.2f} CAD; "
@@ -1491,6 +1536,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             real_road_links=args.real_road_links,
             recovered_coordinates=recovered,
             diagnostic_contracts=diagnostic,
+            apportionment_contracts=apportionment,
         )
         print(
             f"sensitivity: status={sensitivity_result.status} "
