@@ -2,6 +2,37 @@
 
 ## 2026-11-17
 
+- **Built the all-BC woody-residue supply curve for OSeCAN zones B1/B2.**
+  Added `workflows/national/clews/bc_residue_supply.py`,
+  `workflows/national/clews/tests/test_bc_residue_supply.py`,
+  `workflows/national/clews/README.md`, and
+  `planning/bc-woody-residue-supply-curve.md`.
+  - Defined a FRESH-side provisional crosswalk: B1 = Georgia Depression +
+    Southern Coastal Mountains; B2 = the remaining BC ecoprovinces.  Mapped
+    each TSA to its THLB-dominant zone and reported seven material split TSAs
+    (Bulkley, Cascadia, Fraser, GBR North, Kispiox, Nass, Soo); harvest is
+    apportioned across ecoprovinces by THLB area within each TSA.
+  - Primary harvest basis is the all-BC 2018 AAC (52,774,801 m3/y = parsed
+    44,399,801 m3/y + Prince George 8,375,000 m3/y), chosen because the
+    2021-2070 profile needs the sustainable annual cut.  The parsed 36-TSA AAC
+    (44,399,801), parsed apportionment (38,726,439), and all-BC apportionment
+    (58,424,023, adding five TSAs the generic parser misses) are retained as
+    comparison scenarios.
+  - Primary residue ratio is the area-weighted national batch, resolved by
+    ecoprovince (BC all-species 0.080872 ODT/m3; range 0.035732-0.364484).
+    The TSA24 Stage B mill-residue ratio (0.259553 ODT/m3) is reported and
+    rejected as a different mass basis.
+  - Energy is 18.5 GJ/ODT dry; no moisture credit.  Results: B1 6.162027 PJ/yr
+    at 2.994574 $/GJ; B2 87.008058 PJ/yr at 1.706656 $/GJ; national 93.170084
+    PJ/yr at 1.791835 $/GJ.  The 50 PJ/$4 placeholder is conservative on both
+    quantity and cost; a 60% recovery sensitivity gives 55.902 PJ.
+  - Published `data/derived/national/clews_supply/bc_woody_residue/` with
+    `bc_zone_crosswalk.csv`, `bc_tsa_zone_crosswalk.csv`,
+    `bc_annual_residue.csv`, `SUPBCWB1_*`/`SUPBCWB2_*` activity-limit and
+    variable-cost rows, audit/comparison tables, `BC_CLEWS_SUPPLY_REPORT.md`,
+    `README.md`, and `manifest.json`.  22 focused tests pass; ruff and mypy
+    clean on the new module.
+
 - **Built the all-BC forest/THLB area-weight table and joined it to the
   national batch.** Added
   `workflows/national/assortments/bc_area_weights.py` and
