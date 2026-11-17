@@ -963,6 +963,10 @@ Matched real/FFCM cost comparison (same facility-grade pairs):
 
 {_markdown_table(['Grade', 'Links', 'Real median CAD/m3', 'FFCM median CAD/m3', 'Delta median CAD/m3'], cost_comparison_rows) if cost_comparison_rows else 'No matched cost rows.'}
 
+FFCM costs in this comparison include transload at TL nodes; real NRN costs are
+direct road with no transload. The gap is therefore a combined distance and
+transload difference, not a like-for-like rate comparison.
+
 ## 4. Stage A re-run
 
 The base 1,000 ha and ws4-quota runs use real NRN links for facilities with a
