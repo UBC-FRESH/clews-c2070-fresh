@@ -44,11 +44,12 @@ __all__ = [
     "road_rate_for_grade",
 ]
 
-TSA24_ANCHOR_FACILITY = "BC-SAW-488"
+TSA24_ANCHOR_FACILITY = "BC-SAW-506"
 TSA24_ANCHOR_BASIS = (
     "tsa24_prince_george_geocoded_mill_proxy;"
-    "facility=BC-SAW-488;source=mills_db;"
-    "note=no_TSA24_FMU_exists_in_FFCM_graph"
+    "facility=BC-SAW-506;source=mills_db_2015;"
+    "note=no_TSA24_FMU_exists_in_FFCM_graph;"
+    "legacy_BC-SAW-488_was_a_code_collision_with_Canfor_Houston"
 )
 DIAGNOSTIC_ACCESS_KM = 150.0
 

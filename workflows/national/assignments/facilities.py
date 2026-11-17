@@ -35,9 +35,11 @@ __all__ = [
     "FacilityError",
     "FacilityRecord",
     "FacilityTable",
+    "RecoveredCoordinate",
     "accepted_grades_for",
     "build_facility_capacities",
     "build_facility_table",
+    "load_recovered_coordinates",
     "normalize_line_capacity",
 ]
 
@@ -48,9 +50,14 @@ class FacilityError(RuntimeError):
 
 BC_FACILITY_CLASSES = ("SAW", "PAP", "PEL", "BIO", "PLY", "OSB", "NSP")
 STAGE_A_FACILITY_CLASSES = frozenset({"SAW", "PAP", "PEL", "BIO"})
-COORD_SOURCES = ("mills_db", "suppliers_dbf", "tl_anchor_proxy", "missing")
+COORD_SOURCES = (
+    "mills_db_2015",
+    "suppliers_dbf",
+    "tl_anchor_proxy",
+    "missing",
+)
 COORD_CONFIDENCE = {
-    "mills_db": "high",
+    "mills_db_2015": "high",
     "suppliers_dbf": "high",
     "tl_anchor_proxy": "low",
     "missing": "missing",
@@ -148,6 +155,8 @@ class FacilityRecord:
     lines: tuple[str, ...]
     stage_a_scope: bool
     transport_link_status: str = "not_evaluated"
+    match_method: str = ""
+    match_confidence: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -159,6 +168,8 @@ class FacilityRecord:
             "coord_source": self.coord_source,
             "coord_confidence": self.coord_confidence,
             "coord_evidence": self.coord_evidence,
+            "match_method": self.match_method,
+            "match_confidence": self.match_confidence,
             "nameplate_m3_y": "" if self.nameplate_m3_y is None else self.nameplate_m3_y,
             "capacity_status": self.capacity_status,
             "capacity_basis": self.capacity_basis,
@@ -205,6 +216,13 @@ class FacilityTable:
         )
 
     def summary(self) -> dict[str, Any]:
+        match_methods: dict[str, int] = defaultdict(int)
+        match_confidences: dict[str, int] = defaultdict(int)
+        for record in self.records:
+            if record.match_method:
+                match_methods[record.match_method] += 1
+            if record.match_confidence:
+                match_confidences[record.match_confidence] += 1
         return {
             "facility_count": len(self.records),
             "stage_a_scope_count": sum(
@@ -213,6 +231,8 @@ class FacilityTable:
             "coordinate_source_counts": dict(self.coverage),
             "coordinate_source_counts_in_scope": dict(self.coverage_in_scope),
             "coordinate_confidence_counts": dict(self.confidence),
+            "match_method_counts": dict(sorted(match_methods.items())),
+            "match_confidence_counts": dict(sorted(match_confidences.items())),
             "missing_coordinate_count": len(self.missing),
             "missing_coordinate_count_in_scope": len(self.missing_in_scope),
             "missing_coordinates": list(self.missing),
@@ -355,12 +375,18 @@ def _coordinate_from_row(
         return (
             mill_coord[0],
             mill_coord[1],
-            "mills_db",
+            "mills_db_2015",
             "medium" if conflict else "high",
             evidence,
         )
     if mill_coord is not None:
-        return mill_coord[0], mill_coord[1], "mills_db", "high", f"match_status={status}"
+        return (
+            mill_coord[0],
+            mill_coord[1],
+            "mills_db_2015",
+            "high",
+            f"match_status={status}",
+        )
     if supplier_coord is not None:
         return (
             supplier_coord[0],
@@ -370,6 +396,60 @@ def _coordinate_from_row(
             f"match_status={status}",
         )
     return None, None, "missing", "missing", f"match_status={status}"
+
+
+@dataclass(frozen=True, slots=True)
+class RecoveredCoordinate:
+    """A Mills DB coordinate recovered by the BC crosswalk module."""
+
+    facility_id: str
+    lat: float
+    lon: float
+    match_method: str
+    match_confidence: str
+    match_evidence: str
+    name: str
+
+
+def load_recovered_coordinates(path: Path) -> dict[str, RecoveredCoordinate]:
+    """Read ``facilities_bc_recovered.csv`` into trusted coordinate records."""
+    path = Path(path)
+    if not path.exists():
+        raise FacilityError(f"recovered coordinate table is missing: {path}")
+    rows = _read_csv(path)
+    _require_columns(
+        path,
+        rows,
+        {
+            "facility_id",
+            "lat",
+            "lon",
+            "coord_source",
+            "match_method",
+            "match_confidence",
+        },
+    )
+    recovered: dict[str, RecoveredCoordinate] = {}
+    for row in rows:
+        facility_id = str(row["facility_id"]).strip()
+        if not facility_id or str(row["coord_source"]).strip() != "mills_db_2015":
+            continue
+        lat = _number(row["lat"], f"{facility_id} recovered latitude")
+        lon = _number(row["lon"], f"{facility_id} recovered longitude")
+        if not _valid_lat_lon(lat, lon):
+            raise FacilityError(f"{facility_id} recovered coordinate is invalid: {lat},{lon}")
+        recovered[facility_id] = RecoveredCoordinate(
+            facility_id=facility_id,
+            lat=lat,
+            lon=lon,
+            match_method=str(row["match_method"]).strip(),
+            match_confidence=str(row["match_confidence"]).strip(),
+            match_evidence=str(row.get("match_evidence", "")).strip(),
+            name=str(row.get("name", "")).strip(),
+        )
+    if not recovered:
+        raise FacilityError(f"recovered coordinate table has no mills_db_2015 rows: {path}")
+    return recovered
 
 
 def _direct_hubs(
@@ -433,8 +513,18 @@ def _hub_anchor_coordinates(
     return anchors
 
 
-def build_facility_table(repo_root: Path) -> FacilityTable:
-    """Build one row per BC facility with coordinates and normalized capacity."""
+def build_facility_table(
+    repo_root: Path,
+    *,
+    recovered_coordinates: Path | None = None,
+) -> FacilityTable:
+    """Build one row per BC facility with coordinates and normalized capacity.
+
+    When ``recovered_coordinates`` is supplied, the recovered Mills DB 2015
+    crosswalk overrides the legacy ``facility_geocoding.csv`` BC matches.  This
+    is intentional: the legacy exact-code matches are code-vintage collisions,
+    not the same mills.
+    """
     repo_root = Path(repo_root)
     facilities_path = repo_root / "metadata/ffcm-archive/parsed/facilities.csv"
     lines_path = repo_root / "metadata/ffcm-archive/parsed/processing_lines.csv"
@@ -480,11 +570,36 @@ def build_facility_table(repo_root: Path) -> FacilityTable:
             lines_by_facility[facility_id].append(line)
 
     geocoding = {str(row["fcm_facility"]).strip(): row for row in geocoding_rows}
+    recovered = (
+        load_recovered_coordinates(recovered_coordinates)
+        if recovered_coordinates is not None
+        else {}
+    )
     geocoded: dict[str, tuple[float, float, str]] = {}
     coord_rows: dict[str, tuple[float | None, float | None, str, str, str]] = {}
+    name_by_facility: dict[str, str] = {}
+    match_by_facility: dict[str, tuple[str, str]] = {}
     for row in bc_rows:
         facility_id = str(row["facility"]).strip()
-        coord = _coordinate_from_row(geocoding.get(facility_id, {}))
+        if recovered:
+            candidate = recovered.get(facility_id)
+            if candidate is None:
+                coord = (None, None, "missing", "missing", "recovered_crosswalk_unmatched")
+            else:
+                coord = (
+                    candidate.lat,
+                    candidate.lon,
+                    "mills_db_2015",
+                    candidate.match_confidence or "high",
+                    f"recovered:{candidate.match_method};{candidate.match_evidence}",
+                )
+                name_by_facility[facility_id] = candidate.name
+                match_by_facility[facility_id] = (
+                    candidate.match_method,
+                    candidate.match_confidence,
+                )
+        else:
+            coord = _coordinate_from_row(geocoding.get(facility_id, {}))
         coord_rows[facility_id] = coord
         if coord[2] != "missing" and coord[0] is not None and coord[1] is not None:
             geocoded[facility_id] = (coord[0], coord[1], coord[2])
@@ -537,10 +652,13 @@ def build_facility_table(repo_root: Path) -> FacilityTable:
                 if str(line.get("processing_line", "")).strip()
             )
         )
+        match_method, match_confidence = match_by_facility.get(
+            facility_id, ("", "")
+        )
         record = FacilityRecord(
             facility_id=facility_id,
             facility_class=facility_class,
-            name=facility_id,
+            name=name_by_facility.get(facility_id) or facility_id,
             lat=lat,
             lon=lon,
             coord_source=coord_source,
@@ -552,6 +670,8 @@ def build_facility_table(repo_root: Path) -> FacilityTable:
             line_count=len(line_ids),
             lines=line_ids,
             stage_a_scope=stage_a_scope,
+            match_method=match_method,
+            match_confidence=match_confidence,
         )
         records.append(record)
         coverage[coord_source] += 1

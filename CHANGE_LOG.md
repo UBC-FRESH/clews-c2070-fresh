@@ -2,6 +2,41 @@
 
 ## 2026-11-17
 
+- **Recovered BC facility coordinates and built the BC Fibre Database
+  diagnostic contract table, then re-ran Stage A.** Added
+  `workflows/national/assignments/bc_fibre.py`, which parses the 2015 CFS Mills
+  DB, joins FFCM raw site names/cities from
+  `original_list_BP.xlsx`, and accepts a coordinate only when name, city, or
+  coordinate evidence corroborates the code.  The eight legacy exact-code
+  matches are collisions and are rejected in
+  `bc_facility_match_conflicts.csv`.  Coverage improved from 8 Mills DB / 126
+  TL-hub proxy / 45 missing to 98 / 65 / 16 across all 179 BC facilities
+  (Stage A scope: 8/113/41 -> 88/58/15).  Method counts: 47 company+city, 45
+  mill-name, 5 coordinate-corroborated, 1 coordinate-named, 81 unmatched
+  (5 of those have no FFCM registry row).
+  - Parsed `Sawmill Fibre Allocation Input V3.xls` (596 dimensionless residue
+    shares across Chips, SawShav, Hog, Other Biomass) and
+    `TSA Tenure Apportionment V5.xls` (36 TSA sheets; 146 positive 2018
+    apportionment-class rows totalling 38,726,439 m3/y; licence-level detail in
+    `tsa_tenure_apportionment_long.csv`).  The workbooks have no facility-level
+    volume: `contracts_bc_diagnostic.csv` keeps TSA volumes without facility IDs
+    and residue shares without volumes, and Stage A keeps
+    `contract_source=diagnostic_absent` on all 161 facilities.
+  - Rebuilt the NRN road links from the recovered coordinates: 156/163
+    facilities snapped, 134 real paths, 196 grade links.  Stage A now uses real
+    links for 118 facilities (196 links) and flagged FFCM fallback for 11 (14
+    links); 65 facilities moved fallback -> real, while 10 moved real ->
+    fallback and 5 moved real -> missing because the legacy coordinate was a
+    code collision.  The TSA24 anchor also moved from `BC-SAW-488` (actually
+    FFCM Canfor Houston) to `BC-SAW-506` (Canfor Prince George) at the
+    documented 53.99, -122.69 proxy.  Base 1,000 ha: 311,600 m3 assigned, 0
+    unassigned, objective +CAD 4.960M, delivered CAD 125.35/m3 (transport CAD
+    0.65/m3).  ws4-quota sensitivity: 77.46M m3 assigned / 17.90M unassigned,
+    objective -CAD 19.234B, delivered CAD 150.21/m3.  Class mix SAW/PAP/PEL/BIO
+    50.2/30.9/8.9/10.0% versus 49.8/31.1/8.6/10.5% previously and FFCM
+    nameplate 49.6/33.8/7.5/9.1%.  Added matching and contract-evidence tests;
+    43 tests pass.
+
 - **Built the real NRN BC road-network transport pilot and re-ran Stage A.**
   Added `workflows/national/assignments/build_road_network.py`, which reads the
   archived NRN BC GeoPackage, filters haulable road classes, projects to BC

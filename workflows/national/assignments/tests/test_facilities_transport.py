@@ -17,12 +17,19 @@ REAL_LINKS = (
     REPO_ROOT
     / "data/derived/national/assignments/tsa24_pilot/transport_links_bc_real.csv"
 )
+RECOVERED = (
+    REPO_ROOT
+    / "data/derived/national/assignments/tsa24_pilot/facilities_bc_recovered.csv"
+)
 
 
 class FacilityTableTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.table = build_facility_table(REPO_ROOT)
+        cls.table = build_facility_table(
+            REPO_ROOT, recovered_coordinates=RECOVERED
+        )
+        cls.legacy_table = build_facility_table(REPO_ROOT)
 
     def test_one_row_per_bc_facility(self) -> None:
         self.assertEqual(len(self.table.records), 179)
@@ -34,15 +41,28 @@ class FacilityTableTests(unittest.TestCase):
             classes, {"SAW", "PAP", "PEL", "BIO", "PLY", "OSB", "NSP"}
         )
 
-    def test_coordinate_source_counts(self) -> None:
-        self.assertEqual(self.table.coverage["mills_db"], 8)
+    def test_legacy_coordinate_counts_are_retained_for_audit(self) -> None:
+        self.assertEqual(self.legacy_table.coverage["mills_db_2015"], 8)
+        self.assertEqual(self.legacy_table.coverage["suppliers_dbf"], 0)
+        self.assertEqual(self.legacy_table.coverage["tl_anchor_proxy"], 126)
+        self.assertEqual(self.legacy_table.coverage["missing"], 45)
+        self.assertEqual(self.legacy_table.coverage_in_scope["mills_db_2015"], 7)
+        self.assertEqual(self.legacy_table.coverage_in_scope["tl_anchor_proxy"], 113)
+        self.assertEqual(self.legacy_table.coverage_in_scope["missing"], 41)
+
+    def test_recovered_coordinate_counts_improve_on_legacy(self) -> None:
+        self.assertEqual(self.table.coverage["mills_db_2015"], 98)
         self.assertEqual(self.table.coverage["suppliers_dbf"], 0)
-        self.assertEqual(self.table.coverage["tl_anchor_proxy"], 126)
-        self.assertEqual(self.table.coverage["missing"], 45)
-        self.assertEqual(self.table.coverage_in_scope["mills_db"], 7)
-        self.assertEqual(self.table.coverage_in_scope["tl_anchor_proxy"], 113)
-        self.assertEqual(self.table.coverage_in_scope["missing"], 41)
-        self.assertEqual(len(self.table.missing_in_scope), 41)
+        self.assertEqual(self.table.coverage["tl_anchor_proxy"], 65)
+        self.assertEqual(self.table.coverage["missing"], 16)
+        self.assertEqual(self.table.coverage_in_scope["mills_db_2015"], 88)
+        self.assertEqual(self.table.coverage_in_scope["tl_anchor_proxy"], 58)
+        self.assertEqual(self.table.coverage_in_scope["missing"], 15)
+        self.assertEqual(len(self.table.missing_in_scope), 15)
+        self.assertGreater(
+            self.table.coverage_in_scope["mills_db_2015"],
+            self.legacy_table.coverage_in_scope["mills_db_2015"],
+        )
 
     def test_coordinate_sources_are_known_and_in_bc(self) -> None:
         for record in self.table.records:
@@ -56,14 +76,18 @@ class FacilityTableTests(unittest.TestCase):
             self.assertLessEqual(record.lat, 60.1)
             self.assertGreaterEqual(record.lon, -139.2)
             self.assertLessEqual(record.lon, -113.9)
-            self.assertEqual(
-                record.coord_confidence,
-                {
-                    "mills_db": "high",
-                    "suppliers_dbf": "high",
-                    "tl_anchor_proxy": "low",
-                }[record.coord_source],
-            )
+            if record.coord_source == "mills_db_2015":
+                self.assertIn(
+                    record.coord_confidence, {"high", "medium", "low"}
+                )
+            else:
+                self.assertEqual(
+                    record.coord_confidence,
+                    {
+                        "suppliers_dbf": "high",
+                        "tl_anchor_proxy": "low",
+                    }[record.coord_source],
+                )
 
     def test_all_bc_facilities_have_positive_nameplate(self) -> None:
         self.assertEqual(self.table.zero_capacity, ())
@@ -78,7 +102,9 @@ class FacilityTableTests(unittest.TestCase):
 class TransportTableTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.fixture = build_tsa24_fixture(REPO_ROOT)
+        cls.fixture = build_tsa24_fixture(
+            REPO_ROOT, recovered_coordinates=RECOVERED
+        )
         cls.transport = cls.fixture.transport_table
 
     def test_transport_links_are_uncapped_and_declared(self) -> None:
@@ -98,9 +124,9 @@ class TransportTableTests(unittest.TestCase):
             self.assertTrue(link.path_legs)
 
     def test_anchor_facility_is_not_given_a_self_haul(self) -> None:
-        self.assertNotIn("BC-SAW-488", {link.destination for link in self.transport.links})
+        self.assertNotIn("BC-SAW-506", {link.destination for link in self.transport.links})
         self.assertEqual(
-            self.transport.status_by_facility["BC-SAW-488"],
+            self.transport.status_by_facility["BC-SAW-506"],
             "missing_anchor_proxy_self",
         )
 
@@ -171,7 +197,7 @@ class TransportTableTests(unittest.TestCase):
                     {"direct_route", "graph_shortest_path"},
                 )
         self.assertEqual(
-            merged.status_by_facility["BC-SAW-488"],
+            merged.status_by_facility["BC-SAW-506"],
             "missing_anchor_proxy_self",
         )
 

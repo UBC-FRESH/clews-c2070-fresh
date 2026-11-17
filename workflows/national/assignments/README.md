@@ -170,8 +170,10 @@ quality test.
 The parsed FFCM route graph connects facilities to transload (`TL`) and water
 (`W`) nodes, but it has no TSA24 supply node. The pilot therefore uses a
 documented supply anchor: the Mills-DB geocoded Prince George sawmill
-`BC-SAW-488` (53.99, -122.69), which is the only geocoded BC facility in the
-TSA24/Prince George area. This is a proxy, not a production route.
+`BC-SAW-506` (Canfor Prince George; 53.99, -122.69). This is a proxy, not a
+production route. The earlier `BC-SAW-488` anchor was a code collision: the
+FFCM `BC-SAW-488` is Canfor Houston, while the Mills DB `BC-SAW488` is the
+Prince George sawmill now represented by `BC-SAW-506`.
 
 From that anchor the builder uses:
 
@@ -192,6 +194,26 @@ declared density, not a global tonne assumption.
 A facility with no TL path is marked `missing` and excluded; it is never given
 a fabricated distance or cost. Route capacity is absent from the parsed route
 table, so every link records `capacity=None` and `capacity_source=absent`.
+
+### BC coordinate recovery and diagnostic contracts
+
+`bc_fibre.py` builds `facilities_bc_recovered.csv` from the 2015 CFS Mills DB
+and the FFCM raw site registry.  Exact facility codes are only a candidate:
+the 2015 and 2018 code systems collide, so a code match must be corroborated
+by normalized company, city, mill-name, or coordinate evidence.  Rejected
+code collisions are written to `bc_facility_match_conflicts.csv`; unmatched
+facilities keep the low-confidence TL hub proxy or `missing`.
+
+The same module parses the BC Fibre Database sawmill allocation input and TSA
+tenure apportionment workbooks into `contracts_bc_diagnostic.csv`:
+
+- TSA apportionment rows carry real 2018 AAC volumes but no facility ID.
+- Sawmill allocation rows carry dimensionless residue shares but no volume.
+- No row has both a facility ID and a volume, so `fixtures.py` keeps
+  `contract_source=diagnostic_absent` for every Stage A facility.
+
+The evidence tier is `bc_fibre_db_2018_diagnostic`; these are
+diagnostic/project-legacy values, not real supply agreements.
 
 ### Contracts
 

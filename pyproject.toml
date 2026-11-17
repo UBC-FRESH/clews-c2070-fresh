@@ -18,6 +18,11 @@ workflow = [
   "freshforge==0.1.0a5",
   "PuLP>=2.8,<3",
 ]
+workbooks = [
+  "pandas>=2.0",
+  "openpyxl>=3.1",
+  "xlrd>=2.0",
+]
 
 [project.entry-points."freshforge.providers"]
 "clews.materialization" = "fresh_fibre.freshforge_materialization:provider_factory"

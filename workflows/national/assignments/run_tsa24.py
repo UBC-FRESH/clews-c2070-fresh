@@ -37,10 +37,16 @@ from .validate import ValidationReport, validate_assignment
 
 __all__ = ["main", "run_pilot"]
 
-CODE_VERSION = "0.1.0"
+CODE_VERSION = "0.1.1"
 DEFAULT_OUT_DIR = Path("data/derived/national/assignments/tsa24_pilot")
 DEFAULT_AREA_HA = 1000.0
 WS4_QUOTA_AREA_HA = 306047.3
+DEFAULT_RECOVERED_COORDINATES = (
+    DEFAULT_OUT_DIR / "facilities_bc_recovered.csv"
+)
+DEFAULT_DIAGNOSTIC_CONTRACTS = (
+    DEFAULT_OUT_DIR / "contracts_bc_diagnostic.csv"
+)
 
 ASSIGNMENT_COLUMNS = [
     "assignment_id",
@@ -119,6 +125,8 @@ FACILITY_COLUMNS = [
     "coord_source",
     "coord_confidence",
     "coord_evidence",
+    "match_method",
+    "match_confidence",
     "nameplate_m3_y",
     "capacity_status",
     "capacity_basis",
@@ -278,13 +286,18 @@ def _coverage_tables(config: Mapping[str, Any]) -> str:
             counts.get(source, 0),
             in_scope.get(source, 0),
             {
-                "mills_db": "high",
+                "mills_db_2015": "high/medium",
                 "suppliers_dbf": "high",
                 "tl_anchor_proxy": "low",
                 "missing": "missing",
             }[source],
         )
-        for source in ("mills_db", "suppliers_dbf", "tl_anchor_proxy", "missing")
+        for source in (
+            "mills_db_2015",
+            "suppliers_dbf",
+            "tl_anchor_proxy",
+            "missing",
+        )
     ]
     table = _markdown_table(
         ["coord_source", "All BC facilities", "Stage A scope", "Expected confidence"],
@@ -328,9 +341,27 @@ def _coverage_tables(config: Mapping[str, Any]) -> str:
         else f"{len(zero)} zero/blank-capacity facilities kept and flagged: "
         + ", ".join(f"`{item}`" for item in zero)
     )
+    method_counts = coverage.get("match_method_counts", {})
+    confidence_counts = coverage.get("match_confidence_counts", {})
+    match_table = _markdown_table(
+        ["Match method", "Facilities"],
+        sorted(method_counts.items()) or [("none", 0)],
+    )
+    confidence_table = _markdown_table(
+        ["Match confidence", "Facilities"],
+        sorted(confidence_counts.items()) or [("none", 0)],
+    )
     return f"""{table}
 
 {missing_text}
+
+Mills DB 2015 recovery method (code matches are corroborated; collisions rejected):
+
+{match_table}
+
+Recovery confidence:
+
+{confidence_table}
 
 Missing Stage A coordinates: {missing_list}
 
@@ -445,7 +476,7 @@ def _transport_report(config: Mapping[str, Any]) -> str:
 - {capacity_text}
 
 No accepted link uses `access_leg_plus_graph`: the anchor is attached through
-parsed route edges from `BC-SAW-488`. That label is reserved for a future
+parsed route edges from `BC-SAW-506`. That label is reserved for a future
 non-route access leg.
 
 {confidence_table}
@@ -1050,10 +1081,12 @@ report; Stage A does not invent Stage B demand or market rows.
 ## 2. BC facilities (coordinate coverage, sources, missing)
 
 One row per BC facility is written to `facilities_bc.csv`. Coordinates are
-resolved in this order: Mills DB, CFS `suppliers.dbf`, an FFCM TL/water hub
-anchor, then `missing`. The hub anchor is the median coordinate of geocoded
-facilities directly attached to the same TL/water node; it is a low-confidence
-proxy, not a Euclidean guess.
+resolved from the recovered Mills DB 2015 crosswalk (`mills_db_2015`), then an
+FFCM TL/water hub anchor, then `missing`.  Exact facility codes are only a
+candidate: the 2015 and 2018 code systems collide, so every code match must be
+corroborated by name, city, or coordinate evidence.  The hub anchor is the
+median coordinate of geocoded facilities directly attached to the same
+TL/water node; it is a low-confidence proxy, not a Euclidean guess.
 
 {_coverage_tables(fixture.config)}
 
@@ -1119,11 +1152,16 @@ fabricated distance. Rejected facilities (first 20):
 ## 6. Contracts and capacity gaps
 
 {contract_ok} of {len(contract_rows)} diagnostic contracts satisfy both bounds.
-All contracts carry `contract_source=diagnostic_absent`; no populated real
-contract minimum, maximum, or gate cost exists in the archive. Transport links
-carry `capacity=None` and `capacity_source=absent`; route and transload
-capacities are not present in the parsed tables. These are data gaps, not
-modelled constraints.
+Contract sources in this run: `{";".join(contract_sources)}`.
+The BC Fibre Database diagnostic table contributes real TSA-level 2018
+apportionment volumes (no facility identifier) and dimensionless residue
+allocation shares (no volume).  It does **not** contribute a facility-level
+contract volume, so Stage A keeps `min=0`, `max=nameplate` and
+`contract_source=diagnostic_absent` for every facility.  These are diagnostic
+and project-legacy bounds, not real supply agreements.  Transport links carry
+`capacity=None` and `capacity_source=absent`; route and transload capacities
+are not present in the parsed tables. These are data gaps, not modelled
+constraints.
 
 ## 7. Validation
 
@@ -1206,12 +1244,13 @@ def _manifest(
         "limitations": [
             "1,000 ha base area is diagnostic, not a TSA24 supply estimate.",
             "Assortment sorts are dimension-only; no BC official grade equivalence.",
-            "TSA24 supply anchor is a geocoded Prince George mill proxy (BC-SAW-488); no TSA24 FMU exists in the FFCM graph.",
+            "TSA24 supply anchor is a geocoded Prince George mill proxy (FFCM BC-SAW-506); no TSA24 FMU exists in the FFCM graph. The legacy BC-SAW-488 anchor was a code collision with Canfor Houston.",
             "Transport distances use the real NRN BC road graph where available and flagged FFCM TL fallback otherwise; neither is a production route.",
             "Only BC SAW/PAP/PEL/BIO facilities are in the LP; PLY/OSB/NSP rows are retained in facilities_bc.csv but out of scope.",
-            "Many BC facilities lack a defensible coordinate; missing coordinates are not guessed.",
+            "BC coordinates use a corroborated Mills DB 2015 crosswalk; exact facility codes alone are not trusted because the 2015 and 2018 code systems collide.",
+            "Unmatched BC facilities keep a low-confidence TL hub proxy or missing; coordinates are never guessed.",
             "bdmt/y capacity converts at the declared 0.45 ODT/m3 density; admt/y and mbf/y are rejected without declared factors.",
-            "Contracts are diagnostic min=0/max=nameplate with contract_source=diagnostic_absent.",
+            "Contracts are diagnostic min=0/max=nameplate with contract_source=diagnostic_absent; the BC Fibre Database diagnostic table has no facility-level volumes.",
             "Transport links are uncapped: capacity=None and capacity_source=absent; transload costs are applied at TL nodes.",
             "One period; no multi-period inventory dynamics.",
             "No MKRF input or output is used.",
@@ -1288,9 +1327,20 @@ def _write_outputs(
         "config": dict(fixture.config),
         "data_gaps": [
             "no TSA24 supply-node-to-transload route in the parsed FFCM graph; a geocoded Prince George mill is the documented anchor proxy",
-            "only 8 of 179 BC facilities have direct Mills DB/suppliers.dbf coordinates; 113 in-scope facilities use a low-confidence TL hub proxy and 41 are missing",
+            (
+                "BC coordinate recovery: "
+                f"{fixture.config['facility_coverage']['coordinate_source_counts'].get('mills_db_2015', 0)} "
+                "facilities use a corroborated Mills DB 2015 coordinate; "
+                f"{fixture.config['facility_coverage']['coordinate_source_counts'].get('tl_anchor_proxy', 0)} "
+                "use a low-confidence TL hub proxy and "
+                f"{fixture.config['facility_coverage']['coordinate_source_counts'].get('missing', 0)} "
+                "are missing"
+            ),
             "route capacity absent from routes.csv; all transport links use capacity=None and capacity_source=absent",
-            "no populated contract table; all contracts have contract_source=diagnostic_absent",
+            (
+                "BC Fibre Database has TSA apportionment volumes without facility IDs and residue allocation shares without volumes; "
+                "no facility-level contract volume is available"
+            ),
             "admt/y and mbf/y capacity units require declared moisture/recovery factors and are rejected without them",
             "no hogfuel supply in the TSA24 assortment matrix",
             "no mill-residue (sawdust/woodchips) supply in this pilot",
@@ -1312,6 +1362,8 @@ def run_pilot(
     scenario_id: str,
     sensitivity_label: str = "",
     real_road_links: Path | None = None,
+    recovered_coordinates: Path | None = None,
+    diagnostic_contracts: Path | None = None,
 ) -> tuple[AssignmentResult, ValidationReport, Tsa24Fixture]:
     """Build, solve, validate, and write one Stage A pilot run."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1322,6 +1374,8 @@ def run_pilot(
         period=period,
         scenario_id=scenario_id,
         real_road_links=real_road_links,
+        recovered_coordinates=recovered_coordinates,
+        diagnostic_contracts=diagnostic_contracts,
     )
     result = solve_assignment(fixture.inputs)
     validation = validate_assignment(fixture.inputs, result)
@@ -1371,6 +1425,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             "FFCM path and are flagged as fallback."
         ),
     )
+    parser.add_argument(
+        "--recovered-coordinates",
+        type=Path,
+        default=DEFAULT_RECOVERED_COORDINATES,
+        help=(
+            "facilities_bc_recovered.csv. When present, its Mills DB 2015 "
+            "crosswalk replaces the legacy facility_geocoding.csv BC matches."
+        ),
+    )
+    parser.add_argument(
+        "--diagnostic-contracts",
+        type=Path,
+        default=DEFAULT_DIAGNOSTIC_CONTRACTS,
+        help=(
+            "contracts_bc_diagnostic.csv. Only rows with a matched facility "
+            "and a volume can replace the diagnostic_absent fallback."
+        ),
+    )
     parser.add_argument("--msg", action="store_true", help="Show CBC solver output.")
     args = parser.parse_args(argv)
 
@@ -1379,6 +1451,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not out_dir.is_absolute():
         out_dir = (Path.cwd() / out_dir).resolve()
 
+    recovered = args.recovered_coordinates
+    if recovered is not None and not recovered.is_absolute():
+        recovered = (Path.cwd() / recovered).resolve()
+    diagnostic = args.diagnostic_contracts
+    if diagnostic is not None and not diagnostic.is_absolute():
+        diagnostic = (Path.cwd() / diagnostic).resolve()
+
     result, validation, fixture = run_pilot(
         repo_root,
         out_dir,
@@ -1386,6 +1465,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         period=args.period,
         scenario_id=args.scenario_id,
         real_road_links=args.real_road_links,
+        recovered_coordinates=recovered,
+        diagnostic_contracts=diagnostic,
     )
     print(
         f"base: status={result.status} objective={result.objective_value_cad:,.2f} CAD; "
@@ -1408,6 +1489,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             scenario_id=f"{args.scenario_id}_ws4_quota",
             sensitivity_label="ws4_quota_306047.3_ha_period_not_annual",
             real_road_links=args.real_road_links,
+            recovered_coordinates=recovered,
+            diagnostic_contracts=diagnostic,
         )
         print(
             f"sensitivity: status={sensitivity_result.status} "

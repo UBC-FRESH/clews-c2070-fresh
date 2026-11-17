@@ -813,7 +813,7 @@ def _write_report(
         )
     previous_row = (
         (
-            "Previous TL-graph base",
+            "Previous run",
             f"{previous.get('assigned_m3', 0.0):,.0f}",
             f"{previous.get('unassigned_m3', 0.0):,.0f}",
             f"{previous.get('objective_value_cad', 0.0):,.0f}",
@@ -826,7 +826,7 @@ def _write_report(
     previous_sensitivity = summary.get("stage_a_sensitivity_previous")
     previous_sensitivity_row = (
         (
-            "Previous TL-graph ws4 quota",
+            "Previous run ws4 quota",
             f"{previous_sensitivity.get('assigned_m3', 0.0):,.0f}",
             f"{previous_sensitivity.get('unassigned_m3', 0.0):,.0f}",
             f"{previous_sensitivity.get('objective_value_cad', 0.0):,.0f}",

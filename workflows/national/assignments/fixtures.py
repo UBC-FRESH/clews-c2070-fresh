@@ -19,6 +19,7 @@ import csv
 import hashlib
 import json
 import math
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -376,25 +377,117 @@ def _supply_grade_rows(
     return tuple(sorted(grades, key=lambda item: item.grade_id)), tuple(supplies), []
 
 
-def _diagnostic_contracts(
-    facilities: Sequence[FacilityCapacity], period: str
-) -> tuple[Contract, ...]:
-    return tuple(
-        Contract(
-            contract_id=f"DIAG-{facility.facility_id}",
-            period=period,
-            facility_id=facility.facility_id,
-            accepted_grades=facility.eligible_grades,
-            min_volume_m3=0.0,
-            max_volume_m3=facility.nameplate_m3_y,
-            gate_cost_cad_m3=0.0,
-            evidence="diagnostic_no_populated_contract_table",
-            diagnostic=True,
-            notes="min=0, max=nameplate; replace with real contract terms before use",
-            contract_source="diagnostic_absent",
-        )
-        for facility in facilities
+def _diagnostic_contract_row(
+    facility: FacilityCapacity, *, period: str
+) -> Contract:
+    return Contract(
+        contract_id=f"DIAG-{facility.facility_id}",
+        period=period,
+        facility_id=facility.facility_id,
+        accepted_grades=facility.eligible_grades,
+        min_volume_m3=0.0,
+        max_volume_m3=facility.nameplate_m3_y,
+        gate_cost_cad_m3=0.0,
+        evidence="diagnostic_no_populated_contract_table",
+        diagnostic=True,
+        notes="min=0, max=nameplate; replace with real contract terms before use",
+        contract_source="diagnostic_absent",
     )
+
+
+def _load_diagnostic_contracts(
+    path: Path,
+    facilities: Sequence[FacilityCapacity],
+    *,
+    period: str,
+) -> tuple[Contract, ...]:
+    """Load only rows that carry both a matched facility and a volume.
+
+    The BC Fibre Database diagnostic table contains TSA volumes without
+    facility IDs and residue shares without volumes.  Both are evidence, not
+    facility contracts.  This loader therefore returns an empty tuple unless a
+    future table supplies a real facility-level volume.
+    """
+    if not path.exists():
+        return ()
+    rows = _read_csv(path)
+    _require_columns(
+        path,
+        rows,
+        {
+            "contract_id",
+            "facility_id",
+            "allocated_volume",
+            "unit",
+            "period_year",
+            "evidence_tier",
+            "source",
+        },
+    )
+    facility_by_id = {facility.facility_id: facility for facility in facilities}
+    contracts: list[Contract] = []
+    for row in rows:
+        facility_id = str(row["facility_id"]).strip()
+        if not facility_id:
+            continue
+        facility = facility_by_id.get(facility_id)
+        if facility is None:
+            continue
+        unit = str(row["unit"]).strip().lower()
+        if unit not in {"m3/y", "m3"}:
+            continue
+        try:
+            volume = float(str(row["allocated_volume"]).strip())
+        except ValueError:
+            continue
+        if not math.isfinite(volume) or volume <= 0.0:
+            continue
+        contract_id = str(row["contract_id"]).strip() or f"BCFB-{facility_id}"
+        contracts.append(
+            Contract(
+                contract_id=contract_id,
+                period=period,
+                facility_id=facility_id,
+                accepted_grades=facility.eligible_grades,
+                min_volume_m3=0.0,
+                max_volume_m3=volume,
+                gate_cost_cad_m3=0.0,
+                evidence=(
+                    f"evidence_tier={row['evidence_tier']};"
+                    f"source={row['source']};"
+                    "diagnostic_workbook_not_a_supply_agreement"
+                ),
+                diagnostic=True,
+                notes=(
+                    "Diagnostic BC Fibre Database allocation; min=0, max=reported "
+                    "volume; not a real supply agreement."
+                ),
+                contract_source="bc_fibre_db_2018_diagnostic",
+            )
+        )
+    return tuple(contracts)
+
+
+def _diagnostic_contracts(
+    facilities: Sequence[FacilityCapacity],
+    period: str,
+    *,
+    diagnostic_table: Path | None = None,
+) -> tuple[Contract, ...]:
+    populated: dict[str, list[Contract]] = defaultdict(list)
+    if diagnostic_table is not None:
+        for contract in _load_diagnostic_contracts(
+            diagnostic_table, facilities, period=period
+        ):
+            populated[contract.facility_id].append(contract)
+    contracts: list[Contract] = []
+    for facility in facilities:
+        facility_contracts = populated.get(facility.facility_id)
+        if facility_contracts:
+            contracts.extend(facility_contracts)
+        else:
+            contracts.append(_diagnostic_contract_row(facility, period=period))
+    return tuple(sorted(contracts, key=lambda contract: contract.contract_id))
 
 
 def _class_mix(facility_table: FacilityTable) -> dict[str, Any]:
@@ -498,18 +591,18 @@ def _assumption_rows(
         ),
         _assumption(
             "coordinate",
-            "Coordinates use Mills DB first, CFS suppliers.dbf second, an FFCM TL/water hub proxy third, and missing last; no Euclidean guesses are used.",
-            f"mills_db={coverage.get('mills_db', 0)};suppliers_dbf={coverage.get('suppliers_dbf', 0)};tl_anchor_proxy={coverage.get('tl_anchor_proxy', 0)};missing={coverage.get('missing', 0)}",
+            "Coordinates use a corroborated Mills DB 2015 crosswalk, then an FFCM TL/water hub proxy, then missing; exact codes alone are not trusted because the 2015 and 2018 code systems collide.",
+            f"mills_db_2015={coverage.get('mills_db_2015', 0)};suppliers_dbf={coverage.get('suppliers_dbf', 0)};tl_anchor_proxy={coverage.get('tl_anchor_proxy', 0)};missing={coverage.get('missing', 0)}",
             "facility_count",
-            "facility_geocoding.csv;routes.csv",
-            "TL/water proxy uses the median coordinate of geocoded facilities directly attached to the same hub; confidence is low.",
+            "facilities_bc_recovered.csv;bc_facility_match_conflicts.csv;routes.csv",
+            "Name, city, and coordinate evidence corroborate every code match; collisions are rejected and written to the conflict table.",
         ),
         _assumption(
             "coordinate",
             "Stage A scope coordinate coverage is tracked separately from all BC facilities.",
-            f"mills_db={coverage_in_scope.get('mills_db', 0)};suppliers_dbf={coverage_in_scope.get('suppliers_dbf', 0)};tl_anchor_proxy={coverage_in_scope.get('tl_anchor_proxy', 0)};missing={coverage_in_scope.get('missing', 0)}",
+            f"mills_db_2015={coverage_in_scope.get('mills_db_2015', 0)};suppliers_dbf={coverage_in_scope.get('suppliers_dbf', 0)};tl_anchor_proxy={coverage_in_scope.get('tl_anchor_proxy', 0)};missing={coverage_in_scope.get('missing', 0)}",
             "facility_count",
-            "facility_geocoding.csv;routes.csv",
+            "facilities_bc_recovered.csv;routes.csv",
             "Missing coordinates do not fabricate a location and do not by themselves exclude a facility from the LP.",
         ),
         _assumption(
@@ -518,7 +611,7 @@ def _assumption_rows(
             transport_summary.get("anchor", {}).get("anchor_id", ""),
             "facility_id",
             "facility_geocoding.csv;routes.csv",
-            "Anchor coordinate is Mills DB 53.99,-122.69 (BC-SAW-488); all distances are relative to this proxy.",
+            "Anchor coordinate is Mills DB 53.99,-122.69 (FFCM BC-SAW-506, Canfor Prince George); all distances are relative to this proxy.",
         ),
         _assumption(
             "transport",
@@ -546,10 +639,10 @@ def _assumption_rows(
         ),
         _assumption(
             "contracts",
-            "Contracts are diagnostic: min=0 and max=facility nameplate; no populated real contract table exists.",
+            "Contracts are diagnostic: min=0 and max=facility nameplate. The BC Fibre Database contributes TSA apportionment volumes without facility IDs and residue shares without volumes, so no facility-level contract volume is inferred.",
             "",
             "m3",
-            "diagnostic_absent",
+            "diagnostic_absent;bc_fibre_db_2018_diagnostic",
             "contract_source=diagnostic_absent on every contract; compliance is a bound check, not commercial evidence.",
         ),
         _assumption(
@@ -587,6 +680,8 @@ def build_tsa24_fixture(
     period: str = "2026",
     scenario_id: str = "tsa24_bc_stage_a_pilot",
     real_road_links: Path | None = None,
+    recovered_coordinates: Path | None = None,
+    diagnostic_contracts: Path | None = None,
 ) -> Tsa24Fixture:
     """Build the TSA24/BC Stage A problem from parsed archive and derived tables."""
     if not math.isfinite(float(area_ha)) or float(area_ha) <= 0.0:
@@ -637,10 +732,34 @@ def build_tsa24_fixture(
     with target_path.open(encoding="utf-8") as handle:
         target_stand = json.load(handle)
 
+    recovered_path: Path | None = None
+    if recovered_coordinates is not None:
+        recovered_path = (
+            recovered_coordinates
+            if recovered_coordinates.is_absolute()
+            else repo_root / recovered_coordinates
+        )
+        if not recovered_path.exists():
+            raise FixtureError(
+                f"recovered coordinate table is missing: {recovered_path}"
+            )
+    contract_table: Path | None = None
+    if diagnostic_contracts is not None:
+        contract_table = (
+            diagnostic_contracts
+            if diagnostic_contracts.is_absolute()
+            else repo_root / diagnostic_contracts
+        )
+        if not contract_table.exists():
+            raise FixtureError(
+                f"diagnostic contract table is missing: {contract_table}"
+            )
     grades, supplies, _ = _supply_grade_rows(
         matrix_path, ledger_path, float(area_ha), period
     )
-    facility_table = build_facility_table(repo_root)
+    facility_table = build_facility_table(
+        repo_root, recovered_coordinates=recovered_path
+    )
     facilities, line_screen = build_facility_capacities(
         repo_root, facility_table, period=period
     )
@@ -673,7 +792,9 @@ def build_tsa24_fixture(
     }
     facility_table = facility_table.with_transport_status(status_by_facility)
     links = transport_table.to_transport_links(period)
-    contracts = _diagnostic_contracts(facilities, period)
+    contracts = _diagnostic_contracts(
+        facilities, period, diagnostic_table=contract_table
+    )
 
     assumptions = _assumption_rows(
         float(area_ha), target_stand, facility_table, transport_table
@@ -772,6 +893,14 @@ def build_tsa24_fixture(
     }
     if real_path is not None:
         source_hashes[str(real_path.relative_to(repo_root))] = _sha256(real_path)
+    if recovered_path is not None:
+        source_hashes[str(recovered_path.relative_to(repo_root))] = _sha256(
+            recovered_path
+        )
+    if contract_table is not None:
+        source_hashes[str(contract_table.relative_to(repo_root))] = _sha256(
+            contract_table
+        )
     class_mix = _class_mix(facility_table)
     config = {
         "area_ha": float(area_ha),
@@ -786,6 +915,19 @@ def build_tsa24_fixture(
         "tsa24_anchor": dict(transport_table.summary.get("anchor", {})),
         "real_road_links": (
             str(real_path.relative_to(repo_root)) if real_path is not None else ""
+        ),
+        "recovered_coordinates": (
+            str(recovered_path.relative_to(repo_root))
+            if recovered_path is not None
+            else ""
+        ),
+        "diagnostic_contracts": (
+            str(contract_table.relative_to(repo_root))
+            if contract_table is not None
+            else ""
+        ),
+        "diagnostic_contract_sources": sorted(
+            {contract.contract_source for contract in contracts}
         ),
         "unit_registry": list(units.unit_registry_rows()),
         "ffcm_bc_class_mix": class_mix,
