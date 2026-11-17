@@ -469,7 +469,8 @@ def _make_link(
         distance_basis=distance_basis,
         cost_basis=(
             "stage_a_transporter_rates:BC_residue_truck;"
-            "fuel_plus_operating_per_hour_over_speed;no_transload"
+            "fuel_plus_operating_per_hour_over_speed;"
+            "vehicle_capacity=25_bdt;density=0.45_odt_m3;no_transload"
         ),
         evidence=evidence,
     )
