@@ -54,6 +54,7 @@ __all__ = [
     "MODEL_RUNS",
     "OUTPUT_DIR",
     "PLANTS",
+    "SENSITIVITY_RUNS",
     "SUPPLY_DIR",
     "CaseSupply",
     "Lcoe",
@@ -65,6 +66,8 @@ __all__ = [
     "build_cap_metrics",
     "build_lcoe_rows",
     "build_manifest",
+    "build_sensitivity",
+    "build_sensitivity_rows",
     "capital_recovery_factor",
     "load_all_cases",
     "load_case_supply",
@@ -235,6 +238,7 @@ MODEL_RUNS: Mapping[str, Mapping[str, object]] = {
             "2050": 1.031283,
             "2070": 0.0,
         },
+        "emissions_total_mt": 25.749782,
         "cap_binding": False,
     },
     "bc_base_national_rollup": {
@@ -263,6 +267,7 @@ MODEL_RUNS: Mapping[str, Mapping[str, object]] = {
             "2050": 1.031283,
             "2070": 0.0,
         },
+        "emissions_total_mt": 25.749782,
         "cap_binding": False,
     },
     "diag_hydro_frozen_base": {
@@ -320,6 +325,138 @@ MODEL_RUNS: Mapping[str, Mapping[str, object]] = {
             "2070": 52.103015,
         },
         "cap_binding": False,
+    },
+}
+
+# Policy sensitivity runs recorded on 2026-11-17.  Both were run in a disposable
+# copy of the public repository at ``/tmp/osecan_sens``; the public clone was not
+# modified.  The forcing conditions are deliberately narrow:
+#
+# * ``carbon_200``: EmissionsPenalty $200/t from 2026 onward; 2021-2025 keep the
+#   original $95/t placeholder.  All other parameters are the BC-base rollup.
+# * ``carbon_200_hydro_frozen``: the same carbon price plus a
+#   TotalTechnologyAnnualActivityUpperLimit on every PWRHYD<zone> fixed at its
+#   2021 base-run activity.  This is the previous hydro-frozen diagnostic with
+#   the carbon price raised.
+SENSITIVITY_RUNS: Mapping[str, Mapping[str, object]] = {
+    "carbon_200": {
+        "description": "BC base with a $200/t CO2 penalty from 2026",
+        "forcing": (
+            "EmissionsPenalty 95 $/t for 2021-2025 and 200 $/t from 2026; "
+            "BC-base national SUPBCW rollup unchanged."
+        ),
+        "status": "optimal",
+        "objective_musd": 1_331_527.92,
+        "objective_delta_musd": 240.67,
+        "rows": 273_001,
+        "cols": 234_900,
+        "supbcw_pj": {
+            "total": 0.0,
+            "2021": 0.0,
+            "2025": 0.0,
+            "2030": 0.0,
+            "2050": 0.0,
+            "2070": 0.0,
+        },
+        "supbsw_pj": {"total": 0.0},
+        "pwrbcw_pj": {
+            "total": 0.0,
+            "2021": 0.0,
+            "2025": 0.0,
+            "2030": 0.0,
+            "2050": 0.0,
+            "2070": 0.0,
+        },
+        "pwr_bio_pj": {"total": 0.0},
+        "pwr_hyd_pj": {
+            "2021": 2230.744902,
+            "2025": 2265.089874,
+            "2030": 2413.615279,
+            "2050": 3252.16902,
+            "2070": 3252.16902,
+        },
+        "cap_binding": False,
+        "cap_binding_years": "",
+        "max_utilisation_fraction": 0.0,
+        "emissions_mt": {
+            "2021": 0.009171,
+            "2025": 0.0,
+            "2030": 0.0,
+            "2050": 0.0,
+            "2070": 0.0,
+            "total": 1.856899,
+        },
+        "generation_2050_pj": {"HYD": 3252.16902},
+    },
+    "carbon_200_hydro_frozen": {
+        "description": "BC base with $200/t CO2 and hydro frozen at 2021 activity",
+        "forcing": (
+            "EmissionsPenalty 95 $/t for 2021-2025 and 200 $/t from 2026; "
+            "every PWRHYD<zone> activity upper limit fixed at its 2021 base-run "
+            "activity in all years."
+        ),
+        "status": "optimal",
+        "objective_musd": 1_371_553.35,
+        "objective_delta_musd": 40_266.10,
+        "rows": 273_651,
+        "cols": 234_900,
+        "supbcw_pj": {
+            "total": 2104.9812,
+            "2021": 0.0,
+            "2022": 42.9588,
+            "2025": 42.9588,
+            "2028": 42.9588,
+            "2030": 42.9588,
+            "2040": 42.9588,
+            "2050": 42.9588,
+            "2060": 42.9588,
+            "2070": 42.9588,
+        },
+        "supbsw_pj": {"total": 0.0},
+        "pwrbcw_pj": {
+            "total": 565.855166,
+            "2021": 0.0,
+            "2025": 11.548065,
+            "2030": 11.548065,
+            "2040": 11.548065,
+            "2050": 11.548065,
+            "2060": 11.548064,
+            "2070": 11.548064,
+        },
+        "pwr_bio_pj": {"total": 0.0},
+        "pwr_hyd_pj": {
+            "2021": 2230.416314,
+            "2025": 2230.299272,
+            "2030": 2230.54127,
+            "2050": 2230.54127,
+            "2070": 2230.54127,
+        },
+        "pwrbcw_2050_by_zone_pj": {
+            "A1": 0.048224,
+            "A2": 0.532557,
+            "S1": 2.786811,
+            "Q1": 3.381588,
+            "Q2": 2.033405,
+            "T1": 2.588555,
+            "L1": 0.176925,
+        },
+        "cap_binding": True,
+        "cap_binding_years": "2028-2070",
+        "max_utilisation_fraction": 1.0,
+        "emissions_mt": {
+            "2021": 0.023274,
+            "2025": 0.42273,
+            "2030": 1.647079,
+            "2050": 1.669525,
+            "2070": 0.0,
+            "total": 43.990577,
+        },
+        "generation_2050_pj": {
+            "HYD": 2230.54127,
+            "WND": 977.343911,
+            "NGS": 32.735776,
+            "BCW": 11.548065,
+        },
     },
 }
 
@@ -1037,12 +1174,93 @@ def build_cap_binding(
         },
         "conclusion": (
             "The 50 PJ placeholder and the 43-50 PJ BC base cap do not bind "
-            "in any run. The model dispatches zero BCW because unconstrained "
-            "hydro is cheaper in the base model, and the placeholder gas "
-            "plant is cheaper than PWRBCW even when hydro is frozen. The "
-            "generic-BIO bypass means a BCW cap would not cap biomass "
-            "electricity in any case."
+            "in any baseline or diagnostic run. The model dispatches zero BCW "
+            "because unconstrained hydro is cheaper in the base model, and the "
+            "placeholder gas plant is cheaper than PWRBCW even when hydro is "
+            "frozen. The generic-BIO bypass means a BCW cap would not cap "
+            "biomass electricity in any case. The policy sensitivity recorded "
+            "in the run report shows the cap can bind when the CO2 price is "
+            "$200/t and hydro is frozen at 2021 activity."
         ),
+    }
+
+
+def build_sensitivity() -> dict[str, object]:
+    """Return the recorded policy-sensitivity payload.
+
+    The payload is evidence transcribed from the actual solves, not a
+    re-simulation.  It is written to ``sensitivity/sensitivity_runs.json`` and
+    summarised in the run report.
+
+    Returns:
+        A JSON-ready sensitivity payload.
+    """
+    baseline = MODEL_RUNS["bc_base_national_rollup"]
+    return {
+        "schema_version": "1.0",
+        "model": {
+            "repository": MODEL_REPOSITORY,
+            "commit": MODEL_COMMIT,
+            "package": MODEL_PACKAGE,
+            "solver": MODEL_SOLVER,
+            "scenario": MODEL_SCENARIO,
+            "horizon": f"{HORIZON_START}-{HORIZON_END}",
+            "region": "CAN",
+        },
+        "baseline": {
+            "run": "bc_base_national_rollup",
+            "objective_musd": baseline["objective_musd"],
+            "supbcw_total_pj": baseline["supbcw_pj"]["total"],
+            "pwrbcw_total_pj": baseline["pwrbcw_pj"]["total"],
+            "pwr_bio_total_pj": baseline["pwr_bio_pj"]["total"],
+            "cap_binding": baseline["cap_binding"],
+            "emissions_total_mt": baseline["emissions_total_mt"],
+        },
+        "forcing_conditions": {
+            "carbon_200": (
+                "EmissionsPenalty 95 $/t for 2021-2025 and 200 $/t from 2026; "
+                "all other parameters from the BC-base national rollup."
+            ),
+            "carbon_200_hydro_frozen": (
+                "The carbon_200 forcing plus a TotalTechnologyAnnualActivity"
+                "UpperLimit on every PWRHYD<zone> equal to its 2021 base-run "
+                "activity in all years."
+            ),
+        },
+        "runs": dict(SENSITIVITY_RUNS),
+        "conditions_for_bcw_dispatch": [
+            (
+                "The CO2 price must exceed the BCW-vs-gas parity price: about "
+                "160 $/t for the base case, 124 $/t for the high case, and "
+                "214 $/t for the low case."
+            ),
+            (
+                "A cheaper clean firm resource must be constrained. With "
+                "unconstrained hydro, even $200/t leaves BCW at zero because "
+                "hydro expands to 3,252 PJ in 2050."
+            ),
+            (
+                "With $200/t and hydro frozen at 2021 activity, SUPBCW reaches the "
+                "42.959 PJ cap and PWRBCW produces 11.548 PJ/yr of electricity."
+            ),
+        ],
+        "limitations": [
+            (
+                "The model has a national SUPBCW cap only. Zonal BC caps "
+                "(SUPBCWB1/B2) cannot be represented without a model-structure "
+                "change."
+            ),
+            (
+                "BCW is a national fuel. In the hydro-frozen run PWRBCW dispatches "
+                "in A1/A2/S1/Q1/Q2/T1/L1, not in B1/B2; the model does not allocate "
+                "BC residue to BC."
+            ),
+            (
+                "PWRBIO stays at zero in both sensitivity runs because wind is "
+                "cheaper than generic BIO; the generic-BIO bypass is latent, not "
+                "active."
+            ),
+        ],
     }
 
 
@@ -1153,10 +1371,176 @@ def _fmt(value: object, digits: int = 2) -> str:
     return str(value)
 
 
+def build_sensitivity_rows(
+    sensitivity: Mapping[str, object],
+) -> list[dict[str, object]]:
+    """Flatten the sensitivity payload into one CSV row per run.
+
+    Args:
+        sensitivity: Output of :func:`build_sensitivity`.
+
+    Returns:
+        Rows suitable for ``sensitivity/sensitivity_summary.csv``.
+    """
+    baseline = sensitivity["baseline"]
+    rows: list[dict[str, object]] = [
+        {
+            "run": "bc_base_national_rollup",
+            "forcing": "documented 95-115 $/t carbon schedule",
+            "status": "optimal",
+            "objective_musd": baseline["objective_musd"],
+            "objective_delta_musd": 0.0,
+            "supbcw_total_pj": baseline["supbcw_total_pj"],
+            "pwrbcw_total_pj": baseline["pwrbcw_total_pj"],
+            "pwr_bio_total_pj": baseline["pwr_bio_total_pj"],
+            "cap_binding": baseline["cap_binding"],
+            "cap_binding_years": "",
+            "emissions_total_mt": baseline["emissions_total_mt"],
+        }
+    ]
+    for name in ("carbon_200", "carbon_200_hydro_frozen"):
+        run = sensitivity["runs"][name]
+        rows.append(
+            {
+                "run": name,
+                "forcing": run["forcing"],
+                "status": run["status"],
+                "objective_musd": run["objective_musd"],
+                "objective_delta_musd": run["objective_delta_musd"],
+                "supbcw_total_pj": run["supbcw_pj"]["total"],
+                "pwrbcw_total_pj": run["pwrbcw_pj"]["total"],
+                "pwr_bio_total_pj": run["pwr_bio_pj"]["total"],
+                "cap_binding": run["cap_binding"],
+                "cap_binding_years": run["cap_binding_years"],
+                "emissions_total_mt": run["emissions_mt"]["total"],
+            }
+        )
+    return rows
+
+
+def _sensitivity_markdown(sensitivity: Mapping[str, object]) -> list[str]:
+    runs = sensitivity["runs"]
+    baseline = sensitivity["baseline"]
+    lines = [
+        "## 4. Policy sensitivity",
+        "",
+        "Two forcing cases were run on 2026-11-17 in a disposable copy of the",
+        "public model at `/tmp/osecan_sens`; the public clone was not modified.",
+        "Both use the BC-base national rollup (42.959 PJ cap from 2028,",
+        "2.456978 $/GJ). The only model change is the CO2 penalty function, plus",
+        "the hydro upper limits in the second case.",
+        "",
+        "| Run | Forcing | Status | Objective (M$) | SUPBCW total (PJ) | PWRBCW total (PJ) | Cap binds | Emissions total (Mt) |",
+        "|---|---|---|---:|---:|---:|---|---:|",
+        (
+            f"| BC base | documented 95-115 $/t | optimal | "
+            f"{_fmt(baseline['objective_musd'])} | "
+            f"{_fmt(baseline['supbcw_total_pj'], 3)} | "
+            f"{_fmt(baseline['pwrbcw_total_pj'], 3)} | no | "
+            f"{_fmt(baseline['emissions_total_mt'], 3)} |"
+        ),
+    ]
+    for name in ("carbon_200", "carbon_200_hydro_frozen"):
+        run = runs[name]
+        lines.append(
+            f"| {name} | {run['description']} | {run['status']} | "
+            f"{_fmt(run['objective_musd'])} | "
+            f"{_fmt(run['supbcw_pj']['total'], 3)} | "
+            f"{_fmt(run['pwrbcw_pj']['total'], 3)} | "
+            f"{'yes' if run['cap_binding'] else 'no'} | "
+            f"{_fmt(run['emissions_mt']['total'], 3)} |"
+        )
+    lines += [
+        "",
+        "`SUPBSW` and `PWRBIO` are zero in both sensitivity runs.",
+        "",
+        "### SUPBCW activity by year (PJ)",
+        "",
+        "| Run | 2021 | 2025 | 2030 | 2050 | 2070 | Total |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for name in ("carbon_200", "carbon_200_hydro_frozen"):
+        sup = runs[name]["supbcw_pj"]
+        lines.append(
+            f"| {name} | {_fmt(sup['2021'], 3)} | {_fmt(sup['2025'], 3)} | "
+            f"{_fmt(sup['2030'], 3)} | {_fmt(sup['2050'], 3)} | "
+            f"{_fmt(sup['2070'], 3)} | {_fmt(sup['total'], 3)} |"
+        )
+    lines += [
+        "",
+        "### PWRBCW electricity by year (PJ)",
+        "",
+        "| Run | 2021 | 2025 | 2030 | 2050 | 2070 | Total |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for name in ("carbon_200", "carbon_200_hydro_frozen"):
+        pwr = runs[name]["pwrbcw_pj"]
+        lines.append(
+            f"| {name} | {_fmt(pwr['2021'], 3)} | {_fmt(pwr['2025'], 3)} | "
+            f"{_fmt(pwr['2030'], 3)} | {_fmt(pwr['2050'], 3)} | "
+            f"{_fmt(pwr['2070'], 3)} | {_fmt(pwr['total'], 3)} |"
+        )
+    lines += [
+        "",
+        "At $200/t without a hydro constraint, biomass stays at zero: hydro",
+        "expands to 3,252 PJ in 2050 and the objective rises by only 240.67 M$",
+        "while cumulative emissions fall to 1.86 Mt. The carbon price changes",
+        "the merit order against gas, but not against hydro.",
+        "",
+        "With $200/t and hydro frozen at 2021 activity, SUPBCW reaches",
+        "42.959 PJ in every year from 2022 and the cap binds from 2028 through",
+        "2070 (100.0% utilisation). PWRBCW produces 11.548 PJ/yr of electricity",
+        "(3.21 TWh), or 0.35% of 2050 generation. Wind supplies 977.3 PJ in",
+        "2050, gas 32.7 PJ, and PWRBIO remains zero. The objective rises by",
+        "40,266.10 M$.",
+        "",
+        "### Conditions for BCW dispatch",
+        "",
+    ]
+    for item in sensitivity["conditions_for_bcw_dispatch"]:
+        lines.append(f"- {item}")
+    lines += [
+        "",
+        "The cap that binds is the national `SUPBCW` cap. The model has no",
+        "zonal BC supply technology, so a zonal cap cannot be tested here.",
+        "",
+        "The documented 95-115 $/t schedule is below the base-case parity",
+        "price of about 160 $/t even with hydro frozen, which is why the",
+        "earlier hydro-frozen diagnostic also had zero BCW.",
+        "",
+        "### Sensitivity limitations",
+        "",
+    ]
+    for item in sensitivity["limitations"]:
+        lines.append(f"- {item}")
+    lines += [
+        "",
+        "Reproduction (disposable copy; the public clone is unchanged):",
+        "",
+        "```bash",
+        "cd /tmp/osecan_sens",
+        "# build_params.py: return 95.0 if y < 2026 else 200.0",
+        ".venv/bin/python -m osecan.cli build-params --out data/params",
+        '.venv/bin/python -m osecan.cli clean-demand "Current Measures"',
+        ".venv/bin/python apply_bc_base.py",
+        ".venv/bin/python -m osecan.pipeline.assemble --out results/<run>/input",
+        ".venv/bin/otoole convert csv datafile results/<run>/input results/<run>/osecan.txt config/otoole.yaml",
+        ".venv/bin/python -m osecan.pipeline.solve --run results/<run>",
+        "```",
+        "",
+        "For the hydro-frozen case, append the 650 `PWRHYD<zone>` rows from",
+        "`results/diag_hydro_frozen/input/TotalTechnologyAnnualActivityUpperLimit.csv`",
+        "to the assembled input before `otoole convert`.",
+        "",
+    ]
+    return lines
+
+
 def _markdown_report(
     lcoe_rows: Sequence[Mapping[str, object]],
     comparison_rows: Sequence[Mapping[str, object]],
     cap_binding: Mapping[str, object],
+    sensitivity: Mapping[str, object],
     availability: Mapping[str, object],
 ) -> str:
     lookup = {(str(r["case"]), str(r["plant"])): r for r in lcoe_rows}
@@ -1410,8 +1794,8 @@ def _markdown_report(
         "",
         "### Does the cap bind?",
         "",
-        "**No.** In every run, `SUPBCW` activity is zero. The cap is an upper",
-        "bound that is never approached. The reasons are:",
+        "**No** in every baseline and diagnostic run: `SUPBCW` activity is zero.",
+        "The cap is an upper bound that is never approached. The reasons are:",
         "",
         f"1. In the base model, unconstrained hydro is {_fmt(lookup[('generic', 'PWRHYD')]['lcoe_usd_per_mwh'])} $/MWh,",
         f"   below PWRBCW low/base/high ({_fmt(lookup[('low', 'PWRBCW')]['lcoe_usd_per_mwh'])} /",
@@ -1447,7 +1831,8 @@ def _markdown_report(
         f"the gas LCOE ({_fmt(lookup[('generic', 'PWRBIO')]['lcoe_usd_per_mwh'])} vs",
         f"{_fmt(lookup[('carbon_2030', 'PWRNGS')]['lcoe_usd_per_mwh'])} $/MWh at $115/t).",
         "",
-        "## 4. Assumptions and limitations",
+        *_sensitivity_markdown(sensitivity),
+        "## 5. Assumptions and limitations",
         "",
         "- LCOE is a simplified busbar calculation. It excludes transmission,",
         "  backup, balancing, and financing outside the 5% discount rate.",
@@ -1463,9 +1848,11 @@ def _markdown_report(
         "- The model's `TotalDiscountedCost.csv` extraction is empty in this",
         "  version; the objective is read from the GLPK solution instead.",
         "",
-        "## 5. Verification",
+        "## 6. Verification",
         "",
-        "- Four OSeCAN solves returned `optimal` (two base, two diagnostics).",
+        "- Four original OSeCAN solves returned `optimal` (two base, two diagnostics).",
+        "- The BC-base control replication and both policy sensitivity solves",
+        "  returned `optimal`; the control reproduced 1,331,287.25 M$.",
         "- The zonal `harmonize` probe returned exit 1 with the expected",
         "  `TECHNOLOGY not in SETS` errors.",
         "- The reduced analysis is re-built by",
@@ -1473,14 +1860,15 @@ def _markdown_report(
         "- The focused test suite is",
         "  `python -m pytest -q workflows/national/clews/tests/test_osecan_biomass_module.py`.",
         "",
-        "## 6. Gaps and next steps",
+        "## 7. Gaps and next steps",
         "",
         "1. Add `SUPBCWB1/B2` (and `BCWB1/B2` fuels) to `model_structure.py` if",
         "   zonal BC supply constraints are required. The current model cannot",
         "   represent them.",
         "2. Add a hydro resource constraint or a provincial policy that makes",
-        "   biomass compete. The current unconstrained hydro makes the biomass",
-        "   module dormant.",
+        "   biomass compete. The $200/t sensitivity shows that the carbon price",
+        "   alone is not enough while hydro is unconstrained; with hydro frozen,",
+        "   BCW reaches the 42.959 PJ cap at $200/t.",
         "3. Replace the generic `RNWBIO` $3/GJ uncapped supply with a WS3/FABLE",
         "   biomass supply curve, or add a biomass-wide cap. Otherwise the BCW",
         "   cap is bypassed by generic BIO.",
@@ -1536,6 +1924,7 @@ def build_all(root: Path = REPO_ROOT) -> dict[str, object]:
     comparison_rows = build_bcw_vs_bio_rows(cases, lcoe_rows)
     cap_metrics = build_cap_metrics(cases)
     cap_binding = build_cap_binding(cases, cap_metrics, comparison_rows)
+    sensitivity = build_sensitivity()
     availability = build_availability()
     generated_utc = str(availability["generated_utc"])
     return {
@@ -1544,6 +1933,7 @@ def build_all(root: Path = REPO_ROOT) -> dict[str, object]:
         "comparison_rows": comparison_rows,
         "cap_metrics": cap_metrics,
         "cap_binding": cap_binding,
+        "sensitivity": sensitivity,
         "availability": availability,
         "generated_utc": generated_utc,
     }
@@ -1568,6 +1958,8 @@ def write_artifacts(root: Path = REPO_ROOT) -> dict[str, object]:
     cap_path = output_dir / "cap_binding_analysis.json"
     report_path = output_dir / "OSECAN_RUN_REPORT.md"
     runs_path = output_dir / "model_runs.json"
+    sensitivity_path = output_dir / "sensitivity" / "sensitivity_runs.json"
+    sensitivity_csv_path = output_dir / "sensitivity" / "sensitivity_summary.csv"
     manifest_path = output_dir / "manifest.json"
 
     _write_json(availability_path, built["availability"])
@@ -1582,11 +1974,14 @@ def write_artifacts(root: Path = REPO_ROOT) -> dict[str, object]:
             "runs": built["cap_binding"]["runs"],
         },
     )
+    _write_json(sensitivity_path, built["sensitivity"])
+    _write_csv(sensitivity_csv_path, build_sensitivity_rows(built["sensitivity"]))
     report_path.write_text(
         _markdown_report(
             built["lcoe_rows"],
             built["comparison_rows"],
             built["cap_binding"],
+            built["sensitivity"],
             built["availability"],
         ),
         encoding="utf-8",
@@ -1599,6 +1994,8 @@ def write_artifacts(root: Path = REPO_ROOT) -> dict[str, object]:
         cap_path,
         report_path,
         runs_path,
+        sensitivity_path,
+        sensitivity_csv_path,
     ]
     manifest = build_manifest(
         root,

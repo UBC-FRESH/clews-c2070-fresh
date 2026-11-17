@@ -189,6 +189,24 @@ class OsecanBiomassModuleTest(unittest.TestCase):
             self.assertEqual(run["pwr_bio_pj"]["total"], 0.0)
         self.assertIn("do not bind", cap_binding["conclusion"])
 
+    def test_policy_sensitivity(self) -> None:
+        sensitivity = self.built["sensitivity"]
+        runs = sensitivity["runs"]
+        carbon = runs["carbon_200"]
+        self.assertFalse(carbon["cap_binding"])
+        self.assertEqual(carbon["supbcw_pj"]["total"], 0.0)
+        self.assertEqual(carbon["pwrbcw_pj"]["total"], 0.0)
+        frozen = runs["carbon_200_hydro_frozen"]
+        self.assertTrue(frozen["cap_binding"])
+        self.assertEqual(frozen["cap_binding_years"], "2028-2070")
+        self.assertAlmostEqual(frozen["supbcw_pj"]["2030"], 42.958794801, places=4)
+        self.assertAlmostEqual(frozen["supbcw_pj"]["total"], 2104.9812, places=3)
+        self.assertAlmostEqual(frozen["pwrbcw_pj"]["2050"], 11.548065, places=6)
+        self.assertEqual(frozen["pwr_bio_pj"]["total"], 0.0)
+        self.assertEqual(frozen["emissions_mt"]["total"], 43.990577)
+        self.assertIn("160 $/t", sensitivity["conditions_for_bcw_dispatch"][0])
+        self.assertGreater(frozen["objective_musd"], carbon["objective_musd"])
+
     def test_zonal_files_are_rejected(self) -> None:
         compatibility = self.built["cap_binding"]["zonal_compatibility"]
         self.assertEqual(compatibility["status"], "rejected")
@@ -221,7 +239,10 @@ class OsecanBiomassModuleTest(unittest.TestCase):
             manifest["status"], "fresh_side_provisional_not_c2070_official"
         )
         self.assertGreaterEqual(len(manifest["inputs"]), 14)
-        self.assertGreaterEqual(len(manifest["outputs"]), 6)
+        self.assertGreaterEqual(len(manifest["outputs"]), 8)
+        for name in ("sensitivity_runs.json", "sensitivity_summary.csv"):
+            path = OUTPUT_DIR_PATH / "sensitivity" / name
+            self.assertTrue(path.exists(), path)
         for row in manifest["outputs"]:
             path = REPO_ROOT / row["path"]
             self.assertTrue(path.exists(), row["path"])
