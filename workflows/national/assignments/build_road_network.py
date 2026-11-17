@@ -466,6 +466,32 @@ def _stats(values: Sequence[float]) -> dict[str, float | int]:
     }
 
 
+def _cost_comparison(
+    real_links: pd.DataFrame, ffcm_links: pd.DataFrame
+) -> dict[str, Any]:
+    real = real_links[["facility", "grade_id", "cost_cad_m3"]].rename(
+        columns={"facility": "facility_id"}
+    )
+    ffcm = ffcm_links[["destination", "grade_id", "cost_cad_m3"]].rename(
+        columns={"destination": "facility_id"}
+    )
+    merged = real.merge(
+        ffcm, on=["facility_id", "grade_id"], suffixes=("_real", "_ffcm")
+    )
+    by_grade: dict[str, Any] = {}
+    for grade_id, group in merged.groupby("grade_id"):
+        real_cost = group["cost_cad_m3_real"].astype(float).tolist()
+        ffcm_cost = group["cost_cad_m3_ffcm"].astype(float).tolist()
+        delta = [new - old for new, old in zip(real_cost, ffcm_cost)]
+        by_grade[str(grade_id)] = {
+            "matched_links": len(group),
+            "real_cost_cad_m3": _stats(real_cost),
+            "ffcm_cost_cad_m3": _stats(ffcm_cost),
+            "real_minus_ffcm_cad_m3": _stats(delta),
+        }
+    return {"matched_links": len(merged), "by_grade": by_grade}
+
+
 def _read_ffcm_distances(path: Path) -> dict[str, float]:
     rows = pd.read_csv(path)
     required = {"destination", "distance_km"}
@@ -757,6 +783,17 @@ def _write_report(
                 f"{row.cost_cad_m3_km:.6f}",
             )
         )
+    cost_comparison = summary.get("cost_comparison", {})
+    cost_comparison_rows = [
+        (
+            grade,
+            values.get("matched_links", 0),
+            f"{values['real_cost_cad_m3']['median']:.2f}",
+            f"{values['ffcm_cost_cad_m3']['median']:.2f}",
+            f"{values['real_minus_ffcm_cad_m3']['median']:.2f}",
+        )
+        for grade, values in sorted(cost_comparison.get("by_grade", {}).items())
+    ]
 
     stage_rows: list[tuple[Any, ...]] = []
     for label, data in (("Base 1,000 ha", stage_a), ("ws4 quota", None)):
@@ -921,6 +958,10 @@ m3 at the grade density, and costs/rates come from
 `capacity_m3=None`, `capacity_source=absent`.
 
 {_markdown_table(['Grade', 'Transporter', 'CAD/km', 'Capacity m3', 'CAD/m3/km'], cost_lines)}
+
+Matched real/FFCM cost comparison (same facility-grade pairs):
+
+{_markdown_table(['Grade', 'Links', 'Real median CAD/m3', 'FFCM median CAD/m3', 'Delta median CAD/m3'], cost_comparison_rows) if cost_comparison_rows else 'No matched cost rows.'}
 
 ## 4. Stage A re-run
 
@@ -1242,6 +1283,9 @@ def _build_mode(
     )
     comparison = _comparison(real_distances, ffcm_distances, old_distances)
     summary = _summary_payload(graph, snap, links, facilities, rates, comparison)
+    summary["cost_comparison"] = _cost_comparison(
+        links, pd.read_csv(ffcm_path)
+    )
     summary["stage_a_previous"] = _read_previous_stage_a(pilot_dir)
     summary["stage_a_sensitivity_previous"] = _read_previous_stage_a(
         pilot_dir / "sensitivity_ws4_quota"
@@ -1309,6 +1353,11 @@ def _report_mode(pilot_dir: Path, repo_root: Path) -> None:
     facilities = pd.read_csv(pilot_dir / "facilities_bc.csv")
     rates = pd.DataFrame(summary["rate_table"])
     comparison = summary["distance_comparison"]
+    ffcm_path = pilot_dir / "transport_links_bc_ffcm.csv"
+    if ffcm_path.exists():
+        summary["cost_comparison"] = _cost_comparison(
+            links, pd.read_csv(ffcm_path)
+        )
     previous = summary.get("stage_a_previous")
     base = _read_previous_stage_a(pilot_dir)
     sensitivity = _read_previous_stage_a(pilot_dir / "sensitivity_ws4_quota")
