@@ -370,7 +370,7 @@ The run:
   with an explicit hub-and-spoke FFCM road fallback when the graph path is
   missing;
 - solves a profit-maximising residue allocation LP with source balance,
-  recipient capacity, eligibility, link-existence, and optional moisture-blend
+  recipient capacity, eligibility, link existence, and optional moisture-blend
   constraints (automatic service-maximising cost-min if a product price is
   missing);
 - validates mass balance, capacity, eligibility, transport existence, unit
@@ -405,6 +405,8 @@ routing but flagged `real_road_network_source_proxy_location`.
   `admt/y` needs a declared moisture, `mbf/y` needs a declared recovery factor,
   and energy units never convert to volume.
 - No hog-fuel supply in the TSA24 matrix; the grade is reserved.
-- No mill-residue (sawdust/woodchips) supply; only logging residue.
+- No mill-residue (sawdust/woodchips) supply in the Stage A assortment; only
+  logging residue.  The Stage B pilot derives mill residue from the FFCM
+  sawmill outfeed ratios.
 - One period, no inventory dynamics, no demand/market clearing.
 - No MKRF input or output.
