@@ -2,6 +2,36 @@
 
 ## 2026-11-17
 
+- **Built the recoverable-residue curve and 2021-2070 time path for OSeCAN
+  B1/B2.** Added `workflows/national/clews/bc_residue_recovery.py`,
+  `workflows/national/clews/tests/test_bc_residue_recovery.py`, and
+  `planning/bc-residue-recovery.md`.
+  - Parsed all 467 FFCM BC FMUs: 134,745,540.345 m3 log, 8,488,969.042 ODT
+    logging residue, 0.063 ODT/m3, and a uniform 45.454084659 $/ODT supply
+    cost.  FFCM has no FMU -> TSA/zone crosswalk; the BC totals are allocated
+    to B1/B2 by the documented 2018 AAC zone log share (17.399562% /
+    82.600438%) and flagged, not presented as an FMU location.
+  - The same-log-basis implied recovery is 1.736815 for B1 (outside
+    [0.2, 1.0], so the documented 0.60 fallback is used) and 0.583931 for B2.
+    Base cost is 2.456978 $/GJ on a dry ODT basis (18.5 GJ/ODT).
+  - Parsed AAC 2011-2028 from `TSA Tenure Apportionment V5.xls`: 41 TSA
+    sheets, 37 positive, 2018 total exactly 52,774,801 m3/y.  The 2021-2028
+    values are used directly and 2028 is held to 2070 (`aac_2028_hold`).
+  - Result: base 50.472521 PJ/yr in 2021 (B1 3.678381; B2 46.794140) and
+    42.958795 PJ/yr from 2028, at 2.456978 $/GJ; low 30.193455 PJ/yr at
+    3.194071 $/GJ; high 64.700261 PJ/yr at 1.965582 $/GJ.  Against the
+    50 PJ/$4 placeholder, the base 2021 cap is 1.009x and the base cost is
+    0.614x; against the previous gross 93.170084 PJ, the base is 0.542x.
+  - The AGB non-stem sensitivity uses the age-100 (Bark + Foliar + Branch) /
+    Above median 0.246837 (range 0.169403-0.366018) and RSYC age-100 AGB;
+    it is 3.07x the B1 taper base and 1.17x the B2 taper base.  It is a
+    sensitivity, not the base curve.
+  - Published `data/derived/national/clews/` with `bc_residue_recovery.csv`,
+    `bc_residue_time_path.csv`, `bc_residue_cases_summary.json`, 12 zone and
+    6 national parameter files, `BC_RESIDUE_RECOVERY_REPORT.md`,
+    `manifest.json`, and `audit/bc_ffcm_fmu_supply.csv`.  14 focused tests
+    pass; ruff clean.
+
 - **Built the all-BC woody-residue supply curve for OSeCAN zones B1/B2.**
   Added `workflows/national/clews/bc_residue_supply.py`,
   `workflows/national/clews/tests/test_bc_residue_supply.py`,
