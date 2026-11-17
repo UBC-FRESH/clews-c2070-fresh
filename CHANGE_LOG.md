@@ -2,6 +2,36 @@
 
 ## 2026-11-17
 
+- **Built and ran the Phase 1 national representative-stand batch.**
+  Added `workflows/national/assortments/national_batch.py` and
+  `workflows/national/assortments/tests/test_national_batch.py`, plus the
+  governing note `planning/national-representative-stand-batch.md`.
+  - Planned 1,260 ecoprovince × species cells; 1,205 had a valid distribution,
+    height model, TPH target, and taper dispatch.  Completed 1,191 stands.
+    The 14 explicit failures are 11 `BETU.ALL` cells whose RSYC volume cannot
+    be reached at the donor TPH with a positive diameter multiplier, two
+    sampler-truncation failures, and one invalid-log geometry failure.  The 55
+    skipped cells are 33 `GENERIC` fits with no defensible taper proxy, 19
+    no-fit cells, and 3 cells without a finite plot TPH target.
+  - Volume target is RSYC age-100 volume; two cells use the flagged observed
+    plot-volume fallback.  TPH is the expansion-weighted mean live plot-visit
+    TPH from the cell; borrowed cells use the donor ecozone or national species
+    mean.  Every cell uses a **1 ha placeholder** (`placeholder_equal_area`).
+  - Built 488 species × height-model buck-yield tables over 2 cm DBH bins
+    (2–100 cm) with the BC interior dimension sorts and Kozak taper.  The
+    tables cover 1,191 stands and are validated against a 20-tree exact
+    bucking sample in every cell: 1,184 pass the taper/residue gate, 7 fail,
+    and 224 flag product-total allocation as a diagnostic.  Total taper,
+    recovered logs, and residue conserve exactly.
+  - Equal-area pilot totals: 144,415.816 m3 recovered logs, 23,704.258 m3
+    residue (8,822.230 ODT), 168,120.075 m3 total.  These are not a national
+    supply estimate.  Runtime 494.9 s (prep 25.3 s, table build 327.6 s,
+    stand synthesis 141.9 s, assembly 0.2 s), inside the 780 s timebox.
+  - Published `data/derived/national/assortments/national_batch/` with
+    `national_stands.csv`, `national_assortment_matrix.csv`,
+    `national_assortment_summary.json`, `national_buck_yield_table.csv`,
+    `NATIONAL_BATCH_REPORT.md`, `manifest.json`, 488 table partials, and 1,205
+    cell partials.  Added `metadata/national-batch.csv`.
 - **Built the Stage B sawmill-residue and bioenergy allocation pilot for the
   TSA24/BC ws4-quota run.** Added
   `workflows/national/assignments/residue.py` (FFCM outfeed/infeed parsing,

@@ -1357,3 +1357,52 @@ metadata/national-fit.csv             c4b83483df42f8f2682c3c3166b8745366fae59022
 **Verification Timestamp**: 2026-11-16T08:02:52Z
 **Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, scipy 1.18.0, nemora reference checkout (`ws4/nemora`), matplotlib 3.11.0
 **Artifact Reference**: `data/derived/national/assortments/national_fit/`; `metadata/national-fit.csv`; `workflows/national/assortments/national_fit.py`; `workflows/national/assortments/distributions.py`; parent branch `feature/p7-source-triage-and-production-readiness`; data branch `main`
+
+---
+
+## 2026-11-17 — National Representative-Stand Batch (Phase 1)
+
+### Entry: EL-20261117-001
+**Claim**: The national representative-stand batch built 1,191 ecoprovince × species stands, 488 buck-yield tables, and a conserved equal-area assortment matrix inside a 780 s timebox.
+**Status Symbol**: ✅
+**Evidence Type**: Command execution output and published artifacts
+**Command**:
+```bash
+.venv/bin/python -m workflows.national.assortments.national_batch \
+  --workers 48 --resume --timebox-seconds 780 --verbose
+.venv/bin/python -m pytest -q \
+  workflows/national/assortments/tests/test_national_batch.py
+```
+**Exit Code**: 0 (batch, tests)
+**Duration**: 494.9 s batch wall time (prep 25.3 s; table build 327.6 s; stand synthesis 141.9 s; assembly 0.2 s); 34.2 s for the five focused tests
+**Output Summary**:
+```
+Cell plans: 1,260 total; 1,205 selected; 55 skipped.
+Stands completed: 1,191.
+  direct_fit 298, pooled_fit 26, pooled_parent 122, species_national 745.
+  species 1,121; model groups 70.
+Failures: 11 BETU.ALL synthesis (target volume unreachable at donor TPH),
+  2 distribution sampler truncation failures, 1 invalid log geometry.
+Buck-yield tables: 488; 0 table-build failures.
+Validation: 1,191 cells; 1,184 pass taper/residue, 7 fail;
+  product diagnostic 967 pass / 224 fail.
+Synthesis volume relative error max 6.8e-13; TPH relative error max 4.4e-16.
+Matrix taper vs synthesis taper relative error max 2.16%.
+Equal-area totals: recovered logs 144,415.816 m3;
+  residue 23,704.258 m3 (8,822.230 ODT); total 168,120.075 m3.
+Remaining planned cells: 0.
+```
+**Hashes**:
+```
+national_stands.csv                  dc3b49ee5018f062c1d9ec66cb062aef7e80c51d2b86191de05fd9dca32f80eb
+national_assortment_matrix.csv       51dccbb1a28bbe5924085dd935dc665f1ac8e2a9e79df1a84f8bc322d57ea629
+national_assortment_summary.json     92fb84078719ae322c658334c1632e78b769beefa7477a0c575e5d24ce9cb9b6
+NATIONAL_BATCH_REPORT.md             5043e6bd312e2aecad084a835c5aefdcb51ebec838ed8479c1361087591b77d5
+manifest.json                        4c8fffeece6d7786d97c9d7628c6ae8b588017ad3d719f5344f4cc59dc72bd19
+metadata/national-batch.csv          989946a6ef693c33b7ae73a3c2921fb85c8695fc97ca49def310710bca96fa47
+```
+**Verification Timestamp**: 2026-11-17T08:11:18Z
+**Verified By**: Python 3.12.3, pandas 3.0.3, numpy 2.5.0, scipy 1.18.0, nemora reference checkout (`ws4/nemora`)
+**Artifact Reference**: `data/derived/national/assortments/national_batch/`; `metadata/national-batch.csv`; `workflows/national/assortments/national_batch.py`; `planning/national-representative-stand-batch.md`
+
+**Non-claims**: The 1 ha per-cell area is a placeholder.  Summed volumes are a pipeline test, not a national timber-supply estimate.  Taper/jurisdiction and BEC zone are BC proxy assumptions; sorts are dimension-only and `grade_status=not_assigned`.
