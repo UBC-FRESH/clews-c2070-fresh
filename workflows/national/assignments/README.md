@@ -348,6 +348,45 @@ dimension; the Stage A grade-specific truck-cost split remains in
 network_node, technology_flow, market, and provenance tables; Stage A does not
 fabricate them.
 
+## Stage B residue and bioenergy pilot (`stage_b.py`)
+
+The Stage B pilot consumes the Stage A ws4-quota assignment (default input:
+`data/derived/national/assignments/tsa24_pilot/sensitivity_ws4_quota/`), the
+FFCM processing-line outfeed ratios, and the real NRN BC road graph:
+
+```bash
+.venv/bin/python -m workflows.national.assignments.stage_b
+```
+
+The default output is `data/derived/national/assignments/tsa24_pilot/stage_b/`.
+The run:
+
+- derives sawmill residue supply per Stage A SAW facility from declared FFCM
+  outfeed/infeed ratios (chips, sawdust/shavings, hogfuel/bark, other), with
+  every conversion recorded in `residue_conversions.csv`;
+- builds PAP/PEL/BIO recipient demand from FFCM line infeed capacity and
+  operating cost, and product prices from `commodities.csv`;
+- routes every SAW source to every located recipient on the NRN road graph,
+  with an explicit hub-and-spoke FFCM road fallback when the graph path is
+  missing;
+- solves a profit-maximising residue allocation LP with source balance,
+  recipient capacity, eligibility, link-existence, and optional moisture-blend
+  constraints (automatic service-maximising cost-min if a product price is
+  missing);
+- validates mass balance, capacity, eligibility, transport existence, unit
+  consistency, and objective reconciliation before returning success.
+
+Outputs include `residue_supply.csv`, `residue_demand.csv`,
+`stage_b_transport_links.csv`, `stage_b_assignment.csv`,
+`stage_b_utilization.csv`, `residue_balance.csv`, `bioenergy_share.csv`,
+`objective_decomposition.csv`, `validation_summary.json`, `STAGE_B_REPORT.md`,
+and `manifest.json`.
+
+Missing outfeed ratios, missing coordinates, missing paths, and missing prices
+are reported and never replaced by assumed values.  Proxy-coordinate facilities
+are excluded as recipients; proxy-coordinate sawmill sources are used for NRN
+routing but flagged `real_road_network_source_proxy_location`.
+
 ## Known gaps
 
 - No TSA24 FMU/supply node exists in the FFCM graph; the Prince George mill

@@ -2,6 +2,47 @@
 
 ## 2026-11-17
 
+- **Built the Stage B sawmill-residue and bioenergy allocation pilot for the
+  TSA24/BC ws4-quota run.** Added
+  `workflows/national/assignments/residue.py` (FFCM outfeed/infeed parsing,
+  residue supply, recipient demand, and unit conversions) and
+  `workflows/national/assignments/stage_b.py` (NRN facility-to-facility
+  routing, PuLP allocation, validation, tables, report, and manifest).
+  - Parsed 94 ws4-quota SAW facilities (32,076,713 m3 of assigned sawlogs)
+    against the FFCM processing lines; all 94 have complete chips,
+    sawdust/shavings, hogfuel/bark, and internally-used-woodfuel outfeed
+    ratios.  Generated 8,325,597.703 ODT of residue: 5,099,906.709 chips,
+    1,748,418.017 sawdust/shavings, 866,729.145 hogfuel/bark, and 610,543.832
+    other.  Every ratio and unit conversion is recorded in
+    `residue_conversions.csv`; missing ratios are excluded, never assumed.
+  - Screened 41 PAP/PEL/BIO recipient candidates to 24 lines with a
+    corroborated Mills DB coordinate and a road path (5 PAP, 9 PEL, 10 BIO).
+    Recipient capacity is the FFCM line infeed normalised to ODT; product
+    prices are FFCM commodity prices (all available, so the run is
+    profit-maximising).  Proxy-coordinate recipients and island recipients
+    without a road path are excluded and reported.
+  - Routed 2,026 source-recipient links on the real NRN BC road graph
+    (1,150 real, 782 real from proxy-located sources, 94 explicit
+    hub-and-spoke FFCM road fallbacks for a disconnected recipient).  Three
+    co-located source-recipient pairs share a road node (0 km) and are flagged.
+  - Assigned 6,501,439.981 ODT (78.09%) and left 1,824,157.722 ODT
+    unassigned: 1,048,992.210 chips (recipient capacity and missing links),
+    140,390.240 sawdust/shavings, 24,231.402 hogfuel/bark (capacity and
+    negative net contribution), and 610,543.832 other (no consumer class).
+    15 of 24 included recipient facilities are capacity-binding.
+  - Bioenergy share is 10.12% of generated residue and 12.96% of assigned
+    residue, producing 624,018.634 MWh.  Objective +CAD 759,507,703.72:
+    product revenue CAD 1,502,041,517.98, transport CAD 201,593,954.16, and
+    processing CAD 540,939,860.09.
+  - Published `data/derived/national/assignments/tsa24_pilot/stage_b/`
+    (`residue_supply.csv`, `residue_demand.csv`,
+    `stage_b_transport_links.csv`, `stage_b_assignment.csv`,
+    `stage_b_utilization.csv`, `residue_balance.csv`, `bioenergy_share.csv`,
+    `objective_decomposition.csv`, `validation_summary.json`,
+    `STAGE_B_REPORT.md`, and `manifest.json`).  Validation passes all nine
+    checks, including mass balance, capacity, eligibility, transport
+    existence, unit consistency, and objective reconciliation.  Added 13
+    Stage B tests; 69 tests pass.
 - **Built the BC mill-to-tenure crosswalk and re-ran Stage A with
   apportionment-derived maximum bounds.** Added
   `workflows/national/assignments/tenure_crosswalk.py`, which parses the 2018
