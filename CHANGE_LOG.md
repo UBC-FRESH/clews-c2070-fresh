@@ -2,6 +2,33 @@
 
 ## 2026-11-17
 
+- **Built the all-BC forest/THLB area-weight table and joined it to the
+  national batch.** Added
+  `workflows/national/assortments/bc_area_weights.py` and
+  `workflows/national/assortments/tests/test_bc_area_weights.py`.
+  - Read 5,057,731 VRI 2025 R1 polygons passing the documented Crown
+    management / vegetated / treed filter, allocated `SPECIES_CD_1..6` by
+    normalised `SPECIES_PCT_1..6`, and mapped BC codes through the CASFRI
+    crosswalk.  Produced 2,266 `(TSA, ecoprovince, ecoregion, RSYC species)`
+    rows covering 56,428,146 ha of forest and 18,653,774 ha of THLB.
+  - THLB is the per-polygon label-point sample of `misc.thlb.tif`
+    (`area_ha * percent / 100`); 559,917 polygons / 4,953,977 ha have no THLB
+    attribution and are kept at zero.  The raster itself totals 20,032,336 ha
+    on its 32.6% valid grid.
+  - 11,007,317 ha (19.5%) is `UNMAPPED_BC`, dominated by hybrid spruce (`SX`,
+    7.74M ha), spruce aggregate (`S`), yellow-cedar (`YC`), hemlock aggregate
+    (`H`), and fir aggregate (`B`); unmapped area is reported, not
+    redistributed.
+  - Joined 429 BC-relevant national batch cells: 192 matched by
+    `(ecoprovince, species)`, 237 retained as `no_area` with zero totals
+    (never the 1 ha placeholder).  BC area-weighted log volume is 8.94B m3,
+    residue 1.97B m3 / 722.7M odt, taper total 10.91B m3; these are standing
+    volume proxies, not an annual supply estimate.
+  - Published `data/derived/national/assortments/bc_area_weights/` with
+    `bc_area_weights.csv`, `bc_area_summary.json`,
+    `bc_national_batch_area_joined.csv`, `BC_AREA_REPORT.md`, and
+    `manifest.json`.  Runtime 123.8 s; 6 area-weight tests pass.
+
 - **Built and ran the Phase 1 national representative-stand batch.**
   Added `workflows/national/assortments/national_batch.py` and
   `workflows/national/assortments/tests/test_national_batch.py`, plus the
