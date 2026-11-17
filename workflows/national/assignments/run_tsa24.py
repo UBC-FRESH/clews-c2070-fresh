@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import Any
 
 from .fixtures import (
-    DIAGNOSTIC_ACCESS_KM,
     Tsa24Fixture,
     build_tsa24_fixture,
     write_fixture_tables,
@@ -97,6 +96,7 @@ CONTRACT_COLUMNS = [
     "within_maximum",
     "gate_cost_cad_m3",
     "diagnostic",
+    "contract_source",
     "evidence",
     "notes",
 ]
@@ -110,6 +110,58 @@ UNASSIGNED_COLUMNS = [
     "penalty_cost_cad_m3",
 ]
 OBJECTIVE_COLUMNS = ["component", "value_cad", "unit", "notes"]
+FACILITY_COLUMNS = [
+    "facility_id",
+    "facility_class",
+    "name",
+    "lat",
+    "lon",
+    "coord_source",
+    "coord_confidence",
+    "coord_evidence",
+    "nameplate_m3_y",
+    "capacity_status",
+    "capacity_basis",
+    "line_count",
+    "lines",
+    "stage_a_scope",
+    "transport_link_status",
+]
+TRANSPORT_BC_COLUMNS = [
+    "origin",
+    "destination",
+    "grade_id",
+    "mode",
+    "distance_km",
+    "linehaul_cost_cad_m3",
+    "transload_cost_cad_m3",
+    "cost_cad_m3",
+    "capacity_m3",
+    "capacity_source",
+    "path_confidence",
+    "path_nodes",
+    "path_legs",
+    "transload_nodes",
+    "anchor_id",
+    "anchor_basis",
+    "distance_basis",
+    "cost_basis",
+    "evidence",
+]
+TRANSPORT_SCREEN_COLUMNS = [
+    "facility_id",
+    "facility_class",
+    "status",
+    "path_confidence",
+    "nearest_tl",
+    "access_km",
+    "facility_leg_km",
+    "distance_km",
+    "mode",
+    "cost_cad_m3_min",
+    "cost_cad_m3_max",
+    "reason",
+]
 
 
 def _write_csv(
@@ -156,6 +208,320 @@ def _markdown_table(headers: Sequence[str], rows: Sequence[Sequence[object]]) ->
     for row in rows:
         lines.append("| " + " | ".join(str(value) for value in row) + " |")
     return "\n".join(lines)
+
+
+def _stat_line(stats: Mapping[str, Any], digits: int = 1) -> str:
+    if not stats or int(stats.get("count", 0)) == 0:
+        return "n/a"
+    return (
+        f"n={stats['count']}; min={_fmt(stats['min'], digits)}; "
+        f"p25={_fmt(stats['p25'], digits)}; median={_fmt(stats['median'], digits)}; "
+        f"p75={_fmt(stats['p75'], digits)}; max={_fmt(stats['max'], digits)}; "
+        f"mean={_fmt(stats['mean'], digits)}"
+    )
+
+
+def _previous_pilot_class_mix(out_dir: Path) -> dict[str, float] | None:
+    """Return the prior run's assigned-volume share by class.
+
+    The baseline is captured once, before the new run overwrites
+    ``facility_utilization.csv``.  Keeping it as a small CSV makes the
+    comparison auditable across reruns.
+    """
+    baseline_path = out_dir / "previous_pilot_class_mix.csv"
+    if baseline_path.exists():
+        with baseline_path.open(newline="", encoding="utf-8") as handle:
+            return {
+                str(row["facility_class"]): float(row["assigned_share"])
+                for row in csv.DictReader(handle)
+            }
+    utilization_path = out_dir / "facility_utilization.csv"
+    if not utilization_path.exists():
+        return None
+    with utilization_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    total = sum(float(row["assigned_m3"]) for row in rows)
+    by_class: dict[str, float] = {}
+    for row in rows:
+        facility_class = str(row["facility_class"]).strip().upper()
+        by_class[facility_class] = by_class.get(facility_class, 0.0) + float(
+            row["assigned_m3"]
+        )
+    baseline_rows = [
+        {
+            "facility_class": facility_class,
+            "assigned_m3": volume,
+            "assigned_share": volume / total if total > 0 else 0.0,
+        }
+        for facility_class, volume in sorted(by_class.items())
+    ]
+    _write_csv(
+        baseline_path,
+        baseline_rows,
+        ["facility_class", "assigned_m3", "assigned_share"],
+    )
+    return {
+        row["facility_class"]: float(row["assigned_share"])
+        for row in baseline_rows
+    }
+
+
+def _coverage_tables(config: Mapping[str, Any]) -> str:
+    coverage = config.get("facility_coverage", {})
+    counts = coverage.get("coordinate_source_counts", {})
+    in_scope = coverage.get("coordinate_source_counts_in_scope", {})
+    rows = [
+        (
+            source,
+            counts.get(source, 0),
+            in_scope.get(source, 0),
+            {
+                "mills_db": "high",
+                "suppliers_dbf": "high",
+                "tl_anchor_proxy": "low",
+                "missing": "missing",
+            }[source],
+        )
+        for source in ("mills_db", "suppliers_dbf", "tl_anchor_proxy", "missing")
+    ]
+    table = _markdown_table(
+        ["coord_source", "All BC facilities", "Stage A scope", "Expected confidence"],
+        rows,
+    )
+    missing_in_scope = coverage.get("missing_coordinates_in_scope", [])
+    missing_all = coverage.get("missing_coordinates", [])
+    missing_text = (
+        f"{len(missing_in_scope)} Stage A facilities have no coordinate; "
+        f"{len(missing_all)} of all BC facilities are missing. "
+        "Missing coordinates are not replaced with Euclidean guesses."
+    )
+    missing_list = (
+        ", ".join(f"`{item}`" for item in missing_in_scope[:25])
+        + (" ..." if len(missing_in_scope) > 25 else "")
+        if missing_in_scope
+        else "None."
+    )
+    anchor_rows = [
+        (
+            row["hub"],
+            f"{row['lat']:.4f}",
+            f"{row['lon']:.4f}",
+            row["geocoded_facility_count"],
+            row["geocoded_facilities"],
+        )
+        for row in coverage.get("anchor_hubs", [])
+    ]
+    anchor_table = (
+        _markdown_table(
+            ["Hub", "Lat", "Lon", "Geocoded anchors", "Anchor facilities"],
+            anchor_rows,
+        )
+        if anchor_rows
+        else "No TL/water hub had a geocoded facility anchor."
+    )
+    zero = coverage.get("zero_capacity_facilities", [])
+    zero_text = (
+        "None; every BC facility has a positive normalized nameplate."
+        if not zero
+        else f"{len(zero)} zero/blank-capacity facilities kept and flagged: "
+        + ", ".join(f"`{item}`" for item in zero)
+    )
+    return f"""{table}
+
+{missing_text}
+
+Missing Stage A coordinates: {missing_list}
+
+TL/water hub proxies used by `coord_source=tl_anchor_proxy`:
+
+{anchor_table}
+
+Zero/blank-capacity facilities: {zero_text}
+"""
+
+
+def _transport_report(config: Mapping[str, Any]) -> str:
+    summary = config.get("transport_summary", {})
+    comparison = summary.get("diagnostic_comparison", {})
+    confidence = summary.get("confidence_counts", {})
+    modes = summary.get("mode_counts", {})
+    confidence_table = _markdown_table(
+        ["Path confidence", "Facilities"],
+        [
+            (key, value)
+            for key, value in sorted(confidence.items())
+        ]
+        or [("none", 0)],
+    )
+    mode_table = _markdown_table(
+        ["Mode", "Facilities"],
+        [(key, value) for key, value in sorted(modes.items())] or [("none", 0)],
+    )
+    distance_table = _markdown_table(
+        ["Distance set", "Distribution (km)"],
+        [
+            ("New FFCM graph", _stat_line(comparison.get("new_distance_km", {}))),
+            (
+                "Previous 150 km diagnostic",
+                _stat_line(comparison.get("old_diagnostic_distance_km", {})),
+            ),
+            ("Delta new - old", _stat_line(comparison.get("delta_km", {}))),
+            ("Ratio new / old", _stat_line(comparison.get("ratio", {}), 2)),
+        ],
+    )
+    cost_rows = []
+    for grade, values in comparison.get("cost", {}).items():
+        cost_rows.append(
+            (
+                grade,
+                _stat_line(values.get("new", {}), 2),
+                _stat_line(values.get("old", {}), 2),
+                _stat_line(values.get("delta", {}), 2),
+            )
+        )
+    cost_table = (
+        _markdown_table(
+            ["Grade", "New graph CAD/m3", "Previous diagnostic CAD/m3", "Delta CAD/m3"],
+            cost_rows,
+        )
+        if cost_rows
+        else "No comparable cost rows."
+    )
+    outlier_rows = comparison.get("outliers", [])[:10]
+    outlier_table = (
+        _markdown_table(
+            [
+                "Facility",
+                "Class",
+                "Old km",
+                "New km",
+                "Delta km",
+                "Ratio",
+                "Confidence",
+            ],
+            [
+                (
+                    row["facility_id"],
+                    row["facility_class"],
+                    _fmt(row["old_diagnostic_km"], 1),
+                    _fmt(row["new_graph_km"], 1),
+                    _fmt(row["delta_km"], 1),
+                    _fmt(row["ratio"], 2) if row["ratio"] != "" else "n/a",
+                    row["path_confidence"],
+                )
+                for row in outlier_rows
+            ],
+        )
+        if outlier_rows
+        else "No distance outliers."
+    )
+    capacity = summary.get("capacity", {})
+    capacity_text = (
+        f"{capacity.get('capacity_none_count', 0)} links have "
+        f"`capacity=None`; `capacity_source=absent`; route capacity table="
+        f"`{capacity.get('route_capacity_table', 'absent')}`."
+    )
+    return f"""- Accepted links: {summary.get('accepted_link_count', 0)} across
+  {summary.get('accepted_facility_count', 0)} facilities.
+- TSA24 anchor: `{summary.get('anchor', {}).get('supply_node_id', '')}` with
+  anchor proxy `{summary.get('anchor', {}).get('anchor_id', '')}`.
+  Access TL nodes:
+  {", ".join(summary.get('anchor', {}).get('access_tl_nodes', [])) or "none"}.
+- Anchor basis: `{summary.get('anchor', {}).get('anchor_basis', '')}`.
+- {capacity_text}
+
+No accepted link uses `access_leg_plus_graph`: the anchor is attached through
+parsed route edges from `BC-SAW-488`. That label is reserved for a future
+non-route access leg.
+
+{confidence_table}
+
+{mode_table}
+
+{distance_table}
+
+{cost_table}
+
+Distance/cost outliers versus the previous diagnostic (top 10 by delta):
+
+{outlier_table}
+"""
+
+
+def _units_report(config: Mapping[str, Any]) -> str:
+    registry = config.get("unit_registry", [])
+    table = _markdown_table(
+        ["Unit", "Dimension", "Accepted", "Source"],
+        [
+            (
+                row["unit"],
+                row["dimension"],
+                row["accepted"],
+                row["source"],
+            )
+            for row in registry
+        ],
+    )
+    factors = _markdown_table(
+        ["Conversion", "Factor", "Condition/source"],
+        [
+            ("m3_green -> odt", "0.45", "declared basic density; default ledger density"),
+            ("odt -> m3_green", "2.222...", "1 / 0.45; per-grade/species override allowed"),
+            ("bdmt -> odt", "1.0", "dry-mass equivalence; FFCM unit registry candidate"),
+            ("admt -> odt", "1 - moisture", "requires declared air-dry moisture"),
+            ("mbf -> m3_green", "recovery", "requires declared m3 per mbf; rejected otherwise"),
+            ("kWh -> MWh", "0.001", "SI"),
+            ("MWh -> GJ", "3.6", "SI"),
+            ("energy -> volume/mass", "rejected", "no declared energy density"),
+        ],
+    )
+    return f"""{table}
+
+Declared factors:
+
+{factors}
+"""
+
+
+def _class_mix_table(
+    config: Mapping[str, Any],
+    class_rows: Sequence[Mapping[str, Any]],
+    previous_mix: Mapping[str, float] | None,
+) -> str:
+    ffcm = config.get("ffcm_bc_class_mix", {}).get("classes", {})
+    pilot = {row["facility_class"]: row for row in class_rows}
+    total = sum(row["assigned_m3"] for row in class_rows)
+    table_rows = []
+    for facility_class in ("SAW", "PAP", "PEL", "BIO"):
+        row = pilot.get(facility_class, {})
+        assigned = float(row.get("assigned_m3", 0.0))
+        table_rows.append(
+            (
+                facility_class,
+                _fmt(assigned),
+                _pct(assigned / total if total > 0 else 0.0),
+                _pct(
+                    previous_mix.get(facility_class, 0.0)
+                    if previous_mix is not None
+                    else 0.0
+                )
+                if previous_mix is not None
+                else "n/a",
+                _pct(ffcm.get(facility_class, {}).get("nameplate_share", 0.0)),
+                _pct(ffcm.get(facility_class, {}).get("facility_share", 0.0)),
+            )
+        )
+    return _markdown_table(
+        [
+            "Class",
+            "Pilot assigned m3",
+            "Pilot share",
+            "Previous pilot share",
+            "FFCM BC nameplate share",
+            "FFCM BC facility-count share",
+        ],
+        table_rows,
+    )
 
 
 def _ffcm_class_mix(repo_root: Path) -> dict[str, float] | None:
@@ -271,6 +637,7 @@ def _report_markdown(
     fixture: Tsa24Fixture,
     result: AssignmentResult,
     validation: ValidationReport,
+    previous_mix: Mapping[str, float] | None = None,
 ) -> str:
     inputs = fixture.inputs
     grade_rows = _grade_summary(inputs, result)
@@ -335,6 +702,40 @@ def _report_markdown(
         ],
     )
 
+    facility_class_rows = []
+    for facility_class in ("SAW", "PAP", "PEL", "BIO", "PLY", "OSB", "NSP"):
+        records = [
+            record
+            for record in fixture.facility_table.records
+            if record.facility_class == facility_class
+        ]
+        if not records:
+            continue
+        in_scope = [record for record in records if record.stage_a_scope]
+        facility_class_rows.append(
+            (
+                facility_class,
+                len(records),
+                len(in_scope),
+                _fmt(sum((record.nameplate_m3_y or 0.0) for record in in_scope)),
+                sum(
+                    1
+                    for record in in_scope
+                    if record.transport_link_status.startswith("linked")
+                ),
+            )
+        )
+    facility_class_table = _markdown_table(
+        [
+            "Class",
+            "All BC rows",
+            "Stage A rows",
+            "Stage A nameplate m3/y",
+            "Linked",
+        ],
+        facility_class_rows,
+    )
+
     objective_table = _markdown_table(
         ["Component", "Value CAD", "Unit", "Notes"],
         [
@@ -395,9 +796,9 @@ def _report_markdown(
                 "assigned volume weighted",
             ),
             (
-                "transport (diagnostic road)",
+                "transport (FFCM TL graph)",
                 _fmt(average_components["transport_cost_cad_m3"], 2),
-                "assigned volume weighted",
+                "assigned volume weighted; includes transload",
             ),
             (
                 "gate",
@@ -453,43 +854,31 @@ def _report_markdown(
         ],
     )
 
+    class_mix_table = _class_mix_table(fixture.config, class_rows, previous_mix)
     if ffcm_mix is not None:
-        pilot_volume = {row["facility_class"]: row["assigned_m3"] for row in class_rows}
-        pilot_total = sum(pilot_volume.values())
-        mix_rows = []
-        for facility_class in ("SAW", "PAP", "PEL", "BIO"):
-            mix_rows.append(
-                (
-                    facility_class,
-                    _fmt(pilot_volume.get(facility_class, 0.0)),
-                    _pct(
-                        pilot_volume.get(facility_class, 0.0) / pilot_total
-                        if pilot_total
-                        else 0.0
-                    ),
-                    _pct(ffcm_mix.get(facility_class, 0.0)),
-                )
-            )
-        class_mix_table = _markdown_table(
-            ["Class", "Pilot assigned m3", "Pilot share", "FFCM fmu-primary share"],
-            mix_rows,
+        variable_mix = ", ".join(
+            f"{facility_class} {_pct(ffcm_mix.get(facility_class, 0.0))}"
+            for facility_class in ("SAW", "PAP", "PEL", "BIO")
         )
         class_mix_note = (
-            "FFCM shares are primary `fmu -> facility` variable families from "
-            "`lp-variable-families.csv`; PLY/OSB/export and secondary "
-            "processor-to-processor families are outside this pilot and are "
-            "excluded from both shares. The comparison is directional, not a "
-            "calibration target."
+            "FFCM BC nameplate/facility shares come from the 161 in-scope BC "
+            "SAW/PAP/PEL/BIO facilities in `facilities.csv`. The directional "
+            "FFCM `fmu -> facility` variable-family shares are "
+            f"{variable_mix}; that comparison is secondary and not a calibration "
+            "target."
         )
     else:
-        class_mix_table = (
-            "FFCM variable-family table not found; no class-mix comparison made."
+        class_mix_note = (
+            "FFCM variable-family table not found; the BC facility-subset "
+            "comparison above remains valid."
         )
-        class_mix_note = ""
 
     contract_rows = result.contract_compliance
     contract_ok = sum(
         1 for row in contract_rows if row["within_minimum"] and row["within_maximum"]
+    )
+    contract_sources = sorted(
+        {str(row.get("contract_source", "")) for row in contract_rows}
     )
     binding_rows = [
         row for row in result.facility_utilization if row["capacity_binding"]
@@ -530,6 +919,7 @@ def _report_markdown(
                 "supply",
                 "residue",
                 "facility_capacity",
+                "coordinate",
                 "transport",
                 "contracts",
                 "objective",
@@ -546,7 +936,7 @@ def _report_markdown(
     rejected_transport = [
         row
         for row in fixture.tables["transport_screen"]
-        if row["status"] != "accepted_diagnostic_route"
+        if str(row["status"]).startswith("missing")
     ]
     rejected_table = (
         _markdown_table(
@@ -557,7 +947,18 @@ def _report_markdown(
             ],
         )
         if rejected_lines
-        else "No processing line was rejected for its capacity unit."
+        else "No processing line was rejected by the unit contract."
+    )
+    missing_transport_table = (
+        _markdown_table(
+            ["Facility", "Status", "Reason"],
+            [
+                (row["facility_id"], row["status"], row["reason"])
+                for row in rejected_transport[:20]
+            ],
+        )
+        if rejected_transport
+        else "No Stage A facility was excluded from the transport layer."
     )
 
     is_sensitivity = float(fixture.config["area_ha"]) > DEFAULT_AREA_HA * 1.01
@@ -574,11 +975,14 @@ def _report_markdown(
 > **Diagnostic pilot.** The supply area is `{_fmt(fixture.config["area_ha"])} ha`, a
 > contract/data-shape test, not a TSA24 supply estimate. Assortment sorts are
 > dimension-only; no BC official grade equivalence is claimed. MKRF is not used.
+> This version replaces the flat 150 km access leg with the parsed FFCM TL graph,
+> adds facility coordinate provenance, and routes all capacity conversions
+> through `units.py`.
 {sensitivity_note}
 ## 1. Scope and Stage A/B split
 
-Stage A consumes the TSA24 assortment matrix, parsed FFCM BC facility lines, a
-diagnostic road transport layer, and diagnostic contracts, then solves a
+Stage A consumes the TSA24 assortment matrix, parsed FFCM BC facility lines,
+the FFCM TL transport graph, and diagnostic contracts, then solves a
 profit-maximising transportation/allocation LP. It emits facility assignment,
 utilization, contract, unassigned-supply, objective, and validation tables.
 Stage B (`fresh_fibre.graph` / `fresh_fibre.lp`) consumes the Stage B
@@ -590,125 +994,95 @@ report; Stage A does not invent Stage B demand or market rows.
 - Supply offers: {len(inputs.supplies)}
 - Facilities: {len(inputs.facilities)} screened; {len({link.destination for link in inputs.transport_links})} with a transport link
 - Transport links: {len(inputs.transport_links)}
-- Contracts: {len(inputs.contracts)}
+- Contracts: {len(inputs.contracts)} (`contract_source={";".join(contract_sources)}`)
 - Total supply: {_fmt(total_supply)} m3 green
 - Solver: {result.solver_name} {result.solver_version} ({result.status})
 
-## 2. Fixture
+## 2. BC facilities (coordinate coverage, sources, missing)
 
-### 2.1 Supply grades
+One row per BC facility is written to `facilities_bc.csv`. Coordinates are
+resolved in this order: Mills DB, CFS `suppliers.dbf`, an FFCM TL/water hub
+anchor, then `missing`. The hub anchor is the median coordinate of geocoded
+facilities directly attached to the same TL/water node; it is a low-confidence
+proxy, not a Euclidean guess.
 
-The matrix is a per-hectare TSA24 stand composition. Each detail row is scaled
-by the diagnostic area; the total row is a check, not a supply offer. Residue
-uses the ledger's 0.45 ODT/m3 density and 0.45 wet-basis moisture.
+{_coverage_tables(fixture.config)}
 
-{grade_table}
+{facility_class_table}
 
-### 2.2 Facilities
+### 2.1 Capacity normalization
 
-Only BC `SAW`, `PAP`, `PEL`, and `BIO` facilities are in scope. Capacity is
-normalized to m3/y from `m3/y` directly and from `odt/y` at 1/0.45 m3 per ODT.
-`bdmt/y` capacity lines are rejected; for PAP they duplicate the paired `m3/y`
-log line. Facility nameplate is the sum of the maximum normalized capacity per
-primary product, so alternative feedstock lines are not counted repeatedly.
-
-{class_table}
-
-Rejected processing lines (first 15):
+Capacity is normalized to green m3/y through `units.py`: `m3/y` directly,
+`odt/y` and `bdmt/y` at the declared 0.45 ODT/m3 density, `admt/y` only with a
+declared air-dry moisture, `mbf/y` only with a declared recovery factor, and
+energy units never to volume. Facility nameplate is the sum of the maximum
+normalized capacity per primary product. Rejected processing lines (first 15):
 
 {rejected_table}
 
-Facilities without an FFCM road route to a transload node are excluded from the
-transport layer, not given a fabricated distance. Rejected facilities:
-{len(rejected_transport)}.
+### 2.2 Transport screening
 
-### 2.3 Transport
+Facilities without a defensible TL path are excluded rather than given a
+fabricated distance. Rejected facilities (first 20):
 
-The archive has no TSA24 supply-node-to-transload route. The pilot therefore
-uses the minimum FFCM facility-to-`TL` road distance plus a documented
-`{_fmt(DIAGNOSTIC_ACCESS_KM)} km` TSA24 access leg. This is a diagnostic road
-estimate, not a Euclidean distance and not a production route. The facility leg
-is from `routes.csv`; the supply leg is an assumption. Road cost uses
-`BC_logging_truck` for logs and `BC_residue_truck` for residue, with archive
-fuel/operating rates and truck capacities. No transload cost is applied because
-the diagnostic path is direct road. Route capacity is absent from the parsed
-route table, so links are uncapped.
+{missing_transport_table}
 
-### 2.4 Contracts
+## 3. Transport (paths, modes, distance/cost vs 150 km, confidence)
 
-No populated contract table exists in the archive. Each facility receives a
-diagnostic contract with `min=0`, `max=nameplate`, and `gate=0`. Contract
-compliance is therefore a bound check, not evidence about real commercial terms.
+{_transport_report(fixture.config)}
 
-## 3. LP formulation
+## 4. Units (accepted/rejected, factors)
 
-Maximise product revenue minus roadside supply, transport, gate, processing,
-and unassigned penalty:
+{_units_report(fixture.config)}
 
-```
-max  sum_{{s,f,g,t}} (R_fg - C_s - H_sf - G_fg - P_fg) x[s,f,g,t]
-     - penalty * sum_{{s,g,t}} u[s,g,t]
-```
+## 5. Pilot results
 
-Subject to:
-
-- supply balance: `sum_f x[s,f,g,t] + u[s,g,t] = V_s`
-- facility nameplate: `sum_{{s,g}} x[s,f,g,t] <= nameplate_f`
-- grade capacity: `sum_s x[s,f,g,t] <= capacity_fg`
-- contract minimum/maximum per facility and period
-- optional moisture blend: `sum_s M_s x <= limit_f * sum_s x`
-- optional transport-link capacity
-- `x >= 0`, `u >= 0`; no binaries in this pilot
-
-There are no `y[f,l,t]` line-activity variables because the fixture aggregates
-alternative feedstock lines into one grade-specific capacity and keeps the
-facility nameplate as the total cap. `x` is in m3 green; `u` is in the same
-basis. The multi-period key is present, but the pilot uses one period.
-
-## 4. Results
-
-### 4.1 Assigned versus unassigned by grade
+### 5.1 Assigned versus unassigned by grade
 
 {grade_table}
 
-### 4.2 Facility utilization by class
+### 5.2 Facility utilization by class
 
 {class_table}
 
-### 4.3 Capacity binding
+### 5.3 Capacity binding
 
 {binding_table}
 
-### 4.4 Largest assignments
+### 5.4 Largest assignments
 
 {top_table}
 
-### 4.5 Contract compliance
-
-{contract_ok} of {len(contract_rows)} diagnostic contracts satisfy both bounds.
-All contracts are marked `diagnostic`.
-
-### 4.6 Delivered cost per m3
+### 5.5 Delivered cost per m3
 
 {delivered_table}
 
-### 4.7 Objective decomposition
+### 5.6 Objective decomposition
 
 {objective_table}
 
-### 4.8 Facility-class mix versus FFCM
+### 5.7 Class mix versus FFCM BC subset and previous pilot
 
 {class_mix_table}
 
 {class_mix_note}
 
-## 5. Validation
+## 6. Contracts and capacity gaps
+
+{contract_ok} of {len(contract_rows)} diagnostic contracts satisfy both bounds.
+All contracts carry `contract_source=diagnostic_absent`; no populated real
+contract minimum, maximum, or gate cost exists in the archive. Transport links
+carry `capacity=None` and `capacity_source=absent`; route and transload
+capacities are not present in the parsed tables. These are data gaps, not
+modelled constraints.
+
+## 7. Validation
 
 {validation_table}
 
 Overall validation: **{"PASS" if validation.passed else "FAIL"}**.
 
-## 6. Assumptions and unit conversions
+## 8. Assumptions and unit conversions
 
 {assumption_table}
 
@@ -716,17 +1090,21 @@ The full assumption list, including rejected lines and rejected transport
 links, is written to `assumptions.csv`, `line_screen.csv`, and
 `transport_screen.csv`.
 
-## 7. Gaps and next steps
+## 9. Gaps and next steps
 
-- Replace the diagnostic 150 km TSA24 access leg with a real TSA24 supply-node
-  to transload/facility route or an accepted haul-distance model.
-- Replace the diagnostic contracts with populated minimum/maximum terms.
-- Add route/transload capacity and water/rail alternatives; the current pilot
-  is road-only and uncapped.
-- Normalize `bdmt/y`/`admt/y` capacity only after an accepted project
-  convention; the pilot rejects bdmt capacity rather than guessing.
-- Add mill-residue supply (sawdust/woodchips/hogfuel) if the Stage A scope is
-  extended beyond logging residue.
+- Replace the Prince George mill proxy with a real TSA24 supply-node or FMU
+  anchor once the AU-to-FMU crosswalk exists. The current anchor is documented
+  and low-confidence, not a production route.
+- Replace the FFCM synthetic TL distances with an accepted BC road/rail network
+  or a validated haul-distance model; the graph is sparse and produces long
+  TL-TL paths.
+- Populate route and transload capacity before interpreting congestion or
+  mode-shift limits.
+- Populate real contract minima, maxima, and gate costs.
+- Normalize `admt/y` and `mbf/y` capacity only with declared moisture/recovery
+  factors; the current pilot rejects them rather than guessing.
+- Add mill-residue supply (sawdust/woodchips/hogfuel) if Stage A scope expands
+  beyond logging residue.
 - Add multi-period inventory, demand/market clearing, and line-level `y`
   variables only when the data support them.
 - Do not interpret the 1,000 ha result as a TSA24 supply estimate. The optional
@@ -780,11 +1158,13 @@ def _manifest(
         "limitations": [
             "1,000 ha base area is diagnostic, not a TSA24 supply estimate.",
             "Assortment sorts are dimension-only; no BC official grade equivalence.",
-            "TSA24 access distance is a diagnostic 150 km leg; not Euclidean and not a production route.",
-            "Only BC SAW/PAP/PEL/BIO facilities are in scope.",
-            "bdmt/y capacity lines are rejected; PAP uses paired m3/y log lines.",
-            "Contracts are diagnostic min=0/max=nameplate; no populated contract data.",
-            "Transport links are road-only and uncapped; transload costs are not applied.",
+            "TSA24 supply anchor is a geocoded Prince George mill proxy (BC-SAW-488); no TSA24 FMU exists in the FFCM graph.",
+            "Transport distances are FFCM route-graph shortest paths, not Euclidean or production routes.",
+            "Only BC SAW/PAP/PEL/BIO facilities are in the LP; PLY/OSB/NSP rows are retained in facilities_bc.csv but out of scope.",
+            "Many BC facilities lack a defensible coordinate; missing coordinates are not guessed.",
+            "bdmt/y capacity converts at the declared 0.45 ODT/m3 density; admt/y and mbf/y are rejected without declared factors.",
+            "Contracts are diagnostic min=0/max=nameplate with contract_source=diagnostic_absent.",
+            "Transport links are uncapped: capacity=None and capacity_source=absent; transload costs are applied at TL nodes.",
             "One period; no multi-period inventory dynamics.",
             "No MKRF input or output is used.",
         ],
@@ -859,11 +1239,11 @@ def _write_outputs(
         "inputs": result.inputs_summary,
         "config": dict(fixture.config),
         "data_gaps": [
-            "no TSA24 supply-node-to-transload route in the parsed FFCM graph",
-            "only 8 of 179 BC facilities have coordinates in facility_geocoding.csv",
-            "route capacity absent from routes.csv",
-            "no populated contract table",
-            "mixed capacity units require bdmt/y rejection and odt/y normalization",
+            "no TSA24 supply-node-to-transload route in the parsed FFCM graph; a geocoded Prince George mill is the documented anchor proxy",
+            "only 8 of 179 BC facilities have direct Mills DB/suppliers.dbf coordinates; 113 in-scope facilities use a low-confidence TL hub proxy and 41 are missing",
+            "route capacity absent from routes.csv; all transport links use capacity=None and capacity_source=absent",
+            "no populated contract table; all contracts have contract_source=diagnostic_absent",
+            "admt/y and mbf/y capacity units require declared moisture/recovery factors and are rejected without them",
             "no hogfuel supply in the TSA24 assortment matrix",
             "no mill-residue (sawdust/woodchips) supply in this pilot",
         ],
@@ -885,6 +1265,8 @@ def run_pilot(
     sensitivity_label: str = "",
 ) -> tuple[AssignmentResult, ValidationReport, Tsa24Fixture]:
     """Build, solve, validate, and write one Stage A pilot run."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    previous_mix = _previous_pilot_class_mix(out_dir)
     fixture = build_tsa24_fixture(
         repo_root, area_ha=area_ha, period=period, scenario_id=scenario_id
     )
@@ -892,9 +1274,10 @@ def run_pilot(
     validation = validate_assignment(fixture.inputs, result)
     result = replace(result, validation=validation.to_dict())
 
-    report_text = _report_markdown(repo_root, fixture, result, validation)
+    report_text = _report_markdown(
+        repo_root, fixture, result, validation, previous_mix=previous_mix
+    )
     report_path = out_dir / "ASSIGNMENT_REPORT.md"
-    out_dir.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report_text, encoding="utf-8")
     _write_outputs(out_dir, fixture, result, validation)
 
@@ -945,7 +1328,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"assigned={result.assigned_volume_m3:,.0f} m3; "
         f"unassigned={result.unassigned_volume_m3:,.0f} m3; "
         f"validation={'PASS' if validation.passed else 'FAIL'}; "
-        f"facilities={len(fixture.inputs.facilities)}; links={len(fixture.inputs.transport_links)}"
+        f"facilities={len(fixture.inputs.facilities)}; links={len(fixture.inputs.transport_links)}; "
+        f"coverage={fixture.facility_table.coverage_in_scope}; "
+        f"paths={fixture.transport_table.summary['confidence_counts']}"
     )
 
     exit_code = 0 if validation.passed else 1

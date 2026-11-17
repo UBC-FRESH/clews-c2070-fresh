@@ -19,6 +19,7 @@ from typing import Any
 
 __all__ = [
     "FACILITY_CLASSES",
+    "PATH_CONFIDENCE_VALUES",
     "REJECTED_CAPACITY_UNITS",
     "SUPPORTED_CAPACITY_UNITS",
     "Assignment",
@@ -43,12 +44,16 @@ class AssignmentError(ValueError):
 
 
 FACILITY_CLASSES = frozenset({"SAW", "PAP", "PEL", "BIO"})
-SUPPORTED_CAPACITY_UNITS = frozenset({"m3/y", "odt/y"})
+SUPPORTED_CAPACITY_UNITS = frozenset({"m3/y", "odt/y", "bdmt/y"})
 REJECTED_CAPACITY_UNITS = frozenset(
-    {"bdmt/y", "admt/y", "mbf/y", "kwh/y", "t/y", "kg/y", "gj/y", "mwh/y"}
+    {"admt/y", "mbf/y", "kwh/y", "t/y", "kg/y", "gj/y", "mwh/y"}
 )
-_SUPPORTED_GRADE_UNITS = frozenset({"m3", "odt"})
-_SUPPORTED_TRANSPORT_MODES = frozenset({"ROAD"})
+_SUPPORTED_GRADE_UNITS = frozenset({"m3", "m3_green", "odt"})
+_SUPPORTED_TRANSPORT_MODES = frozenset({"ROAD", "RAIL", "WATER", "COMBINATION"})
+PATH_CONFIDENCE_VALUES = frozenset(
+    {"graph_shortest_path", "direct_route", "access_leg_plus_graph", "missing"}
+)
+CAPACITY_SOURCE_VALUES = frozenset({"absent"})
 _TOLERANCE = 1e-9
 
 
@@ -418,6 +423,8 @@ class TransportLink:
     distance_basis: str
     cost_basis: str
     evidence: str
+    path_confidence: str = "graph_shortest_path"
+    capacity_source: str = "absent"
 
     def __post_init__(self) -> None:
         link_id = _identifier(self.link_id, "link_id")
@@ -428,7 +435,8 @@ class TransportLink:
         mode = _uppercase(self.mode, "mode")
         if mode not in _SUPPORTED_TRANSPORT_MODES:
             raise AssignmentError(
-                f"transport mode {mode!r} is outside the Stage A road pilot"
+                f"transport mode {mode!r} is outside the Stage A supported set "
+                f"{sorted(_SUPPORTED_TRANSPORT_MODES)}"
             )
         distance = _finite(self.distance_km, "distance_km", minimum=0.0)
         cost = _finite(self.cost_cad_m3, "cost_cad_m3", minimum=0.0)
@@ -439,6 +447,22 @@ class TransportLink:
         )
         if capacity is not None and capacity <= 0.0:
             raise AssignmentError(f"link {link_id} capacity_m3 must be positive")
+        path_confidence = _identifier(self.path_confidence, "path_confidence").lower()
+        if path_confidence not in PATH_CONFIDENCE_VALUES:
+            raise AssignmentError(
+                f"link {link_id} path_confidence {path_confidence!r} is not one of "
+                f"{sorted(PATH_CONFIDENCE_VALUES)}"
+            )
+        capacity_source = _identifier(self.capacity_source, "capacity_source").lower()
+        if capacity is None and capacity_source != "absent":
+            raise AssignmentError(
+                f"link {link_id} has no capacity but capacity_source is "
+                f"{capacity_source!r}; use 'absent'"
+            )
+        if capacity is not None and capacity_source == "absent":
+            raise AssignmentError(
+                f"link {link_id} has capacity but capacity_source='absent'"
+            )
         object.__setattr__(self, "link_id", link_id)
         object.__setattr__(self, "period", period)
         object.__setattr__(self, "origin", origin)
@@ -455,6 +479,8 @@ class TransportLink:
             self, "cost_basis", _identifier(self.cost_basis, "cost_basis")
         )
         object.__setattr__(self, "evidence", _identifier(self.evidence, "evidence"))
+        object.__setattr__(self, "path_confidence", path_confidence)
+        object.__setattr__(self, "capacity_source", capacity_source)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -467,8 +493,10 @@ class TransportLink:
             "distance_km": self.distance_km,
             "cost_cad_m3": self.cost_cad_m3,
             "capacity_m3": "" if self.capacity_m3 is None else self.capacity_m3,
+            "capacity_source": self.capacity_source,
             "distance_basis": self.distance_basis,
             "cost_basis": self.cost_basis,
+            "path_confidence": self.path_confidence,
             "evidence": self.evidence,
         }
 
@@ -487,6 +515,7 @@ class Contract:
     evidence: str
     diagnostic: bool = True
     notes: str = ""
+    contract_source: str = "diagnostic_absent"
 
     def __post_init__(self) -> None:
         contract_id = _identifier(self.contract_id, "contract_id")
@@ -516,6 +545,11 @@ class Contract:
         object.__setattr__(self, "evidence", _identifier(self.evidence, "evidence"))
         object.__setattr__(self, "diagnostic", bool(self.diagnostic))
         object.__setattr__(self, "notes", str(self.notes).strip())
+        object.__setattr__(
+            self,
+            "contract_source",
+            _identifier(self.contract_source, "contract_source"),
+        )
 
     def accepts(self, grade_id: str) -> bool:
         return _uppercase(grade_id, "grade_id") in self.accepted_grades
@@ -530,6 +564,7 @@ class Contract:
             "max_volume_m3": self.max_volume_m3,
             "gate_cost_cad_m3": self.gate_cost_cad_m3,
             "diagnostic": self.diagnostic,
+            "contract_source": self.contract_source,
             "evidence": self.evidence,
             "notes": self.notes,
         }
@@ -1007,17 +1042,27 @@ def to_stage_b_tables(
         weight = offer.capacity_m3_y if offer is not None else facility.nameplate_m3_y
         bucket = transport_weights.setdefault(
             key,
-            {"weight": 0.0, "weighted_cost": 0.0, "capacity": facility.nameplate_m3_y},
+            {
+                "weight": 0.0,
+                "weighted_cost": 0.0,
+                "capacity": facility.nameplate_m3_y,
+                "modes": set(),
+            },
         )
         bucket["weight"] += weight
         bucket["weighted_cost"] += link.cost_cad_m3 * weight
+        bucket["modes"].add(link.mode)
     transport_rows = [
         {
             "scenario_id": inputs.scenario_id,
             "period": period,
             "origin_node_id": origin,
             "destination_node_id": destination,
-            "transport_mode": "ROAD",
+            "transport_mode": (
+                next(iter(bucket["modes"]))
+                if len(bucket["modes"]) == 1
+                else "COMBINATION"
+            ),
             "transport_cost": (
                 bucket["weighted_cost"] / bucket["weight"]
                 if bucket["weight"] > 0

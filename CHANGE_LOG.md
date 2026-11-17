@@ -1,5 +1,51 @@
 # Change Log
 
+## 2026-11-17
+
+- **Upgraded the Stage A TSA24/BC facility and transport inputs and re-ran the
+  pilot.** Added `workflows/national/assignments/units.py` (declared
+  `m3_green`/`odt`/`bdmt`/`admt`/`mbf`/`kwh`/`mwh`/`gj` conversions with
+  fail-closed ambiguity handling), `facilities.py` (one row per BC facility,
+  Mills DB -> CFS suppliers.dbf -> FFCM TL/water hub anchor -> missing
+  coordinate precedence, unit-normalized nameplate), and `transport.py` (FFCM
+  TL-graph shortest paths, road/rail/combination modes, line-haul and transload
+  costs, path confidence). Published `facilities_bc.csv` and
+  `transport_links_bc.csv` under `data/derived/national/assignments/tsa24_pilot/`.
+  - **Facilities:** 179 BC rows; 161 Stage A SAW/PAP/PEL/BIO facilities.
+    Coordinate coverage all BC: 8 `mills_db`, 0 `suppliers_dbf`, 126
+    `tl_anchor_proxy`, 45 `missing`; Stage A scope: 7 / 0 / 113 / 41. No
+    Euclidean guesses; 8 TL/water hub proxies documented. No zero/blank
+    nameplate facility remained.
+  - **Transport:** TSA24 supply anchor is the Mills-DB Prince George sawmill
+    proxy `BC-SAW-488` because no TSA24 FMU exists in the FFCM graph. 210
+    grade-specific links across 129 facilities: 61 `direct_route`, 68
+    `graph_shortest_path`; 31 facilities have no TL route and the anchor mill is
+    excluded from a self-haul, so 32 are `missing`. Modes: 105 road, 24
+    combination. Median graph distance 920.6 km versus 261.2 km under the
+    previous 150 km diagnostic (+690.7 km median); SAWLOG median cost CAD
+    61.39/m3 versus 14.23, residue CAD 31.63/m3 versus 13.70. All links record
+    `capacity=None` and `capacity_source=absent`.
+  - **Units:** `bdmt/y` capacity now converts at the declared 0.45 ODT/m3
+    density; `admt/y` needs a declared air-dry moisture; `mbf/y` needs a
+    declared recovery factor; energy units never convert to volume. All 268 BC
+    in-scope processing lines passed the unit screen.
+  - **Base pilot (1,000 ha):** 311,600 m3 assigned, 0 unassigned, objective
+    -CAD 1.624M, delivered cost CAD 146.48/m3 (transport CAD 21.78/m3), net
+    contribution -CAD 5.21/m3. Class mix is unchanged from the previous pilot
+    (SAW 70.3%, PAP 7.0%, PEL 22.7%, BIO 0%). The unassigned penalty keeps the
+    SAWLOG stream assigned even though its diagnostic margin is negative.
+  - **ws4-quota sensitivity (306,047.3 ha/period):** 77.25M m3 assigned, 18.11M
+    m3 unassigned (RESIDUE 8.72M, SAWLOG 9.39M, all capacity-exhausted),
+    objective -CAD 21.35B, 129 facilities binding. Class mix: SAW 50.1%, PAP
+    31.0%, PEL 8.9%, BIO 10.0%.
+  - **Contracts/capacity:** all 161 contracts remain `min=0`,
+    `max=nameplate`, `gate=0`, now with `contract_source=diagnostic_absent`;
+    no real contract or route capacity data exists.
+  - Added tests for units, facility coverage, and transport paths under
+    `workflows/national/assignments/tests/`; `pytest -q tests/test_assignment.py
+    workflows/national/assignments/tests` passes 27 tests. No MKRF input or
+    output is used; assortment sorts remain dimension-only.
+
 ## 2026-11-16
 
 - **Built the Stage A facility-assignment pilot and ran TSA24/BC.** Added

@@ -3,11 +3,12 @@
 The fixture is intentionally conservative:
 
 * supply is the TSA24 assortment matrix scaled from its per-hectare basis;
-* facilities are BC SAW/PAP/PEL/BIO lines with explicitly normalized capacity;
-* transport is a diagnostic road estimate because the archive has no TSA24
-  supply-node-to-facility route and only eight BC facilities carry coordinates;
-* contracts are diagnostic zero-minimum/nameplate-maximum records because the
-  archive has no populated contract table.
+* facilities are BC SAW/PAP/PEL/BIO lines with explicit unit-normalized capacity
+  and coordinate provenance (Mills DB, suppliers.dbf, TL/water hub proxy, missing);
+* transport is the parsed FFCM TL graph from a documented TSA24 Prince George
+  mill proxy anchor, with road/rail modes and transload costs;
+* contracts remain diagnostic zero-minimum/nameplate-maximum records and are
+  labelled ``diagnostic_absent``.
 
 Every non-archive conversion is recorded in the returned assumption table.
 """
@@ -18,25 +19,32 @@ import csv
 import hashlib
 import json
 import math
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from . import units
+from .facilities import (
+    FacilityTable,
+    build_facility_capacities,
+    build_facility_table,
+)
 from .schema import (
-    REJECTED_CAPACITY_UNITS,
-    AssignmentError,
     AssignmentInputs,
     Contract,
     FacilityCapacity,
-    FacilityOffer,
     FeedstockGrade,
     SupplyOffer,
-    TransportLink,
-    require_supported_capacity_unit,
+)
+from .transport import (
+    DIAGNOSTIC_ACCESS_KM,
+    TransportTable,
+    build_transport_table,
 )
 
 __all__ = [
+    "DIAGNOSTIC_ACCESS_KM",
     "FixtureError",
     "Tsa24Fixture",
     "build_tsa24_fixture",
@@ -49,19 +57,12 @@ class FixtureError(RuntimeError):
 
 
 # The TSA24 residue ledger uses a 0.45 ODT/m3 basic density and 0.45 wet-basis
-# moisture assumption.  The same density is used to normalize odt/y facility
-# capacity to the model's green-m3 basis; this is the only global conversion in
-# the fixture and it is recorded on every affected row.
-RESIDUE_DENSITY_ODT_M3 = 0.45
+# moisture assumption.  The same density is the declared default for odt/y and
+# bdmt/y capacity normalization; every affected row carries the basis token.
+RESIDUE_DENSITY_ODT_M3 = units.DEFAULT_BASIC_DENSITY_ODT_M3
 ODT_TO_M3 = 1.0 / RESIDUE_DENSITY_ODT_M3
-
-# The archive has no TSA24 supply-node-to-transload link.  This is the
-# documented diagnostic access leg; the facility-to-transload leg is taken from
-# the FFCM road graph.
-DIAGNOSTIC_ACCESS_KM = 150.0
 DIAGNOSTIC_UNASSIGNED_PENALTY_CAD_M3 = 1000.0
 
-_LOG_GRADES = frozenset({"SAWLOG", "PULP", "OTHER_LOG"})
 _GRADE_PRODUCTS = {
     "SAWLOG": "sawlog",
     "PULP": "pulpwood",
@@ -98,7 +99,7 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def _require_columns(
-    path: Path, rows: list[dict[str, str]], required: Iterable[str]
+    path: Path, rows: list[dict[str, str]], required: Sequence[str]
 ) -> None:
     missing = set(required) - set(rows[0])
     if missing:
@@ -171,31 +172,8 @@ class Tsa24Fixture:
     tables: Mapping[str, tuple[dict[str, Any], ...]]
     source_hashes: Mapping[str, str]
     config: Mapping[str, Any]
-
-
-def _load_prices(path: Path) -> dict[str, tuple[float, str]]:
-    rows = _read_csv(path)
-    _require_columns(path, rows, {"commodity", "price_value", "price_unit"})
-    prices: dict[str, tuple[float, str]] = {}
-    for row in rows:
-        commodity = str(row["commodity"]).strip().lower()
-        if not commodity:
-            continue
-        try:
-            price = _number(row["price_value"], f"{commodity} price", default=0.0)
-        except FixtureError:
-            continue
-        unit = str(row["price_unit"]).strip().lower().replace("cad", "$")
-        if price <= 0.0 or not unit:
-            continue
-        prices[commodity] = (price, unit)
-    if not prices:
-        raise FixtureError(f"no positive commodity prices found in {path}")
-    return prices
-
-
-def _grade_volume_basis(grade_id: str) -> str:
-    return "m3"
+    facility_table: FacilityTable
+    transport_table: TransportTable
 
 
 def _supply_grade_rows(
@@ -397,586 +375,6 @@ def _supply_grade_rows(
     return tuple(sorted(grades, key=lambda item: item.grade_id)), tuple(supplies), []
 
 
-def _normalize_capacity(line: Mapping[str, str]) -> tuple[float | None, str, str]:
-    unit = str(line.get("infeed_unit", "")).strip().lower()
-    try:
-        require_supported_capacity_unit(unit)
-    except AssignmentError as error:
-        reason = (
-            "rejected_capacity_unit"
-            if unit in REJECTED_CAPACITY_UNITS
-            else "unknown_capacity_unit"
-        )
-        return None, unit, f"{reason}:{error}"
-    rate = _number(line.get("infeed_rate", ""), "infeed_rate", default=0.0)
-    if rate <= 0.0:
-        return None, unit, "rejected_nonpositive_infeed_rate"
-    if unit == "m3/y":
-        return rate, "m3/y", "archive_m3_y"
-    if unit == "odt/y":
-        return rate * ODT_TO_M3, "odt/y", "ledger_0.45_odt_m3"
-    return None, unit, f"unknown_capacity_unit:{unit}"
-
-
-def _flow_totals(flows: Sequence[Mapping[str, str]], line_id: str) -> dict[str, float]:
-    totals: dict[str, float] = {}
-    for row in flows:
-        if str(row.get("processing_line", "")).strip() != line_id:
-            continue
-        if str(row.get("flow_attribute", "")).strip() != "OutfeedRateByEntity":
-            continue
-        unit = str(row.get("unit", "")).strip().lower()
-        value = _number(row.get("value", ""), "outfeed value", default=0.0)
-        if value <= 0.0:
-            continue
-        totals[unit] = totals.get(unit, 0.0) + value
-    return totals
-
-
-def _normalize_processing_cost(
-    line: Mapping[str, str],
-    capacity_m3: float,
-    outfeed: Mapping[str, float],
-) -> tuple[float, str]:
-    unit = str(line.get("operating_cost_unit", "")).strip().lower().replace("cad", "$")
-    cost = _number(line.get("operating_cost", ""), "operating_cost", default=0.0)
-    if cost < 0.0:
-        return 0.0, "rejected_negative_operating_cost_used_zero"
-    if unit in {"$/m3", "$/m3/y"}:
-        return cost, "archive_dollar_per_m3"
-    if unit in {"$/odt", "$/odt/y"}:
-        outfeed_odt = outfeed.get("odt/y", 0.0)
-        if outfeed_odt > 0.0:
-            return cost * outfeed_odt / capacity_m3, "outfeed_odt_ratio"
-        return cost * RESIDUE_DENSITY_ODT_M3, "ledger_density_fallback"
-    if unit in {"$/mbf", "$/mbf/y"}:
-        outfeed_mbf = outfeed.get("mbf/y", 0.0)
-        if outfeed_mbf <= 0.0:
-            return 0.0, "rejected_missing_mbf_outfeed_used_zero"
-        return cost * outfeed_mbf / capacity_m3, "outfeed_mbf_ratio"
-    if unit in {"$/kwh", "$/kwh/y"}:
-        outfeed_kwh = outfeed.get("kwh/y", 0.0)
-        if outfeed_kwh <= 0.0:
-            return 0.0, "rejected_missing_kwh_outfeed_used_zero"
-        return cost * outfeed_kwh / capacity_m3, "outfeed_kwh_ratio"
-    if unit in {"$/admt", "$/admt/y"}:
-        outfeed_admt = outfeed.get("admt/y", 0.0)
-        if outfeed_admt <= 0.0:
-            return 0.0, "rejected_missing_admt_outfeed_used_zero"
-        return cost * outfeed_admt / capacity_m3, "outfeed_admt_ratio"
-    if unit in {"$/t", "$/t/y"}:
-        outfeed_t = outfeed.get("t/y", 0.0)
-        if outfeed_t <= 0.0:
-            return 0.0, "rejected_missing_tonne_outfeed_used_zero"
-        return cost * outfeed_t / capacity_m3, "outfeed_tonne_ratio"
-    return 0.0, f"rejected_operating_cost_unit_{_identifier(unit)}_used_zero"
-
-
-def _flow_quantity_in_price_unit(
-    quantity: float,
-    flow_unit: str,
-    price_unit: str,
-    density_odt_m3: float,
-) -> float | None:
-    flow_unit = flow_unit.strip().lower()
-    price_unit = price_unit.strip().lower().replace("cad", "$")
-    if price_unit in {"$/t", "$/tonne"}:
-        if flow_unit in {"odt/y", "admt/y", "t/y", "bdt/y"}:
-            return quantity
-        if flow_unit == "kg/y":
-            return quantity / 1000.0
-        if flow_unit == "m3/y":
-            return quantity * density_odt_m3
-        return None
-    if price_unit in {"$/mbf", "$/mbf/y"}:
-        return quantity if flow_unit == "mbf/y" else None
-    if price_unit in {"$/mwh", "$/mwh/y"}:
-        if flow_unit == "kwh/y":
-            return quantity / 1000.0
-        if flow_unit == "mwh/y":
-            return quantity
-        return None
-    if price_unit in {"$/m3", "$/m3/y"}:
-        return quantity if flow_unit == "m3/y" else None
-    if price_unit in {"$/kg", "$/kg/y"}:
-        return quantity if flow_unit == "kg/y" else None
-    if price_unit in {"$/gj", "$/gj/y"}:
-        return quantity if flow_unit == "gj/y" else None
-    return None
-
-
-def _normalize_product_revenue(
-    line: Mapping[str, Any],
-    capacity_m3: float,
-    prices: Mapping[str, tuple[float, str]],
-    density_odt_m3: float,
-) -> tuple[float, str]:
-    revenue = 0.0
-    included: list[str] = []
-    mass_basis_flag = False
-    for row in line.get("_outfeed_rows", ()):  # type: ignore[arg-type]
-        commodity = str(row.get("commodity", "")).strip().lower()
-        if commodity in {"internally_used_woodfuel", ""}:
-            continue
-        price = prices.get(commodity)
-        if price is None:
-            continue
-        price_value, price_unit = price
-        quantity = _number(row.get("value", ""), "outfeed value", default=0.0)
-        flow_unit = str(row.get("unit", "")).strip().lower()
-        converted = _flow_quantity_in_price_unit(
-            quantity, flow_unit, price_unit, density_odt_m3
-        )
-        if converted is None or converted <= 0.0:
-            continue
-        revenue += price_value * converted
-        included.append(f"{commodity}:{flow_unit}->{price_unit}")
-        if price_unit in {"$/t", "$/tonne"} and flow_unit in {"odt/y", "admt/y"}:
-            mass_basis_flag = True
-    if not included:
-        return 0.0, "no_priced_outfeed"
-    basis = "outfeed_price_mix:" + ";".join(sorted(set(included)))
-    if mass_basis_flag:
-        basis += ";mass_basis_odt_or_admt_treated_as_tonne"
-    return revenue / capacity_m3, basis
-
-
-def _accepted_grades(facility_class: str, feedstock: str) -> tuple[str, ...]:
-    feedstock = feedstock.strip().lower()
-    if feedstock == "log":
-        if facility_class == "SAW":
-            return ("SAWLOG",)
-        if facility_class == "PAP":
-            return ("SAWLOG", "PULP", "OTHER_LOG")
-        if facility_class in {"PEL", "BIO"}:
-            return ("PULP", "OTHER_LOG")
-        return ()
-    if feedstock == "logging_residue":
-        return ("RESIDUE",)
-    if feedstock == "hogfuel":
-        return ("HOGFUEL",)
-    return ()
-
-
-def _facility_rows(
-    facilities_path: Path,
-    lines_path: Path,
-    flows_path: Path,
-    prices_path: Path,
-    period: str,
-) -> tuple[tuple[FacilityCapacity, ...], list[dict[str, Any]], list[dict[str, Any]]]:
-    facility_rows = _read_csv(facilities_path)
-    _require_columns(facilities_path, facility_rows, {"facility", "facility_class"})
-    line_rows = _read_csv(lines_path)
-    _require_columns(
-        lines_path,
-        line_rows,
-        {
-            "processing_line",
-            "facility",
-            "feedstock",
-            "primary_product",
-            "infeed_rate",
-            "infeed_unit",
-            "operating_cost",
-            "operating_cost_unit",
-        },
-    )
-    flow_rows = _read_csv(flows_path)
-    _require_columns(
-        flows_path,
-        flow_rows,
-        {"processing_line", "flow_attribute", "commodity", "value", "unit"},
-    )
-    prices = _load_prices(prices_path)
-    selected_classes = {"SAW", "PAP", "PEL", "BIO"}
-    facility_class = {
-        str(row["facility"]).strip(): str(row["facility_class"]).strip().upper()
-        for row in facility_rows
-        if str(row["facility"]).strip().startswith("BC-")
-        and str(row["facility_class"]).strip().upper() in selected_classes
-    }
-    if not facility_class:
-        raise FixtureError("no BC SAW/PAP/PEL/BIO facilities found")
-
-    line_screen: list[dict[str, Any]] = []
-    lines_by_facility: dict[str, list[dict[str, Any]]] = {}
-    for row in line_rows:
-        facility_id = str(row["facility"]).strip()
-        if facility_id not in facility_class:
-            continue
-        line_id = str(row["processing_line"]).strip()
-        capacity, unit, capacity_basis = _normalize_capacity(row)
-        if capacity is None:
-            line_screen.append(
-                {
-                    "facility_id": facility_id,
-                    "line_id": line_id,
-                    "facility_class": facility_class[facility_id],
-                    "feedstock": str(row["feedstock"]).strip().lower(),
-                    "primary_product": str(row["primary_product"]).strip().lower(),
-                    "capacity_status": "rejected",
-                    "capacity_basis": capacity_basis,
-                    "infeed_unit": unit,
-                    "infeed_rate": row.get("infeed_rate", ""),
-                    "reason": capacity_basis,
-                }
-            )
-            continue
-        outfeed = _flow_totals(flow_rows, line_id)
-        processing, cost_basis = _normalize_processing_cost(row, capacity, outfeed)
-        outfeed_rows = [
-            flow
-            for flow in flow_rows
-            if str(flow.get("processing_line", "")).strip() == line_id
-            and str(flow.get("flow_attribute", "")).strip() == "OutfeedRateByEntity"
-        ]
-        line_with_flows = dict(row)
-        line_with_flows["_outfeed_rows"] = outfeed_rows  # type: ignore[assignment]
-        density = (
-            RESIDUE_DENSITY_ODT_M3
-            if str(row["feedstock"]).strip().lower() == "logging_residue"
-            else 0.40
-        )
-        revenue, revenue_basis = _normalize_product_revenue(
-            line_with_flows, capacity, prices, density
-        )
-        record = {
-            "line_id": line_id,
-            "facility_id": facility_id,
-            "facility_class": facility_class[facility_id],
-            "feedstock": str(row["feedstock"]).strip().lower(),
-            "primary_product": str(row["primary_product"]).strip().lower(),
-            "capacity_m3_y": capacity,
-            "capacity_basis": capacity_basis,
-            "processing_cost_cad_m3": processing,
-            "cost_basis": cost_basis,
-            "product_revenue_cad_m3": revenue,
-            "revenue_basis": revenue_basis,
-            "outfeed": outfeed,
-        }
-        lines_by_facility.setdefault(facility_id, []).append(record)
-        line_screen.append(
-            {
-                "facility_id": facility_id,
-                "line_id": line_id,
-                "facility_class": facility_class[facility_id],
-                "feedstock": record["feedstock"],
-                "primary_product": record["primary_product"],
-                "capacity_status": "accepted",
-                "capacity_basis": capacity_basis,
-                "infeed_unit": unit,
-                "infeed_rate": row.get("infeed_rate", ""),
-                "capacity_m3_y": capacity,
-                "cost_basis": cost_basis,
-                "revenue_basis": revenue_basis,
-                "reason": "",
-            }
-        )
-
-    facilities: list[FacilityCapacity] = []
-    for facility_id, facility_lines in sorted(lines_by_facility.items()):
-        product_capacity: dict[str, float] = {}
-        for line in facility_lines:
-            product = line["primary_product"]
-            product_capacity[product] = max(
-                product_capacity.get(product, 0.0), line["capacity_m3_y"]
-            )
-        nameplate = sum(product_capacity.values())
-        if nameplate <= 0.0:
-            continue
-        candidate_grades: set[str] = set()
-        for line in facility_lines:
-            candidate_grades.update(
-                _accepted_grades(facility_class[facility_id], line["feedstock"])
-            )
-        offers: list[FacilityOffer] = []
-        for grade_id in sorted(candidate_grades):
-            by_product: dict[str, list[dict[str, Any]]] = {}
-            for line in facility_lines:
-                if grade_id in _accepted_grades(
-                    facility_class[facility_id], line["feedstock"]
-                ):
-                    by_product.setdefault(line["primary_product"], []).append(line)
-            if not by_product:
-                continue
-            representatives: list[dict[str, Any]] = []
-            for product_lines in by_product.values():
-                representatives.append(
-                    max(product_lines, key=lambda item: item["capacity_m3_y"])
-                )
-            grade_capacity = sum(line["capacity_m3_y"] for line in representatives)
-            if grade_capacity <= 0.0:
-                continue
-            total_capacity = sum(line["capacity_m3_y"] for line in representatives)
-            processing = (
-                sum(
-                    line["processing_cost_cad_m3"] * line["capacity_m3_y"]
-                    for line in representatives
-                )
-                / total_capacity
-            )
-            revenue = (
-                sum(
-                    line["product_revenue_cad_m3"] * line["capacity_m3_y"]
-                    for line in representatives
-                )
-                / total_capacity
-            )
-            primary_product = max(
-                by_product,
-                key=lambda product: max(
-                    line["capacity_m3_y"] for line in by_product[product]
-                ),
-            )
-            capacity_basis = ";".join(
-                sorted({line["capacity_basis"] for line in representatives})
-            )
-            cost_basis = ";".join(
-                sorted({line["cost_basis"] for line in representatives})
-            )
-            revenue_basis = ";".join(
-                sorted({line["revenue_basis"] for line in representatives})
-            )
-            offers.append(
-                FacilityOffer(
-                    offer_id=f"{facility_id}::{grade_id}",
-                    period=period,
-                    facility_id=facility_id,
-                    facility_name=facility_id,
-                    facility_class=facility_class[facility_id],
-                    grade_id=grade_id,
-                    primary_product=primary_product,
-                    capacity_m3_y=grade_capacity,
-                    processing_cost_cad_m3=processing,
-                    product_revenue_cad_m3=revenue,
-                    capacity_basis=capacity_basis,
-                    cost_basis=cost_basis,
-                    revenue_basis=revenue_basis,
-                    evidence=(
-                        "parsed_ffcm_processing_lines;"
-                        "capacity=normalized_line_infeed;"
-                        "cost_and_revenue=line_outfeed_ratios"
-                    ),
-                )
-            )
-        if not offers:
-            continue
-        facilities.append(
-            FacilityCapacity(
-                facility_id=facility_id,
-                facility_name=facility_id,
-                facility_class=facility_class[facility_id],
-                nameplate_m3_y=nameplate,
-                offers=tuple(offers),
-                evidence="parsed_ffcm_processing_lines;nameplate=max_per_product",
-            )
-        )
-    if not facilities:
-        raise FixtureError(
-            "no BC facility could be normalized to a supported capacity basis"
-        )
-    return tuple(facilities), line_screen, []
-
-
-def _facility_tl_distances(
-    routes_path: Path, facility_ids: set[str]
-) -> dict[str, tuple[str, float]]:
-    rows = _read_csv(routes_path)
-    _require_columns(
-        routes_path,
-        rows,
-        {"origin_list", "destination_list", "total_length", "transport_mode"},
-    )
-    distances: dict[str, tuple[str, float]] = {}
-    for row in rows:
-        if str(row.get("transport_mode", "")).strip().upper() != "ROAD":
-            continue
-        distance = _number(
-            row.get("total_length", ""), "route total_length", default=0.0
-        )
-        if distance <= 0.0:
-            continue
-        origins = [
-            value.strip()
-            for value in str(row["origin_list"]).split(";")
-            if value.strip()
-        ]
-        destinations = [
-            value.strip()
-            for value in str(row["destination_list"]).split(";")
-            if value.strip()
-        ]
-        for origin in origins:
-            for destination in destinations:
-                facility = None
-                transload = None
-                if origin in facility_ids and destination.startswith("TL"):
-                    facility, transload = origin, destination
-                elif destination in facility_ids and origin.startswith("TL"):
-                    facility, transload = destination, origin
-                if facility is None or transload is None:
-                    continue
-                current = distances.get(facility)
-                if current is None or distance < current[1]:
-                    distances[facility] = (transload, distance)
-    return distances
-
-
-def _transporter_rates(
-    transporters_path: Path, materials_path: Path
-) -> tuple[float, float, dict[str, float]]:
-    rows = _read_csv(transporters_path)
-    _require_columns(
-        transporters_path,
-        rows,
-        {
-            "transporter",
-            "cruising_speed",
-            "cruising_speed_unit",
-            "transport_mode",
-            "operating_cost",
-            "operating_cost_unit",
-            "fuel_cost",
-            "fuel_cost_unit",
-        },
-    )
-    selected = {
-        str(row["transporter"]).strip(): row
-        for row in rows
-        if str(row["transporter"]).strip() in {"BC_logging_truck", "BC_residue_truck"}
-    }
-    if set(selected) != {"BC_logging_truck", "BC_residue_truck"}:
-        raise FixtureError("BC logging/residue transporter rows are missing")
-    rates: dict[str, float] = {}
-    for name, row in selected.items():
-        if str(row["transport_mode"]).strip().upper() != "ROAD":
-            raise FixtureError(f"{name} is not a road transporter")
-        speed = _number(row["cruising_speed"], f"{name} speed")
-        operating = _number(row["operating_cost"], f"{name} operating cost")
-        fuel = _number(row["fuel_cost"], f"{name} fuel cost")
-        if speed <= 0.0 or operating < 0.0 or fuel < 0.0:
-            raise FixtureError(f"{name} has invalid non-positive cost or speed")
-        rates[name] = fuel + operating / speed
-
-    material_rows = _read_csv(materials_path)
-    _require_columns(
-        materials_path, material_rows, {"transporter", "commodity", "capacity", "unit"}
-    )
-    capacities: dict[str, dict[str, float]] = {}
-    for row in material_rows:
-        transporter = str(row["transporter"]).strip()
-        if transporter not in rates:
-            continue
-        commodity = str(row["commodity"]).strip().lower()
-        capacities.setdefault(transporter, {})[commodity] = _number(
-            row["capacity"], f"{transporter} {commodity} capacity"
-        )
-    log_capacity = capacities.get("BC_logging_truck", {}).get("log")
-    residue_capacity = capacities.get("BC_residue_truck", {}).get("logging_residue")
-    if not log_capacity or not residue_capacity:
-        raise FixtureError(
-            "transporter material capacities for log/residue are missing"
-        )
-    return (
-        rates["BC_logging_truck"],
-        rates["BC_residue_truck"],
-        {
-            "log_capacity_m3": log_capacity,
-            "residue_capacity_bdt": residue_capacity,
-        },
-    )
-
-
-def _transport_links(
-    facilities: Sequence[FacilityCapacity],
-    routes_path: Path,
-    transporters_path: Path,
-    materials_path: Path,
-    period: str,
-) -> tuple[tuple[TransportLink, ...], list[dict[str, Any]], dict[str, float]]:
-    distances = _facility_tl_distances(
-        routes_path, {facility.facility_id for facility in facilities}
-    )
-    log_rate, residue_rate, capacities = _transporter_rates(
-        transporters_path, materials_path
-    )
-    log_capacity = capacities["log_capacity_m3"]
-    residue_capacity = capacities["residue_capacity_bdt"]
-    log_cost_per_m3_km = log_rate / log_capacity
-    residue_cost_per_m3_km = residue_rate / residue_capacity * RESIDUE_DENSITY_ODT_M3
-    links: list[TransportLink] = []
-    screen: list[dict[str, Any]] = []
-    for facility in facilities:
-        route = distances.get(facility.facility_id)
-        if route is None:
-            screen.append(
-                {
-                    "facility_id": facility.facility_id,
-                    "facility_class": facility.facility_class,
-                    "status": "rejected_no_ffcm_road_route_to_tl",
-                    "transload_node": "",
-                    "ffcm_route_km": "",
-                    "diagnostic_access_km": DIAGNOSTIC_ACCESS_KM,
-                    "total_distance_km": "",
-                }
-            )
-            continue
-        transload, route_km = route
-        total_distance = DIAGNOSTIC_ACCESS_KM + route_km
-        for offer in facility.offers:
-            is_residue = offer.grade_id in {"RESIDUE", "HOGFUEL"}
-            per_m3_km = residue_cost_per_m3_km if is_residue else log_cost_per_m3_km
-            links.append(
-                TransportLink(
-                    link_id=f"TSA24_AU23000->{facility.facility_id}::{offer.grade_id}",
-                    period=period,
-                    origin="TSA24_AU23000",
-                    destination=facility.facility_id,
-                    grade_id=offer.grade_id,
-                    mode="ROAD",
-                    distance_km=total_distance,
-                    cost_cad_m3=total_distance * per_m3_km,
-                    capacity_m3=None,
-                    distance_basis=(
-                        "diagnostic_tsa24_access_150km_plus_"
-                        "ffcm_facility_to_tl_min_road_km"
-                    ),
-                    cost_basis=(
-                        "transporters_bc_residue_truck"
-                        if is_residue
-                        else "transporters_bc_logging_truck"
-                    ),
-                    evidence="diagnostic_not_a_production_route",
-                )
-            )
-        screen.append(
-            {
-                "facility_id": facility.facility_id,
-                "facility_class": facility.facility_class,
-                "status": "accepted_diagnostic_route",
-                "transload_node": transload,
-                "ffcm_route_km": route_km,
-                "diagnostic_access_km": DIAGNOSTIC_ACCESS_KM,
-                "total_distance_km": total_distance,
-            }
-        )
-    if not links:
-        raise FixtureError("no facility has an FFCM road route to a transload node")
-    return (
-        tuple(links),
-        screen,
-        {
-            "log_cost_per_m3_km": log_cost_per_m3_km,
-            "residue_cost_per_m3_km": residue_cost_per_m3_km,
-            "log_truck_capacity_m3": log_capacity,
-            "residue_truck_capacity_bdt": residue_capacity,
-            "bc_logging_truck_cost_per_km": log_rate,
-            "bc_residue_truck_cost_per_km": residue_rate,
-        },
-    )
-
-
 def _diagnostic_contracts(
     facilities: Sequence[FacilityCapacity], period: str
 ) -> tuple[Contract, ...]:
@@ -992,16 +390,54 @@ def _diagnostic_contracts(
             evidence="diagnostic_no_populated_contract_table",
             diagnostic=True,
             notes="min=0, max=nameplate; replace with real contract terms before use",
+            contract_source="diagnostic_absent",
         )
         for facility in facilities
     )
 
 
+def _class_mix(facility_table: FacilityTable) -> dict[str, Any]:
+    rows: dict[str, dict[str, float]] = {}
+    for facility_class in ("SAW", "PAP", "PEL", "BIO"):
+        records = [
+            record
+            for record in facility_table.records
+            if record.stage_a_scope and record.facility_class == facility_class
+        ]
+        rows[facility_class] = {
+            "facility_count": float(len(records)),
+            "nameplate_m3_y": float(
+                sum((record.nameplate_m3_y or 0.0) for record in records)
+            ),
+        }
+    total_count = sum(row["facility_count"] for row in rows.values())
+    total_nameplate = sum(row["nameplate_m3_y"] for row in rows.values())
+    for row in rows.values():
+        row["facility_share"] = (
+            row["facility_count"] / total_count if total_count > 0 else 0.0
+        )
+        row["nameplate_share"] = (
+            row["nameplate_m3_y"] / total_nameplate if total_nameplate > 0 else 0.0
+        )
+    return {
+        "classes": rows,
+        "facility_count": total_count,
+        "nameplate_m3_y": total_nameplate,
+    }
+
+
 def _assumption_rows(
     area_ha: float,
     target_stand: Mapping[str, Any],
-    transport_rates: Mapping[str, float],
+    facility_table: FacilityTable,
+    transport_table: TransportTable,
 ) -> list[dict[str, Any]]:
+    coverage = facility_table.coverage
+    coverage_in_scope = facility_table.coverage_in_scope
+    transport_summary = transport_table.summary
+    comparison = transport_summary.get("diagnostic_comparison", {})
+    old_distance = comparison.get("old_diagnostic_distance_km", {})
+    new_distance = comparison.get("new_distance_km", {})
     rows = [
         _assumption(
             "scope",
@@ -1045,11 +481,11 @@ def _assumption_rows(
         ),
         _assumption(
             "facility_capacity",
-            "m3/y infeed is used directly; odt/y infeed is converted at 1/0.45 m3 per ODT; bdmt/y is rejected.",
+            "m3/y infeed is used directly; odt/y and bdmt/y infeed use the declared 0.45 ODT/m3 density; admt/y is rejected without a declared air-dry moisture; mbf/y is rejected without a declared recovery factor; energy units cannot become volume.",
             ODT_TO_M3,
             "m3/ODT",
-            "archive_parsed_processing_lines;ledger_density",
-            "PAP bdmt/y lines are duplicate alternatives of the m3/y log lines and are excluded.",
+            "units.py;archive_parsed_processing_lines;ledger_density",
+            "PAP bdmt/y alternatives convert below the paired m3/y log line, so product capacity is unchanged.",
         ),
         _assumption(
             "facility_capacity",
@@ -1060,52 +496,60 @@ def _assumption_rows(
             "Prevents counting the same FFCM line once per feedstock alternative.",
         ),
         _assumption(
-            "processing_cost",
-            "Operating cost is converted to CAD/m3 infeed with the same line's outfeed ratio when the archive unit is per mbf, kwh, admt, odt, or t.",
-            "",
-            "CAD/m3",
-            "archive_parsed_processing_line_flows",
-            "No global mbf/kwh/admt conversion is assumed.",
+            "coordinate",
+            "Coordinates use Mills DB first, CFS suppliers.dbf second, an FFCM TL/water hub proxy third, and missing last; no Euclidean guesses are used.",
+            f"mills_db={coverage.get('mills_db', 0)};suppliers_dbf={coverage.get('suppliers_dbf', 0)};tl_anchor_proxy={coverage.get('tl_anchor_proxy', 0)};missing={coverage.get('missing', 0)}",
+            "facility_count",
+            "facility_geocoding.csv;routes.csv",
+            "TL/water proxy uses the median coordinate of geocoded facilities directly attached to the same hub; confidence is low.",
         ),
         _assumption(
-            "revenue",
-            "Product revenue uses parsed commodity prices and each line's outfeed mix.",
-            "",
-            "CAD/m3",
-            "archive_parsed_commodities;processing_line_flows",
-            "Mass prices are applied to odt/admt outfeed with an explicit flag.",
+            "coordinate",
+            "Stage A scope coordinate coverage is tracked separately from all BC facilities.",
+            f"mills_db={coverage_in_scope.get('mills_db', 0)};suppliers_dbf={coverage_in_scope.get('suppliers_dbf', 0)};tl_anchor_proxy={coverage_in_scope.get('tl_anchor_proxy', 0)};missing={coverage_in_scope.get('missing', 0)}",
+            "facility_count",
+            "facility_geocoding.csv;routes.csv",
+            "Missing coordinates do not fabricate a location and do not by themselves exclude a facility from the LP.",
         ),
         _assumption(
             "transport",
-            "The TSA24 supply node has no archive route to an FFCM transload hub; a 150 km access leg is added to the minimum facility-to-TL road distance.",
-            DIAGNOSTIC_ACCESS_KM,
+            "The TSA24 supply anchor is a geocoded Prince George mill proxy because no TSA24 FMU exists in the FFCM graph.",
+            transport_summary.get("anchor", {}).get("anchor_id", ""),
+            "facility_id",
+            "facility_geocoding.csv;routes.csv",
+            "Anchor coordinate is Mills DB 53.99,-122.69 (BC-SAW-488); all distances are relative to this proxy.",
+        ),
+        _assumption(
+            "transport",
+            "Distances are FFCM route-graph shortest paths from the anchor through TL nodes, not Euclidean distances.",
+            new_distance.get("median", ""),
             "km",
-            "diagnostic",
-            "This is the primary transport uncertainty; it is not a Euclidean estimate.",
+            "archive_parsed_routes",
+            f"Median graph distance is {new_distance.get('median', '')} km versus {old_distance.get('median', '')} km in the previous 150 km diagnostic.",
         ),
         _assumption(
             "transport",
-            "Road cost uses BC_logging_truck for logs and BC_residue_truck for residue, with archive fuel and operating rates.",
-            transport_rates.get("log_cost_per_m3_km", ""),
-            "CAD/m3-km",
-            "archive_parsed_transporters;transporter_materials",
-            "No transload cost is applied because the diagnostic path is direct road.",
+            "Road and rail costs use BC transporters with archive fuel and operating rates and material capacities; transload costs are added at each TL node.",
+            "",
+            "CAD/m3",
+            "archive_parsed_transporters;transporter_materials;transload_costs",
+            "Combination paths use the actual leg mode; no global average rate is assumed.",
         ),
         _assumption(
             "transport",
-            "FFCM route capacity is absent from the parsed route table; pilot transport links are uncapped.",
+            "FFCM route capacity is absent from the parsed route table; every transport link is uncapped.",
             "",
             "m3",
             "diagnostic",
-            "Add route capacity before interpreting congestion or rail/water limits.",
+            "capacity=None and capacity_source=absent; do not interpret congestion or rail/water limits.",
         ),
         _assumption(
             "contracts",
-            "Contracts are diagnostic: min=0 and max=facility nameplate.",
+            "Contracts are diagnostic: min=0 and max=facility nameplate; no populated real contract table exists.",
             "",
             "m3",
-            "diagnostic_no_populated_contract_table",
-            "Contract compliance is reported but does not constrain the base pilot.",
+            "diagnostic_absent",
+            "contract_source=diagnostic_absent on every contract; compliance is a bound check, not commercial evidence.",
         ),
         _assumption(
             "objective",
@@ -1166,7 +610,10 @@ def build_tsa24_fixture(
     materials_path = (
         repo_root / "metadata/ffcm-archive/parsed/transporter_materials.csv"
     )
+    transload_path = repo_root / "metadata/ffcm-archive/parsed/transload_costs.csv"
     prices_path = repo_root / "metadata/ffcm-archive/parsed/commodities.csv"
+    geocoding_path = repo_root / "metadata/facility_geocoding.csv"
+    anchors_path = repo_root / "metadata/fmu_tl_anchors.csv"
     for path in (
         matrix_path,
         ledger_path,
@@ -1177,7 +624,10 @@ def build_tsa24_fixture(
         routes_path,
         transporters_path,
         materials_path,
+        transload_path,
         prices_path,
+        geocoding_path,
+        anchors_path,
     ):
         if not path.exists():
             raise FixtureError(f"required fixture input is missing: {path}")
@@ -1188,15 +638,34 @@ def build_tsa24_fixture(
     grades, supplies, _ = _supply_grade_rows(
         matrix_path, ledger_path, float(area_ha), period
     )
-    facilities, line_screen, _ = _facility_rows(
-        facilities_path, lines_path, flows_path, prices_path, period
+    facility_table = build_facility_table(repo_root)
+    facilities, line_screen = build_facility_capacities(
+        repo_root, facility_table, period=period
     )
-    links, transport_screen, transport_rates = _transport_links(
-        facilities, routes_path, transporters_path, materials_path, period
+    transport_table = build_transport_table(
+        repo_root, facilities, grades, period=period
     )
+    status_by_facility = {
+        record.facility_id: (
+            "out_of_scope"
+            if not record.stage_a_scope
+            else (
+                "zero_capacity"
+                if record.capacity_status != "positive"
+                else transport_table.status_by_facility.get(
+                    record.facility_id, "missing_no_offer"
+                )
+            )
+        )
+        for record in facility_table.records
+    }
+    facility_table = facility_table.with_transport_status(status_by_facility)
+    links = transport_table.to_transport_links(period)
     contracts = _diagnostic_contracts(facilities, period)
 
-    assumptions = _assumption_rows(float(area_ha), target_stand, transport_rates)
+    assumptions = _assumption_rows(
+        float(area_ha), target_stand, facility_table, transport_table
+    )
     assumptions.extend(
         _assumption(
             "facility_screen",
@@ -1213,13 +682,13 @@ def build_tsa24_fixture(
         _assumption(
             "transport_screen",
             f"{row['facility_id']} rejected: {row['status']}",
-            "",
+            row.get("distance_km", ""),
             "km",
             "archive_parsed_routes",
-            "The facility has no defensible FFCM facility-to-transload road distance.",
+            "The facility has no defensible FFCM TL-graph path from the TSA24 anchor.",
         )
-        for row in transport_screen
-        if row["status"] != "accepted_diagnostic_route"
+        for row in transport_table.screen
+        if str(row["status"]).startswith("missing")
     )
 
     inputs = AssignmentInputs(
@@ -1238,7 +707,10 @@ def build_tsa24_fixture(
             "area_ha": float(area_ha),
             "period": period,
             "target_stand": target_stand,
-            "transport_rates": transport_rates,
+            "transport_summary": dict(transport_table.summary),
+            "facility_coverage": facility_table.summary(),
+            "tsa24_anchor": dict(transport_table.summary.get("anchor", {})),
+            "unit_registry": list(units.unit_registry_rows()),
             "diagnostic": True,
             "not_a_tsa_supply_estimate": True,
             "mkrf_used": False,
@@ -1255,11 +727,17 @@ def build_tsa24_fixture(
             for facility in inputs.facilities
             for offer in facility.offers
         ),
+        "facilities_bc": tuple(
+            record.to_dict() for record in facility_table.records
+        ),
         "transport_links": tuple(link.to_dict() for link in inputs.transport_links),
+        "transport_links_bc": tuple(
+            path.to_dict() for path in transport_table.links
+        ),
+        "transport_screen": tuple(transport_table.screen),
         "contracts": tuple(contract.to_dict() for contract in inputs.contracts),
         "assumptions": tuple(assumptions),
         "line_screen": tuple(line_screen),
-        "transport_screen": tuple(transport_screen),
         "grades": tuple(grade.to_dict() for grade in inputs.grades),
     }
     source_hashes = {
@@ -1274,9 +752,13 @@ def build_tsa24_fixture(
             routes_path,
             transporters_path,
             materials_path,
+            transload_path,
             prices_path,
+            geocoding_path,
+            anchors_path,
         )
     }
+    class_mix = _class_mix(facility_table)
     config = {
         "area_ha": float(area_ha),
         "period": period,
@@ -1285,7 +767,12 @@ def build_tsa24_fixture(
         "diagnostic_access_km": DIAGNOSTIC_ACCESS_KM,
         "unassigned_penalty_cad_m3": DIAGNOSTIC_UNASSIGNED_PENALTY_CAD_M3,
         "facility_classes": ["BIO", "PAP", "PEL", "SAW"],
-        "transport_rates": transport_rates,
+        "facility_coverage": facility_table.summary(),
+        "transport_summary": dict(transport_table.summary),
+        "tsa24_anchor": dict(transport_table.summary.get("anchor", {})),
+        "unit_registry": list(units.unit_registry_rows()),
+        "ffcm_bc_class_mix": class_mix,
+        "transport_rates": dict(transport_table.summary.get("rate_table", {})),
         "target_volume_m3ha": target_stand.get("volume_m3ha"),
         "target_agb_odt_ha": target_stand.get("target_agb_odt_ha"),
     }
@@ -1294,6 +781,8 @@ def build_tsa24_fixture(
         tables=tables,
         source_hashes=source_hashes,
         config=config,
+        facility_table=facility_table,
+        transport_table=transport_table,
     )
 
 

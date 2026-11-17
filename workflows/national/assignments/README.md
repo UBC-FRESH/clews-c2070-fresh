@@ -6,8 +6,10 @@ assortment supply and the Stage B forest-sector network-flow model.
 ```
 TSA24 assortment matrix + residue ledger
   -> supply offers by dimension-only grade          (fixtures.py)
-  -> FFCM BC facility lines, normalized capacity    (fixtures.py)
-  -> diagnostic road transport + contracts          (fixtures.py)
+  -> BC facility table + coordinate provenance      (facilities.py)
+  -> unit-normalized facility capacity              (units.py)
+  -> FFCM TL graph transport + transload costs      (transport.py)
+  -> diagnostic contracts                           (fixtures.py)
   -> PuLP transportation LP                         (model.py)
   -> assignment, utilization, contract, unassigned,
      objective, and validation tables               (run_tsa24.py)
@@ -31,8 +33,10 @@ invent demand rows, market clearing, or line-level scheduling.
   remains the total cap.
 - Objective: maximise product revenue minus roadside supply, transport, gate,
   processing, and unassigned penalty. A cost-min diagnostic is not used.
-- Units: all model quantities are m3 green. ODT is carried on offers for
-  reporting and converted only at declared boundaries.
+- Units: all model quantities are m3 green. ODT and dry-mass units are carried
+  on offers for reporting and converted only at declared boundaries. `units.py`
+  defines `m3_green`, `odt`, `bdmt`, `admt`, `mbf`, `kwh`, `mwh`, and `gj`;
+  ambiguous conversions fail loudly rather than silently converting.
 
 The base pilot area is **1,000 ha**. It is a contract/data-shape diagnostic, not
 a TSA24 supply estimate. The optional `--sensitivity-ws4-quota` run at
@@ -46,7 +50,8 @@ not be read as an annual TSA supply forecast.
 | `parsed_archive` | Directly parsed FFCM archive table | `facilities.csv`, `processing_lines.csv`, `routes.csv` |
 | `derived_tsa24_matrix` | TSA24 assortment matrix / residue ledger | grade volumes, matrix prices |
 | `ledger_assumption` | Residue ledger assumption | 0.45 ODT/m3, 0.45 wet-basis moisture |
-| `diagnostic` | Documented pilot assumption, not a source value | 150 km access leg, diagnostic contracts, penalty |
+| `graph_proxy` | Documented FFCM graph proxy | TSA24 Prince George mill anchor, TL hub coordinate proxy |
+| `diagnostic` | Documented pilot assumption, not a source value | diagnostic contracts, unassigned penalty |
 | `assumption` | Generic placeholder | reserved hog-fuel grade with no supply |
 
 Every non-archive conversion is written to `assumptions.csv`; rejected lines
@@ -130,17 +135,26 @@ quality test.
 
 ### Facilities
 
-- Keep BC `SAW`, `PAP`, `PEL`, `BIO` facilities from `facilities.csv`.
-- Normalize `infeed_rate`:
+- Build one row per BC facility in `facilities_bc.csv`, including out-of-scope
+  `PLY`/`OSB`/`NSP` rows and any zero/blank-capacity facility. The LP keeps only
+  BC `SAW`, `PAP`, `PEL`, and `BIO` with positive nameplate.
+- Resolve coordinates in this order: Mills DB (`coord_source=mills_db`), CFS
+  `suppliers.dbf` (`suppliers_dbf`), an FFCM TL/water hub anchor
+  (`tl_anchor_proxy`), then `missing`. The hub anchor is the median coordinate
+  of geocoded facilities directly attached to the same hub; it is a
+  low-confidence proxy, not a Euclidean guess.
+- Normalize `infeed_rate` through `units.py`:
   - `m3/y` -> m3/y directly.
-  - `odt/y` -> m3/y at `1 / 0.45`, the ledger density.
-  - `bdmt/y` -> rejected. PAP bdmt/y lines are duplicates of the paired m3/y
-    log line; the m3/y line is used.
-  - `admt/y`, `mbf/y`, `kwh/y`, and other units -> rejected for capacity.
+  - `odt/y` and `bdmt/y` -> m3/y at the declared 0.45 ODT/m3 density.
+  - `admt/y` -> rejected unless an air-dry moisture is declared.
+  - `mbf/y` -> rejected unless a recovery factor (m3 per mbf) is declared.
+  - `kwh/y`, `mwh/y`, `gj/y` -> rejected for capacity; energy cannot become
+    volume without a declared energy density.
 - Group lines by facility × primary product. Product capacity is the maximum
   normalized line capacity across feedstock alternatives; facility nameplate is
   the sum across products. This avoids counting the same FFCM line once per
-  feedstock alternative.
+  feedstock alternative. PAP `bdmt/y` alternatives convert below the paired
+  `m3/y` log line, so the nameplate is unchanged.
 - Grade capacity is the sum, across products, of the maximum capacity of lines
   that accept that grade. Grade capacities are alternatives, not additive
   across grades; the facility nameplate remains the binding total.
@@ -154,32 +168,38 @@ quality test.
 ### Transport
 
 The parsed FFCM route graph connects facilities to transload (`TL`) and water
-(`W`) nodes, but it has no TSA24 supply node and only eight BC facilities have
-coordinates. A facility-to-TSA24 route therefore does not exist in the archive.
+(`W`) nodes, but it has no TSA24 supply node. The pilot therefore uses a
+documented supply anchor: the Mills-DB geocoded Prince George sawmill
+`BC-SAW-488` (53.99, -122.69), which is the only geocoded BC facility in the
+TSA24/Prince George area. This is a proxy, not a production route.
 
-The pilot uses a documented diagnostic:
+From that anchor the builder uses:
 
 ```
-distance = 150 km TSA24 access leg
-         + minimum FFCM facility-to-TL ROAD distance
+anchor -> TL access leg from routes.csv
+        -> TL-TL shortest path from routes.csv
+        -> TL -> facility route from routes.csv
 ```
 
-The facility leg is from `routes.csv`; the access leg is an assumption. This is
-not Euclidean distance and not a production route. Facilities without an FFCM
-road route are excluded from the transport layer rather than given a fabricated
-distance.
+`transport_links_bc.csv` records the path nodes, path legs, distance, mode
+(`ROAD`, `RAIL`, `WATER`, or `COMBINATION`), line-haul cost, transload cost, and
+`path_confidence` (`direct_route`, `graph_shortest_path`, or `missing`). Road
+and rail costs use the BC transporters with archive fuel/operating rates and
+`transporter_materials` capacities; transload costs are applied at each TL node
+from `transload_costs.csv`. `$/t` transload costs use the feedstock grade's
+declared density, not a global tonne assumption.
 
-Road cost uses `BC_logging_truck` for logs and `BC_residue_truck` for residue,
-with archive fuel and operating rates and truck capacities. No transload cost is
-applied because the diagnostic path is direct road. Route capacity is absent
-from the parsed route table, so transport links are uncapped.
+A facility with no TL path is marked `missing` and excluded; it is never given
+a fabricated distance or cost. Route capacity is absent from the parsed route
+table, so every link records `capacity=None` and `capacity_source=absent`.
 
 ### Contracts
 
 No populated contract table exists. Each facility receives a diagnostic
 contract with `min=0`, `max=nameplate`, and `gate=0`. `Contract.diagnostic` is
-true and the notes say to replace it with real terms. The test suite covers
-non-zero minima and tighter maxima.
+true, `contract_source=diagnostic_absent` is written on every contract, and the
+notes say to replace it with real terms. The test suite covers non-zero minima
+and tighter maxima.
 
 ## Validation (`validate.py`)
 
@@ -192,6 +212,8 @@ The validator recomputes, rather than trusts:
 - unassigned reasons;
 - moisture blend limits;
 - unit consistency and documented capacity conversions;
+- transport path confidence, capacity source, and distance basis;
+- diagnostic contract source;
 - finite values;
 - objective decomposition against the solver objective;
 - facility utilization and contract report completeness.
@@ -215,7 +237,7 @@ Optional period-scale sensitivity:
 Tests:
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -p 'test_assignment.py' -v
+.venv/bin/python -m pytest -q tests/test_assignment.py workflows/national/assignments/tests
 ```
 
 ## Outputs
@@ -234,13 +256,16 @@ The pilot writes to `data/derived/national/assignments/tsa24_pilot/`:
 | `ASSIGNMENT_REPORT.md` | pilot narrative and tables |
 | `manifest.json` | config, source/output hashes, counts, assumptions |
 | `supply_offers.csv` | fixture supply table |
+| `facilities_bc.csv` | one row per BC facility, coordinate source/confidence, nameplate, line list, transport status |
 | `facility_capacity.csv` | fixture facility total table |
 | `facility_offers.csv` | fixture facility-grade table |
-| `transport_links.csv` | fixture transport table |
+| `transport_links.csv` | fixture transport table consumed by the LP |
+| `transport_links_bc.csv` | auditable path table: nodes, legs, mode, distance, line-haul, transload, confidence, capacity source |
 | `contracts.csv` | fixture contract table |
 | `assumptions.csv` | all diagnostic assumptions |
 | `line_screen.csv` | accepted/rejected processing lines |
-| `transport_screen.csv` | accepted/rejected facility routes |
+| `transport_screen.csv` | accepted/missing facility paths |
+| `previous_pilot_class_mix.csv` | captured prior-run class shares for comparison |
 | `grades.csv` | grade definitions |
 | `stage_b_supply_offer.csv` | Stage B `supply_offer` subset |
 | `stage_b_technology.csv` | Stage B `technology` subset |
@@ -256,13 +281,16 @@ fabricate them.
 
 ## Known gaps
 
-- No TSA24 supply-node-to-transload route; the 150 km access leg is the main
-  transport uncertainty.
-- Only 8 of 179 BC facilities have geocoding; Euclidean distance is not used.
-- No route or transload capacity in the parsed route table.
-- No populated contract table.
-- Mixed capacity units: `bdmt/y` is rejected, `odt/y` is normalized at 0.45,
-  and `mbf`/`kwh` are used only through same-line outfeed ratios.
+- No TSA24 FMU/supply node exists in the FFCM graph; the Prince George mill
+  proxy is the documented anchor and the main transport uncertainty.
+- Only 8 of 179 BC facilities have direct Mills DB/CFS coordinates; 113
+  in-scope facilities use a low-confidence TL hub proxy and 41 have no
+  coordinate. Euclidean distance is not used.
+- No route or transload capacity in the parsed route table; links are uncapped.
+- No populated contract table; contracts are `diagnostic_absent`.
+- Mixed capacity units: `bdmt/y` converts at the declared 0.45 density,
+  `admt/y` needs a declared moisture, `mbf/y` needs a declared recovery factor,
+  and energy units never convert to volume.
 - No hog-fuel supply in the TSA24 matrix; the grade is reserved.
 - No mill-residue (sawdust/woodchips) supply; only logging residue.
 - One period, no inventory dynamics, no demand/market clearing.

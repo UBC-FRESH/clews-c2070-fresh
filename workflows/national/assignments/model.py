@@ -498,6 +498,7 @@ def _build_result(
                 + _TOLERANCE * max(1.0, abs(contract.max_volume_m3)),
                 "gate_cost_cad_m3": contract.gate_cost_cad_m3,
                 "diagnostic": contract.diagnostic,
+                "contract_source": contract.contract_source,
                 "evidence": contract.evidence,
                 "notes": contract.notes,
             }
@@ -532,7 +533,7 @@ def _build_result(
             "component": "transport_cost",
             "value_cad": -transport_cost,
             "unit": "CAD",
-            "notes": "assigned volume x diagnostic road cost",
+            "notes": "assigned volume x FFCM TL-graph transport cost",
         },
         {
             "component": "gate_cost",

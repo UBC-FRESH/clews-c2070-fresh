@@ -308,7 +308,8 @@ class AssignmentTests(unittest.TestCase):
     def test_capacity_unit_rejection(self) -> None:
         self.assertTrue(capacity_unit_is_supported("m3/y"))
         self.assertTrue(capacity_unit_is_supported("odt/y"))
-        for unit in ("bdmt/y", "admt/y", "mbf/y", "kwh/y"):
+        self.assertTrue(capacity_unit_is_supported("bdmt/y"))
+        for unit in ("admt/y", "mbf/y", "kwh/y"):
             with self.assertRaises(AssignmentError):
                 require_supported_capacity_unit(unit)
 

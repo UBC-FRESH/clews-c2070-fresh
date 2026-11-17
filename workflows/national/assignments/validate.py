@@ -12,7 +12,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
+from . import units
 from .schema import (
+    PATH_CONFIDENCE_VALUES,
     REJECTED_CAPACITY_UNITS,
     SUPPORTED_CAPACITY_UNITS,
     AssignmentError,
@@ -309,9 +311,17 @@ def validate_assignment(
 
     unit_errors: list[str] = []
     for grade in inputs.grades:
-        if grade.unit not in {"m3", "odt"}:
+        try:
+            canonical = units.canonical_unit(grade.unit)
+        except units.UnitError as error:
             unit_errors.append(
-                f"grade {grade.grade_id} has unsupported unit {grade.unit}"
+                f"grade {grade.grade_id} has unsupported unit {grade.unit}: {error}"
+            )
+            continue
+        if canonical not in {"m3_green", "odt"}:
+            unit_errors.append(
+                f"grade {grade.grade_id} canonical unit {canonical} is not a "
+                "Stage A model basis"
             )
     for facility in inputs.facilities:
         if facility.facility_class not in {"SAW", "PAP", "PEL", "BIO"}:
@@ -327,20 +337,63 @@ def validate_assignment(
             for token in tokens:
                 if token in SUPPORTED_CAPACITY_UNITS:
                     continue
+                if token == "archive_m3_y":
+                    continue
+                if token.startswith("units_") and "_m3_" in token:
+                    continue
                 if any(rejected in token for rejected in REJECTED_CAPACITY_UNITS):
                     unit_errors.append(
                         f"{offer.offer_id}: rejected capacity basis token {token!r}"
                     )
-                elif token not in {"archive_m3_y", "ledger_0.45_odt_m3"}:
+                else:
                     unit_errors.append(
                         f"{offer.offer_id}: undocumented capacity basis token {token!r}"
                     )
     add(
         "unit_consistency",
         not unit_errors,
-        "all quantities use m3 and every capacity conversion is documented"
+        "all quantities use declared m3/odt conversions and every capacity basis is documented"
         if not unit_errors
         else "; ".join(unit_errors[:5]),
+    )
+
+    transport_errors: list[str] = []
+    for link in inputs.transport_links:
+        if link.path_confidence not in PATH_CONFIDENCE_VALUES:
+            transport_errors.append(
+                f"{link.link_id}: unknown path confidence {link.path_confidence!r}"
+            )
+        if link.capacity_m3 is None and link.capacity_source != "absent":
+            transport_errors.append(
+                f"{link.link_id}: capacity is absent but capacity_source is "
+                f"{link.capacity_source!r}"
+            )
+        if link.capacity_m3 is not None and link.capacity_source == "absent":
+            transport_errors.append(
+                f"{link.link_id}: capacity exists but capacity_source is absent"
+            )
+        if not link.distance_basis:
+            transport_errors.append(f"{link.link_id}: distance basis is empty")
+    add(
+        "transport_provenance",
+        not transport_errors,
+        "every transport link declares path confidence, capacity source, and distance basis"
+        if not transport_errors
+        else "; ".join(transport_errors[:5]),
+    )
+
+    contract_source_errors = [
+        f"{contract.contract_id}: diagnostic contract has contract_source "
+        f"{contract.contract_source!r}"
+        for contract in inputs.contracts
+        if contract.diagnostic and contract.contract_source != "diagnostic_absent"
+    ]
+    add(
+        "contract_source",
+        not contract_source_errors,
+        "diagnostic contracts declare diagnostic_absent"
+        if not contract_source_errors
+        else "; ".join(contract_source_errors[:5]),
     )
 
     nonfinite = [

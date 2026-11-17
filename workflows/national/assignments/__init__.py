@@ -11,6 +11,14 @@ claim official BC grade equivalence, and it does not use MKRF.
 
 from __future__ import annotations
 
+from . import units
+from .facilities import (
+    FacilityError,
+    FacilityRecord,
+    FacilityTable,
+    build_facility_capacities,
+    build_facility_table,
+)
 from .fixtures import FixtureError, Tsa24Fixture, build_tsa24_fixture
 from .model import AssignmentSolveError, solve_assignment
 from .schema import (
@@ -27,6 +35,7 @@ from .schema import (
     UnassignedSupply,
     to_stage_b_tables,
 )
+from .transport import TransportPath, TransportTable, build_transport_table
 from .validate import (
     AssignmentValidationError,
     ValidationCheck,
@@ -43,17 +52,26 @@ __all__ = [
     "AssignmentValidationError",
     "Contract",
     "FacilityCapacity",
+    "FacilityError",
     "FacilityOffer",
+    "FacilityRecord",
+    "FacilityTable",
     "FeedstockGrade",
     "FixtureError",
     "SupplyOffer",
     "TransportLink",
+    "TransportPath",
+    "TransportTable",
     "Tsa24Fixture",
     "UnassignedSupply",
     "ValidationCheck",
     "ValidationReport",
+    "build_facility_capacities",
+    "build_facility_table",
+    "build_transport_table",
     "build_tsa24_fixture",
     "solve_assignment",
     "to_stage_b_tables",
+    "units",
     "validate_assignment",
 ]
