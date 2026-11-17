@@ -2,6 +2,23 @@
 
 ## 2026-11-17
 
+- **Built the real NRN BC road-network transport pilot and re-ran Stage A.**
+  Added `workflows/national/assignments/build_road_network.py`, which reads the
+  archived NRN BC GeoPackage, filters haulable road classes, projects to BC
+  Albers (EPSG:3005), snaps endpoints to a 1 m grid, assembles a 203,511-node /
+  242,059-edge undirected graph in 11.5 s (peak 579 MB), snaps facilities to the
+  nearest node within 5 km, and writes `transport_links_bc_real.csv`,
+  `snap_diagnostics.csv`, `road_network_summary.json`, `NETWORK_REPORT.md`, and
+  `distance_comparison.png`. 134 facilities carry coordinates: 79 snapped, 55
+  `too_far`, 45 `missing_coord`; 77 facilities have a real path (BC-SAW-383 is
+  on a separate Vancouver Island component). Stage A now uses real links for 67
+  in-scope facilities and flagged FFCM TL fallback for 67; 26 + the anchor
+  remain unlinked. The 1,000 ha base is unchanged (311,600 m3 assigned,
+  objective -CAD 1.624M, all three assigned facilities are fallback), while the
+  ws4-quota sensitivity moves to 79.48M m3 assigned / 15.89M unassigned
+  (objective -CAD 18.449B) from 77.25M / 18.11M (-CAD 21.346B) on the previous
+  TL-graph run. Added graph/snap/cost tests; 34 tests pass.
+
 - **Upgraded the Stage A TSA24/BC facility and transport inputs and re-ran the
   pilot.** Added `workflows/national/assignments/units.py` (declared
   `m3_green`/`odt`/`bdmt`/`admt`/`mbf`/`kwh`/`mwh`/`gj` conversions with

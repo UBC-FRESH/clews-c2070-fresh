@@ -35,7 +35,12 @@ from .schema import (
     UnassignedSupply,
     to_stage_b_tables,
 )
-from .transport import TransportPath, TransportTable, build_transport_table
+from .transport import (
+    TransportPath,
+    TransportTable,
+    apply_real_road_links,
+    build_transport_table,
+)
 from .validate import (
     AssignmentValidationError,
     ValidationCheck,
@@ -70,6 +75,7 @@ __all__ = [
     "build_facility_table",
     "build_transport_table",
     "build_tsa24_fixture",
+    "apply_real_road_links",
     "solve_assignment",
     "to_stage_b_tables",
     "units",

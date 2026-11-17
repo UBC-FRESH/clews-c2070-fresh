@@ -533,7 +533,7 @@ def _build_result(
             "component": "transport_cost",
             "value_cad": -transport_cost,
             "unit": "CAD",
-            "notes": "assigned volume x FFCM TL-graph transport cost",
+            "notes": "assigned volume x transport cost",
         },
         {
             "component": "gate_cost",

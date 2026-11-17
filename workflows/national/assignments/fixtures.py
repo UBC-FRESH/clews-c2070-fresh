@@ -40,6 +40,7 @@ from .schema import (
 from .transport import (
     DIAGNOSTIC_ACCESS_KM,
     TransportTable,
+    apply_real_road_links,
     build_transport_table,
 )
 
@@ -585,6 +586,7 @@ def build_tsa24_fixture(
     area_ha: float = 1000.0,
     period: str = "2026",
     scenario_id: str = "tsa24_bc_stage_a_pilot",
+    real_road_links: Path | None = None,
 ) -> Tsa24Fixture:
     """Build the TSA24/BC Stage A problem from parsed archive and derived tables."""
     if not math.isfinite(float(area_ha)) or float(area_ha) <= 0.0:
@@ -645,6 +647,16 @@ def build_tsa24_fixture(
     transport_table = build_transport_table(
         repo_root, facilities, grades, period=period
     )
+    real_path: Path | None = None
+    if real_road_links is not None:
+        real_path = (
+            real_road_links
+            if real_road_links.is_absolute()
+            else repo_root / real_road_links
+        )
+        transport_table = apply_real_road_links(
+            transport_table, real_path, facilities, grades
+        )
     status_by_facility = {
         record.facility_id: (
             "out_of_scope"
@@ -758,6 +770,8 @@ def build_tsa24_fixture(
             anchors_path,
         )
     }
+    if real_path is not None:
+        source_hashes[str(real_path.relative_to(repo_root))] = _sha256(real_path)
     class_mix = _class_mix(facility_table)
     config = {
         "area_ha": float(area_ha),
@@ -770,6 +784,9 @@ def build_tsa24_fixture(
         "facility_coverage": facility_table.summary(),
         "transport_summary": dict(transport_table.summary),
         "tsa24_anchor": dict(transport_table.summary.get("anchor", {})),
+        "real_road_links": (
+            str(real_path.relative_to(repo_root)) if real_path is not None else ""
+        ),
         "unit_registry": list(units.unit_registry_rows()),
         "ffcm_bc_class_mix": class_mix,
         "transport_rates": dict(transport_table.summary.get("rate_table", {})),

@@ -51,7 +51,13 @@ REJECTED_CAPACITY_UNITS = frozenset(
 _SUPPORTED_GRADE_UNITS = frozenset({"m3", "m3_green", "odt"})
 _SUPPORTED_TRANSPORT_MODES = frozenset({"ROAD", "RAIL", "WATER", "COMBINATION"})
 PATH_CONFIDENCE_VALUES = frozenset(
-    {"graph_shortest_path", "direct_route", "access_leg_plus_graph", "missing"}
+    {
+        "graph_shortest_path",
+        "direct_route",
+        "access_leg_plus_graph",
+        "real_road_network",
+        "missing",
+    }
 )
 CAPACITY_SOURCE_VALUES = frozenset({"absent"})
 _TOLERANCE = 1e-9

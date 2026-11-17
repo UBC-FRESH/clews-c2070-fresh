@@ -23,7 +23,7 @@ import math
 import statistics
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -35,9 +35,13 @@ __all__ = [
     "PathLeg",
     "TransportPath",
     "TransportTable",
+    "apply_real_road_links",
     "build_transport_table",
     "commodity_for_grade",
     "is_residue_grade",
+    "legacy_diagnostic_distance",
+    "load_road_rate_inputs",
+    "road_rate_for_grade",
 ]
 
 TSA24_ANCHOR_FACILITY = "BC-SAW-488"
@@ -229,6 +233,33 @@ def _rate_for(
     )
 
 
+def load_road_rate_inputs(
+    repo_root: Path,
+) -> tuple[
+    dict[str, TransporterRate],
+    dict[str, dict[str, tuple[float, str]]],
+]:
+    """Load the Stage A road transporter rates and material capacities."""
+    repo_root = Path(repo_root)
+    transporter_path = repo_root / "metadata/ffcm-archive/parsed/transporters.csv"
+    material_path = (
+        repo_root / "metadata/ffcm-archive/parsed/transporter_materials.csv"
+    )
+    rates = _load_transporters(transporter_path)
+    capacities = _load_material_capacities(material_path, rates)
+    return rates, capacities
+
+
+def road_rate_for_grade(
+    rates: Mapping[str, TransporterRate],
+    capacities: Mapping[str, Mapping[str, tuple[float, str]]],
+    *,
+    grade_id: str,
+) -> TransporterRate:
+    """Return the BC road transporter for a Stage A grade."""
+    return _rate_for(rates, capacities, mode="ROAD", grade_id=grade_id)
+
+
 def _load_transload_costs(path: Path) -> dict[tuple[str, str], tuple[float, str]]:
     rows = _read_csv(path)
     _require_columns(
@@ -283,9 +314,11 @@ class TransportPath:
     distance_basis: str
     cost_basis: str
     evidence: str
+    snap_m: float | None = None
+    network_source: str = ""
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        row = {
             "origin": self.origin,
             "destination": self.destination,
             "grade_id": self.grade_id,
@@ -306,7 +339,11 @@ class TransportPath:
             "cost_basis": self.cost_basis,
             "evidence": self.evidence,
         }
-
+        if self.snap_m is not None:
+            row["snap_m"] = self.snap_m
+        if self.network_source:
+            row["network_source"] = self.network_source
+        return row
     def to_link(self, period: str) -> TransportLink:
         return TransportLink(
             link_id=f"{self.origin}->{self.destination}::{self.grade_id}",
@@ -524,6 +561,13 @@ def _old_diagnostic_distance(
     if minimum is None:
         return None
     return DIAGNOSTIC_ACCESS_KM + minimum
+
+
+def legacy_diagnostic_distance(
+    rows: Sequence[Mapping[str, str]], facility_id: str
+) -> float | None:
+    """Return the pre-NRN 150 km access diagnostic for one facility."""
+    return _old_diagnostic_distance(rows, facility_id)
 
 
 def _diagnostic_comparison(
@@ -838,8 +882,8 @@ def build_transport_table(
         raise TransportError("no facility could be connected to the TSA24 anchor")
     links.sort(key=lambda item: (item.destination, item.grade_id))
     screen.sort(key=lambda row: row["facility_id"])
-    confidence_counts = defaultdict(int)
-    mode_counts = defaultdict(int)
+    confidence_counts: dict[str, int] = defaultdict(int)
+    mode_counts: dict[str, int] = defaultdict(int)
     for paths in paths_by_facility.values():
         confidence_counts[paths[0].path_confidence] += 1
         mode_counts[paths[0].mode] += 1
@@ -899,4 +943,275 @@ def build_transport_table(
         screen=tuple(screen),
         summary=summary,
         status_by_facility=dict(status_by_facility),
+    )
+
+
+def _real_path_from_row(
+    row: Mapping[str, str],
+    *,
+    origin: str,
+    anchor_facility_id: str,
+    anchor_basis: str,
+) -> TransportPath:
+    facility_id = str(row["facility"]).strip()
+    grade_id = str(row["grade_id"]).strip().upper()
+    distance_km = _number(row["distance_km"], f"{facility_id} {grade_id} distance")
+    cost = _number(row["cost_cad_m3"], f"{facility_id} {grade_id} cost")
+    linehaul_text = str(row.get("linehaul_cost_cad_m3", "")).strip()
+    linehaul = (
+        _number(linehaul_text, f"{facility_id} {grade_id} linehaul")
+        if linehaul_text
+        else cost
+    )
+    transload_text = str(row.get("transload_cost_cad_m3", "")).strip()
+    transload = (
+        _number(transload_text, f"{facility_id} {grade_id} transload")
+        if transload_text
+        else 0.0
+    )
+    snap_m = _number(row["snap_m"], f"{facility_id} snap_m")
+    confidence = str(row["path_confidence"]).strip().lower()
+    if confidence != "real_road_network":
+        raise TransportError(
+            f"real road link {facility_id} has path_confidence {confidence!r}"
+        )
+    if distance_km <= 0.0:
+        raise TransportError(
+            f"real road link {facility_id} must have a positive distance"
+        )
+    if abs(linehaul + transload - cost) > 1e-6 * max(1.0, abs(cost)):
+        raise TransportError(
+            f"real road link {facility_id} cost does not equal linehaul + transload"
+        )
+    network_source = str(row["network_source"]).strip()
+    if not network_source:
+        raise TransportError(f"real road link {facility_id} has no network_source")
+    return TransportPath(
+        origin=origin,
+        destination=facility_id,
+        grade_id=grade_id,
+        mode="ROAD",
+        distance_km=distance_km,
+        linehaul_cost_cad_m3=linehaul,
+        transload_cost_cad_m3=transload,
+        cost_cad_m3=cost,
+        capacity_m3=None,
+        capacity_source="absent",
+        path_confidence="real_road_network",
+        path_nodes=(anchor_facility_id, facility_id),
+        path_legs=(
+            PathLeg(
+                origin=anchor_facility_id,
+                destination=facility_id,
+                mode="ROAD",
+                distance_km=distance_km,
+                route_id="nrn_bc_road_graph",
+            ),
+        ),
+        transload_nodes=(),
+        anchor_id=anchor_facility_id,
+        anchor_basis=anchor_basis,
+        distance_basis="nrn_bc_road_graph_shortest_path_epsg3005",
+        cost_basis=(
+            "stage_a_transporter_rates;fuel_plus_operating_per_hour_over_speed;"
+            "no_transload"
+        ),
+        evidence=(
+            "nrn_bc_real_road_network;"
+            f"snap_m={snap_m:.3f};network_source={network_source};"
+            "route_capacity_absent"
+        ),
+        snap_m=snap_m,
+        network_source=network_source,
+    )
+
+
+def apply_real_road_links(
+    table: TransportTable,
+    real_road_path: Path,
+    facilities: Sequence[FacilityCapacity],
+    grades: Sequence[FeedstockGrade],
+    *,
+    anchor_facility_id: str = TSA24_ANCHOR_FACILITY,
+) -> TransportTable:
+    """Replace FFCM paths with real NRN paths where available, flag fallbacks.
+
+    Facilities with a real road path use it for every offered grade.  Facilities
+    without a real path retain their FFCM TL-graph path and are explicitly
+    labelled ``linked_ffcm_fallback_no_real_road_path``.
+    """
+    path = Path(real_road_path)
+    rows = _read_csv(path)
+    _require_columns(
+        path,
+        rows,
+        {
+            "facility",
+            "grade_id",
+            "distance_km",
+            "cost_cad_m3",
+            "path_confidence",
+            "snap_m",
+            "network_source",
+        },
+    )
+    if not table.links:
+        raise TransportError("the FFCM transport table is empty")
+    origin = table.links[0].origin
+    anchor_basis = str(
+        table.summary.get("anchor", {}).get("anchor_basis", TSA24_ANCHOR_BASIS)
+    )
+    facility_by_id = {facility.facility_id: facility for facility in facilities}
+    grade_ids = {grade.grade_id for grade in grades}
+
+    rows_by_facility: dict[str, list[Mapping[str, str]]] = defaultdict(list)
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        facility_id = str(row["facility"]).strip()
+        if facility_id not in facility_by_id:
+            continue
+        grade_id = str(row["grade_id"]).strip().upper()
+        if grade_id not in grade_ids:
+            raise TransportError(
+                f"real road link {facility_id} references unknown grade {grade_id}"
+            )
+        key = (facility_id, grade_id)
+        if key in seen:
+            raise TransportError(f"duplicate real road link for {key}")
+        seen.add(key)
+        rows_by_facility[facility_id].append(row)
+
+    real_paths: dict[str, tuple[TransportPath, ...]] = {}
+    for facility_id, facility_rows in rows_by_facility.items():
+        if facility_id == anchor_facility_id:
+            continue
+        offered = {offer.grade_id for offer in facility_by_id[facility_id].offers}
+        supplied = {str(row["grade_id"]).strip().upper() for row in facility_rows}
+        missing = offered - supplied
+        if missing:
+            raise TransportError(
+                f"real road links for {facility_id} miss offered grades "
+                f"{sorted(missing)}"
+            )
+        real_paths[facility_id] = tuple(
+            _real_path_from_row(
+                row,
+                origin=origin,
+                anchor_facility_id=anchor_facility_id,
+                anchor_basis=anchor_basis,
+            )
+            for row in sorted(
+                facility_rows,
+                key=lambda item: str(item["grade_id"]).strip().upper(),
+            )
+        )
+
+    if not real_paths:
+        raise TransportError(f"no usable real road links in {path}")
+
+    ffcm_by_facility: dict[str, list[TransportPath]] = defaultdict(list)
+    for link in table.links:
+        ffcm_by_facility[link.destination].append(link)
+
+    links: list[TransportPath] = []
+    status_by_facility = dict(table.status_by_facility)
+    fallback_facilities: list[str] = []
+    for facility_id in facility_by_id:
+        if facility_id == anchor_facility_id:
+            status_by_facility[facility_id] = "missing_anchor_proxy_self"
+            continue
+        if facility_id in real_paths:
+            links.extend(real_paths[facility_id])
+            status_by_facility[facility_id] = "linked_real_road_network"
+            continue
+        ffcm_paths = ffcm_by_facility.get(facility_id, [])
+        if not ffcm_paths:
+            status_by_facility[facility_id] = table.status_by_facility.get(
+                facility_id, "missing_no_real_or_ffcm_path"
+            )
+            continue
+        fallback_facilities.append(facility_id)
+        status_by_facility[facility_id] = "linked_ffcm_fallback_no_real_road_path"
+        links.extend(
+            replace(
+                ffcm_path,
+                evidence=ffcm_path.evidence + ";ffcm_fallback_no_real_road_path",
+            )
+            for ffcm_path in ffcm_paths
+        )
+
+    if not links:
+        raise TransportError("no transport link survived the real-road merge")
+
+    links.sort(key=lambda item: (item.destination, item.grade_id))
+    screen = tuple(
+        {
+            **row,
+            "status": status_by_facility.get(
+                str(row["facility_id"]), str(row["status"])
+            ),
+        }
+        for row in table.screen
+    )
+    confidence_counts: dict[str, int] = defaultdict(int)
+    mode_counts: dict[str, int] = defaultdict(int)
+    by_facility: dict[str, list[TransportPath]] = defaultdict(list)
+    for link in links:
+        by_facility[link.destination].append(link)
+    for paths in by_facility.values():
+        confidence_counts[paths[0].path_confidence] += 1
+        mode_counts[paths[0].mode] += 1
+
+    summary = dict(table.summary)
+    summary.update(
+        {
+            "accepted_link_count": len(links),
+            "accepted_facility_count": len(by_facility),
+            "screened_facility_count": len(screen),
+            "confidence_counts": dict(confidence_counts),
+            "mode_counts": dict(mode_counts),
+            "distance_km": _stats(
+                [paths[0].distance_km for paths in by_facility.values()]
+            ),
+            "cost_cad_m3": {
+                grade: _stats(
+                    [
+                        path.cost_cad_m3
+                        for paths in by_facility.values()
+                        for path in paths
+                        if path.grade_id == grade
+                    ]
+                )
+                for grade in sorted({path.grade_id for path in links})
+            },
+            "capacity": {
+                "capacity_none_count": len(links),
+                "capacity_source": "absent",
+                "route_capacity_table": "absent",
+            },
+            "transport_basis": (
+                "real_nrn_bc_road_graph_with_ffcm_tl_fallback"
+            ),
+            "real_road": {
+                "facility_count": len(real_paths),
+                "link_count": sum(len(paths) for paths in real_paths.values()),
+                "source": path.name,
+                "path_confidence": "real_road_network",
+            },
+            "ffcm_fallback": {
+                "facility_count": len(fallback_facilities),
+                "link_count": sum(
+                    len(by_facility[facility_id])
+                    for facility_id in fallback_facilities
+                ),
+                "facilities": sorted(fallback_facilities),
+                "path_confidence": "ffcm_fallback_no_real_road_path",
+            },
+        }
+    )
+    return TransportTable(
+        links=tuple(links),
+        screen=screen,
+        summary=summary,
+        status_by_facility=status_by_facility,
     )

@@ -147,6 +147,8 @@ TRANSPORT_BC_COLUMNS = [
     "distance_basis",
     "cost_basis",
     "evidence",
+    "snap_m",
+    "network_source",
 ]
 TRANSPORT_SCREEN_COLUMNS = [
     "facility_id",
@@ -421,9 +423,21 @@ def _transport_report(config: Mapping[str, Any]) -> str:
         f"`capacity=None`; `capacity_source=absent`; route capacity table="
         f"`{capacity.get('route_capacity_table', 'absent')}`."
     )
+    real_road = summary.get("real_road", {})
+    fallback = summary.get("ffcm_fallback", {})
+    real_road_text = (
+        f"- Real NRN road links: {real_road.get('link_count', 0)} grade links "
+        f"across {real_road.get('facility_count', 0)} facilities "
+        f"(`path_confidence=real_road_network`).\n"
+        f"- FFCM fallback links: {fallback.get('link_count', 0)} grade links "
+        f"across {fallback.get('facility_count', 0)} facilities "
+        f"(`status=linked_ffcm_fallback_no_real_road_path`).\n"
+        if real_road
+        else ""
+    )
     return f"""- Accepted links: {summary.get('accepted_link_count', 0)} across
   {summary.get('accepted_facility_count', 0)} facilities.
-- TSA24 anchor: `{summary.get('anchor', {}).get('supply_node_id', '')}` with
+{real_road_text}- TSA24 anchor: `{summary.get('anchor', {}).get('supply_node_id', '')}` with
   anchor proxy `{summary.get('anchor', {}).get('anchor_id', '')}`.
   Access TL nodes:
   {", ".join(summary.get('anchor', {}).get('access_tl_nodes', [])) or "none"}.
@@ -645,6 +659,37 @@ def _report_markdown(
     ffcm_mix = _ffcm_class_mix(repo_root)
     total_supply = sum(item.volume_m3 for item in inputs.supplies)
 
+    transport_summary = fixture.config.get("transport_summary", {})
+    real_road = transport_summary.get("real_road", {})
+    fallback = transport_summary.get("ffcm_fallback", {})
+    real_facility_count = int(real_road.get("facility_count", 0))
+    fallback_facility_count = int(fallback.get("facility_count", 0))
+    fallback_facilities = list(fallback.get("facilities", []))
+    transport_note = (
+        "This version uses the real NRN BC road graph for facilities with a "
+        f"snapped road path ({real_facility_count} facilities) and keeps the "
+        "parsed FFCM TL graph as a flagged fallback for "
+        f"{fallback_facility_count} facilities without a real path."
+        if real_facility_count
+        else "This version replaces the flat 150 km access leg with the parsed "
+        "FFCM TL graph."
+    )
+    transport_label = (
+        "transport (real NRN road + FFCM fallback)"
+        if real_facility_count
+        else "transport (FFCM TL graph)"
+    )
+    fallback_list = ", ".join(fallback_facilities[:20]) or "none"
+    real_road_note = (
+        f"- Real NRN road paths: {real_facility_count} facilities "
+        f"({real_road.get('link_count', 0)} grade links).\n"
+        f"- FFCM TL fallback: {fallback_facility_count} facilities "
+        f"({fallback.get('link_count', 0)} grade links); first 20: "
+        f"{fallback_list}.\n"
+        if real_facility_count
+        else ""
+    )
+
     grade_table = _markdown_table(
         [
             "Grade",
@@ -796,9 +841,9 @@ def _report_markdown(
                 "assigned volume weighted",
             ),
             (
-                "transport (FFCM TL graph)",
+                transport_label,
                 _fmt(average_components["transport_cost_cad_m3"], 2),
-                "assigned volume weighted; includes transload",
+                "assigned volume weighted; fallback links may include transload",
             ),
             (
                 "gate",
@@ -975,14 +1020,18 @@ def _report_markdown(
 > **Diagnostic pilot.** The supply area is `{_fmt(fixture.config["area_ha"])} ha`, a
 > contract/data-shape test, not a TSA24 supply estimate. Assortment sorts are
 > dimension-only; no BC official grade equivalence is claimed. MKRF is not used.
-> This version replaces the flat 150 km access leg with the parsed FFCM TL graph,
-> adds facility coordinate provenance, and routes all capacity conversions
+> This version uses the real NRN BC road graph for facilities with a snapped
+> road path and keeps the parsed FFCM TL graph as a flagged fallback elsewhere.
+> It adds facility coordinate provenance and routes all capacity conversions
 > through `units.py`.
 {sensitivity_note}
+{transport_note}
+{real_road_note}
 ## 1. Scope and Stage A/B split
 
 Stage A consumes the TSA24 assortment matrix, parsed FFCM BC facility lines,
-the FFCM TL transport graph, and diagnostic contracts, then solves a
+the real NRN BC road graph plus flagged FFCM TL fallback, and diagnostic
+contracts, then solves a
 profit-maximising transportation/allocation LP. It emits facility assignment,
 utilization, contract, unassigned-supply, objective, and validation tables.
 Stage B (`fresh_fibre.graph` / `fresh_fibre.lp`) consumes the Stage B
@@ -1095,9 +1144,8 @@ links, is written to `assumptions.csv`, `line_screen.csv`, and
 - Replace the Prince George mill proxy with a real TSA24 supply-node or FMU
   anchor once the AU-to-FMU crosswalk exists. The current anchor is documented
   and low-confidence, not a production route.
-- Replace the FFCM synthetic TL distances with an accepted BC road/rail network
-  or a validated haul-distance model; the graph is sparse and produces long
-  TL-TL paths.
+- Extend real-road coverage beyond the NRN BC 2018 layer and 5 km facility snap
+  tolerance; facilities without a real path still use flagged FFCM TL fallback.
 - Populate route and transload capacity before interpreting congestion or
   mode-shift limits.
 - Populate real contract minima, maxima, and gate costs.
@@ -1159,7 +1207,7 @@ def _manifest(
             "1,000 ha base area is diagnostic, not a TSA24 supply estimate.",
             "Assortment sorts are dimension-only; no BC official grade equivalence.",
             "TSA24 supply anchor is a geocoded Prince George mill proxy (BC-SAW-488); no TSA24 FMU exists in the FFCM graph.",
-            "Transport distances are FFCM route-graph shortest paths, not Euclidean or production routes.",
+            "Transport distances use the real NRN BC road graph where available and flagged FFCM TL fallback otherwise; neither is a production route.",
             "Only BC SAW/PAP/PEL/BIO facilities are in the LP; PLY/OSB/NSP rows are retained in facilities_bc.csv but out of scope.",
             "Many BC facilities lack a defensible coordinate; missing coordinates are not guessed.",
             "bdmt/y capacity converts at the declared 0.45 ODT/m3 density; admt/y and mbf/y are rejected without declared factors.",
@@ -1263,12 +1311,17 @@ def run_pilot(
     period: str,
     scenario_id: str,
     sensitivity_label: str = "",
+    real_road_links: Path | None = None,
 ) -> tuple[AssignmentResult, ValidationReport, Tsa24Fixture]:
     """Build, solve, validate, and write one Stage A pilot run."""
     out_dir.mkdir(parents=True, exist_ok=True)
     previous_mix = _previous_pilot_class_mix(out_dir)
     fixture = build_tsa24_fixture(
-        repo_root, area_ha=area_ha, period=period, scenario_id=scenario_id
+        repo_root,
+        area_ha=area_ha,
+        period=period,
+        scenario_id=scenario_id,
+        real_road_links=real_road_links,
     )
     result = solve_assignment(fixture.inputs)
     validation = validate_assignment(fixture.inputs, result)
@@ -1308,6 +1361,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="Also run the documented ws4 quota area as a period-scale diagnostic.",
     )
+    parser.add_argument(
+        "--real-road-links",
+        type=Path,
+        default=None,
+        help=(
+            "Optional transport_links_bc_real.csv. Real NRN road paths replace "
+            "FFCM paths per facility; facilities without a real path keep the "
+            "FFCM path and are flagged as fallback."
+        ),
+    )
     parser.add_argument("--msg", action="store_true", help="Show CBC solver output.")
     args = parser.parse_args(argv)
 
@@ -1322,6 +1385,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         area_ha=args.area_ha,
         period=args.period,
         scenario_id=args.scenario_id,
+        real_road_links=args.real_road_links,
     )
     print(
         f"base: status={result.status} objective={result.objective_value_cad:,.2f} CAD; "
@@ -1343,6 +1407,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             period=args.period,
             scenario_id=f"{args.scenario_id}_ws4_quota",
             sensitivity_label="ws4_quota_306047.3_ha_period_not_annual",
+            real_road_links=args.real_road_links,
         )
         print(
             f"sensitivity: status={sensitivity_result.status} "

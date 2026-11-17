@@ -10,8 +10,13 @@ from workflows.national.assignments.facilities import (
     build_facility_table,
 )
 from workflows.national.assignments.fixtures import build_tsa24_fixture
+from workflows.national.assignments.transport import apply_real_road_links
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+REAL_LINKS = (
+    REPO_ROOT
+    / "data/derived/national/assignments/tsa24_pilot/transport_links_bc_real.csv"
+)
 
 
 class FacilityTableTests(unittest.TestCase):
@@ -135,6 +140,40 @@ class TransportTableTests(unittest.TestCase):
         for contract in self.fixture.inputs.contracts:
             self.assertEqual(contract.contract_source, "diagnostic_absent")
             self.assertTrue(contract.diagnostic)
+
+    def test_real_road_links_replace_paths_and_flag_fallback(self) -> None:
+        if not REAL_LINKS.exists():
+            self.skipTest("real road links have not been generated")
+        merged = apply_real_road_links(
+            self.transport,
+            REAL_LINKS,
+            self.fixture.inputs.facilities,
+            self.fixture.inputs.grades,
+        )
+        real_road = merged.summary["real_road"]
+        fallback = merged.summary["ffcm_fallback"]
+        self.assertGreater(real_road["facility_count"], 0)
+        self.assertGreater(fallback["facility_count"], 0)
+        real_destinations = {
+            link.destination
+            for link in merged.links
+            if link.path_confidence == "real_road_network"
+        }
+        self.assertEqual(len(real_destinations), real_road["facility_count"])
+        for link in merged.links:
+            if link.destination in real_destinations:
+                self.assertEqual(link.path_confidence, "real_road_network")
+                self.assertIsNotNone(link.snap_m)
+                self.assertTrue(link.network_source)
+            else:
+                self.assertIn(
+                    link.path_confidence,
+                    {"direct_route", "graph_shortest_path"},
+                )
+        self.assertEqual(
+            merged.status_by_facility["BC-SAW-488"],
+            "missing_anchor_proxy_self",
+        )
 
 
 if __name__ == "__main__":
