@@ -535,6 +535,13 @@ def _read_model_root(model_root: Path, params_dir: Path) -> dict[str, object]:
     if not all(value for key, value in checks.items() if isinstance(value, bool)):
         failed = [key for key, value in checks.items() if isinstance(value, bool) and not value]
         raise ValueError(f"zonal structure verification failed: {failed}")
+    if checks["PWRBCWB1_input_ratio"] != 3.72 or checks["PWRBCWB2_input_ratio"] != 3.72:
+        raise ValueError(
+            "PWRBCWB1/B2 input ratios changed from 3.72: "
+            f"{checks['PWRBCWB1_input_ratio']}, {checks['PWRBCWB2_input_ratio']}"
+        )
+    if checks["SUPBCWB1_output_ratio"] != 1.0 or checks["SUPBCWB2_output_ratio"] != 1.0:
+        raise ValueError("SUPBCWB1/B2 output ratios changed from 1.0")
 
     caps = {
         technology: read_series_csv(
@@ -870,14 +877,20 @@ def build_run_summaries(
     }
 
     hydro_source = runs_root / "base" / "results_csv" / "ProductionByTechnologyAnnual.csv"
-    hydro_2021 = {}
-    if hydro_source.exists():
-        _, rows = read_csv_rows(hydro_source)
-        hydro_2021 = {
-            row["TECHNOLOGY"]: round(float(row["VALUE"]), 6)
-            for row in rows
-            if row["TECHNOLOGY"].startswith("PWRHYD") and row["YEAR"] == "2021"
-        }
+    if not hydro_source.exists():
+        raise FileNotFoundError(
+            f"missing 2021 base run used for the hydro cap: {hydro_source}"
+        )
+    _, rows = read_csv_rows(hydro_source)
+    hydro_2021 = {
+        row["TECHNOLOGY"]: round(float(row["VALUE"]), 6)
+        for row in rows
+        if row["TECHNOLOGY"].startswith("PWRHYD") and row["YEAR"] == "2021"
+    }
+    if len(hydro_2021) != 13:
+        raise ValueError(
+            f"expected 13 PWRHYD 2021 values for the hydro cap, found {len(hydro_2021)}"
+        )
 
     return {
         "schema_version": "1.0",
