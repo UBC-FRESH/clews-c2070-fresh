@@ -102,9 +102,9 @@ Schema notes:
 - **Age/volume monotonicity:** 23 source tables show small post-peak wiggles
   (maximum 7.6 m³/ha over 5 years). These are source-curve shape artifacts,
   not parser corruption; they are flagged per unit in the manifest.
-- **Inventory CRS:** 03451 and 03152 are `EPSG:32187`; 03551 and 03151 are
-  `EPSG:32187`; 02651 is `EPSG:32189`. All are projected NAD83 MTM metres, so
-  `SUPERFICIE` hectares are directly usable.
+- **Inventory CRS:** `03451`, `03152`, `03551` and `03151` are
+  `EPSG:32187`; `02651` is `EPSG:32189`. All are projected NAD83 MTM metres,
+  so `SUPERFICIE` hectares are directly usable.
 
 ## 5. Confidentiality and missing units
 
