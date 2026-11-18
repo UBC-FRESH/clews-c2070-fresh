@@ -2,6 +2,20 @@
 
 ## 2026-11-18
 
+- **Built national SCANFI v2 area weights and inventoried donor candidates.**
+  Added `scripts/national/build_scanfi_area_weights.py` and
+  `scripts/national/build_donor_candidates.py`.  The full 30 m national grid
+  was aggregated in 181 s to exact 990 m (33 x 33 pixel) blocks; forest area
+  uses NFI land-cover classes 5-7 and species area normalises the ten SCANFI
+  crown-closure layers within each block.  Outputs cover all 36 ecoprovinces,
+  13 provinces/territories, 5,800 ecodistrict x province units, and 1,191 batch
+  cells.  National forest area is 422.5 Mha (1.145x the 369.0 Mha NFI Table 4.0
+  benchmark); coastline/lake blocks were nearest-unit filled (12.5 Mha flagged).
+  Donor inventory ranks 398 weak AB/ON/NS/NU/MB batch cells and 371 no-plot
+  ecodistricts; MGM joins remain pending.  Outputs are under
+  `data/derived/national/assortments/national_area_weights/`.  The public OSeCAN
+  repository was not modified.
+
 - **Adopted the refined FFCM-implied B2 recovery as the BC base and reran the
   zonal OSeCAN.**  The base recovery is no longer held at the stale 2026-11-17
   calibration.  `bc_residue_recovery.py` now recomputes
