@@ -2,6 +2,14 @@
 
 ## 2026-11-18
 
+- **Built the all-BC B1/B2 supply -> Stage A -> Stage B chain.**
+  Added `workflows/national/assignments/bc_chain.py` and
+  `workflows/national/assignments/tests/test_bc_chain.py`.  The chain scales the
+  area-weighted BC assortment batch to the 2021/2028 zonal AAC, assigns
+  sawlog/pulp/other/residue through NRN zone-to-facility links, derives sawmill
+  residue from Stage A SAW inputs, and reports OSeCAN cap comparisons.  Outputs,
+  report, and manifest are under `data/derived/national/bc_chain/`.
+
 - **Added zonal BC woody-residue supply to OSeCAN and ran the zonal vs
   national comparison.** Added `workflows/national/clews/osecan_zonal.py` and
   `workflows/national/clews/tests/test_osecan_zonal.py`.
