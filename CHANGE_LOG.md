@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-11-18
+
+- **Added zonal BC woody-residue supply to OSeCAN and ran the zonal vs
+  national comparison.** Added `workflows/national/clews/osecan_zonal.py` and
+  `workflows/national/clews/tests/test_osecan_zonal.py`.
+  - In a disposable `/tmp/osecan_zonal` copy of public `deltae/C2070` commit
+    `40d5b43`, added `BCWB1`/`BCWB2` fuels and `SUPBCWB1`/`SUPBCWB2` supply
+    technologies, switched `PWRBCWB1`/`PWRBCWB2` to the zone fuels at the
+    unchanged 3.72 input ratio, and kept the national `BCW` chain for the other
+    eleven zones.  `harmonize` exit 0 and `osecan info` exit 0.
+  - Ran three `Current Measures` cases with hydro frozen at 2021 activity and
+    CO2 at 95 $/t to 2025 and 200 $/t from 2026: national `SUPBCW` control,
+    zonal `SUPBCWB1/B2`, and zonal plus `RNWBIO` at 4 $/GJ.  All solved
+    optimal; the control reproduced 1,371,553.35 M$.
+  - Zonal BCW dispatches: `PWRBCWB1` 0.987 PJ/yr from 2025 and `PWRBCWB2`
+    10.561 PJ/yr by 2050; `SUPBCWB1` binds 2026-2070 and `SUPBCWB2` binds
+    2032-2070.  The zonal constraint raises cost by 47.21 M$ and cumulative
+    CO2 by 17.669 Mt relative to the national control; the higher generic-BIO
+    cost leaves BCW dispatch unchanged.
+  - Published `data/derived/national/clews/osecan/zonal/` with
+    `zonal_structure.json`, `run_summaries.json`, `dispatch_by_zone.csv`,
+    `ZONAL_OSECAN_REPORT.md`, and `manifest.json`.  23 focused tests pass;
+    ruff clean.
 ## 2026-11-17
 
 - **Built the recoverable-residue curve and 2021-2070 time path for OSeCAN
