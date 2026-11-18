@@ -570,8 +570,13 @@ def allocate_province_factors(
 def load_backbone_province_factors(path: Path) -> dict[str, dict[str, float]]:
     factors: dict[str, dict[str, float]] = {}
     with path.open(newline="") as handle:
-        for row in csv.DictReader(handle):
-            factors[row["province"]] = {
+        for line_number, row in enumerate(csv.DictReader(handle), start=2):
+            province = row["province"]
+            require(
+                province not in factors,
+                f"{path}:{line_number}: duplicate province factor key {province!r}",
+            )
+            factors[province] = {
                 "residue_odt": parse_float(row["residue_odt"], field="residue_odt", source=path),
                 "log_volume_m3": parse_float(
                     row["log_volume_m3"], field="log_volume_m3", source=path

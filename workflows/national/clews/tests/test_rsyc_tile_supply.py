@@ -20,6 +20,7 @@ from workflows.national.clews.rsyc_tile_supply import (
     build_harvest_sensitivity,
     build_validation,
     load_backbone_harvest,
+    load_backbone_province_factors,
     load_library,
     load_matrix_cells,
 )
@@ -399,6 +400,27 @@ def _write_harvest(path, rows: list[dict[str, object]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=HARVEST_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def test_backbone_province_factors_reject_duplicate_keys(tmp_path) -> None:
+    path = tmp_path / "province_factors.csv"
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["province", "residue_odt", "log_volume_m3", "odt_per_m3_log"],
+        )
+        writer.writeheader()
+        for _ in range(2):
+            writer.writerow(
+                {
+                    "province": "ON",
+                    "residue_odt": 1.0,
+                    "log_volume_m3": 2.0,
+                    "odt_per_m3_log": 0.5,
+                }
+            )
+    with pytest.raises(TileSupplyError, match="duplicate province factor key"):
+        load_backbone_province_factors(path)
 
 
 def test_backbone_harvest_rejects_duplicate_keys(tmp_path) -> None:
