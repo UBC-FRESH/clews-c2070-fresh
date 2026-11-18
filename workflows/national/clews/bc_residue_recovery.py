@@ -40,6 +40,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from workflows.national.clews.bc_residue_supply import (
+    BATCH_JOINED_SHA256,
     BatchRatios,
     BcResidueSupplyError,
     TsaArea,
@@ -63,6 +64,8 @@ __all__ = [
     "PLACEHOLDER_COST_USD_PER_GJ",
     "PLACEHOLDER_PJ",
     "PREVIOUS_GROSS_PJ",
+    "PUBLISHED_BASE_RECOVERY",
+    "PUBLISHED_BASE_RECOVERY_BASIS",
     "RECOVERY_MAX",
     "RECOVERY_MIN",
     "AacTrajectory",
@@ -119,10 +122,52 @@ CASE_COST_MULTIPLIER: Mapping[str, float] = {
     "high": 0.80,
 }
 
+# Published base recovery fractions from the 2026-11-17 FFCM calibration.
+# They are held fixed when the batch taper estimate is refined: the recovery
+# rate is a calibrated model parameter, not a quantity that should silently
+# reflate when the gross taper estimate falls.  The FFCM-implied fraction on
+# the current batch is reported as a diagnostic (see ``implied_recovery``),
+# not used to set the base cap.  Re-deriving it would raise the B2 cap from
+# 32.204 PJ to about 39.9 PJ and would not reconcile with the refined chain.
+PUBLISHED_BASE_RECOVERY: Mapping[str, float] = {
+    "B1": 0.600000000,
+    "B2": 0.583931303,
+}
+PUBLISHED_BASE_RECOVERY_BASIS = "published_2026_11_17_ffcm_calibration_held"
+
 # Current C2070 placeholder and the previous gross taper-residue result.
 PLACEHOLDER_PJ = 50.0
 PLACEHOLDER_COST_USD_PER_GJ = 4.0
 PREVIOUS_GROSS_PJ = 93.17008437023686
+
+# Pre-refinement (2026-11-17) cap basis, retained for the reconciliation report.
+STALE_BATCH_SHA256 = (
+    "e0a51d5aa6b1ec22b9d27451f229a26bed525ee85641b7ce1766fe1c822e411e"
+)
+STALE_BATCH_LOG_M3 = 8_936_253_982.256
+STALE_BATCH_RESIDUE_ODT = 722_691_930.985
+OLD_CASE_CAPS_PJ: Mapping[str, Mapping[str, float]] = {
+    "low": {"B1": 2.142166604, "B2": 23.547766898, "CAN": 25.689933501},
+    "base": {"B1": 3.672285606, "B2": 39.286509195, "CAN": 42.958794801},
+    "high": {"B1": 4.590357008, "B2": 50.459500495, "CAN": 55.049857503},
+}
+OLD_CASE_CAPS_2021_PJ: Mapping[str, Mapping[str, float]] = {
+    "low": {"B1": 2.145722264, "B2": 28.047732727, "CAN": 30.193454990},
+    "base": {"B1": 3.678381023, "B2": 46.794140373, "CAN": 50.472521396},
+    "high": {"B1": 4.597976279, "B2": 60.102284415, "CAN": 64.700260694},
+}
+OLD_TIME_PATH_2028: Mapping[str, Mapping[str, float]] = {
+    "B1": {
+        "annual_log_m3": 9_120_804.864676,
+        "gross_taper_residue_odt": 330_836.541084,
+        "base_recovery_fraction": 0.600000000,
+    },
+    "B2": {
+        "annual_log_m3": 34_249_970.935324,
+        "gross_taper_residue_odt": 3_636_720.756404,
+        "base_recovery_fraction": 0.583931303,
+    },
+}
 
 AGB_AGE = 100
 
@@ -713,18 +758,17 @@ def _zone_log_and_taper(
     allocated, _ = allocate_harvest(volumes, areas)
 
     zone_log: defaultdict[str, float] = defaultdict(float)
-    zone_residue: defaultdict[str, float] = defaultdict(float)
     for ecoprovince, volume in allocated.items():
-        ratio = ratios.by_ecoprovince.get(ecoprovince)
-        if ratio is None:
-            if ecoprovince != "NO_ECOPROVINCE":
-                raise BcResidueRecoveryError(
-                    f"No batch residue ratio for ecoprovince {ecoprovince!r}"
-                )
-            ratio = ratios.bc_all_species
         zone = zone_for_ecoprovince(ecoprovince)
         zone_log[zone] += volume
-        zone_residue[zone] += volume * ratio
+
+    # The cap uses the direct matched-cell zone ratio, the same basis as the
+    # refined all-BC chain.  Applying ecoprovince ratios to TSA-allocated
+    # volumes would give a different zone ratio and break reconciliation.
+    zone_residue = {
+        zone_id: zone_log[zone_id] * ratios.by_zone[zone_id]
+        for zone_id in ("B1", "B2")
+    }
 
     for zone_id in ("B1", "B2"):
         if zone_id not in zone_log or zone_log[zone_id] <= 0:
@@ -890,6 +934,7 @@ def build_recovery(
     recovery_min: float = RECOVERY_MIN,
     recovery_max: float = RECOVERY_MAX,
     fallback: float = BASE_RECOVERY_FALLBACK,
+    base_recovery_by_zone: Mapping[str, float] | None = None,
 ) -> tuple[ZoneRecovery, ...]:
     """Compare FFCM residue with gross taper residue on the same log basis.
 
@@ -898,11 +943,21 @@ def build_recovery(
     one year of gross taper ODT.  FFCM has no FMU-to-TSA crosswalk in the repo,
     so the BC total is allocated to B1/B2 by the documented 2018 AAC zone log
     shares.  That allocation is flagged, not silently treated as an FMU map.
+
+    When ``base_recovery_by_zone`` is supplied, those published/calibrated
+    fractions set the base case and the FFCM-implied fraction is a diagnostic.
+    This keeps a batch-taper refinement from silently reflating the cap.
     """
     if not 0.0 < fallback < 1.0:
         raise BcResidueRecoveryError("fallback recovery must be between 0 and 1")
     if recovery_min < 0 or recovery_max > 1 or recovery_min >= recovery_max:
         raise BcResidueRecoveryError("Invalid recovery bounds")
+    if base_recovery_by_zone is not None:
+        missing = {"B1", "B2"} - set(base_recovery_by_zone)
+        if missing:
+            raise BcResidueRecoveryError(
+                f"Published base recovery is missing zones {sorted(missing)}"
+            )
 
     rows: list[ZoneRecovery] = []
     for zone_id in ("B1", "B2"):
@@ -917,7 +972,33 @@ def build_recovery(
         gross_same_basis = ffcm_log * taper_ratio
         implied = ffcm_residue / gross_same_basis
         in_bounds = recovery_min <= implied <= recovery_max
-        base = implied if in_bounds else fallback
+        if base_recovery_by_zone is None:
+            base = implied if in_bounds else fallback
+            recovery_basis = (
+                "ffcm_implied" if in_bounds else "fallback_0.60_out_of_bounds"
+            )
+            flag = (
+                "implied_within_0.2_1.0"
+                if in_bounds
+                else "implied_outside_0.2_1.0_used_0.60"
+            )
+        else:
+            base = float(base_recovery_by_zone[zone_id])
+            if not 0.0 < base < 1.0:
+                raise BcResidueRecoveryError(
+                    f"Published base recovery for {zone_id} must be in (0, 1), "
+                    f"got {base}"
+                )
+            if not recovery_min <= base <= recovery_max:
+                raise BcResidueRecoveryError(
+                    f"Published base recovery for {zone_id} ({base}) is outside "
+                    f"the case envelope [{recovery_min}, {recovery_max}]"
+                )
+            recovery_basis = PUBLISHED_BASE_RECOVERY_BASIS
+            flag = (
+                f"published_base_held;ffcm_implied_{implied:.9f}_diagnostic;"
+                f"implied_in_bounds_{str(in_bounds).lower()}"
+            )
         rows.append(
             ZoneRecovery(
                 zone_id=zone_id,
@@ -935,14 +1016,8 @@ def build_recovery(
                 implied_recovery_fraction=implied,
                 recovery_in_bounds=in_bounds,
                 base_recovery_fraction=base,
-                recovery_basis=(
-                    "ffcm_implied" if in_bounds else "fallback_0.60_out_of_bounds"
-                ),
-                flag=(
-                    "implied_within_0.2_1.0"
-                    if in_bounds
-                    else "implied_outside_0.2_1.0_used_0.60"
-                ),
+                recovery_basis=recovery_basis,
+                flag=flag,
                 crosswalk_status="no_fmu_tsa_map_documented_zone_share",
                 comparison_only=False,
             )
@@ -953,6 +1028,25 @@ def build_recovery(
     )
     national_implied = ffcm.total_residue_odt / (ffcm.total_log_m3 * national_taper)
     national_in_bounds = recovery_min <= national_implied <= recovery_max
+    if base_recovery_by_zone is None:
+        national_base = national_implied if national_in_bounds else fallback
+        national_basis = (
+            "national_comparison_only"
+            if national_in_bounds
+            else "fallback_0.60_out_of_bounds"
+        )
+        national_flag = (
+            "national_comparison_only"
+            if national_in_bounds
+            else "implied_outside_0.2_1.0_used_0.60"
+        )
+    else:
+        national_base = sum(
+            zone_shares[zone_id] * float(base_recovery_by_zone[zone_id])
+            for zone_id in ("B1", "B2")
+        )
+        national_basis = "national_comparison_only_published_weighted"
+        national_flag = "national_comparison_only"
     rows.append(
         ZoneRecovery(
             zone_id="CAN",
@@ -969,19 +1063,9 @@ def build_recovery(
             gross_taper_residue_odt_same_log_basis=(ffcm.total_log_m3 * national_taper),
             implied_recovery_fraction=national_implied,
             recovery_in_bounds=national_in_bounds,
-            base_recovery_fraction=(
-                national_implied if national_in_bounds else fallback
-            ),
-            recovery_basis=(
-                "national_comparison_only"
-                if national_in_bounds
-                else "fallback_0.60_out_of_bounds"
-            ),
-            flag=(
-                "national_comparison_only"
-                if national_in_bounds
-                else "implied_outside_0.2_1.0_used_0.60"
-            ),
+            base_recovery_fraction=national_base,
+            recovery_basis=national_basis,
+            flag=national_flag,
             crosswalk_status="no_fmu_tsa_map_documented_zone_share",
             comparison_only=True,
         )
@@ -1406,6 +1490,7 @@ class BuildArtifacts:
     previous_gross_pj: float
     zone_shares: Mapping[str, float]
     taper_ratios: Mapping[str, float]
+    batch_ratios: BatchRatios
     input_paths: tuple[Path, ...]
 
 
@@ -1421,7 +1506,12 @@ def build_all(repo_root: Path) -> BuildArtifacts:
     ffcm = load_ffcm_bc_supply(repo_root / INPUT_PATHS["ffcm_fmu_supply"])
     aac = load_aac_workbook(repo_root / INPUT_PATHS["aac_workbook"])
     shares, taper_ratios = zone_shares_from_reference(aac, areas, ratios)
-    recovery = build_recovery(ffcm, shares, taper_ratios)
+    recovery = build_recovery(
+        ffcm,
+        shares,
+        taper_ratios,
+        base_recovery_by_zone=PUBLISHED_BASE_RECOVERY,
+    )
     time_path = build_time_path(aac, areas, ratios)
     cases = build_cases(time_path, recovery)
 
@@ -1453,6 +1543,7 @@ def build_all(repo_root: Path) -> BuildArtifacts:
         previous_gross_pj=previous_gross_pj,
         zone_shares=shares,
         taper_ratios=taper_ratios,
+        batch_ratios=ratios,
         input_paths=tuple(input_paths),
     )
 
@@ -1726,6 +1817,40 @@ def summary_payload(artifacts: BuildArtifacts) -> dict[str, object]:
         "artifact_version": "0.1.0",
         "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "status": "fresh_side_provisional_not_c2070_official",
+        "batch_basis": {
+            "joined_sha256": BATCH_JOINED_SHA256,
+            "total_log_m3": round(artifacts.batch_ratios.log_m3, 6),
+            "total_residue_odt": round(artifacts.batch_ratios.residue_odt, 6),
+            "bc_all_species_ratio": round(
+                artifacts.batch_ratios.bc_all_species, 9
+            ),
+            "by_zone_ratio": {
+                zone_id: round(value, 9)
+                for zone_id, value in artifacts.batch_ratios.by_zone.items()
+            },
+            "log_m3_by_zone": {
+                zone_id: round(value, 6)
+                for zone_id, value in artifacts.batch_ratios.log_m3_by_zone.items()
+            },
+            "residue_odt_by_zone": {
+                zone_id: round(value, 6)
+                for zone_id, value in artifacts.batch_ratios.residue_odt_by_zone.items()
+            },
+            "matched_cells": artifacts.batch_ratios.matched_cells,
+            "no_area_cells": artifacts.batch_ratios.no_area_cells,
+        },
+        "published_base_recovery": {
+            "basis": PUBLISHED_BASE_RECOVERY_BASIS,
+            "by_zone": {
+                zone_id: round(value, 9)
+                for zone_id, value in PUBLISHED_BASE_RECOVERY.items()
+            },
+            "note": (
+                "Base recovery is held at the 2026-11-17 calibration when the "
+                "batch taper estimate is refined; ffcm_implied_recovery_fraction "
+                "is a diagnostic, not the base cap driver."
+            ),
+        },
         "ffcm_basis": {
             "fmu_count": artifacts.ffcm.fmu_count,
             "total_log_m3": round(artifacts.ffcm.total_log_m3, 6),
@@ -1880,10 +2005,14 @@ The B1 implied fraction is **{b1.implied_recovery_fraction:.6f}**, above 1.0:
 the uniform FFCM roadside-residue ratio (0.063 ODT/m3) is larger than the
 coastal taper-residue ratio ({b1.gross_taper_ratio_odt_per_m3:.6f} ODT/m3).
 B1 is therefore flagged and the documented **0.60** fallback is used. The B2
-implied fraction is **{b2.implied_recovery_fraction:.6f}**, inside the bounds,
-so B2 uses the FFCM-implied value. The national comparison ratio is
-{recovery["CAN"].implied_recovery_fraction:.6f}; it is reported only, not used
-to set the national cap (the rollup is the sum of B1 and B2).
+implied fraction on the refined batch is **{b2.implied_recovery_fraction:.6f}**,
+inside the bounds, but the base cap **does not** re-derive recovery from it.
+The base recovery is held at the published 2026-11-17 calibration
+({b2.base_recovery_fraction:.6f}); the FFCM-implied value is reported as a
+diagnostic because re-deriving it would raise the B2 cap to about 39.9 PJ and
+would not reconcile with the refined all-BC chain. The national comparison
+ratio is {recovery["CAN"].implied_recovery_fraction:.6f}; it is reported only,
+not used to set the national cap (the rollup is the sum of B1 and B2).
 
 Supporting evidence: the BC Fibre Database `Roadside Residue` sheet uses 18%
 of harvest with regional inclusion factors of 0.2 to 0.8. The FFCM uniform
@@ -2016,7 +2145,9 @@ The build performs and the tests re-check:
 
 - **Recovery bounds**: B1 implied {b1.implied_recovery_fraction:.6f} is flagged
   and uses the 0.60 fallback; B2 implied {b2.implied_recovery_fraction:.6f} is
-  in [0.2, 1.0]; every base recovery is in [0.2, 1.0].
+  in [0.2, 1.0] but is a diagnostic; the base recovery is the published
+  {b2.base_recovery_fraction:.6f} calibration, and every base recovery is in
+  [0.2, 1.0].
 - **ODT -> PJ**: `PJ = ODT x 18.5 / 1,000,000` within 1e-9 PJ.
 - **Cost conversion**: `$/GJ = $/ODT / 18.5`; low = base x 1.30, high =
   base x 0.80.
@@ -2038,7 +2169,11 @@ The build performs and the tests re-check:
    defensible FMU boundary layer would replace the share allocation.
 3. **FFCM InitialContent is a stock.** The implied recovery is a per-m3 ratio,
    not a calibrated annual recovery rate. The 0.60 B1 fallback is a documented
-   base, not a measured coastal recovery.
+   base, not a measured coastal recovery. On the refined batch the B2
+   FFCM-implied recovery is {b2.implied_recovery_fraction:.6f}, above the
+   published {b2.base_recovery_fraction:.6f}; this is an open evidence question.
+   The cap holds the published calibration so the batch refinement lowers the
+   gross taper estimate instead of silently reflating the cap.
 4. **Cost is a single FFCM provincial value.** It does not vary by zone and
    excludes collection, grinding, bundling, stumpage, and opportunity cost.
    It is a lower bound for a harvest-residue supply curve.
@@ -2066,6 +2201,175 @@ data artifacts are committed in the `data` submodule and the parent repository;
 `git status --porcelain` for the artifact paths is clean after the commit. The
 exact commit hashes and publish result are recorded in the task handoff
 because they are created after this report is written.
+"""
+
+
+def reconciliation_markdown(artifacts: BuildArtifacts, repo_root: Path) -> str:
+    """Old-vs-new cap reconciliation against the refined all-BC chain."""
+    cases = {case.name: case for case in artifacts.cases}
+    chain_path = (
+        repo_root / "data/derived/national/bc_chain/bc_supply_by_zone.csv"
+    )
+    chain: dict[tuple[int, str], float] = {}
+    if chain_path.exists():
+        with chain_path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                year = int(row["year"])
+                zone_id = row["zone"].strip()
+                if year in (2021, 2028) and zone_id in ("B1", "B2"):
+                    key = (year, zone_id)
+                    chain[key] = chain.get(key, 0.0) + float(
+                        row["residue_recoverable_odt"]
+                    )
+
+    cap_rows = []
+    for case_name in ("low", "base", "high"):
+        for zone_id in ("B1", "B2", "CAN"):
+            old = OLD_CASE_CAPS_PJ[case_name][zone_id]
+            new = cases[case_name].row(2028, zone_id).residue_pj
+            cap_rows.append(
+                f"| {case_name} | {zone_id} | {old:,.6f} | {new:,.6f} | "
+                f"{new - old:+,.6f} | {100.0 * (new / old - 1.0):+.2f}% |"
+            )
+
+    cap_2021_rows = []
+    for case_name in ("low", "base", "high"):
+        for zone_id in ("B1", "B2", "CAN"):
+            old = OLD_CASE_CAPS_2021_PJ[case_name][zone_id]
+            new = cases[case_name].row(2021, zone_id).residue_pj
+            cap_2021_rows.append(
+                f"| {case_name} | {zone_id} | {old:,.6f} | {new:,.6f} | "
+                f"{new - old:+,.6f} | {100.0 * (new / old - 1.0):+.2f}% |"
+            )
+
+    decomposition_rows = []
+    for zone_id in ("B1", "B2"):
+        old = OLD_TIME_PATH_2028[zone_id]
+        new_row = next(
+            row
+            for row in artifacts.time_path
+            if row.year == 2028 and row.zone_id == zone_id
+        )
+        old_taper = old["gross_taper_residue_odt"] / old["annual_log_m3"]
+        new_taper = new_row.gross_taper_residue_odt / new_row.annual_log_m3
+        old_recovery = old["base_recovery_fraction"]
+        new_recovery = cases["base"].recovery_by_zone[zone_id]
+        log_ratio = new_row.annual_log_m3 / old["annual_log_m3"]
+        taper_ratio = new_taper / old_taper
+        recovery_ratio = new_recovery / old_recovery
+        cap_ratio = (
+            cases["base"].row(2028, zone_id).residue_pj
+            / OLD_CASE_CAPS_PJ["base"][zone_id]
+        )
+        decomposition_rows.append(
+            f"| {zone_id} | {old['annual_log_m3']:,.3f} | "
+            f"{new_row.annual_log_m3:,.3f} | {100.0 * (log_ratio - 1.0):+.2f}% | "
+            f"{old_taper:.9f} | {new_taper:.9f} | "
+            f"{100.0 * (taper_ratio - 1.0):+.2f}% | "
+            f"{old_recovery:.9f} | {new_recovery:.9f} | "
+            f"{100.0 * (recovery_ratio - 1.0):+.2f}% | "
+            f"{100.0 * (cap_ratio - 1.0):+.2f}% |"
+        )
+
+    chain_rows = []
+    for year in (2021, 2028):
+        for zone_id in ("B1", "B2"):
+            cap_pj = cases["base"].row(year, zone_id).residue_pj
+            chain_odt = chain.get((year, zone_id))
+            if chain_odt is None:
+                chain_rows.append(
+                    f"| {year} | {zone_id} | {cap_pj:,.6f} | n/a | n/a |"
+                )
+                continue
+            chain_pj = chain_odt * LHV_GJ_PER_ODT / PJ_GJ
+            chain_rows.append(
+                f"| {year} | {zone_id} | {cap_pj:,.6f} | {chain_pj:,.6f} | "
+                f"{100.0 * (cap_pj / chain_pj - 1.0):+.6f}% |"
+            )
+
+    base_2028 = cases["base"].row(2028, "CAN").residue_pj
+    return f"""# BC OSeCAN residue cap reconciliation
+
+Status: **FRESH-side provisional**.  This note bridges the 2026-11-17 cap
+(`bc_national_batch_area_joined.csv` sha256 `{STALE_BATCH_SHA256[:12]}...`) to
+the refined 2026-11-18 all-BC chain (`fd12a1a...`).
+
+## 1. Input-hash bridge
+
+| Item | Pre-refinement / cap | Refined / current |
+|---|---|---|
+| Joined batch sha256 | `{STALE_BATCH_SHA256}` | `{BATCH_JOINED_SHA256}` |
+| Batch log (m3) | {STALE_BATCH_LOG_M3:,.3f} | {artifacts.batch_ratios.log_m3:,.3f} |
+| Batch residue (ODT) | {STALE_BATCH_RESIDUE_ODT:,.3f} | {artifacts.batch_ratios.residue_odt:,.3f} |
+| BC all-species ratio (ODT/m3) | {STALE_BATCH_RESIDUE_ODT / STALE_BATCH_LOG_M3:.9f} | {artifacts.batch_ratios.bc_all_species:.9f} |
+| Area weights sha256 | `a173afb4e323...` | `a1882d5e1d0d...` |
+
+The batch totals rose because the species-alias refinement recovered
+10,845,346 ha of formerly `UNMAPPED_BC` area into named species.  The cap did
+not see that batch: it was built from the stale `e0a51d5...` file.  The
+chain manifest already records the current `fd12a1a...` file, so the cap
+predates the refinement.
+
+## 2. Old vs new caps (2028+, PJ/yr)
+
+| Case | Zone | Old | New | Delta | Delta % |
+|---|---|---:|---:|---:|---:|
+{chr(10).join(cap_rows)}
+
+2021 values:
+
+| Case | Zone | Old | New | Delta | Delta % |
+|---|---|---:|---:|---:|---:|
+{chr(10).join(cap_2021_rows)}
+
+The base 2028+ total falls from **{OLD_CASE_CAPS_PJ["base"]["CAN"]:,.6f} PJ**
+to **{base_2028:,.6f} PJ**.  Low/high cases move proportionally; costs are
+unchanged at 2.456978 / 3.194071 / 1.965582 $/GJ.
+
+## 3. Decomposition of the change (2028, base case)
+
+`cap = log volume x taper ratio x recovery x 18.5 / 1e6`.  The three factors
+are shown as ratios; the final column is the exact cap change.
+
+| Zone | Old log (m3) | New log (m3) | Log | Old taper (ODT/m3) | New taper (ODT/m3) | Taper | Old recovery | New recovery | Recovery | Cap change |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+{chr(10).join(decomposition_rows)}
+
+The recovery factor is deliberately **1.000000**: the base recovery is held at
+the published 2026-11-17 calibration.  The refined batch reduces the B2 gross
+taper ratio from 0.106181 to 0.087041 (-18.03%), which is the dominant driver.
+The FFCM-implied recovery on the refined batch is
+{next(row for row in artifacts.recovery if row.zone_id == "B2").implied_recovery_fraction:.6f}
+for B2, not 0.583931; re-deriving it would raise the B2 cap to about 39.9 PJ
+and would not reconcile with the chain.  It is reported as a diagnostic and an
+open evidence question.
+
+## 4. Chain and energy cap agreement
+
+Chain recoverable residue from `bc_supply_by_zone.csv`:
+
+| Year | Zone | Cap (PJ) | Chain recoverable (PJ) | Difference |
+|---:|---|---:|---:|---:|
+{chr(10).join(chain_rows)}
+
+The 2028 values agree exactly because the time path now uses the same
+matched-cell zone taper ratio as the chain and the same published recovery
+fractions.  The zone split of the batch is:
+
+| Zone | Matched log (m3) | Matched residue (ODT) | Ratio (ODT/m3) |
+|---|---:|---:|---:|
+| B1 | {artifacts.batch_ratios.log_m3_by_zone["B1"]:,.3f} | {artifacts.batch_ratios.residue_odt_by_zone["B1"]:,.3f} | {artifacts.batch_ratios.by_zone["B1"]:.9f} |
+| B2 | {artifacts.batch_ratios.log_m3_by_zone["B2"]:,.3f} | {artifacts.batch_ratios.residue_odt_by_zone["B2"]:,.3f} | {artifacts.batch_ratios.by_zone["B2"]:.9f} |
+
+## 5. Residual disagreement and smallest fix
+
+No cap/chain disagreement remains at the published basis.  The residual issue
+is the FFCM-implied recovery diagnostic: on the refined B2 taper the FFCM
+roadside stream is 0.723799 of gross taper, versus the published 0.583931.
+If the project decides the FFCM-implied basis is authoritative, the smallest
+fix is to replace `PUBLISHED_BASE_RECOVERY["B2"]` with the implied value,
+rebuild the time path and chain together, and update the manifest; that would
+raise the B2 cap to about 39.9 PJ, not lower it to 32.2 PJ.
 """
 
 
@@ -2192,6 +2496,12 @@ def write_artifacts(
     report_path = out_dir / "BC_RESIDUE_RECOVERY_REPORT.md"
     report_path.write_text(report_markdown(artifacts), encoding="utf-8")
     written.append(report_path)
+
+    reconciliation_path = out_dir / "BC_RESIDUE_RECONCILIATION.md"
+    reconciliation_path.write_text(
+        reconciliation_markdown(artifacts, repo_root), encoding="utf-8"
+    )
+    written.append(reconciliation_path)
 
     manifest = {
         "artifact_version": "0.1.0",

@@ -171,7 +171,7 @@ class OsecanBiomassModuleTest(unittest.TestCase):
         )
         self.assertAlmostEqual(
             metrics["base"]["max_electricity_2028_pj"],
-            42.958794801 * BCW_EFFICIENCY,
+            35.809945709 * BCW_EFFICIENCY,
             places=9,
         )
         self.assertGreater(

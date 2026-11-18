@@ -2,6 +2,27 @@
 
 ## 2026-11-18
 
+- **Reconciled the BC OSeCAN residue caps with the refined all-BC chain and
+  reran the zonal case.**  Rebuilt `bc_residue_recovery.py` against the refined
+  area-weighted batch (`bc_national_batch_area_joined.csv` sha256
+  `fd12a1a...`; the cap used the stale `e0a51d5...` file).  Updated the batch
+  constants (log 8.936B -> 11.283B m3; residue 722.692M -> 823.763M ODT),
+  added a pinned batch-hash and sibling-manifest check, and made the time path
+  use the matched-cell zone taper ratio.  The base recovery is held at the
+  published 2026-11-17 calibration (B1 0.60, B2 0.583931) so the batch
+  refinement lowers the gross taper instead of silently reflating recovery;
+  the FFCM-implied B2 fraction (0.723799) is reported as a diagnostic.
+  Base 2028+ caps move B1 3.672286 -> 3.605475 PJ, B2 39.286509 -> 32.204471
+  PJ, total 42.958795 -> 35.809946 PJ; low/high cases and the `SUPBCW` rollup
+  are updated, costs unchanged.  The rebuilt caps equal
+  `bc_supply_by_zone.csv` recoverable residue exactly.  Added
+  `BC_RESIDUE_RECONCILIATION.md` and cap/chain/manifest tests.  Reran
+  `Current Measures` in `/tmp/osecan_zonal` with the new caps: control
+  objective 1,371,586.14 M$, zonal 1,371,621.94 M$ (previous 1,371,553.35 /
+  1,371,600.56); B2 binds 2030-2070 (previous 2032-2070).  Outputs under
+  `data/derived/national/clews/osecan/reconcile/`; the public OSeCAN repo was
+  not modified.
+
 - **Fixed the BC residue co-optimisation review findings.**  Harvest sources
   now use the period-specific `residue_recoverable_odt` offers in
   `bc_supply_by_zone.csv` by zone, keeping the Stage A log assignment fixed and

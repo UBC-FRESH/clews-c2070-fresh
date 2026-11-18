@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import math
 import tempfile
 import unittest
@@ -29,6 +30,11 @@ from workflows.national.clews.bc_residue_recovery import (
     parameter_rows,
     summary_payload,
     write_artifacts,
+)
+from workflows.national.clews.bc_residue_supply import (
+    BATCH_JOINED_SHA256,
+    BATCH_LOG_M3,
+    BATCH_RESIDUE_ODT,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -91,16 +97,22 @@ class BcResidueRecoveryTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             recovery["B1"].base_recovery_fraction, BASE_RECOVERY_FALLBACK, places=12
         )
-        self.assertIn("outside", recovery["B1"].flag)
+        self.assertIn("diagnostic", recovery["B1"].flag)
 
         self.assertGreaterEqual(recovery["B2"].implied_recovery_fraction, RECOVERY_MIN)
         self.assertLessEqual(recovery["B2"].implied_recovery_fraction, RECOVERY_MAX)
         self.assertTrue(recovery["B2"].recovery_in_bounds)
         self.assertAlmostEqual(
             recovery["B2"].base_recovery_fraction,
-            recovery["B2"].implied_recovery_fraction,
-            places=12,
+            0.583931303,
+            places=9,
         )
+        self.assertNotAlmostEqual(
+            recovery["B2"].base_recovery_fraction,
+            recovery["B2"].implied_recovery_fraction,
+            places=6,
+        )
+        self.assertEqual(recovery["B2"].recovery_basis, "published_2026_11_17_ffcm_calibration_held")
         self.assertTrue(recovery["CAN"].comparison_only)
         for row in recovery.values():
             self.assertGreaterEqual(row.base_recovery_fraction, RECOVERY_MIN)
@@ -282,8 +294,8 @@ class BcResidueRecoveryTestCase(unittest.TestCase):
         self.assertLess(agb.nonstem.minimum, agb.nonstem.median)
         self.assertGreater(agb.nonstem.maximum, agb.nonstem.median)
         zones = {row.zone_id: row for row in agb.zones}
-        self.assertAlmostEqual(zones["B1"].ratio_to_taper, 3.067493529, places=6)
-        self.assertAlmostEqual(zones["B2"].ratio_to_taper, 1.170142634, places=6)
+        self.assertAlmostEqual(zones["B1"].ratio_to_taper, 3.124382866, places=6)
+        self.assertAlmostEqual(zones["B2"].ratio_to_taper, 1.450424479, places=6)
         self.assertTrue(agb.rsyc_agb_available)
         self.assertGreater(zones["B1"].annual_gross_slash_odt_2021, 0)
         self.assertGreater(zones["B2"].annual_gross_slash_odt_2021, 0)
@@ -311,7 +323,7 @@ class BcResidueRecoveryTestCase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             out_dir = Path(temporary)
             written = write_artifacts(self.artifacts, REPO_ROOT, out_dir)
-            self.assertEqual(len(written), 25)
+            self.assertEqual(len(written), 26)
             self.assertTrue(
                 (out_dir / "audit" / "bc_aac_trajectory_2011_2028.csv").exists()
             )
@@ -341,12 +353,63 @@ class BcResidueRecoveryTestCase(unittest.TestCase):
                 rows = list(csv.DictReader(handle))
             self.assertEqual(len(rows), 150)
 
+    def test_batch_constants_match_refined_batch(self) -> None:
+        self.assertAlmostEqual(self.artifacts.batch_ratios.log_m3, BATCH_LOG_M3, places=3)
+        self.assertAlmostEqual(
+            self.artifacts.batch_ratios.residue_odt, BATCH_RESIDUE_ODT, places=3
+        )
+        summary = summary_payload(self.artifacts)
+        self.assertEqual(
+            summary["batch_basis"]["joined_sha256"], BATCH_JOINED_SHA256
+        )
+        self.assertAlmostEqual(
+            summary["batch_basis"]["bc_all_species_ratio"],
+            0.07301189090471145,
+            places=9,
+        )
+
+    def test_manifest_captures_batch_hash(self) -> None:
+        manifest = json.loads((OUTPUT_DIR / "manifest.json").read_text(encoding="utf-8"))
+        inputs = {entry["path"]: entry["sha256"] for entry in manifest["inputs"]}
+        key = (
+            "data/derived/national/assortments/bc_area_weights/"
+            "bc_national_batch_area_joined.csv"
+        )
+        self.assertEqual(inputs[key], BATCH_JOINED_SHA256)
+        self.assertIn("BC_RESIDUE_RECONCILIATION.md", {
+            entry["path"] for entry in manifest["outputs"]
+        })
+
+    def test_cap_chain_reconciliation_per_zone(self) -> None:
+        chain_path = (
+            REPO_ROOT / "data/derived/national/bc_chain/bc_supply_by_zone.csv"
+        )
+        if not chain_path.exists():
+            self.skipTest(f"chain artifact not present: {chain_path}")
+        chain: dict[str, float] = {}
+        with chain_path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                if int(row["year"]) != 2028 or row["zone"] not in {"B1", "B2"}:
+                    continue
+                chain[row["zone"]] = chain.get(row["zone"], 0.0) + float(
+                    row["residue_recoverable_odt"]
+                )
+        cases = {case.name: case for case in self.artifacts.cases}
+        for zone_id in ("B1", "B2"):
+            cap_pj = cases["base"].row(2028, zone_id).residue_pj
+            chain_pj = chain[zone_id] * LHV_GJ_PER_ODT / 1_000_000.0
+            self.assertLessEqual(
+                abs(cap_pj / chain_pj - 1.0),
+                0.01,
+                f"{zone_id} cap {cap_pj} vs chain {chain_pj}",
+            )
+
     def test_placeholder_and_previous_comparison(self) -> None:
         cases = {case.name: case for case in self.artifacts.cases}
         base_2021 = cases["base"].row(2021, "CAN").residue_pj
         base_2028 = cases["base"].row(2028, "CAN").residue_pj
-        self.assertTrue(math.isclose(base_2021, 50.472521396, rel_tol=1e-9))
-        self.assertTrue(math.isclose(base_2028, 42.958794801, rel_tol=1e-9))
+        self.assertTrue(math.isclose(base_2021, 41.298610459, rel_tol=1e-9))
+        self.assertTrue(math.isclose(base_2028, 35.809945709, rel_tol=1e-9))
         self.assertLess(base_2021, PREVIOUS_GROSS_PJ)
         self.assertLess(base_2028, PREVIOUS_GROSS_PJ)
 

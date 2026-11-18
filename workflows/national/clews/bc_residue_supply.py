@@ -276,8 +276,17 @@ ALL_BC_APPORTIONMENT_M3 = PARSED_APPORTIONMENT_M3 + sum(
     MISSING_APPORTIONMENT_M3.values()
 )
 
-BATCH_LOG_M3 = 8_936_253_982.256
-BATCH_RESIDUE_ODT = 722_691_930.985
+# Recomputed 2026-11-18 from the refined area-weighted batch after the species
+# alias recovery (the previous constants were from the pre-refinement batch,
+# sha256 e0a51d5...; the current batch is fd12a1a...).  The batch totals rose
+# because 10,845,346 ha of formerly UNMAPPED_BC area now carries species
+# composition.  Keep these in lockstep with the joined batch and its manifest;
+# load_batch_ratios fails closed on either mismatch.
+BATCH_LOG_M3 = 11_282_585_443.417416
+BATCH_RESIDUE_ODT = 823_762_897.5178778
+BATCH_JOINED_SHA256 = (
+    "fd12a1ace118b951ddf1e82d03c17c4b0e63bf4b288814c09526db371c103e7b"
+)
 BATCH_BC_ALL_SPECIES_RATIO = BATCH_RESIDUE_ODT / BATCH_LOG_M3
 
 STAGE_B_ODT = 8_325_597.70314148
@@ -425,9 +434,19 @@ class TsaArea:
 
 @dataclass(frozen=True, slots=True)
 class BatchRatios:
-    """BC area-weighted national-batch residue ratios."""
+    """BC area-weighted national-batch residue ratios.
+
+    ``by_ecoprovince`` is the TSA-allocation input; ``by_zone`` is the direct
+    matched-cell aggregate used by the refined all-BC chain and by the OSeCAN
+    cap.  The two must not be confused: allocating AAC across ecoprovinces by
+    TSA area and then applying ecoprovince ratios gives a different zone ratio
+    than aggregating the matched batch cells by zone.
+    """
 
     by_ecoprovince: Mapping[str, float]
+    by_zone: Mapping[str, float]
+    log_m3_by_zone: Mapping[str, float]
+    residue_odt_by_zone: Mapping[str, float]
     bc_all_species: float
     log_m3: float
     residue_odt: float
@@ -574,8 +593,32 @@ def load_tsa_volumes(
     return dict(volumes)
 
 
+def _verify_batch_manifest(path: Path, digest: str) -> None:
+    """Fail closed unless the joined batch matches its sibling manifest."""
+    manifest_path = path.parent / "manifest.json"
+    if not manifest_path.exists():
+        raise BcResidueSupplyError(
+            f"Missing BC area-weight manifest for batch check: {manifest_path}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    recorded = (
+        manifest.get("outputs", {})
+        .get(path.name, {})
+        .get("sha256")
+    )
+    if recorded is None:
+        raise BcResidueSupplyError(
+            f"BC area-weight manifest does not record {path.name}"
+        )
+    if recorded != digest:
+        raise BcResidueSupplyError(
+            f"Batch {path.name} sha256 {digest} does not match the manifest "
+            f"record {recorded}"
+        )
+
+
 def load_batch_ratios(path: Path) -> BatchRatios:
-    """Compute ecoprovince and all-BC residue ODT per log m3 from the batch join."""
+    """Compute ecoprovince, zone, and all-BC residue ODT per log m3 from the batch join."""
     rows = _read_csv(path, "BC national batch join")
     _require_columns(
         rows,
@@ -584,12 +627,14 @@ def load_batch_ratios(path: Path) -> BatchRatios:
     )
     log_m3: defaultdict[str, float] = defaultdict(float)
     residue_odt: defaultdict[str, float] = defaultdict(float)
+    zone_log: defaultdict[str, float] = defaultdict(float)
+    zone_residue: defaultdict[str, float] = defaultdict(float)
     matched_cells: set[str] = set()
     no_area_cells: set[str] = set()
 
     for index, row in enumerate(rows, start=2):
         ecoprovince = row["ecoprovince"].strip()
-        zone_for_ecoprovince(ecoprovince)
+        zone = zone_for_ecoprovince(ecoprovince)
         status = row["area_status"].strip()
         if status == "no_area":
             no_area_cells.add(row["cell_key"])
@@ -601,16 +646,24 @@ def load_batch_ratios(path: Path) -> BatchRatios:
         matched_cells.add(row["cell_key"])
         stream = row["stream"].strip()
         if stream == "log":
-            log_m3[ecoprovince] += _number(
-                row["volume_m3"], f"batch row {index} volume_m3"
-            )
+            volume = _number(row["volume_m3"], f"batch row {index} volume_m3")
+            log_m3[ecoprovince] += volume
+            zone_log[zone] += volume
         elif stream == "residue":
-            residue_odt[ecoprovince] += _number(
-                row["residue_odt"], f"batch row {index} residue_odt"
-            )
+            residue = _number(row["residue_odt"], f"batch row {index} residue_odt")
+            residue_odt[ecoprovince] += residue
+            zone_residue[zone] += residue
 
     total_log = sum(log_m3.values())
     total_residue = sum(residue_odt.values())
+    digest = _sha256(path)
+    if digest != BATCH_JOINED_SHA256:
+        raise BcResidueSupplyError(
+            f"Batch {path.name} sha256 {digest} does not match the pinned "
+            f"{BATCH_JOINED_SHA256}; update BATCH_LOG_M3, BATCH_RESIDUE_ODT, "
+            "BATCH_JOINED_SHA256, and the manifest together"
+        )
+    _verify_batch_manifest(path, digest)
     if not math.isclose(total_log, BATCH_LOG_M3, rel_tol=1e-9, abs_tol=1.0):
         raise BcResidueSupplyError(
             f"Batch log total {total_log:,.3f} m3 does not match documented "
@@ -627,8 +680,18 @@ def load_batch_ratios(path: Path) -> BatchRatios:
         for ecoprovince in log_m3
         if log_m3[ecoprovince] > 0
     }
+    by_zone: dict[str, float] = {}
+    for zone_id in ("B1", "B2"):
+        if zone_log[zone_id] <= 0 or zone_residue[zone_id] <= 0:
+            raise BcResidueSupplyError(
+                f"Batch zone {zone_id} has no positive matched log/residue"
+            )
+        by_zone[zone_id] = zone_residue[zone_id] / zone_log[zone_id]
     return BatchRatios(
         by_ecoprovince=by_ecoprovince,
+        by_zone=by_zone,
+        log_m3_by_zone=dict(zone_log),
+        residue_odt_by_zone=dict(zone_residue),
         bc_all_species=total_residue / total_log,
         log_m3=total_log,
         residue_odt=total_residue,

@@ -58,6 +58,9 @@ def _ratios() -> BatchRatios:
             "Southern Coastal Mountains": 0.04,
             "Northern Montane Cordillera": 0.10,
         },
+        by_zone={"B1": 0.045, "B2": 0.10},
+        log_m3_by_zone={"B1": 2000.0, "B2": 2000.0},
+        residue_odt_by_zone={"B1": 90.0, "B2": 200.0},
         bc_all_species=0.08,
         log_m3=4000.0,
         residue_odt=320.0,
@@ -304,7 +307,7 @@ class BasisConstantsTest(unittest.TestCase):
         self.assertEqual(len(MISSING_APPORTIONMENT_M3), 5)
 
     def test_ratios_are_documented(self) -> None:
-        self.assertAlmostEqual(BATCH_BC_ALL_SPECIES_RATIO, 0.0808719103574986, places=12)
+        self.assertAlmostEqual(BATCH_BC_ALL_SPECIES_RATIO, 0.07301189090471145, places=12)
         self.assertAlmostEqual(STAGE_B_TOTAL_RATIO, 0.2595527054957869, places=12)
 
 
