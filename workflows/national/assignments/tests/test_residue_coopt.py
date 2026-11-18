@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import replace
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -251,3 +253,23 @@ def test_missing_path_confidence_is_not_defaulted() -> None:
         _require_text(float("nan"), "path_confidence")
     with pytest.raises(CooptError, match="provenance cannot be defaulted"):
         _require_text("", "path_confidence")
+
+
+def test_committed_coopt_harvest_conservation() -> None:
+    """The published co-opt run conserves the full recoverable harvest stream."""
+    root = Path(__file__).resolve().parents[4]
+    summary_path = (
+        root / "data/derived/national/bc_chain/bc_residue_coopt_summary.json"
+    )
+    if not summary_path.exists():
+        pytest.skip(f"co-opt artifact not present: {summary_path}")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    recoverable = float(summary["harvest_recoverable_odt"])
+    assigned = float(summary["harvest_coopt_assigned_odt"])
+    assert recoverable > 0
+    # The LP reports rounded activity; conserve within a 0.05 odt solver residue.
+    assert assigned == pytest.approx(recoverable, abs=0.05)
+    assert float(summary["harvest_stage_a_assigned_odt"]) <= recoverable + 1e-6
+    assert summary["solver_status"].lower() == "optimal"
+    for check in summary["validation"]:
+        assert check["passed"], check

@@ -2,6 +2,25 @@
 
 ## 2026-11-18
 
+- **Adopted the refined FFCM-implied B2 recovery as the BC base and reran the
+  zonal OSeCAN.**  The base recovery is no longer held at the stale 2026-11-17
+  calibration.  `bc_residue_recovery.py` now recomputes
+  `implied_B2 = ffcm_residue_B2 / (ffcm_log_B2 * taper_ratio_B2)` from the
+  current batch and FFCM ledger, asserts it at 0.723799 (tolerance 1e-5) and in
+  [0.2, 1.0], and uses it for B2; B1 remains the documented 0.60 fallback
+  (implied 1.7690 out of bounds).  Base 2028+ caps: B1 3.605475 PJ, B2
+  39.918341 PJ, total 43.523816 PJ.  Low/high stay at 0.35/0.75 (B2 19.302895 /
+  41.363347 PJ).  `BC_RESIDUE_RECONCILIATION.md` records the old published
+  42.958795 PJ, interim held 35.809946 PJ, and adopted 43.523816 PJ.  Rebuilt
+  the 2028 chain and co-opt: harvest recoverable 2,352,639 ODT, total residue
+  9,258,723 ODT, all assigned, BIO 2,535,332 ODT (27.4% of assigned), net
+  contribution CAD 957,802,389.  Cap equals chain recoverable residue per zone
+  (B1 3.605475, B2 39.918341 PJ).  Reran `Current Measures` in
+  `/tmp/osecan_zonal`: control objective 1,371,550.76 M$, zonal 1,371,599.09
+  M$; zonal emissions 61.659110 Mt; B1 binds 2026-2070, B2 2032-2070.
+  Outputs under `data/derived/national/clews/osecan/reconcile_ffcm/`; the
+  public OSeCAN repo was not modified.
+
 - **Reconciled the BC OSeCAN residue caps with the refined all-BC chain and
   reran the zonal case.**  Rebuilt `bc_residue_recovery.py` against the refined
   area-weighted batch (`bc_national_batch_area_joined.csv` sha256

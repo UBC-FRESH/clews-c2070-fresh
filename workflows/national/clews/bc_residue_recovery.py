@@ -54,18 +54,24 @@ from workflows.national.clews.bc_residue_supply import (
 __all__ = [
     "AGB_AGE",
     "ALL_BC_AAC_2018_M3",
+    "B1_FALLBACK_RECOVERY",
+    "BASE_RECOVERY_BASIS",
     "BASE_RECOVERY_FALLBACK",
     "CASE_COST_MULTIPLIER",
     "CASE_RECOVERY",
+    "EXPECTED_FFCM_IMPLIED_B2",
+    "FFCM_IMPLIED_B2_TOLERANCE",
     "HORIZON_END",
     "HORIZON_START",
+    "INTERIM_HELD_BASE_2021_PJ",
+    "INTERIM_HELD_BASE_2028_PJ",
+    "INTERIM_HELD_RECOVERY",
     "LHV_GJ_PER_ODT",
+    "OLD_PUBLISHED_BASE_2028_PJ",
     "OUTPUT_DIR",
     "PLACEHOLDER_COST_USD_PER_GJ",
     "PLACEHOLDER_PJ",
     "PREVIOUS_GROSS_PJ",
-    "PUBLISHED_BASE_RECOVERY",
-    "PUBLISHED_BASE_RECOVERY_BASIS",
     "RECOVERY_MAX",
     "RECOVERY_MIN",
     "AacTrajectory",
@@ -122,18 +128,30 @@ CASE_COST_MULTIPLIER: Mapping[str, float] = {
     "high": 0.80,
 }
 
-# Published base recovery fractions from the 2026-11-17 FFCM calibration.
-# They are held fixed when the batch taper estimate is refined: the recovery
-# rate is a calibrated model parameter, not a quantity that should silently
-# reflate when the gross taper estimate falls.  The FFCM-implied fraction on
-# the current batch is reported as a diagnostic (see ``implied_recovery``),
-# not used to set the base cap.  Re-deriving it would raise the B2 cap from
-# 32.204 PJ to about 39.9 PJ and would not reconcile with the refined chain.
-PUBLISHED_BASE_RECOVERY: Mapping[str, float] = {
+# Adopted base recovery.  The 2026-11-18 refinement changed the gross taper
+# ratio, so the B2 base is recomputed from the current batch and FFCM ledger
+# rather than held at the stale 2026-11-17 calibration:
+#
+#   implied_B2 = ffcm_residue_B2 / (ffcm_log_B2 * taper_ratio_B2)
+#
+# The value is asserted in ``build_all`` (tolerance 1e-5) so a silent input
+# drift fails closed.  B1 remains the documented 0.60 fallback because its
+# implied recovery (about 1.7368) is outside [0.2, 1.0].
+EXPECTED_FFCM_IMPLIED_B2 = 0.723799
+FFCM_IMPLIED_B2_TOLERANCE = 1e-5
+BASE_RECOVERY_BASIS = "ffcm_implied_refined_batch_2026_11_18"
+B1_FALLBACK_RECOVERY = 0.600000000
+
+# Historical bases retained for the reconciliation report:
+# old published 2026-11-17 cap, and the interim held-calibration cap that
+# deliberately did not re-derive B2 from the refined taper.
+OLD_PUBLISHED_BASE_2028_PJ = 42.958794801
+INTERIM_HELD_BASE_2028_PJ = 35.809945709
+INTERIM_HELD_BASE_2021_PJ = 41.298610459
+INTERIM_HELD_RECOVERY: Mapping[str, float] = {
     "B1": 0.600000000,
     "B2": 0.583931303,
 }
-PUBLISHED_BASE_RECOVERY_BASIS = "published_2026_11_17_ffcm_calibration_held"
 
 # Current C2070 placeholder and the previous gross taper-residue result.
 PLACEHOLDER_PJ = 50.0
@@ -944,9 +962,10 @@ def build_recovery(
     so the BC total is allocated to B1/B2 by the documented 2018 AAC zone log
     shares.  That allocation is flagged, not silently treated as an FMU map.
 
-    When ``base_recovery_by_zone`` is supplied, those published/calibrated
-    fractions set the base case and the FFCM-implied fraction is a diagnostic.
-    This keeps a batch-taper refinement from silently reflating the cap.
+    By default the base is the FFCM-implied fraction when it is inside the
+    [0.2, 1.0] envelope and the documented 0.60 fallback otherwise.  A caller
+    may override the base explicitly (used only for historical replay); the
+    override is labelled and never silently mixed with the implied basis.
     """
     if not 0.0 < fallback < 1.0:
         raise BcResidueRecoveryError("fallback recovery must be between 0 and 1")
@@ -994,9 +1013,9 @@ def build_recovery(
                     f"Published base recovery for {zone_id} ({base}) is outside "
                     f"the case envelope [{recovery_min}, {recovery_max}]"
                 )
-            recovery_basis = PUBLISHED_BASE_RECOVERY_BASIS
+            recovery_basis = "caller_override"
             flag = (
-                f"published_base_held;ffcm_implied_{implied:.9f}_diagnostic;"
+                f"caller_override_base;ffcm_implied_{implied:.9f}_diagnostic;"
                 f"implied_in_bounds_{str(in_bounds).lower()}"
             )
         rows.append(
@@ -1045,7 +1064,7 @@ def build_recovery(
             zone_shares[zone_id] * float(base_recovery_by_zone[zone_id])
             for zone_id in ("B1", "B2")
         )
-        national_basis = "national_comparison_only_published_weighted"
+        national_basis = "national_comparison_only_caller_override"
         national_flag = "national_comparison_only"
     rows.append(
         ZoneRecovery(
@@ -1494,6 +1513,59 @@ class BuildArtifacts:
     input_paths: tuple[Path, ...]
 
 
+def _assert_adopted_recovery(recovery: Sequence[ZoneRecovery]) -> None:
+    """Fail closed unless the recomputed FFCM-implied basis is the adopted one.
+
+    B2 must reproduce the refined-batch implied recovery (0.723799 +/- 1e-5)
+    and sit inside [0.2, 1.0].  B1 must remain the documented 0.60 fallback
+    because its implied value is out of bounds.
+    """
+    by_zone = {row.zone_id: row for row in recovery}
+    missing = {"B1", "B2"} - set(by_zone)
+    if missing:
+        raise BcResidueRecoveryError(f"Recovery is missing zones {sorted(missing)}")
+
+    b1 = by_zone["B1"]
+    b2 = by_zone["B2"]
+    if b1.recovery_in_bounds:
+        raise BcResidueRecoveryError(
+            f"B1 implied recovery {b1.implied_recovery_fraction:.9f} is now in "
+            "bounds; the documented 0.60 fallback assumption no longer holds"
+        )
+    if not math.isclose(
+        b1.base_recovery_fraction, B1_FALLBACK_RECOVERY, rel_tol=0, abs_tol=1e-12
+    ):
+        raise BcResidueRecoveryError(
+            f"B1 base recovery {b1.base_recovery_fraction} is not the documented "
+            f"{B1_FALLBACK_RECOVERY} fallback"
+        )
+    if not RECOVERY_MIN <= b2.implied_recovery_fraction <= RECOVERY_MAX:
+        raise BcResidueRecoveryError(
+            f"B2 implied recovery {b2.implied_recovery_fraction:.9f} is outside "
+            f"[{RECOVERY_MIN}, {RECOVERY_MAX}]"
+        )
+    if not math.isclose(
+        b2.implied_recovery_fraction,
+        EXPECTED_FFCM_IMPLIED_B2,
+        rel_tol=0,
+        abs_tol=FFCM_IMPLIED_B2_TOLERANCE,
+    ):
+        raise BcResidueRecoveryError(
+            f"B2 implied recovery {b2.implied_recovery_fraction:.9f} does not "
+            f"match the refined-batch expectation {EXPECTED_FFCM_IMPLIED_B2} "
+            f"(tolerance {FFCM_IMPLIED_B2_TOLERANCE}); refusing to rebuild caps"
+        )
+    if not math.isclose(
+        b2.base_recovery_fraction,
+        b2.implied_recovery_fraction,
+        rel_tol=0,
+        abs_tol=1e-12,
+    ):
+        raise BcResidueRecoveryError(
+            "B2 base recovery is not the recomputed FFCM-implied value"
+        )
+
+
 def build_all(repo_root: Path) -> BuildArtifacts:
     """Load inputs and build every table, failing closed on bad data."""
     input_paths = [repo_root / relative for relative in INPUT_PATHS.values()]
@@ -1506,12 +1578,8 @@ def build_all(repo_root: Path) -> BuildArtifacts:
     ffcm = load_ffcm_bc_supply(repo_root / INPUT_PATHS["ffcm_fmu_supply"])
     aac = load_aac_workbook(repo_root / INPUT_PATHS["aac_workbook"])
     shares, taper_ratios = zone_shares_from_reference(aac, areas, ratios)
-    recovery = build_recovery(
-        ffcm,
-        shares,
-        taper_ratios,
-        base_recovery_by_zone=PUBLISHED_BASE_RECOVERY,
-    )
+    recovery = build_recovery(ffcm, shares, taper_ratios)
+    _assert_adopted_recovery(recovery)
     time_path = build_time_path(aac, areas, ratios)
     cases = build_cases(time_path, recovery)
 
@@ -1839,17 +1907,28 @@ def summary_payload(artifacts: BuildArtifacts) -> dict[str, object]:
             "matched_cells": artifacts.batch_ratios.matched_cells,
             "no_area_cells": artifacts.batch_ratios.no_area_cells,
         },
-        "published_base_recovery": {
-            "basis": PUBLISHED_BASE_RECOVERY_BASIS,
+        "base_recovery": {
+            "basis": BASE_RECOVERY_BASIS,
             "by_zone": {
-                zone_id: round(value, 9)
-                for zone_id, value in PUBLISHED_BASE_RECOVERY.items()
+                row.zone_id: round(row.base_recovery_fraction, 9)
+                for row in artifacts.recovery
+                if not row.comparison_only
             },
+            "expected_ffcm_implied_b2": EXPECTED_FFCM_IMPLIED_B2,
+            "ffcm_implied_b2_tolerance": FFCM_IMPLIED_B2_TOLERANCE,
             "note": (
-                "Base recovery is held at the 2026-11-17 calibration when the "
-                "batch taper estimate is refined; ffcm_implied_recovery_fraction "
-                "is a diagnostic, not the base cap driver."
+                "The B2 base is recomputed as ffcm_residue_B2 / "
+                "(ffcm_log_B2 * taper_ratio_B2) from the current batch and "
+                "FFCM ledger and asserted at build time; B1 remains the "
+                "documented 0.60 fallback because its implied value is out of "
+                "bounds."
             ),
+        },
+        "historical_bases": {
+            "old_published_2026_11_17_base_2028_pj": OLD_PUBLISHED_BASE_2028_PJ,
+            "interim_held_calibration_base_2021_pj": INTERIM_HELD_BASE_2021_PJ,
+            "interim_held_calibration_base_2028_pj": INTERIM_HELD_BASE_2028_PJ,
+            "interim_held_recovery_by_zone": dict(INTERIM_HELD_RECOVERY),
         },
         "ffcm_basis": {
             "fmu_count": artifacts.ffcm.fmu_count,
@@ -1905,7 +1984,7 @@ def summary_payload(artifacts: BuildArtifacts) -> dict[str, object]:
             "FFCM InitialContent is a stock, so the recovery comparison is per unit log volume, not annual stock-to-flow.",
             "FFCM has no FMU-to-TSA/zone crosswalk in the repo; BC totals are allocated by the documented 2018 AAC zone log share and flagged.",
             "The zone taper ratio is the matched-cell batch aggregate, the same basis as the refined all-BC chain; ecoprovince-ratio weighting is not used for the cap.",
-            "Base recovery is held at the published 2026-11-17 FFCM calibration; the refined-batch FFCM-implied fraction is a diagnostic, not the cap driver.",
+            "The B2 base recovery is the refined-batch FFCM-implied fraction (recomputed and asserted, not hard-coded); B1 uses the documented 0.60 fallback because its implied value is out of bounds.",
             "FFCM logging_residue is a roadside-recoverable stream (0.063 ODT/m3), not full aboveground slash.",
             "Cost is FFCM SupplyCost on a dry ODT basis; no moisture credit, deflator, or exchange-rate adjustment is applied.",
             "The time path uses workbook AAC 2021-2028 and holds 2028 flat to 2070; no MPB, climate, or wildfire trajectory is invented.",
@@ -2007,12 +2086,12 @@ The B1 implied fraction is **{b1.implied_recovery_fraction:.6f}**, above 1.0:
 the uniform FFCM roadside-residue ratio (0.063 ODT/m3) is larger than the
 coastal taper-residue ratio ({b1.gross_taper_ratio_odt_per_m3:.6f} ODT/m3).
 B1 is therefore flagged and the documented **0.60** fallback is used. The B2
-implied fraction on the refined batch is **{b2.implied_recovery_fraction:.6f}**,
-inside the bounds, but the base cap **does not** re-derive recovery from it.
-The base recovery is held at the published 2026-11-17 calibration
-({b2.base_recovery_fraction:.6f}); the FFCM-implied value is reported as a
-diagnostic because re-deriving it would raise the B2 cap to about 39.9 PJ and
-would not reconcile with the refined all-BC chain. The national comparison
+implied fraction on the refined batch is **{b2.implied_recovery_fraction:.6f}**
+and is the adopted base recovery. It is recomputed at build time as
+`ffcm_residue_B2 / (ffcm_log_B2 * taper_ratio_B2)` and asserted against
+{EXPECTED_FFCM_IMPLIED_B2:.6f} (tolerance {FFCM_IMPLIED_B2_TOLERANCE:g}); it is
+not a hard-coded calibration constant. The previous held value 0.583931 was a
+stale calibration tied to the pre-refinement taper. The national comparison
 ratio is {recovery["CAN"].implied_recovery_fraction:.6f}; it is reported only,
 not used to set the national cap (the rollup is the sum of B1 and B2).
 
@@ -2172,10 +2251,10 @@ The build performs and the tests re-check:
 3. **FFCM InitialContent is a stock.** The implied recovery is a per-m3 ratio,
    not a calibrated annual recovery rate. The 0.60 B1 fallback is a documented
    base, not a measured coastal recovery. On the refined batch the B2
-   FFCM-implied recovery is {b2.implied_recovery_fraction:.6f}, above the
-   published {b2.base_recovery_fraction:.6f}; this is an open evidence question.
-   The cap holds the published calibration so the batch refinement lowers the
-   gross taper estimate instead of silently reflating the cap.
+   FFCM-implied recovery is {b2.implied_recovery_fraction:.6f} and is the
+   adopted base; the old published 0.583931 was tied to the pre-refinement
+   taper and is superseded. The remaining evidence gap is the stock-to-flow
+   interpretation, not the arithmetic basis.
 4. **Cost is a single FFCM provincial value.** It does not vary by zone and
    excludes collection, grinding, bundling, stumpage, and opportunity cost.
    It is a lower bound for a harvest-residue supply curve.
@@ -2207,11 +2286,10 @@ because they are created after this report is written.
 
 
 def reconciliation_markdown(artifacts: BuildArtifacts, repo_root: Path) -> str:
-    """Old-vs-new cap reconciliation against the refined all-BC chain."""
+    """Record the resolved FFCM-implied basis and the cap/chain reconciliation."""
     cases = {case.name: case for case in artifacts.cases}
-    chain_path = (
-        repo_root / "data/derived/national/bc_chain/bc_supply_by_zone.csv"
-    )
+    recovery = {row.zone_id: row for row in artifacts.recovery}
+    chain_path = repo_root / "data/derived/national/bc_chain/bc_supply_by_zone.csv"
     chain: dict[tuple[int, str], float] = {}
     if chain_path.exists():
         with chain_path.open(newline="", encoding="utf-8") as handle:
@@ -2223,6 +2301,24 @@ def reconciliation_markdown(artifacts: BuildArtifacts, repo_root: Path) -> str:
                     chain[key] = chain.get(key, 0.0) + float(
                         row["residue_recoverable_odt"]
                     )
+
+    basis_rows = []
+    for label, by_zone, total in (
+        ("Old published 2026-11-17", {"B1": 3.672285606, "B2": 39.286509195}, OLD_PUBLISHED_BASE_2028_PJ),
+        ("Interim held calibration", {"B1": 3.605474907, "B2": 32.204470802}, INTERIM_HELD_BASE_2028_PJ),
+        (
+            "Adopted FFCM-implied",
+            {
+                "B1": cases["base"].row(2028, "B1").residue_pj,
+                "B2": cases["base"].row(2028, "B2").residue_pj,
+            },
+            cases["base"].row(2028, "CAN").residue_pj,
+        ),
+    ):
+        basis_rows.append(
+            f"| {label} | {by_zone['B1']:,.6f} | {by_zone['B2']:,.6f} | "
+            f"{total:,.6f} |"
+        )
 
     cap_rows = []
     for case_name in ("low", "base", "high"):
@@ -2292,9 +2388,11 @@ def reconciliation_markdown(artifacts: BuildArtifacts, repo_root: Path) -> str:
     base_2028 = cases["base"].row(2028, "CAN").residue_pj
     return f"""# BC OSeCAN residue cap reconciliation
 
-Status: **FRESH-side provisional**.  This note bridges the 2026-11-17 cap
-(`bc_national_batch_area_joined.csv` sha256 `{STALE_BATCH_SHA256[:12]}...`) to
-the refined 2026-11-18 all-BC chain (`fd12a1a...`).
+Status: **FRESH-side provisional; basis resolved 2026-11-18**.  This note
+bridges the 2026-11-17 cap (`bc_national_batch_area_joined.csv` sha256
+`{STALE_BATCH_SHA256[:12]}...`) through the interim held-calibration cap to the
+adopted FFCM-implied basis on the refined 2026-11-18 all-BC chain
+(`fd12a1a...`).
 
 ## 1. Input-hash bridge
 
@@ -2307,46 +2405,62 @@ the refined 2026-11-18 all-BC chain (`fd12a1a...`).
 | Area weights sha256 | `a173afb4e323...` | `a1882d5e1d0d...` |
 
 The batch totals rose because the species-alias refinement recovered
-10,845,346 ha of formerly `UNMAPPED_BC` area into named species.  The cap did
-not see that batch: it was built from the stale `e0a51d5...` file.  The
-chain manifest already records the current `fd12a1a...` file, so the cap
-predates the refinement.
+10,845,346 ha of formerly `UNMAPPED_BC` area into named species.
 
-## 2. Old vs new caps (2028+, PJ/yr)
+## 2. Basis decision
 
-| Case | Zone | Old | New | Delta | Delta % |
+The refined batch changed the B2 gross taper ratio from 0.106181 to
+0.087041 ODT/m3, so the FFCM-implied B2 recovery is now recomputed from the
+current batch and FFCM ledger:
+
+`implied_B2 = ffcm_residue_B2 / (ffcm_log_B2 x taper_ratio_B2)`
+
+= {recovery["B2"].ffcm_residue_odt:,.3f} / ({recovery["B2"].ffcm_log_m3:,.3f} x
+{recovery["B2"].gross_taper_ratio_odt_per_m3:.9f}) =
+**{recovery["B2"].implied_recovery_fraction:.9f}**.
+
+This is the adopted base (asserted at build time to {EXPECTED_FFCM_IMPLIED_B2}
+within {FFCM_IMPLIED_B2_TOLERANCE:g} and to [0.2, 1.0]).  B1 stays at the
+documented **0.600000** fallback because its implied
+{recovery["B1"].implied_recovery_fraction:.6f} is out of bounds.
+
+| Basis | B1 2028+ (PJ) | B2 2028+ (PJ) | Total 2028+ (PJ) |
+|---|---:|---:|---:|
+{chr(10).join(basis_rows)}
+
+The old published 42.958795 PJ held B2 at 0.583931, a calibration tied to the
+pre-refinement taper.  The interim 35.809946 PJ deliberately held that stale
+calibration and is superseded.  The adopted total is
+**{base_2028:,.6f} PJ**.
+
+## 3. Old published vs adopted caps (2028+, PJ/yr)
+
+| Case | Zone | Old | Adopted | Delta | Delta % |
 |---|---|---:|---:|---:|---:|
 {chr(10).join(cap_rows)}
 
 2021 values:
 
-| Case | Zone | Old | New | Delta | Delta % |
+| Case | Zone | Old | Adopted | Delta | Delta % |
 |---|---|---:|---:|---:|---:|
 {chr(10).join(cap_2021_rows)}
 
-The base 2028+ total falls from **{OLD_CASE_CAPS_PJ["base"]["CAN"]:,.6f} PJ**
-to **{base_2028:,.6f} PJ**.  Low/high cases move proportionally; costs are
-unchanged at 2.456978 / 3.194071 / 1.965582 $/GJ.
+Costs are unchanged at 2.456978 / 3.194071 / 1.965582 $/GJ.
 
-## 3. Decomposition of the change (2028, base case)
+## 4. Decomposition vs the old published basis (2028, base case)
 
-`cap = log volume x taper ratio x recovery x 18.5 / 1e6`.  The three factors
-are shown as ratios; the final column is the exact cap change.
+`cap = log volume x taper ratio x recovery x 18.5 / 1e6`.
 
 | Zone | Old log (m3) | New log (m3) | Log | Old taper (ODT/m3) | New taper (ODT/m3) | Taper | Old recovery | New recovery | Recovery | Cap change |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 {chr(10).join(decomposition_rows)}
 
-The recovery factor is deliberately **1.000000**: the base recovery is held at
-the published 2026-11-17 calibration.  The refined batch reduces the B2 gross
-taper ratio from 0.106181 to 0.087041 (-18.03%), which is the dominant driver.
-The FFCM-implied recovery on the refined batch is
-{next(row for row in artifacts.recovery if row.zone_id == "B2").implied_recovery_fraction:.6f}
-for B2, not 0.583931; re-deriving it would raise the B2 cap to about 39.9 PJ
-and would not reconcile with the chain.  It is reported as a diagnostic and an
-open evidence question.
+For B2 the taper refinement (-18.03%) is more than offset by adopting the
+FFCM-implied recovery (0.583931 -> {recovery["B2"].implied_recovery_fraction:.6f},
++23.95%), so the cap rises {100.0 * (cases["base"].row(2028, "B2").residue_pj / OLD_CASE_CAPS_PJ["base"]["B2"] - 1.0):+.2f}% versus the old published value.
+B1 is unchanged in recovery and moves only with the zone taper.
 
-## 4. Chain and energy cap agreement
+## 5. Chain and energy cap agreement
 
 Chain recoverable residue from `bc_supply_by_zone.csv`:
 
@@ -2354,26 +2468,26 @@ Chain recoverable residue from `bc_supply_by_zone.csv`:
 |---:|---|---:|---:|---:|
 {chr(10).join(chain_rows)}
 
-The 2028 values agree exactly because the time path now uses the same
-matched-cell zone taper ratio as the chain and the same published recovery
-fractions.  The zone split of the batch is:
+The time path and the chain share the same matched-cell zone taper ratio and
+the same base recovery fraction, so the cap and chain recoverable residue agree
+per zone.  The zone split of the batch is:
 
 | Zone | Matched log (m3) | Matched residue (ODT) | Ratio (ODT/m3) |
 |---|---:|---:|---:|
 | B1 | {artifacts.batch_ratios.log_m3_by_zone["B1"]:,.3f} | {artifacts.batch_ratios.residue_odt_by_zone["B1"]:,.3f} | {artifacts.batch_ratios.by_zone["B1"]:.9f} |
 | B2 | {artifacts.batch_ratios.log_m3_by_zone["B2"]:,.3f} | {artifacts.batch_ratios.residue_odt_by_zone["B2"]:,.3f} | {artifacts.batch_ratios.by_zone["B2"]:.9f} |
 
-## 5. Residual disagreement and smallest fix
+## 6. Validation
 
-No cap/chain disagreement remains at the published basis.  The residual issue
-is the FFCM-implied recovery diagnostic: on the refined B2 taper the FFCM
-roadside stream is 0.723799 of gross taper, versus the published 0.583931.
-If the project decides the FFCM-implied basis is authoritative, the smallest
-fix is to replace `PUBLISHED_BASE_RECOVERY["B2"]` with the implied value,
-rebuild the time path and chain together, and update the manifest; that would
-raise the B2 cap to about 39.9 PJ, not lower it to 32.2 PJ.
+- B2 implied recovery is recomputed and asserted at
+  {recovery["B2"].implied_recovery_fraction:.9f} (expected
+  {EXPECTED_FFCM_IMPLIED_B2}, tolerance {FFCM_IMPLIED_B2_TOLERANCE:g}).
+- B1 uses the documented 0.60 fallback; its implied value is out of bounds.
+- Cases remain monotonic: low 0.35 < base < high 0.75.
+- Cap equals chain recoverable residue per zone within 1% after the chain
+  rebuild; the test suite re-checks the 2028 rows.
+- `SUPBCW` is the exact B1+B2 rollup and remains comparison-only.
 """
-
 
 # ---------------------------------------------------------------------------
 # Writers

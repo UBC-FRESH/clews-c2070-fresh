@@ -50,9 +50,9 @@ __all__ = [
 ]
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-OUTPUT_DIR = SUPPLY_DIR / "osecan" / "reconcile"
+OUTPUT_DIR = SUPPLY_DIR / "osecan" / "reconcile_ffcm"
 
-# Previous published run, before the cap reconciliation.
+# Original published run (pre-refinement cap basis).
 OLD_CONTROL_OBJECTIVE_MUSD = 1_371_553.35
 OLD_ZONAL_OBJECTIVE_MUSD = 1_371_600.56
 OLD_CONTROL_EMISSIONS_MT = 43.990577
@@ -64,25 +64,38 @@ OLD_B1_BINDING_YEARS = "2026-2070"
 OLD_PWRBCWB1_2050_PJ = 0.987175
 OLD_PWRBCWB2_2050_PJ = 10.560887
 
+# Interim held-calibration run (2026-11-18, stale B2 recovery 0.583931).
+INTERIM_CONTROL_OBJECTIVE_MUSD = 1_371_586.14
+INTERIM_ZONAL_OBJECTIVE_MUSD = 1_371_621.94
+INTERIM_CONTROL_EMISSIONS_MT = 46.930848
+INTERIM_ZONAL_EMISSIONS_MT = 61.65911
+INTERIM_B1_CAP_PJ = 3.605474907
+INTERIM_B2_CAP_PJ = 32.204470802
+INTERIM_B2_BINDING_YEARS = "2030-2070"
+INTERIM_B1_BINDING_YEARS = "2026-2070"
+INTERIM_PWRBCWB1_2050_PJ = 0.969212
+INTERIM_PWRBCWB2_2050_PJ = 8.657124
+
 RECONCILE_RUNS = (
     RunSpec(
         name="control",
-        label="national control with reconciled total cap",
+        label="national control with FFCM-implied total cap",
         description=(
-            "National SUPBCW with the reconciled B1+B2 total cap (35.810 PJ "
-            "from 2028); zonal SUPBCWB1/B2 disabled; PWRHYD<z> fixed at 2021 "
-            "activity; CO2 95 $/t to 2025 and 200 $/t from 2026."
+            "National SUPBCW with the adopted FFCM-implied B1+B2 total cap "
+            "(43.524 PJ from 2028); zonal SUPBCWB1/B2 disabled; PWRHYD<z> "
+            "fixed at 2021 activity; CO2 95 $/t to 2025 and 200 $/t from 2026."
         ),
         zonal_supply=False,
         generic_bio_cost_usd_per_gj=3.0,
     ),
     RunSpec(
         name="zonal",
-        label="zonal BC supply with reconciled caps",
+        label="zonal BC supply with FFCM-implied caps",
         description=(
-            "Zonal SUPBCWB1/B2 with the reconciled caps (B1 3.605 PJ, B2 "
-            "32.204 PJ from 2028); national SUPBCW disabled; PWRHYD<z> fixed "
-            "at 2021 activity; CO2 95 $/t to 2025 and 200 $/t from 2026."
+            "Zonal SUPBCWB1/B2 with the adopted FFCM-implied caps (B1 3.605 "
+            "PJ, B2 39.918 PJ from 2028); national SUPBCW disabled; "
+            "PWRHYD<z> fixed at 2021 activity; CO2 95 $/t to 2025 and 200 $/t "
+            "from 2026."
         ),
         zonal_supply=True,
         generic_bio_cost_usd_per_gj=3.0,
@@ -216,7 +229,7 @@ def build_run_summaries(
             - float(control["supbcw_pj"]["total"]),
             6,
         ),
-        "previous_run": {
+        "original_published_run": {
             "control_objective_musd": OLD_CONTROL_OBJECTIVE_MUSD,
             "zonal_objective_musd": OLD_ZONAL_OBJECTIVE_MUSD,
             "control_emissions_mt": OLD_CONTROL_EMISSIONS_MT,
@@ -238,6 +251,30 @@ def build_run_summaries(
             ),
             "zonal_emissions_delta_mt": round(
                 float(zonal["emissions_mt"]["total"]) - OLD_ZONAL_EMISSIONS_MT, 6
+            ),
+        },
+        "interim_held_run": {
+            "control_objective_musd": INTERIM_CONTROL_OBJECTIVE_MUSD,
+            "zonal_objective_musd": INTERIM_ZONAL_OBJECTIVE_MUSD,
+            "control_emissions_mt": INTERIM_CONTROL_EMISSIONS_MT,
+            "zonal_emissions_mt": INTERIM_ZONAL_EMISSIONS_MT,
+            "zonal_b1_cap_pj": INTERIM_B1_CAP_PJ,
+            "zonal_b2_cap_pj": INTERIM_B2_CAP_PJ,
+            "zonal_b1_binding_years": INTERIM_B1_BINDING_YEARS,
+            "zonal_b2_binding_years": INTERIM_B2_BINDING_YEARS,
+            "pwrbcwb1_2050_pj": INTERIM_PWRBCWB1_2050_PJ,
+            "pwrbcwb2_2050_pj": INTERIM_PWRBCWB2_2050_PJ,
+            "control_objective_delta_musd": round(
+                float(control["objective_musd"]) - INTERIM_CONTROL_OBJECTIVE_MUSD, 2
+            ),
+            "zonal_objective_delta_musd": round(
+                float(zonal["objective_musd"]) - INTERIM_ZONAL_OBJECTIVE_MUSD, 2
+            ),
+            "control_emissions_delta_mt": round(
+                float(control["emissions_mt"]["total"]) - INTERIM_CONTROL_EMISSIONS_MT, 6
+            ),
+            "zonal_emissions_delta_mt": round(
+                float(zonal["emissions_mt"]["total"]) - INTERIM_ZONAL_EMISSIONS_MT, 6
             ),
         },
     }
@@ -348,12 +385,14 @@ def _binding_range(block: Mapping[str, object]) -> str:
 
 
 def markdown_report(summaries: Mapping[str, object]) -> str:
-    """Render the reconciliation run report."""
+    """Render the FFCM-implied reconciliation run report."""
     runs = summaries["runs"]
     control = runs["control"]
     zonal = runs["zonal"]
     comparison = summaries["comparison"]
-    previous = comparison["previous_run"]
+    original = comparison["original_published_run"]
+    interim = comparison["interim_held_run"]
+    caps = summaries["caps"]
 
     def series_rows(key: str, digits: int = 3) -> str:
         rows = []
@@ -364,18 +403,9 @@ def markdown_report(summaries: Mapping[str, object]) -> str:
             )
         return "\n".join(rows)
 
-    def dispatch_rows(key: str, digits: int = 3) -> str:
-        rows = []
-        for year in KEY_YEARS:
-            rows.append(
-                f"| {year} | {_fmt(control[key][str(year)], digits)} | "
-                f"{_fmt(zonal[key][str(year)], digits)} |"
-            )
-        return "\n".join(rows)
-
     cap_rows = []
     for technology in ("SUPBCW", "SUPBCWB1", "SUPBCWB2"):
-        cap = summaries["caps"][technology]
+        cap = caps[technology]
         cap_rows.append(
             f"| {technology} | {_fmt(cap.get('2028'), 6)} | "
             f"{_fmt(cap.get('2070'), 6)} |"
@@ -389,13 +419,15 @@ def markdown_report(summaries: Mapping[str, object]) -> str:
             f"{'yes' if cb['binding'] else 'no'} | {_binding_range(cb)} |"
         )
 
-    return f"""# Reconciled zonal OSeCAN run
+    return f"""# FFCM-implied zonal OSeCAN reconciliation
 
-Status: **{STATUS}**.  The BC residue caps were reconciled to the refined
-all-BC chain (B1 3.605475 PJ, B2 32.204471 PJ from 2028; total 35.809946 PJ)
-and the `Current Measures` zonal experiment was rerun in a disposable OSeCAN
-copy at commit `{MODEL_COMMIT[:7]}`.  The public `deltae/C2070` repository was
-not modified.
+Status: **{STATUS}**.  The BC residue base was resolved to the recomputed
+FFCM-implied B2 recovery 0.723799161 (not the stale published 0.583931303) and
+the caps were rebuilt with the chain (B1 {_fmt(caps['SUPBCWB1'].get('2028'), 6)}
+PJ, B2 {_fmt(caps['SUPBCWB2'].get('2028'), 6)} PJ, total
+{_fmt(caps['SUPBCW'].get('2028'), 6)} PJ from 2028).  The `Current Measures`
+experiment was rerun in a disposable OSeCAN copy at commit
+`{MODEL_COMMIT[:7]}`.  The public `deltae/C2070` repository was not modified.
 
 ## Caps loaded
 
@@ -410,11 +442,12 @@ not modified.
 | control | {control['solver_status']} | {_fmt(control['objective_musd'], 2)} | {control['lp_rows']:,} | {control['lp_cols']:,} |
 | zonal | {zonal['solver_status']} | {_fmt(zonal['objective_musd'], 2)} | {zonal['lp_rows']:,} | {zonal['lp_cols']:,} |
 
-Previous run: control {_fmt(previous['control_objective_musd'], 2)} M$,
-zonal {_fmt(previous['zonal_objective_musd'], 2)} M$ with B2 cap
-{_fmt(previous['zonal_b2_cap_pj'], 6)} PJ.  New-minus-old objective:
-control {_fmt(previous['control_objective_delta_musd'], 2)} M$,
-zonal {_fmt(previous['zonal_objective_delta_musd'], 2)} M$.
+Objective deltas against the two earlier bases:
+
+| Basis | Control (M$) | Zonal (M$) | Control delta (M$) | Zonal delta (M$) |
+|---|---:|---:|---:|---:|
+| Original published (42.9588 PJ) | {_fmt(original['control_objective_musd'], 2)} | {_fmt(original['zonal_objective_musd'], 2)} | {_fmt(original['control_objective_delta_musd'], 2)} | {_fmt(original['zonal_objective_delta_musd'], 2)} |
+| Interim held (35.8099 PJ) | {_fmt(interim['control_objective_musd'], 2)} | {_fmt(interim['zonal_objective_musd'], 2)} | {_fmt(interim['control_objective_delta_musd'], 2)} | {_fmt(interim['zonal_objective_delta_musd'], 2)} |
 
 ## SUP activity by year (PJ)
 
@@ -481,28 +514,27 @@ Cumulative: control {_fmt(control['emissions_mt']['total'], 6)} Mt;
 zonal {_fmt(zonal['emissions_mt']['total'], 6)} Mt;
 delta {_fmt(comparison['emissions_delta_mt'], 6)} Mt.
 
-## Old vs new
+## Three-basis comparison
 
-| Metric | Previous | Reconciled |
-|---|---:|---:|
-| Zonal B1 cap 2028+ (PJ) | {_fmt(OLD_B1_CAP_PJ, 6)} | {_fmt(summaries['caps']['SUPBCWB1'].get('2028'), 6)} |
-| Zonal B2 cap 2028+ (PJ) | {_fmt(OLD_B2_CAP_PJ, 6)} | {_fmt(summaries['caps']['SUPBCWB2'].get('2028'), 6)} |
-| Zonal B1 binding years | {previous['zonal_b1_binding_years']} | {_binding_range(zonal['cap_binding']['SUPBCWB1'])} |
-| Zonal B2 binding years | {previous['zonal_b2_binding_years']} | {_binding_range(zonal['cap_binding']['SUPBCWB2'])} |
-| PWRBCWB1 2050 (PJ) | {_fmt(previous['pwrbcwb1_2050_pj'], 6)} | {_fmt(zonal['pwrbcwb1_pj']['2050'], 6)} |
-| PWRBCWB2 2050 (PJ) | {_fmt(previous['pwrbcwb2_2050_pj'], 6)} | {_fmt(zonal['pwrbcwb2_pj']['2050'], 6)} |
-| Zonal objective (M$) | {_fmt(OLD_ZONAL_OBJECTIVE_MUSD, 2)} | {_fmt(zonal['objective_musd'], 2)} |
-| Control objective (M$) | {_fmt(OLD_CONTROL_OBJECTIVE_MUSD, 2)} | {_fmt(control['objective_musd'], 2)} |
-| Zonal emissions (Mt) | {_fmt(OLD_ZONAL_EMISSIONS_MT, 6)} | {_fmt(zonal['emissions_mt']['total'], 6)} |
-| Control emissions (Mt) | {_fmt(OLD_CONTROL_EMISSIONS_MT, 6)} | {_fmt(control['emissions_mt']['total'], 6)} |
+| Metric | Original 42.9588 PJ | Interim 35.8099 PJ | FFCM-implied |
+|---|---:|---:|---:|
+| Zonal B1 cap 2028+ (PJ) | {_fmt(original['zonal_b1_cap_pj'], 6)} | {_fmt(interim['zonal_b1_cap_pj'], 6)} | {_fmt(caps['SUPBCWB1'].get('2028'), 6)} |
+| Zonal B2 cap 2028+ (PJ) | {_fmt(original['zonal_b2_cap_pj'], 6)} | {_fmt(interim['zonal_b2_cap_pj'], 6)} | {_fmt(caps['SUPBCWB2'].get('2028'), 6)} |
+| Zonal B1 binding years | {original['zonal_b1_binding_years']} | {interim['zonal_b1_binding_years']} | {_binding_range(zonal['cap_binding']['SUPBCWB1'])} |
+| Zonal B2 binding years | {original['zonal_b2_binding_years']} | {interim['zonal_b2_binding_years']} | {_binding_range(zonal['cap_binding']['SUPBCWB2'])} |
+| PWRBCWB1 2050 (PJ) | {_fmt(original['pwrbcwb1_2050_pj'], 6)} | {_fmt(interim['pwrbcwb1_2050_pj'], 6)} | {_fmt(zonal['pwrbcwb1_pj']['2050'], 6)} |
+| PWRBCWB2 2050 (PJ) | {_fmt(original['pwrbcwb2_2050_pj'], 6)} | {_fmt(interim['pwrbcwb2_2050_pj'], 6)} | {_fmt(zonal['pwrbcwb2_pj']['2050'], 6)} |
+| Zonal objective (M$) | {_fmt(original['zonal_objective_musd'], 2)} | {_fmt(interim['zonal_objective_musd'], 2)} | {_fmt(zonal['objective_musd'], 2)} |
+| Control objective (M$) | {_fmt(original['control_objective_musd'], 2)} | {_fmt(interim['control_objective_musd'], 2)} | {_fmt(control['objective_musd'], 2)} |
+| Zonal emissions (Mt) | {_fmt(original['zonal_emissions_mt'], 6)} | {_fmt(interim['zonal_emissions_mt'], 6)} | {_fmt(zonal['emissions_mt']['total'], 6)} |
+| Control emissions (Mt) | {_fmt(original['control_emissions_mt'], 6)} | {_fmt(interim['control_emissions_mt'], 6)} | {_fmt(control['emissions_mt']['total'], 6)} |
 
 The zonal run is the cap-constrained case; the control uses the same total
 energy cap as one national technology.  All runs solved to the status shown
-above.  The reduced B2 cap removes 7.082 PJ/yr of Interior residue relative
-to the previous run; the dispatch response is reported in the tables, not
-asserted as a forecast.
+above.  The FFCM-implied B2 cap is 7.714 PJ/yr above the interim held cap and
+0.632 PJ/yr above the original published cap; the dispatch response is
+reported in the tables, not asserted as a forecast.
 """
-
 
 def write_artifacts(
     root: Path = REPO_ROOT,
@@ -519,7 +551,7 @@ def write_artifacts(
 
     summaries_path = output_dir / "run_summaries.json"
     dispatch_path = output_dir / "dispatch_by_zone.csv"
-    report_path = output_dir / "RECONCILE_OSECAN_REPORT.md"
+    report_path = output_dir / "RECONCILE_FFCM_REPORT.md"
     manifest_path = output_dir / "manifest.json"
 
     _write_json(summaries_path, summaries)

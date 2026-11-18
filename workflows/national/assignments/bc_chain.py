@@ -1543,11 +1543,12 @@ def _build_report(
             "",
             "## Comparison to OSeCAN caps",
             "",
-            ("The OSeCAN caps are the 2028+ base residue availability: B1 "
-            "3.672 PJ/y and B2 39.287 PJ/y.  The comparison below uses the "
-            "time-path gross taper residue x base recovery fraction, the same "
-            "basis as the published caps; the scaled batch residue is a second "
-            "independent check."),
+            (f"The OSeCAN caps are the adopted 2028+ base residue availability: "
+            f"B1 {caps['B1']:.3f} PJ/y and B2 {caps['B2']:.3f} PJ/y "
+            f"(B2 recovery 0.723799, recomputed from the FFCM ledger and the "
+            f"refined batch taper).  The comparison below uses the time-path "
+            f"gross taper residue x base recovery fraction, the same basis as "
+            f"the adopted caps; the scaled batch residue is a second check."),
             "",
         ]
     )
@@ -1578,10 +1579,10 @@ def _build_report(
     lines.extend(
         [
             "",
-            ("The batch residue is not a cap calibration: the batch is a "
-            "per-hectare taper estimate scaled to the same AAC, while OSeCAN is "
-            "a recovery-adjusted policy cap.  Agreement within a few percent is "
-            "supportive; disagreement is an evidence gap, not a model target."),
+            ("The batch residue is not an independent cap calibration: the "
+            "chain and the time path use the same matched-cell zone taper ratio "
+            "and base recovery, so they agree per zone by construction.  The "
+            "independent check is the taper ratio, not the final cap."),
             "",
             "## Caveats/tests/commits/publish/status",
             "",

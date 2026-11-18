@@ -12,8 +12,11 @@ from pathlib import Path
 from workflows.national.clews.bc_residue_recovery import (
     AGB_AGE,
     ALL_BC_AAC_2018_M3,
+    BASE_RECOVERY_BASIS,
     BASE_RECOVERY_FALLBACK,
     CASE_COST_MULTIPLIER,
+    EXPECTED_FFCM_IMPLIED_B2,
+    FFCM_IMPLIED_B2_TOLERANCE,
     HORIZON_END,
     HORIZON_START,
     LHV_GJ_PER_ODT,
@@ -97,26 +100,40 @@ class BcResidueRecoveryTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             recovery["B1"].base_recovery_fraction, BASE_RECOVERY_FALLBACK, places=12
         )
-        self.assertIn("diagnostic", recovery["B1"].flag)
+        self.assertIn("outside", recovery["B1"].flag)
 
         self.assertGreaterEqual(recovery["B2"].implied_recovery_fraction, RECOVERY_MIN)
         self.assertLessEqual(recovery["B2"].implied_recovery_fraction, RECOVERY_MAX)
         self.assertTrue(recovery["B2"].recovery_in_bounds)
         self.assertAlmostEqual(
             recovery["B2"].base_recovery_fraction,
-            0.583931303,
-            places=9,
-        )
-        self.assertNotAlmostEqual(
-            recovery["B2"].base_recovery_fraction,
             recovery["B2"].implied_recovery_fraction,
-            places=6,
+            places=12,
         )
-        self.assertEqual(recovery["B2"].recovery_basis, "published_2026_11_17_ffcm_calibration_held")
+        self.assertEqual(recovery["B2"].recovery_basis, "ffcm_implied")
+        self.assertEqual(recovery["B2"].flag, "implied_within_0.2_1.0")
         self.assertTrue(recovery["CAN"].comparison_only)
         for row in recovery.values():
             self.assertGreaterEqual(row.base_recovery_fraction, RECOVERY_MIN)
             self.assertLessEqual(row.base_recovery_fraction, RECOVERY_MAX)
+
+    def test_b2_recovery_is_recomputed_and_asserted(self) -> None:
+        recovery = {row.zone_id: row for row in self.artifacts.recovery}
+        b2 = recovery["B2"]
+        recomputed = b2.ffcm_residue_odt / (
+            b2.ffcm_log_m3 * b2.gross_taper_ratio_odt_per_m3
+        )
+        self.assertAlmostEqual(recomputed, b2.implied_recovery_fraction, places=12)
+        self.assertAlmostEqual(
+            b2.implied_recovery_fraction,
+            EXPECTED_FFCM_IMPLIED_B2,
+            delta=FFCM_IMPLIED_B2_TOLERANCE,
+        )
+        self.assertAlmostEqual(b2.base_recovery_fraction, recomputed, places=12)
+        self.assertEqual(
+            summary_payload(self.artifacts)["base_recovery"]["basis"],
+            BASE_RECOVERY_BASIS,
+        )
 
     def test_recovery_synthetic_out_of_bounds_fallback(self) -> None:
         ffcm = FfcmBcSupply(
@@ -408,8 +425,22 @@ class BcResidueRecoveryTestCase(unittest.TestCase):
         cases = {case.name: case for case in self.artifacts.cases}
         base_2021 = cases["base"].row(2021, "CAN").residue_pj
         base_2028 = cases["base"].row(2028, "CAN").residue_pj
-        self.assertTrue(math.isclose(base_2021, 41.298610459, rel_tol=1e-9))
-        self.assertTrue(math.isclose(base_2028, 35.809945709, rel_tol=1e-9))
+        self.assertTrue(math.isclose(base_2021, 50.325738034, rel_tol=1e-9))
+        self.assertTrue(math.isclose(base_2028, 43.523816032, rel_tol=1e-9))
+        self.assertTrue(
+            math.isclose(
+                cases["low"].row(2028, "B2").residue_pj,
+                19.302895260,
+                rel_tol=1e-9,
+            )
+        )
+        self.assertTrue(
+            math.isclose(
+                cases["high"].row(2028, "B2").residue_pj,
+                41.363346986,
+                rel_tol=1e-9,
+            )
+        )
         self.assertLess(base_2021, PREVIOUS_GROSS_PJ)
         self.assertLess(base_2028, PREVIOUS_GROSS_PJ)
 

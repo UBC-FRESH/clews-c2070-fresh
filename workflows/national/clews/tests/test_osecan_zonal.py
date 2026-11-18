@@ -135,7 +135,9 @@ class OsecanZonalArtifactTest(unittest.TestCase):
                 ]
             )
 
-    def test_zonal_caps_and_costs_match_source_files(self) -> None:
+    def test_zonal_caps_and_costs_match_committed_snapshot(self) -> None:
+        # ``zonal_structure.json`` is the pre-reconciliation snapshot; the live
+        # builder and the ``reconcile_ffcm`` artifacts carry the adopted caps.
         caps = self.structure["caps_and_costs"]
         self.assertAlmostEqual(
             caps["SUPBCWB1"]["activity_upper_limit_pj"]["2021"], 3.678381023, places=9
@@ -185,7 +187,7 @@ class OsecanZonalArtifactTest(unittest.TestCase):
         self.assertEqual(rebuilt["fuels"], self.structure["fuels"])
         self.assertEqual(rebuilt["zonal_mapping"], self.structure["zonal_mapping"])
         # The committed ``zonal`` artifacts are the pre-reconciliation snapshot.
-        # The live builder now uses the reconciled caps.
+        # The live builder now uses the adopted FFCM-implied caps.
         self.assertAlmostEqual(
             rebuilt["caps_and_costs"]["SUPBCWB1"]["activity_upper_limit_pj"]["2028"],
             3.605474907,
@@ -193,12 +195,12 @@ class OsecanZonalArtifactTest(unittest.TestCase):
         )
         self.assertAlmostEqual(
             rebuilt["caps_and_costs"]["SUPBCWB2"]["activity_upper_limit_pj"]["2028"],
-            32.204470802,
+            39.918341125,
             places=9,
         )
         self.assertAlmostEqual(
             rebuilt["caps_and_costs"]["SUPBCW"]["activity_upper_limit_pj"]["2028"],
-            35.809945709,
+            43.523816032,
             places=9,
         )
         self.assertAlmostEqual(
@@ -511,6 +513,47 @@ class OsecanZonalConstantsTest(unittest.TestCase):
         self.assertIn("PWRBIO", ECONOMICS_PLANTS)
         self.assertIn(2021, KEY_YEARS)
         self.assertIn(2070, KEY_YEARS)
+
+
+class OsecanReconcileFfcmTest(unittest.TestCase):
+    """Check the published FFCM-implied OSeCAN run harmonizes with the caps."""
+
+    def test_reconcile_ffcm_caps_and_solvers(self) -> None:
+        artifact_dir = REPO_ROOT / "data/derived/national/clews/osecan/reconcile_ffcm"
+        summary_path = artifact_dir / "run_summaries.json"
+        if not summary_path.exists():
+            self.skipTest(f"reconcile artifact not present: {summary_path}")
+        summaries = json.loads(summary_path.read_text(encoding="utf-8"))
+        source = {}
+        for technology, path in (
+            ("SUPBCWB1", "SUPBCWB1_activity_limits_base.csv"),
+            ("SUPBCWB2", "SUPBCWB2_activity_limits_base.csv"),
+            (
+                "SUPBCW",
+                "comparison/SUPBCW_activity_limits_base.csv",
+            ),
+        ):
+            with (REPO_ROOT / "data/derived/national/clews" / path).open(
+                newline="", encoding="utf-8"
+            ) as handle:
+                rows = list(csv.DictReader(handle))
+            source[technology] = {
+                int(row["YEAR"]): float(row["VALUE"])
+                for row in rows
+                if row["TECHNOLOGY"] == technology
+            }
+        for technology, series in source.items():
+            self.assertAlmostEqual(
+                summaries["caps"][technology]["2028"], series[2028], places=9
+            )
+        self.assertAlmostEqual(summaries["caps"]["SUPBCWB2"]["2028"], 39.918341125, places=9)
+        self.assertAlmostEqual(summaries["caps"]["SUPBCW"]["2028"], 43.523816032, places=9)
+        for run in ("control", "zonal"):
+            self.assertEqual(summaries["runs"][run]["solver_status"], "optimal")
+        self.assertEqual(
+            summaries["runs"]["zonal"]["cap_binding"]["SUPBCWB2"]["binding_years"],
+            "2032-2070",
+        )
 
 
 if __name__ == "__main__":
