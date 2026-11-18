@@ -221,3 +221,16 @@ Raw bundles and extracted model directories remain in external scratch and are n
 - Cluster and compress the unique yield tables for integration with the CLEWs forest-supply chain.
 - Join development-type mappings to inventory polygons through the restricted crosswalk inside the secure data environment.
 - Validate the curve tables against the earlier five-unit sample and against provincial yield-curve sources before calibration.
+
+## 8. Publication status
+
+| Repository | Branch | Commit | Status |
+|---|---|---|---|
+| `ws3` | `dev` | `7943cc3` | parser hardening and 20 focused tests pushed |
+| `clews-c2070-fresh-data` | `feature/osecan-zonal-bc-supply` | `ae3ee96` | public derivatives pushed; large CSVs git-annex-backed and copied to `arbutus-s3` |
+| `clews-c2070-fresh` | `feature/osecan-zonal-bc-supply` | `17d7409` | pipeline, source index, report, roadmap, and data pointer pushed |
+
+Final `git status --porcelain` showed no `D` entry in any repository. Unrelated
+untracked RSYC work from other sessions remains in the parent and data
+worktrees and was not staged.
+
