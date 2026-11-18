@@ -2,6 +2,21 @@
 
 ## 2026-11-18
 
+- **Filled the national harvest basis and ran the C2070 base at 119M m3
+  log/yr.**  FSD 2021-2024 harvest now populates all 12 jurisdictions; the 2024
+  Canada total is 118,977,339 m3 and the 12-province sum matches it.  Added 2024
+  AAC/proxy and NFD wood-supply values, a 2024-hold base path for 2025-2070, and
+  national low-100M/high-150M scenario rows.  The 150M case is now explicitly an
+  upper bound, 26.1% above the observed 2024 harvest.  BC's repo-parsed AAC path
+  is retained.  The new `national_base_119m` OSeCAN scenario converts
+  118,977,339 log m3 to 155,991,469.70 total m3, 13,776,817.89 ODT, and 152.923
+  PJ at 0.60 recovery; BC zonal is 43.523816 PJ and rest-of-Canada 109.399 PJ.
+  Stress results: objective 1,371,124.38 M$, emissions 38.544682 Mt, SUPBCW
+  binds 2027-2070; baseline remains zero-biomass at 25.714753 Mt.  `osecan
+  harmonize` passes for all three parameter sets.  Public OSeCAN repo untouched.
+  Files under `data/derived/national/harvest_basis/` and
+  `data/derived/national/clews/osecan/national_base_119m/`.
+
 - **Completed the full public QC BFEC/Woodstock extraction.** Crawled all 13
   diffusion regions, selected the latest public model ZIP for 52
   `Modeles_compresses` units plus notice-bearing root bundles `08462` and
