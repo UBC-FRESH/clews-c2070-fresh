@@ -4,11 +4,11 @@
 |---|---|
 | Document | `planning/national-rsyc-backbone.md` |
 | Date | 2026-11-18 |
-| Status | Decision and architecture note; tile-disaggregation test and QC VRI schema/download complete (2026-11-18); no national supply result |
+| Status | Decision and architecture note; tile-disaggregation test and QC VRI schema/download complete (2026-11-18); harvest basis adopted at 119M base / 100M low / 150M high; no national supply result |
 | Audience | PI, national modellers, CLEWS supply-chain maintainers |
 | Scope | National yield-curve backbone for the C2070 forest/biomass model |
 | Governing decision | User, 2026-11-18: RSYC is the default national backbone; BC/QC/MGM/VRI provincial datasets are calibration and validation only |
-| Companion documents | `planning/national-bucking-supply-architecture.md`; `planning/national-representative-stand-batch.md`; `planning/national-gy-data-landscape.md`; `planning/qc-bfec-full-extraction.md` |
+| Companion documents | `planning/national-harvest-basis.md`; `planning/national-bucking-supply-architecture.md`; `planning/national-representative-stand-batch.md`; `planning/national-gy-data-landscape.md`; `planning/qc-bfec-full-extraction.md` |
 
 ## 1. Decision and scope
 
@@ -23,6 +23,7 @@
 | What supplies DBH/height distributions? | The national fit |
 | What supplies buck-yield tables? | The national batch |
 | Can a provincial curve fill an RSYC gap? | No |
+| What annual harvest level drives the chain? | 2024 observed harvest (118,977,339 m3 log/yr) held flat; 100M low, 150M high; see §4.3 |
 | Can a national supply total be reported now? | No; see §6 and §7 |
 
 **What changes.** The national model stops treating provincial yield libraries as candidate primary curves. The curve layer becomes a single RSYC compilation with one selection rule, explicit fallback, and tile-first control totals: tile-level species curves set the absolute level, ecodistrict species curves supply relative composition, and one scalar per tile × species reconciles the two. The 2026-11-18 tile-disaggregation test (§3.4) is the evidence for this ordering. This replaces the earlier ecodistrict-first default; ecodistrict curves now supply composition only. Provincial yield libraries move to a benchmark role with pre-declared holdouts. The national fit and batch remain the sole suppliers of DBH/height distributions and buck-yield tables.
@@ -200,6 +201,47 @@ Every row must carry `curve_evidence_tier`, `selected_level`, `selected_model_id
 
 The national batch is a Phase 1 pipeline test: 1,191 stands, 488 buck-yield tables, `area_basis = placeholder_equal_area`, BC taper proxies, and 69 non-ok cells. Each representative stand is scaled to the RSYC volume at age 100; an observed-plot volume fallback is flagged. The curve library behind the batch has not been reconciled to tile-first control totals, so the batch cannot test the tile-first architecture. The batch is not a national supply estimate. Its equal-area sum must never be reported as a national total. The area-weighted rerun is the next gate (§7).
 
+### 4.3 Harvest basis decision (2026-11-18)
+
+**Decision.** The C2070 base is the 2024 observed national harvest of **118,977,339 m3 log/yr**, held flat from 2025 to 2070. The former `150,000,000 m3/yr` assumption, a rounded 2010–2019 mean national harvest, is reclassified as the **high** case; it is 26.1% above the 2024 observed level. The **low** case is `100,000,000 m3/yr`. The base is an accounting hold, not a harvest forecast. The existing 150M parameter files and reports are unchanged and remain the high-case artifacts.
+
+| Case | Path ID | Log basis (m3/yr) | Label |
+|---|---|---:|---|
+| Base | `base_hold_2024` | 118,977,339 | Central C2070 base; 2024 observed harvest held flat 2025–2070 |
+| Low | `low_100m` | 100,000,000 | Lower scenario bound |
+| High | `high_150m` | 150,000,000 | Upper bound; former central assumption (2010–2019 mean, rounded) |
+
+Observed national harvest (FSD management volume):
+
+| Year | Harvest (m3) |
+|---:|---:|
+| 2021 | 139,417,556 |
+| 2022 | 130,038,592 |
+| 2023 | 110,830,798 |
+| 2024 | 118,977,339 |
+
+The 2024 NFD wood supply is 207,680,142 m3, so 2024 utilization is 57.3% (harvest / wood supply). Wood supply is not harvest and is never substituted for the harvest basis.
+
+The RSYC-only v0 caps use log share `0.762716956451988`, tile factor `0.08831776452936206` ODT/m3 total, recovery `0.60`, and LHV `18.5` GJ/ODT. The BC zonal value is the unchanged 2028+ `SUPBCWB1` + `SUPBCWB2` total; the national cap is split so `SUPBCW` + `SUPBCWB1` + `SUPBCWB2` equals the national total in every year.
+
+| Case | National (PJ/yr) | BC zonal 2028+ (PJ/yr) | Rest of Canada 2028+ (PJ/yr) |
+|---|---:|---:|---:|
+| Base 119M | 152.922679 | 43.523816 | 109.398863 |
+| Low 100M | 128.530929 | 43.523816 | 85.007113 |
+| High 150M | 192.796393 | 43.523816 | 149.272577 |
+
+Stress case: CO2 at 95 $/t to 2025 and 200 $/t from 2026, with every `PWRHYD<z>` upper-capped at its 2021 activity. These are FRESH-side provisional OSeCAN results, not official C2070 results and not a national supply estimate from the RSYC chain.
+
+| Case | Objective (M$) | Emissions total (Mt CO2) | BCW supply, 2021–2070 (PJ) | `SUPBCW` binds |
+|---|---:|---:|---:|---|
+| Base 119M | 1,371,124.38 | 38.544682 | 7,086.539 | 2027–2070 |
+| Low 100M | 1,371,219.04 | 39.685119 | 5,972.421 | 2024–2070 |
+| High 150M | 1,370,983.13 | 38.544682 | 8,819.496 | 2028–2070 |
+
+`BCW` supply is the sum of `SUPBCW`, `SUPBCWB1`, and `SUPBCWB2` activity. The stress objective is nearly flat across the three cases (235.91 M$ from low to high); emissions are 1.140 Mt higher in the low case than in the base and high cases.
+
+**Caveats.** The 2024 hold is not a forecast. No THLB or operability filter is applied. The caps are RSYC-only v0 with no benchmark corrections. 150M is an upper bound. The managed-landbase proxy is still pending. The full harvest-basis record is in `planning/national-harvest-basis.md`.
+
 ## 5. Calibration and validation
 
 ### 5.1 Benchmark datasets
@@ -255,7 +297,7 @@ The QC VRI schema and calibration-set acquisition work is complete. This superse
 
 | ID | Gap | Consequence | Decision needed |
 |---|---|---|---|
-| G1 | National AAC and harvest scenario; annualization | RSYC gives m3/ha by age, not a harvest level. Annual supply cannot be derived from RSYC alone | Adopt a national AAC/harvest scenario and an annualization rule; keep yield and harvest level separate |
+| G1 | National AAC and harvest scenario; annualization | Harvest level adopted at the 2024 observed hold (§4.3); RSYC gives m3/ha by age, so annual supply cannot be derived from RSYC alone | Remaining: provincial AAC trajectory and the annualization rule linking landbase yield to the adopted harvest level; keep yield and harvest level separate |
 | G2 | THLB and operability | SCANFI's 422.5 Mha is gross treed area with no THLB or operability filter; it is 1.145× the NFI Table 4.0 forest-land benchmark | Define the national land-base filter, or report gross and THLB separately; no national total until decided |
 | G3 | Jurisdiction taper and grade | BC taper proxies are used for all national species; sorts are dimension-only and `grade_status = not_assigned` | Set jurisdiction taper and grade rule sets and their acquisition order |
 | G4 | Species resolution | 32 species plus 3 groups; SCANFI has 10 species layers plus aggregates; broadleaf is an aggregate; white/red pine is split 50/50; 767 unmapped-species cells; species-area covers 9 of 27 tile species; 24% overall fallback | Approve the species crosswalk and group/`other` fallback; report the species-resolution tier; do not claim unsupported splits and do not use forest-area proxy as a species weight |
@@ -306,6 +348,7 @@ Foundation artifacts available as inputs: the national fit (6,545 parameter rows
 - `data/derived/national/qc_bfec_sample/QC_BFEC_SAMPLE_REPORT.md` — five-unit BFEC sample parse.
 - `planning/qc-bfec-full-extraction.md` — 52-unit BFEC extraction scope.
 - `external/qc_vri/meta/qc_vri_report.md` (external, untracked) — QC VRI schema and acquisition result, provincial layer gap, 21M full-schema tile, codebooks, and 60-tile/agency-package sizing for §5.3.
+- `planning/national-harvest-basis.md` — harvest basis decision, observed series, AAC/wood-supply comparison, caps, and stress results.
 - `planning/national-bucking-supply-architecture.md` — bucking contracts and RSYC limits.
 - `planning/national-representative-stand-batch.md` — batch contract and non-claims.
 - `planning/national-gy-data-landscape.md` — provincial plot and inventory landscape.
