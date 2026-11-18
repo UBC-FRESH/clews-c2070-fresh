@@ -1208,8 +1208,8 @@ def _report(
         f"**{pel_coopt:,.0f} odt**."),
         (f"- No source/recipient infeasibility was found. "
         f"**{len(result.excluded_pairs)}** eligible pairs were excluded because "
-        "no NRN road/ferry link exists (mostly BIO-4007, which has no Stage A "
-        "harvest-residue link)."),
+        "no NRN road/ferry link exists (all BIO-4007, which lacks links from "
+        "eight harvest sources and eight sawmill hogfuel sources)."),
         "",
         "## Recipient utilization",
         "",
