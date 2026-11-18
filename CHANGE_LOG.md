@@ -2,6 +2,18 @@
 
 ## 2026-11-18
 
+- **Refined the all-BC chain with NRN ferry connectivity and documented species
+  aliases.** Added NRN `FERRYSEG` edges (53 connected segments plus one
+  documented Comox-Powell River fallback; 1,951.95 km) and a flagged
+  `0.03 CAD/m3/km` ferry-cost placeholder.  Added a documented alias table for
+  SX, S, YC, H, B, ACT, and PA, recovering 10,845,346 ha and reducing residual
+  unmapped area from 19.5% to 0.29%.  Re-ran area weights, 2028 supply, Stage A,
+  and Stage B.  Stage A now assigns 47,672,271 m3 (100%) with B1 SAWLOG
+  unassigned at zero; 12 previously disconnected island/coastal facilities are
+  routable and 11 receive 8,470,715 m3.  Outputs and `BC_REFINEMENT_REPORT.md`
+  are under `data/derived/national/bc_chain/`; 119 assignment/assortment tests
+  pass.
+
 - **Built the all-BC B1/B2 supply -> Stage A -> Stage B chain.**
   Added `workflows/national/assignments/bc_chain.py` and
   `workflows/national/assignments/tests/test_bc_chain.py`.  The chain scales the

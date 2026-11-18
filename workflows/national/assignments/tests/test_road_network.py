@@ -11,8 +11,11 @@ from pyproj import Transformer
 from scipy.sparse import csr_matrix
 
 from workflows.national.assignments.build_road_network import (
+    FERRY_FARE_CAD_M3_KM,
     RoadGraph,
     assemble_graph,
+    augment_graph_with_edges,
+    load_ferry_segments,
     snap_facilities,
 )
 from workflows.national.assignments.transport import (
@@ -75,6 +78,48 @@ class GraphAssemblyTests(unittest.TestCase):
             assemble_graph(
                 np.empty((0, 2)), np.empty((0, 2)), np.empty((0,))
             )
+
+    def test_augment_graph_with_ferry_edge_merges_components(self) -> None:
+        node_xy = np.array(
+            [[0.0, 0.0], [100.0, 0.0], [1000.0, 0.0], [1100.0, 0.0]]
+        )
+        matrix = csr_matrix(
+            (
+                np.array([100.0, 100.0]),
+                (np.array([0, 2]), np.array([1, 3])),
+            ),
+            shape=(4, 4),
+        )
+        graph = RoadGraph(
+            node_xy_m=node_xy,
+            edge_u=np.array([0, 2]),
+            edge_v=np.array([1, 3]),
+            edge_length_m=np.array([100.0, 100.0]),
+            matrix=matrix,
+            component_labels=np.array([0, 0, 1, 1]),
+            component_sizes=np.array([2, 2]),
+            total_features=2,
+            kept_features=2,
+            class_counts={"Arterial": 2},
+            excluded_counts={},
+            source_crs="EPSG:4617",
+            bounds_wgs84=(-139.0, 48.0, -114.0, 60.0),
+            traffic_direction_counts={"Unknown": 2},
+            timings_s={"total_s": 0.0},
+            peak_rss_mb=0.0,
+            gpkg_member="test.gpkg",
+        )
+        augmented = augment_graph_with_edges(graph, [1], [2], [900.0])
+        self.assertEqual(len(augmented.component_sizes), 1)
+        self.assertEqual(int(augmented.component_sizes[0]), 4)
+        self.assertEqual(len(augmented.edge_length_m), 3)
+        self.assertEqual(len(augmented.ferry_edge_length_m), 0)
+
+    def test_nrn_ferry_layer_has_major_routes_and_positive_placeholder(self) -> None:
+        segments = load_ferry_segments(REPO_ROOT / "data/raw/nrn/nrn_bc_gpkg.zip")
+        self.assertGreaterEqual(len(segments), 50)
+        self.assertGreater(sum(segment.length_m for segment in segments), 1_500_000.0)
+        self.assertGreater(FERRY_FARE_CAD_M3_KM, 0.0)
 
 
 class SnapTests(unittest.TestCase):

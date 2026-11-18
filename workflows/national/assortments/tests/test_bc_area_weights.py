@@ -10,12 +10,15 @@ import pandas as pd
 import pytest
 
 from workflows.national.assortments.bc_area_weights import (
+    ALIAS_RULES,
     UNMAPPED_SPECIES,
+    _build_area_table,
     aggregate_area_table,
     build_batch_join,
     build_species_crosswalk,
     map_bc_species,
     normalise_species_percentages,
+    resolve_bc_species,
     thlb_area_from_percent,
 )
 
@@ -65,6 +68,63 @@ def test_crosswalk_maps_exact_species_and_flags_unmapped() -> None:
     assert map_bc_species("PLI", code_to_rsyc) == ("PINU.CON", "exact_crosswalk")
     assert map_bc_species("SX", code_to_rsyc) == (UNMAPPED_SPECIES, "unmapped")
     assert map_bc_species("missing", code_to_rsyc) == (UNMAPPED_SPECIES, "unmapped")
+
+
+def test_alias_rules_cover_requested_codes_and_respect_coast_interior() -> None:
+    assert {"SX", "S", "YC", "H", "B", "ACT", "PA"} <= set(ALIAS_RULES)
+    assert resolve_bc_species("SX", "Southern Coastal Mountains", {})[:1] == ("PICE.SIT",)
+    assert resolve_bc_species("SX", "Central Montane Cordillera", {})[:1] == ("PICE.GLA",)
+    assert resolve_bc_species("S", "Georgia Depression", {})[:1] == ("PICE.SIT",)
+    assert resolve_bc_species("S", "Boreal Foothills", {})[:1] == ("PICE.GLA",)
+    assert resolve_bc_species("H", "Central Montane Cordillera", {})[:1] == ("TSUG.HET",)
+    assert resolve_bc_species("YC", "Southern Coastal Mountains", {})[:1] == ("CONIFEROUS",)
+    assert resolve_bc_species("ACT", "Southern Coastal Mountains", {})[:1] == ("POPU.BAL",)
+    assert resolve_bc_species("B", "Central Montane Cordillera", {})[:1] == ("ABIE.LAS",)
+    assert resolve_bc_species("PA", "Central Montane Cordillera", {})[:1] == ("CONIFEROUS",)
+
+
+def test_exact_crosswalk_wins_over_alias_and_unknown_stays_unmapped() -> None:
+    assert resolve_bc_species("SX", "Southern Coastal Mountains", {"SX": "PICE.ENG"})[0] == "PICE.ENG"
+    assert resolve_bc_species("ZZZ", "Georgia Depression", {})[0] == UNMAPPED_SPECIES
+
+
+def test_alias_area_is_recovered_and_conserved() -> None:
+    frame = pd.DataFrame(
+        {
+            "POLYGON_AREA": [100.0, 50.0],
+            "SPECIES_CD_1": ["SX", "SX"],
+            "SPECIES_PCT_1": [60.0, 100.0],
+            "SPECIES_CD_2": ["H", ""],
+            "SPECIES_PCT_2": [40.0, 0.0],
+            "SPECIES_CD_3": ["", ""],
+            "SPECIES_PCT_3": [0.0, 0.0],
+            "SPECIES_CD_4": ["", ""],
+            "SPECIES_PCT_4": [0.0, 0.0],
+            "SPECIES_CD_5": ["", ""],
+            "SPECIES_PCT_5": [0.0, 0.0],
+            "SPECIES_CD_6": ["", ""],
+            "SPECIES_PCT_6": [0.0, 0.0],
+        }
+    )
+    table, diagnostics = _build_area_table(
+        frame,
+        {},
+        np.array(["24", "24"], dtype=object),
+        np.array(["Prince George", "Prince George"], dtype=object),
+        np.array(["Southern Coastal Mountains", "Central Montane Cordillera"], dtype=object),
+        np.array(["Coast", "Fraser"], dtype=object),
+        np.array([100.0, 100.0]),
+    )
+    assert table["area_ha"].sum() == pytest.approx(150.0)
+    assert diagnostics["area_conservation_ha"] == pytest.approx(150.0)
+    assert diagnostics["alias_recovered_area_ha"] == pytest.approx(150.0)
+    assert diagnostics["unmapped_by_code"] == {}
+    coast = table[table["ecoprovince"] == "Southern Coastal Mountains"]
+    interior = table[table["ecoprovince"] == "Central Montane Cordillera"]
+    assert coast.loc[coast["rsyc_species"] == "PICE.SIT", "area_ha"].iloc[0] == pytest.approx(60.0)
+    assert coast.loc[coast["rsyc_species"] == "TSUG.HET", "area_ha"].iloc[0] == pytest.approx(40.0)
+    assert interior.loc[interior["rsyc_species"] == "PICE.GLA", "area_ha"].iloc[0] == pytest.approx(50.0)
+    assert set(table["mapping_basis"]) == {"alias"}
 
 
 def test_area_aggregation_sums_area_thlb_and_counts() -> None:

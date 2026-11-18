@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -181,3 +182,25 @@ def test_real_batch_reports_unmapped_row() -> None:
         logs = group.loc[group["product"].isin(["sawlog", "pulpwood", "other"]), "volume_m3"].sum()
         assert logs == pytest.approx(float(group["aac_m3"].iloc[0]), rel=1e-9)
     check_zone_supply(supply)
+
+
+def test_stage_a_rerun_outputs_conserve_volume_and_class_mix() -> None:
+    out_dir = REPO_ROOT / "data/derived/national/bc_chain"
+    summary_path = out_dir / "bc_stage_a_summary.json"
+    assignments_path = out_dir / "bc_stage_a_assignment.csv"
+    unassigned_path = out_dir / "bc_stage_a_unassigned.csv"
+    if not (summary_path.exists() and assignments_path.exists() and unassigned_path.exists()):
+        pytest.skip("BC chain Stage A outputs are not materialized")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assignments = pd.read_csv(assignments_path)
+    unassigned = pd.read_csv(unassigned_path)
+    assigned = float(assignments["volume_m3"].sum())
+    unassigned_volume = float(unassigned["volume_m3"].sum())
+    assert assigned + unassigned_volume == pytest.approx(summary["total_supply_m3"], rel=1e-6)
+    assert summary["assigned_m3"] == pytest.approx(assigned, rel=1e-6)
+    assert summary["unassigned_m3"] == pytest.approx(unassigned_volume, rel=1e-6)
+    class_assigned = sum(
+        float(row["assigned_m3"]) for row in summary["class_utilization"]
+    )
+    assert class_assigned == pytest.approx(assigned, rel=1e-6)
+    assert summary["transport_summary"]["link_count"] > 0

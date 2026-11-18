@@ -4,7 +4,7 @@ The module links three previously separate diagnostics:
 
 1. annual zonal supply from the area-weighted BC assortment batch;
 2. Stage A log/residue assignment to BC SAW/PAP/PEL/BIO facilities through the
-   NRN road graph from area-weighted TSA zone nodes;
+   NRN road graph plus NRN ferry segments from area-weighted TSA zone nodes;
 3. Stage B sawmill-residue allocation to PAP/PEL/BIO recipients.
 
 All inputs are parsed once at this boundary.  The functions below raise
@@ -35,6 +35,8 @@ from . import units
 from .build_road_network import (
     DEFAULT_NRN_ZIP,
     FACILITY_SNAP_TOLERANCE_M,
+    FERRY_FARE_BASIS,
+    FERRY_FARE_CAD_M3_KM,
     METRIC_CRS,
     build_road_graph,
 )
@@ -75,7 +77,7 @@ RESIDUE_DENSITY_ODT_M3 = units.DEFAULT_BASIC_DENSITY_ODT_M3
 MOISTURE_WET_BASIS = 0.45
 GJ_PER_ODT = 18.5
 ZONE_NODE_IDS = {"B1": "ZONE_B1", "B2": "ZONE_B2"}
-ZONE_SNAP_TOLERANCE_M = 50_000.0
+ZONE_SNAP_TOLERANCE_M = 100_000.0
 TIME_PATH = Path("data/derived/national/clews/bc_residue_time_path.csv")
 BATCH = Path(
     "data/derived/national/assortments/bc_area_weights/"
@@ -641,8 +643,12 @@ def build_zone_nodes(
 def _zone_node_snap(
     graph: Any, zone_nodes: pd.DataFrame
 ) -> tuple[dict[str, int], dict[str, float]]:
-    """Snap zone centroids to the nearest NRN graph node with a documented cap."""
-    tree = cKDTree(graph.node_xy_m)
+    """Snap zone centroids to the nearest node in the main graph component."""
+    main_label = int(np.argmax(graph.component_sizes))
+    main_nodes = np.flatnonzero(graph.component_labels == main_label)
+    if len(main_nodes) == 0:
+        raise BcChainError("the road graph has no main component")
+    tree = cKDTree(graph.node_xy_m[main_nodes])
     indices: dict[str, int] = {}
     distances: dict[str, float] = {}
     for row in zone_nodes.itertuples(index=False):
@@ -651,12 +657,55 @@ def _zone_node_snap(
         snap_m = float(distance[0])
         if snap_m > ZONE_SNAP_TOLERANCE_M:
             raise BcChainError(
-                f"zone node {row.node_id} is {snap_m:.0f} m from the NRN graph; "
-                f"exceeds {ZONE_SNAP_TOLERANCE_M:.0f} m"
+                f"zone node {row.node_id} is {snap_m:.0f} m from the main NRN "
+                f"graph component; exceeds {ZONE_SNAP_TOLERANCE_M:.0f} m"
             )
-        indices[str(row.node_id)] = int(index[0])
+        indices[str(row.node_id)] = int(main_nodes[int(index[0])])
         distances[str(row.node_id)] = snap_m
     return indices, distances
+
+
+def _ferry_pair_lookup(graph: Any) -> dict[tuple[int, int], float]:
+    """Map an undirected node pair to its ferry length in metres."""
+    lookup: dict[tuple[int, int], float] = {}
+    for u, v, length in zip(
+        getattr(graph, "ferry_edge_u", ()),
+        getattr(graph, "ferry_edge_v", ()),
+        getattr(graph, "ferry_edge_length_m", ()),
+    ):
+        key = (min(int(u), int(v)), max(int(u), int(v)))
+        lookup[key] = max(lookup.get(key, 0.0), float(length))
+    return lookup
+
+
+def _ferry_path_metrics(
+    predecessors: np.ndarray,
+    source_node: int,
+    target_node: int,
+    ferry_pairs: Mapping[tuple[int, int], float],
+) -> tuple[float, int]:
+    """Trace one shortest-path predecessor chain and sum ferry edges."""
+    if source_node == target_node:
+        return 0.0, 0
+    ferry_m = 0.0
+    crossings = 0
+    node = int(target_node)
+    guard = 0
+    while node != source_node:
+        previous = int(predecessors[0, node])
+        if previous < 0:
+            raise BcChainError(
+                f"shortest-path predecessor chain breaks before source {source_node}"
+            )
+        key = (min(previous, node), max(previous, node))
+        if key in ferry_pairs:
+            ferry_m += float(ferry_pairs[key])
+            crossings += 1
+        node = previous
+        guard += 1
+        if guard > len(predecessors[0]):
+            raise BcChainError("shortest-path predecessor chain contains a cycle")
+    return ferry_m, crossings
 
 
 def build_zone_transport_links(
@@ -716,11 +765,15 @@ def build_zone_transport_links(
         facility_node[str(row.facility_id)] = (int(snap_index[position]), snap_m)
 
     distances: dict[str, np.ndarray] = {}
+    predecessors: dict[str, np.ndarray] = {}
     for zone_id, node_index in origin_nodes.items():
-        values = csgraph.dijkstra(
-            graph.matrix, directed=False, indices=[node_index]
-        )[0]
-        distances[zone_id] = values
+        values, previous = csgraph.dijkstra(
+            graph.matrix, directed=False, indices=[node_index], return_predecessors=True
+        )
+        distances[zone_id] = values[0]
+        predecessors[zone_id] = previous
+
+    ferry_pairs = _ferry_pair_lookup(graph)
 
     rates, capacities = load_road_rate_inputs(repo_root)
     grade_density = {grade.grade_id: grade.density_odt_m3 for grade in grades}
@@ -749,7 +802,13 @@ def build_zone_transport_links(
                 distance_km = distance_m / 1000.0
                 density = grade_density[offer.grade_id]
                 rate = grade_rates[offer.grade_id]
-                cost = distance_km * rate.cost_per_m3_km(density)
+                ferry_m, ferry_crossings = _ferry_path_metrics(
+                    predecessors[zone_node], origin_nodes[zone_node], node_index, ferry_pairs
+                )
+                ferry_km = min(ferry_m / 1000.0, distance_km)
+                road_km = max(distance_km - ferry_km, 0.0)
+                ferry_cost = ferry_km * FERRY_FARE_CAD_M3_KM
+                cost = road_km * rate.cost_per_m3_km(density) + ferry_cost
                 links.append(
                     TransportLink(
                         link_id=f"{zone_node}->{facility_id}::{offer.grade_id}",
@@ -761,17 +820,22 @@ def build_zone_transport_links(
                         distance_km=distance_km,
                         cost_cad_m3=cost,
                         capacity_m3=None,
-                        distance_basis="nrn_bc_road_graph_shortest_path_epsg3005",
+                        distance_basis="nrn_bc_road_graph_plus_ferry_shortest_path_epsg3005",
                         cost_basis=(
                             f"road_transporter_rate:{rate.transporter};"
+                            f"ferry_placeholder:{FERRY_FARE_CAD_M3_KM}_cad_m3_km;"
                             "fuel_plus_operating_per_hour_over_speed;no_transload"
                         ),
                         evidence=(
                             f"zone_node_snap_m={origin_snap[zone_node]:.1f};"
-                            f"facility_snap_m={snap_m:.1f};route_capacity_absent"
+                            f"facility_snap_m={snap_m:.1f};"
+                            f"ferry_km={ferry_km:.1f};"
+                            f"ferry_crossings={ferry_crossings};route_capacity_absent"
                         ),
                         path_confidence="real_road_network",
                         capacity_source="absent",
+                        ferry_distance_km=ferry_km,
+                        ferry_cost_cad_m3=ferry_cost,
                     )
                 )
     if not links:
@@ -786,6 +850,12 @@ def build_zone_transport_links(
         "link_count": len(links),
         "distance_km": _stats([link.distance_km for link in links]),
         "cost_cad_m3": _stats([link.cost_cad_m3 for link in links]),
+        "ferry_link_count": int(sum(1 for link in links if link.ferry_distance_km > 0.0)),
+        "ferry_distance_km": _stats([link.ferry_distance_km for link in links]),
+        "ferry_cost_cad_m3": _stats([link.ferry_cost_cad_m3 for link in links]),
+        "ferry_fare_placeholder_cad_m3_km": FERRY_FARE_CAD_M3_KM,
+        "ferry_fare_basis": FERRY_FARE_BASIS,
+        "ferry_graph_summary": dict(getattr(graph, "ferry_summary", {})),
         "rates": {
             grade_id: {
                 "transporter": rate.transporter,
@@ -1002,7 +1072,21 @@ def _unassigned_frame(result: AssignmentResult, ledger: pd.DataFrame) -> pd.Data
         record.update(meta)
         record["grade"] = item.grade_id
         rows.append(record)
-    frame = pd.DataFrame(rows)
+    columns = [
+        "supply_id",
+        "period",
+        "grade_id",
+        "origin",
+        "volume_m3",
+        "reason",
+        "penalty_cost_cad_m3",
+        "zone",
+        "species",
+        "product",
+        "sort_code",
+        "grade",
+    ]
+    frame = pd.DataFrame(rows, columns=columns)
     if frame.empty:
         return frame
     return frame.sort_values(["zone", "grade_id", "supply_id"]).reset_index(drop=True)
@@ -1367,10 +1451,10 @@ def _build_report(
     lines.extend(
         [
             "",
-            ("Product/species detail is in `bc_supply_by_zone.csv`.  Unmapped "
-            "species area (SX, S, YC, H, B, ACT, ...) is carried as an explicit "
-            "`UNMAPPED_BC` row with zero volume and its excluded forest area; it "
-            "is not redistributed into named species."),
+            ("Product/species detail is in `bc_supply_by_zone.csv`.  Documented "
+            "aliases recover the former SX/S/YC/H/B/ACT/PA gap; residual "
+            "`UNMAPPED_BC` area is carried as an explicit zero-volume row with its "
+            "excluded forest area and is not redistributed into named species."),
             "",
             "## Stage A (assigned/unassigned, utilization, binds, cost, class mix)",
             "",
@@ -1431,6 +1515,13 @@ def _build_report(
             f"{stage_a_summary['binding_contract_count']}.  "
             "Top binding facilities and contracts are in "
             "`bc_stage_a_summary.json`."),
+            "",
+            (f"Transport: {stage_a_summary['transport_summary']['link_count']} "
+            f"zone-facility-grade links; "
+            f"{stage_a_summary['transport_summary'].get('ferry_link_count', 0)} "
+            "use at least one ferry edge.  Ferry cost uses the flagged placeholder "
+            f"{stage_a_summary['transport_summary'].get('ferry_fare_placeholder_cad_m3_km', FERRY_FARE_CAD_M3_KM):.2f} "
+            "CAD/m3/km, not a BC Ferries tariff; crossing time is distance / 33 km/h."),
             "",
             "## Stage B (residue assigned/unassigned, bioenergy share, utilization)",
             "",
@@ -1535,21 +1626,25 @@ def _build_report(
             ("- **Zone nodes**: area-weighted TSA centroids from dissolved FADM "
             "TSA polygons, weighted by 2018 apportionment x THLB share, and "
             "restricted to TSAs whose nearest NRN node is in the main "
-            "road-connected component.  B1 therefore has four weighted TSAs and "
-            "no island/coastal component node; island and ferry-only facilities "
-            "are unlinked.  B1 sawlog unassigned volume is an upper bound under "
+            "road-connected component.  With NRN ferry edges, the main component "
+            "includes Vancouver Island and coastal TSAs where a terminal snapped "
+            "within the documented tolerance.  Remaining island-only facilities "
+            "stay unlinked and B1 sawlog unassigned volume is an upper bound under "
             "this proxy, not evidence that the fibre is uneconomic."),
             ("- **Facilities**: FFCM/Mills DB proxies; capacities are normalized "
             "processing-line infeed, not licensed or current operating capacity."),
             ("- **Contracts**: 2018 apportionment-derived maximum entitlements are "
             "diagnostic; min=0 and gate=0 are placeholders, not supply agreements."),
-            ("- **Unmapped species**: 19.5% of BC forest area (SX etc.) has no RSYC "
-            "target and is excluded from species composition; the AAC is still "
-            "allocated across mapped species, so the mapped shares are an "
-            "assumption.  The excluded area is reported explicitly."),
-            ("- **Transport**: 2018 NRN road graph shortest paths, road only, no "
-            "route capacity, no rail/water, and zone centroids can snap several "
-            "kilometres from the nearest road node."),
+            ("- **Unmapped species**: the area table now applies documented aliases "
+            "(SX, S, YC, H, B, ACT, PA) with rule and confidence columns.  Any "
+            "residual `UNMAPPED_BC` area is excluded from species composition and "
+            "reported explicitly; it is never silently redistributed."),
+            (f"- **Transport**: 2018 NRN road graph plus NRN `FERRYSEG` shortest "
+             f"paths.  Ferry cost uses a flagged placeholder of "
+             f"{stage_a_summary.get('transport_summary', {}).get('ferry_fare_placeholder_cad_m3_km', FERRY_FARE_CAD_M3_KM):.2f} "
+             "CAD/m3/km, not a BC Ferries tariff; crossing time is distance / "
+             "33 km/h.  No route capacity, sailing schedule, queue, or rail/water "
+             "mode is modelled."),
             ("- **Stage B separation**: Stage A residue assigned to BIO/PEL is a "
             "separate harvest-residue allocation; Stage B sawmill residue is "
             "derived from Stage A SAW log assignments.  The two models do not "
@@ -1637,7 +1732,7 @@ def _manifest(
             "facilities and capacities are FFCM/Mills DB proxies",
             "apportionment contracts are diagnostic maximum entitlements",
             "19.5% unmapped species area is excluded from species composition",
-            "NRN 2018 road-only shortest paths; no route capacity or rail/water",
+            "NRN 2018 road+ferry shortest paths; no route capacity or rail/water",
             "Stage A harvest residue and Stage B sawmill residue are separate models",
             "roadside/stumpage cost is not modelled",
         ],

@@ -26,7 +26,7 @@ import tempfile
 import time
 import zipfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -60,9 +60,17 @@ __all__ = [
 DEFAULT_NRN_ZIP = Path("data/raw/nrn/nrn_bc_gpkg.zip")
 DEFAULT_PILOT_DIR = Path("data/derived/national/assignments/tsa24_pilot")
 NRN_ROAD_LAYER = "NRN_BC_14_0_ROADSEG"
+NRN_FERRY_LAYER = "NRN_BC_14_0_FERRYSEG"
 METRIC_CRS = "EPSG:3005"
 NODE_SNAP_TOLERANCE_M = 1.0
 FACILITY_SNAP_TOLERANCE_M = 5_000.0
+FERRY_TERMINAL_SNAP_TOLERANCE_M = 5_000.0
+FERRY_SPEED_KMH = 33.0
+#: Placeholder only: a documented, explicitly non-tariff ferry charge used to
+#: keep island/coastal links from looking free.  It is not a BC Ferries rate.
+FERRY_FARE_CAD_M3_KM = 0.03
+FERRY_FARE_BASIS = "placeholder_not_a_bc_ferries_tariff"
+FERRY_ROUTE_DEDUP_M = 3_000.0
 BUILD_TIME_LIMIT_S = 780.0
 
 HAULABLE_ROAD_CLASSES = frozenset(
@@ -106,6 +114,79 @@ class RoadGraph:
     timings_s: Mapping[str, float]
     peak_rss_mb: float
     gpkg_member: str
+    ferry_edge_u: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=int))
+    ferry_edge_v: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=int))
+    ferry_edge_length_m: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=float))
+    ferry_routes: tuple[Mapping[str, Any], ...] = ()
+    ferry_summary: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class FerrySegment:
+    """One NRN FERRYSEG feature in the metric CRS."""
+
+    ferry_id: str
+    name: str
+    length_m: float
+    first_xy: tuple[float, float]
+    last_xy: tuple[float, float]
+    road_class: str
+
+
+#: Published BC Ferries routes used as a fallback when the NRN ferry layer is
+#: absent or does not cover a route.  Distances/times are rounded published
+#: schedule approximations, not survey measurements.  Fares are the documented
+#: placeholder above, never a real tariff.
+MAJOR_FERRY_ROUTES: tuple[Mapping[str, Any], ...] = (
+    {
+        "route_id": "TSA-SWB",
+        "name": "Tsawwassen-Swartz Bay",
+        "terminal_a": (49.0069, -123.1283),
+        "terminal_b": (48.6887, -123.4143),
+        "distance_km": 40.0,
+        "crossing_min": 95.0,
+    },
+    {
+        "route_id": "HSB-DNB",
+        "name": "Horseshoe Bay-Departure Bay",
+        "terminal_a": (49.3747, -123.2717),
+        "terminal_b": (49.1946, -123.9567),
+        "distance_km": 55.0,
+        "crossing_min": 100.0,
+    },
+    {
+        "route_id": "HSB-LGD",
+        "name": "Horseshoe Bay-Langdale",
+        "terminal_a": (49.3747, -123.2717),
+        "terminal_b": (49.4344, -123.4739),
+        "distance_km": 16.0,
+        "crossing_min": 40.0,
+    },
+    {
+        "route_id": "CMX-PWR",
+        "name": "Comox-Powell River",
+        "terminal_a": (49.6736, -124.9250),
+        "terminal_b": (49.8356, -124.5247),
+        "distance_km": 27.0,
+        "crossing_min": 80.0,
+    },
+    {
+        "route_id": "PTH-PRU",
+        "name": "Port Hardy-Prince Rupert",
+        "terminal_a": (50.7222, -127.4969),
+        "terminal_b": (54.3150, -130.3240),
+        "distance_km": 500.0,
+        "crossing_min": 990.0,
+    },
+    {
+        "route_id": "SKG-PRU",
+        "name": "Skidegate-Prince Rupert",
+        "terminal_a": (53.2469, -132.0099),
+        "terminal_b": (54.3150, -130.3240),
+        "distance_km": 170.0,
+        "crossing_min": 390.0,
+    },
+)
 
 
 def _extract_nrn_gpkg(nrn_zip: Path) -> tuple[str, str]:
@@ -236,6 +317,288 @@ def assemble_graph(
     )
 
 
+def _assemble_edge_matrix(
+    node_xy: np.ndarray,
+    edge_u: np.ndarray,
+    edge_v: np.ndarray,
+    edge_length_m: np.ndarray,
+) -> tuple[csr_matrix, np.ndarray, np.ndarray]:
+    """Build a deduplicated undirected matrix and component labels from edges."""
+    u = np.asarray(edge_u, dtype=np.int64)
+    v = np.asarray(edge_v, dtype=np.int64)
+    lengths = np.asarray(edge_length_m, dtype=float)
+    if not (len(u) == len(v) == len(lengths)):
+        raise RoadNetworkError("edge arrays must have equal length")
+    if len(lengths) == 0:
+        raise RoadNetworkError("cannot assemble an empty edge set")
+    edges = pd.DataFrame(
+        {
+            "u": np.minimum(u, v),
+            "v": np.maximum(u, v),
+            "length_m": lengths,
+        }
+    )
+    edges = edges.loc[edges["u"] != edges["v"]]
+    if edges.empty:
+        raise RoadNetworkError("every edge collapsed to a self-loop")
+    edges = edges.groupby(["u", "v"], as_index=False)["length_m"].min()
+    matrix = csr_matrix(
+        (edges["length_m"].to_numpy(), (edges["u"].to_numpy(), edges["v"].to_numpy())),
+        shape=(len(node_xy), len(node_xy)),
+    )
+    _components, labels = csgraph.connected_components(matrix, directed=False)
+    sizes = np.bincount(labels)
+    return matrix, labels, sizes
+
+
+def augment_graph_with_edges(
+    graph: RoadGraph,
+    edge_u: Sequence[int],
+    edge_v: Sequence[int],
+    edge_length_m: Sequence[float],
+) -> RoadGraph:
+    """Return a new graph with extra undirected edges between existing nodes."""
+    new_u = np.asarray(edge_u, dtype=np.int64)
+    new_v = np.asarray(edge_v, dtype=np.int64)
+    new_lengths = np.asarray(edge_length_m, dtype=float)
+    if not (len(new_u) == len(new_v) == len(new_lengths)):
+        raise RoadNetworkError("new edge arrays must have equal length")
+    if len(new_lengths) == 0:
+        return graph
+    if (new_u < 0).any() or (new_v < 0).any():
+        raise RoadNetworkError("new edge node indices must be non-negative")
+    node_count = len(graph.node_xy_m)
+    if (new_u >= node_count).any() or (new_v >= node_count).any():
+        raise RoadNetworkError("new edge node index exceeds graph node count")
+    if not np.isfinite(new_lengths).all() or (new_lengths <= 0.0).any():
+        raise RoadNetworkError("new edge lengths must be finite and positive")
+
+    matrix, labels, sizes = _assemble_edge_matrix(
+        graph.node_xy_m,
+        np.concatenate([graph.edge_u, new_u]),
+        np.concatenate([graph.edge_v, new_v]),
+        np.concatenate([graph.edge_length_m, new_lengths]),
+    )
+    return replace(
+        graph,
+        edge_u=np.concatenate([graph.edge_u, new_u]),
+        edge_v=np.concatenate([graph.edge_v, new_v]),
+        edge_length_m=np.concatenate([graph.edge_length_m, new_lengths]),
+        matrix=matrix,
+        component_labels=labels,
+        component_sizes=sizes,
+    )
+
+
+def _ferry_segment_records(gpkg_path: str) -> list[FerrySegment]:
+    info = pyogrio.read_info(gpkg_path, layer=NRN_FERRY_LAYER)
+    if info["features"] == 0:
+        raise RoadNetworkError(f"NRN ferry layer {NRN_FERRY_LAYER} is empty")
+    frame = pyogrio.read_dataframe(gpkg_path, layer=NRN_FERRY_LAYER)
+    if frame.empty:
+        raise RoadNetworkError(f"NRN ferry layer {NRN_FERRY_LAYER} is empty")
+    frame = frame.to_crs(METRIC_CRS)
+    records: list[FerrySegment] = []
+    for row in frame.itertuples(index=False):
+        geometry = row.geometry
+        if geometry is None or geometry.is_empty:
+            continue
+        if geometry.geom_type == "LineString":
+            parts = (geometry,)
+        elif geometry.geom_type == "MultiLineString":
+            parts = tuple(geometry.geoms)
+        else:
+            raise RoadNetworkError(
+                f"unsupported ferry geometry type {geometry.geom_type!r}"
+            )
+        for part_index, part in enumerate(parts):
+            if part.is_empty or part.length <= 0.0:
+                continue
+            coordinates = part.coords
+            records.append(
+                FerrySegment(
+                    ferry_id=f"{row.FERRYSEGID}:{part_index}",
+                    name=str(row.RTENAME1EN or row.RTENAME2EN or "NRN ferry"),
+                    length_m=float(part.length),
+                    first_xy=(float(coordinates[0][0]), float(coordinates[0][1])),
+                    last_xy=(float(coordinates[-1][0]), float(coordinates[-1][1])),
+                    road_class=str(row.ROADCLASS or "Unknown"),
+                )
+            )
+    if not records:
+        raise RoadNetworkError("NRN ferry layer produced no usable segments")
+    return records
+
+
+def load_ferry_segments(nrn_zip: Path) -> list[FerrySegment]:
+    """Read and project the NRN BC ferry segments."""
+    gpkg_path, _member = _extract_nrn_gpkg(nrn_zip)
+    try:
+        return _ferry_segment_records(gpkg_path)
+    finally:
+        shutil.rmtree(Path(gpkg_path).parent, ignore_errors=True)
+
+
+def _add_ferry_network(
+    graph: RoadGraph,
+    nrn_zip: Path,
+    *,
+    snap_tolerance_m: float = FERRY_TERMINAL_SNAP_TOLERANCE_M,
+) -> RoadGraph:
+    """Add NRN ferry segments and documented fallback routes to the graph."""
+    tree = cKDTree(graph.node_xy_m)
+    segments: list[FerrySegment] = []
+    layer_error = ""
+    try:
+        segments = load_ferry_segments(nrn_zip)
+    except (RoadNetworkError, OSError) as error:
+        layer_error = str(error)
+
+    route_rows: list[dict[str, Any]] = []
+    ferry_u: list[int] = []
+    ferry_v: list[int] = []
+    ferry_lengths: list[float] = []
+    rejected: list[dict[str, Any]] = []
+    for segment in segments:
+        distances, indices = tree.query(
+            np.array([segment.first_xy, segment.last_xy]), k=1
+        )
+        if float(np.max(distances)) > snap_tolerance_m:
+            rejected.append(
+                {
+                    "ferry_id": segment.ferry_id,
+                    "name": segment.name,
+                    "reason": "terminal_too_far",
+                    "snap_m": float(np.max(distances)),
+                }
+            )
+            continue
+        u, v = int(indices[0]), int(indices[1])
+        if u == v:
+            rejected.append(
+                {
+                    "ferry_id": segment.ferry_id,
+                    "name": segment.name,
+                    "reason": "same_node",
+                    "snap_m": float(np.max(distances)),
+                }
+            )
+            continue
+        ferry_u.append(u)
+        ferry_v.append(v)
+        ferry_lengths.append(segment.length_m)
+        route_rows.append(
+            {
+                "route_id": segment.ferry_id,
+                "name": segment.name,
+                "source": "nrn_ferryseg",
+                "distance_km": segment.length_m / 1000.0,
+                "crossing_min": segment.length_m / 1000.0 / FERRY_SPEED_KMH * 60.0,
+                "terminal_snap_m": float(np.max(distances)),
+            }
+        )
+
+    # Add published major routes only when the NRN layer does not already
+    # connect the same pair of terminals.  This keeps the fallback explicit
+    # without double-counting a route that is already present.
+    transformer = Transformer.from_crs("EPSG:4326", METRIC_CRS, always_xy=True)
+    existing_pairs = list(zip(ferry_u, ferry_v))
+    for route in MAJOR_FERRY_ROUTES:
+        a_lon, a_lat = route["terminal_a"][1], route["terminal_a"][0]
+        b_lon, b_lat = route["terminal_b"][1], route["terminal_b"][0]
+        a_xy = transformer.transform(a_lon, a_lat)
+        b_xy = transformer.transform(b_lon, b_lat)
+        distances, indices = tree.query(np.array([a_xy, b_xy]), k=1)
+        if float(np.max(distances)) > snap_tolerance_m:
+            route_rows.append(
+                {
+                    "route_id": route["route_id"],
+                    "name": route["name"],
+                    "source": "published_fallback",
+                    "distance_km": route["distance_km"],
+                    "crossing_min": route["crossing_min"],
+                    "terminal_snap_m": float(np.max(distances)),
+                    "status": "rejected_terminal_too_far",
+                }
+            )
+            continue
+        u, v = int(indices[0]), int(indices[1])
+        covered = False
+        for pair_u, pair_v in existing_pairs:
+            same = (
+                np.linalg.norm(graph.node_xy_m[u] - graph.node_xy_m[pair_u])
+                <= FERRY_ROUTE_DEDUP_M
+                and np.linalg.norm(graph.node_xy_m[v] - graph.node_xy_m[pair_v])
+                <= FERRY_ROUTE_DEDUP_M
+            )
+            swapped = (
+                np.linalg.norm(graph.node_xy_m[u] - graph.node_xy_m[pair_v])
+                <= FERRY_ROUTE_DEDUP_M
+                and np.linalg.norm(graph.node_xy_m[v] - graph.node_xy_m[pair_u])
+                <= FERRY_ROUTE_DEDUP_M
+            )
+            if same or swapped:
+                covered = True
+                break
+        if covered:
+            route_rows.append(
+                {
+                    "route_id": route["route_id"],
+                    "name": route["name"],
+                    "source": "published_fallback",
+                    "distance_km": route["distance_km"],
+                    "crossing_min": route["crossing_min"],
+                    "terminal_snap_m": float(np.max(distances)),
+                    "status": "covered_by_nrn",
+                }
+            )
+            continue
+        ferry_u.append(u)
+        ferry_v.append(v)
+        ferry_lengths.append(float(route["distance_km"]) * 1000.0)
+        existing_pairs.append((u, v))
+        route_rows.append(
+            {
+                "route_id": route["route_id"],
+                "name": route["name"],
+                "source": "published_fallback",
+                "distance_km": route["distance_km"],
+                "crossing_min": route["crossing_min"],
+                "terminal_snap_m": float(np.max(distances)),
+                "status": "added",
+            }
+        )
+
+    if not ferry_lengths:
+        raise RoadNetworkError(
+            "no ferry edge could be connected to the road graph"
+            + (f"; NRN ferry layer error: {layer_error}" if layer_error else "")
+        )
+
+    augmented = augment_graph_with_edges(graph, ferry_u, ferry_v, ferry_lengths)
+    summary = {
+        "layer": NRN_FERRY_LAYER,
+        "layer_status": "ok" if not layer_error else f"unusable: {layer_error}",
+        "nrn_segments": len(segments),
+        "edges_added": len(ferry_lengths),
+        "nrn_edges": len(segments) - len(rejected) if segments else 0,
+        "rejected": rejected,
+        "total_ferry_km": sum(ferry_lengths) / 1000.0,
+        "speed_kmh": FERRY_SPEED_KMH,
+        "fare_placeholder_cad_m3_km": FERRY_FARE_CAD_M3_KM,
+        "fare_basis": FERRY_FARE_BASIS,
+        "routes": route_rows,
+    }
+    return replace(
+        augmented,
+        ferry_edge_u=np.asarray(ferry_u, dtype=np.int64),
+        ferry_edge_v=np.asarray(ferry_v, dtype=np.int64),
+        ferry_edge_length_m=np.asarray(ferry_lengths, dtype=float),
+        ferry_routes=tuple(route_rows),
+        ferry_summary=summary,
+    )
+
+
 def _classify_road_classes(values: Sequence[object]) -> tuple[np.ndarray, dict[str, int]]:
     classes = pd.Series(values, dtype="object").fillna("").astype(str).str.strip()
     unknown = sorted(
@@ -259,8 +622,15 @@ def build_road_graph(
     *,
     layer: str = NRN_ROAD_LAYER,
     snap_tolerance_m: float = NODE_SNAP_TOLERANCE_M,
+    include_ferries: bool = True,
+    ferry_snap_tolerance_m: float = FERRY_TERMINAL_SNAP_TOLERANCE_M,
 ) -> RoadGraph:
-    """Read, filter, project, and assemble the real BC road graph."""
+    """Read, filter, project, and assemble the real BC road graph.
+
+    Ferry segments are added from NRN ``FERRYSEG`` by snapping each segment's
+    terminal endpoints to the nearest road node.  Documented major BC Ferries
+    routes are added only where the NRN layer does not already cover the pair.
+    """
     start = time.perf_counter()
     gpkg_path, member = _extract_nrn_gpkg(nrn_zip)
     try:
@@ -319,7 +689,7 @@ def build_road_graph(
             "total_s": time.perf_counter() - start,
         }
         peak_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
-        return RoadGraph(
+        graph = RoadGraph(
             node_xy_m=node_xy,
             edge_u=edge_u,
             edge_v=edge_v,
@@ -342,6 +712,17 @@ def build_road_graph(
         )
     finally:
         shutil.rmtree(Path(gpkg_path).parent, ignore_errors=True)
+
+    if include_ferries:
+        ferry_start = time.perf_counter()
+        graph = _add_ferry_network(
+            graph, nrn_zip, snap_tolerance_m=ferry_snap_tolerance_m
+        )
+        timings = dict(graph.timings_s)
+        timings["ferry_s"] = time.perf_counter() - ferry_start
+        timings["total_s"] = time.perf_counter() - start
+        graph = replace(graph, timings_s=timings)
+    return graph
 
 
 def snap_facilities(
@@ -731,6 +1112,50 @@ def _markdown_table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> st
     return "\n".join([header, rule, *body])
 
 
+def _ferry_markdown(ferry: Mapping[str, Any]) -> str:
+    if not ferry:
+        return "Ferry summary is unavailable in this report."
+    routes = ferry.get("routes") or []
+    rows = [
+        [
+            str(row.get("route_id", "")),
+            str(row.get("name", "")),
+            str(row.get("source", "")),
+            f"{float(row.get('distance_km', 0.0)):.1f}",
+            f"{float(row.get('crossing_min', 0.0)):.0f}",
+            str(row.get("status", "used")),
+        ]
+        for row in routes
+    ]
+    lines = [
+        "## 2b. Ferries",
+        "",
+        (
+            f"- Layer: `{ferry.get('layer', NRN_FERRY_LAYER)}` "
+            f"({ferry.get('layer_status', 'unknown')})."
+        ),
+        (
+            f"- NRN segments read: {ferry.get('nrn_segments', 0)}; ferry edges added: "
+            f"{ferry.get('edges_added', 0)}; total ferry length: "
+            f"{float(ferry.get('total_ferry_km', 0.0)):,.0f} km."
+        ),
+        (
+            f"- Crossing speed assumption: {float(ferry.get('speed_kmh', FERRY_SPEED_KMH)):.0f} km/h; "
+            f"cost placeholder: {float(ferry.get('fare_placeholder_cad_m3_km', FERRY_FARE_CAD_M3_KM)):.2f} "
+            f"CAD/m3/km (`{ferry.get('fare_basis', FERRY_FARE_BASIS)}`).  This is not a tariff."
+        ),
+    ]
+    if rows:
+        lines.append("")
+        lines.append(
+            _markdown_table(
+                rows,
+                ["Route", "Name", "Source", "km", "min", "Status"],
+            )
+        )
+    return "\n".join(lines)
+
+
 def _write_report(
     pilot_dir: Path,
     summary: Mapping[str, Any],
@@ -881,6 +1306,8 @@ def _write_report(
         else ""
     )
 
+    ferry = summary.get("ferry") or {}
+
     report = f"""# BC Road-Network Transport Pilot (NRN)
 
 ## 1. Network
@@ -926,8 +1353,12 @@ as the shortest-path source. Across all {snap['total']} facilities,
 Real paths were available for **{summary['paths']['facilities_with_path']}**
 of the {snap['with_coord']} coordinate-bearing facilities. Facilities on a
 different connected component from the anchor are marked `no_path` rather than
-given a Euclidean guess. One island facility (`BC-SAW-383`) snaps to a separate
-Vancouver Island component; no ferry link is added in this pass.
+given a Euclidean guess.  NRN `FERRYSEG` edges are added where terminal
+endpoints snap to the road graph within {FERRY_TERMINAL_SNAP_TOLERANCE_M:.0f} m;
+island and coastal facilities are therefore routable when a ferry terminal is
+present.
+
+{_ferry_markdown(ferry)}
 
 ## 3. Distances and costs
 
@@ -999,8 +1430,10 @@ The fallback list is in `road_network_summary.json` and the Stage A manifest.
   flagged FFCM fallback rather than a fabricated distance.
 - The 5 km snap access leg is recorded as `snap_m` but is not added to the
   graph distance or cost; it remains an unmodelled access gap.
-- Vancouver Island is disconnected from the mainland road component; ferry
-  segments (NRN `FERRYSEG`) and ferry fares/times are not included.
+- Vancouver Island and coastal islands are connected through NRN `FERRYSEG`
+  edges and documented fallback routes.  Ferry fare is a flagged placeholder,
+  crossing time is distance / {FERRY_SPEED_KMH:.0f} km/h, and no sailing
+  schedule, queue, or seasonal capacity is modelled.
 - NRWN rail is not used in this pass; all links are road.
 - Route and transload capacity remain absent; the LP cannot model congestion or
   mode-shift limits.
@@ -1202,6 +1635,7 @@ def _summary_payload(
             "values": graph.traffic_direction_counts,
             "treatment": "all edges bidirectional; no one-way attribute available",
         },
+        "ferry": dict(graph.ferry_summary),
         "graph": {
             "nodes": len(graph.node_xy_m),
             "edges": len(graph.edge_length_m),

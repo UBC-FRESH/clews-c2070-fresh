@@ -112,6 +112,106 @@ RSYC_SPECIES = frozenset(
     }
 )
 
+MODEL_GROUP_TARGETS = frozenset({"CONIFEROUS", "BROADLEAF"})
+
+#: Ecoprovinces treated as coastal for the spruce alias rule.  The rule is a
+#: documented BC commercial-code convention, not a species-level identification:
+#: coastal spruce is predominantly Sitka spruce, interior/boreal spruce is
+#: predominantly hybrid white spruce (PICE.GLA complex).
+COASTAL_ECOPROVINCES = frozenset(
+    {
+        "Georgia Depression",
+        "Northern Coastal Mountains",
+        "Southern Coastal Mountains",
+    }
+)
+
+#: Documented alias table for BC commercial codes whose CASFRI target has no
+#: RSYC species.  ``coast``/``interior`` targets are selected by ecoprovince;
+#: ``default`` is used everywhere.  Confidence is a judgement about the
+#: species-level substitution, not about the area accounting.
+ALIAS_RULES: dict[str, dict[str, str]] = {
+    "SX": {
+        "coast": "PICE.SIT",
+        "interior": "PICE.GLA",
+        "confidence": "medium",
+        "rule": "SX_hybrid_spruce_coast_SIT_interior_GLA",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "Hybrid spruce (Picea x) has no RSYC target; coastal populations are "
+            "assigned to Sitka spruce and interior/boreal populations to the "
+            "white-spruce complex. This preserves the commercial spruce stream."
+        ),
+    },
+    "S": {
+        "coast": "PICE.SIT",
+        "interior": "PICE.GLA",
+        "confidence": "medium",
+        "rule": "S_spruce_coast_SIT_interior_GLA",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "Unspecified spruce (Picea spp.) is split by ecoprovince using the "
+            "same coastal/interior convention as SX."
+        ),
+    },
+    "YC": {
+        "default": "CONIFEROUS",
+        "confidence": "low",
+        "rule": "YC_yellow_cedar_no_rsyc_target_group_conifer",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "Yellow-cedar (Callitropsis/Chamaecyparis nootkatensis) has no RSYC "
+            "species target. No other RSYC Cupressaceae is defensible at species "
+            "level, so the area is carried in the coniferous model group and flagged."
+        ),
+    },
+    "H": {
+        "default": "TSUG.HET",
+        "confidence": "high",
+        "rule": "H_hemlock_to_western_hemlock",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "BC code H is hemlock; western hemlock (TSUG.HET) is the dominant "
+            "commercial hemlock in the province. Mountain hemlock is not separated "
+            "in the source code, so this is a species-level assumption."
+        ),
+    },
+    "B": {
+        "default": "ABIE.LAS",
+        "confidence": "medium",
+        "rule": "B_balsam_to_subalpine_fir_ABIE_LAS",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "BC balsam is subalpine fir (Abies lasiocarpa), not eastern balsam fir "
+            "(ABIE.BAL). The brief's ABIE.BAL suggestion was rejected because "
+            "ABIE.BAL is not a BC commercial species; CASFRI maps B to ABIE_SPP."
+        ),
+    },
+    "ACT": {
+        "default": "POPU.BAL",
+        "confidence": "medium",
+        "rule": "ACT_black_cottonwood_to_balsam_poplar_Tacamahaca",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "Black cottonwood (Populus trichocarpa) is treated as balsam poplar "
+            "(P. balsamifera subsp. trichocarpa), the closest RSYC species in "
+            "section Tacamahaca. POPU.TRE (trembling aspen) is a poorer match."
+        ),
+    },
+    "PA": {
+        "default": "CONIFEROUS",
+        "confidence": "low",
+        "rule": "PA_whitebark_pine_no_rsyc_target_group_conifer",
+        "source": "bc_alias_table_v1",
+        "note": (
+            "The brief labelled PA as paper birch, but the CASFRI crosswalk and BC "
+            "VRI code set identify PA as whitebark pine (Pinus albicaulis). Paper "
+            "birch is EP/BETU.PAP and is already an exact crosswalk. Whitebark pine "
+            "has no RSYC target, so the area is carried in the coniferous group."
+        ),
+    },
+}
+
 CONIFER_GENERA = frozenset(
     {"ABIE", "CHAM", "JUNI", "LARI", "PICE", "PINU", "PSEU", "TAXU", "THUJ", "TSUG"}
 )
@@ -345,9 +445,73 @@ def map_bc_species(code: object, code_to_rsyc: Mapping[str, str]) -> tuple[str, 
     return target, "exact_crosswalk"
 
 
+def resolve_bc_species(
+    code: object,
+    ecoprovince: object,
+    code_to_rsyc: Mapping[str, str],
+) -> tuple[str, str, str, str]:
+    """Resolve one BC code to a reporting species, alias source, rule, confidence.
+
+    Exact CASFRI crosswalk targets win over aliases.  A documented alias is used
+    only when the crosswalk has no RSYC species target.  Unknown codes remain
+    ``UNMAPPED_BC``; they are never silently folded into a group.
+    """
+    key = "" if code is None else str(code).strip().upper()
+    exact = code_to_rsyc.get(key)
+    if exact is not None:
+        return exact, "bc_casfri_crosswalk", "exact_crosswalk", "high"
+
+    rule = ALIAS_RULES.get(key)
+    if rule is None:
+        return UNMAPPED_SPECIES, "none", "unmapped_no_alias", "none"
+
+    province = "" if ecoprovince is None else str(ecoprovince).strip()
+    if "default" in rule:
+        target = rule["default"]
+    elif province in COASTAL_ECOPROVINCES:
+        target = rule["coast"]
+    else:
+        target = rule["interior"]
+    return target, rule["source"], rule["rule"], rule["confidence"]
+
+
+def alias_table_frame() -> pd.DataFrame:
+    """Return the documented alias table in long form for the output artifact."""
+    rows: list[dict[str, str]] = []
+    for code, rule in sorted(ALIAS_RULES.items()):
+        if "default" in rule:
+            rows.append(
+                {
+                    "bc_code": code,
+                    "ecoprovince_scope": "all",
+                    "target": rule["default"],
+                    "rule": rule["rule"],
+                    "source": rule["source"],
+                    "confidence": rule["confidence"],
+                    "note": rule["note"],
+                }
+            )
+            continue
+        for scope, target_key in (("coastal", "coast"), ("interior_boreal", "interior")):
+            rows.append(
+                {
+                    "bc_code": code,
+                    "ecoprovince_scope": scope,
+                    "target": rule[target_key],
+                    "rule": rule["rule"],
+                    "source": rule["source"],
+                    "confidence": rule["confidence"],
+                    "note": rule["note"],
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def _species_group(species: str) -> str:
     if species == UNMAPPED_SPECIES:
         return "unmapped"
+    if species in MODEL_GROUP_TARGETS:
+        return species.lower()
     genus = species.split(".", 1)[0]
     if genus in CONIFER_GENERA:
         return "coniferous"
@@ -549,7 +713,9 @@ def _build_area_table(
     ecoprov_labels, ecoprov_index = np.unique(ecoprov_values, return_inverse=True)
     ecoreg_labels, ecoreg_index = np.unique(ecoreg_values, return_inverse=True)
 
-    species_order = np.array(sorted(RSYC_SPECIES) + [UNMAPPED_SPECIES], dtype=object)
+    species_order = np.array(
+        sorted(RSYC_SPECIES | MODEL_GROUP_TARGETS) + [UNMAPPED_SPECIES], dtype=object
+    )
     species_to_index = {str(species): index for index, species in enumerate(species_order)}
     unmapped_index = species_to_index[UNMAPPED_SPECIES]
 
@@ -562,18 +728,47 @@ def _build_area_table(
     area_sum = np.zeros(group_count, dtype="float64")
     thlb_sum = np.zeros(group_count, dtype="float64")
     polygon_count = np.zeros(group_count, dtype="int64")
+    exact_group = np.zeros(group_count, dtype=bool)
+    alias_rules_by_group: dict[int, set[int]] = {}
     unmapped_by_code: dict[str, float] = {}
+    alias_area_by_id = np.zeros(0, dtype="float64")
+    alias_id_meta: list[dict[str, str]] = []
 
     for slot, (code_column, percent_column) in enumerate(
         zip(SPECIES_CODE_COLUMNS, SPECIES_PCT_COLUMNS)
     ):
-        codes = frame[code_column].astype("object").to_numpy()
-        unique_codes, inverse = np.unique(codes.astype(str), return_inverse=True)
-        mapped = np.array(
-            [species_to_index[map_bc_species(code, code_to_rsyc)[0]] for code in unique_codes],
-            dtype="int64",
+        codes = np.array(
+            ["" if value is None else str(value).strip().upper() for value in frame[code_column]],
+            dtype=object,
         )
-        species_index = mapped[inverse]
+        code_index, code_labels = pd.factorize(codes, sort=False)
+        if (code_index < 0).any():
+            raise AreaWeightError("species code factorisation produced an unknown code")
+
+        species_lookup = np.empty((len(code_labels), n_ecoprov), dtype="int64")
+        alias_lookup = np.full((len(code_labels), n_ecoprov), -1, dtype="int64")
+        for code_position, code in enumerate(code_labels):
+            for province_position, province in enumerate(ecoprov_labels):
+                target, source, rule, confidence = resolve_bc_species(
+                    code, province, code_to_rsyc
+                )
+                species_lookup[code_position, province_position] = species_to_index[target]
+                if source not in {"bc_casfri_crosswalk", "none"}:
+                    alias_id = len(alias_id_meta)
+                    alias_id_meta.append(
+                        {
+                            "code": str(code),
+                            "target": str(target),
+                            "source": source,
+                            "rule": rule,
+                            "confidence": confidence,
+                            "ecoprovince": str(province),
+                        }
+                    )
+                    alias_lookup[code_position, province_position] = alias_id
+
+        species_index = species_lookup[code_index, ecoprov_index]
+        alias_index = alias_lookup[code_index, ecoprov_index]
         keep = valid & (weights[:, slot] > 0)
         if not keep.any():
             continue
@@ -589,13 +784,38 @@ def _build_area_table(
         thlb_sum += np.bincount(group_index, weights=contribution_thlb, minlength=group_count)
         polygon_count += np.bincount(group_index, minlength=group_count).astype("int64")
 
+        alias_keep = keep & (alias_index >= 0)
+        exact_keep = keep & (alias_index < 0) & (species_index != unmapped_index)
+        if exact_keep.any():
+            exact_group[np.unique(group_index[exact_keep[keep]])] = True
+        if alias_keep.any():
+            alias_ids = alias_index[alias_keep]
+            if len(alias_area_by_id) < len(alias_id_meta):
+                grown = np.zeros(len(alias_id_meta), dtype="float64")
+                grown[: len(alias_area_by_id)] = alias_area_by_id
+                alias_area_by_id = grown
+            alias_area_by_id += np.bincount(
+                alias_ids,
+                weights=contribution_area[alias_keep[keep]],
+                minlength=len(alias_id_meta),
+            )
+            pairs = np.unique(
+                np.column_stack([group_index[alias_keep[keep]], alias_ids]), axis=0
+            )
+            for group_id, alias_id in pairs:
+                alias_rules_by_group.setdefault(int(group_id), set()).add(int(alias_id))
+
         unmapped_keep = keep & (species_index == unmapped_index)
         if unmapped_keep.any():
-            unmapped_codes = codes[unmapped_keep].astype(str)
-            unmapped_area = area_ha[unmapped_keep] * weights[unmapped_keep, slot]
-            for code in np.unique(unmapped_codes):
+            unmapped_codes = code_index[unmapped_keep]
+            unmapped_area = contribution_area[unmapped_keep[keep]]
+            totals = np.bincount(
+                unmapped_codes, weights=unmapped_area, minlength=len(code_labels)
+            )
+            for position in np.flatnonzero(totals):
+                code = str(code_labels[position])
                 unmapped_by_code[code] = unmapped_by_code.get(code, 0.0) + float(
-                    unmapped_area[unmapped_codes == code].sum()
+                    totals[position]
                 )
 
     present = np.flatnonzero(polygon_count)
@@ -629,12 +849,79 @@ def _build_area_table(
     table["vintage"] = VINTAGE
     table["crs"] = CRS
     table["rsyc_model_group"] = table["rsyc_species"].map(_species_group)
-    table["mapping_basis"] = np.where(
-        table["rsyc_species"] == UNMAPPED_SPECIES, "unmapped", "exact_crosswalk"
-    )
+
+    mapping_rows = []
+    for group_id, species in zip(present, species_index):
+        if species == unmapped_index:
+            mapping_rows.append(("unmapped", "none", "unmapped_no_alias", "none"))
+            continue
+        alias_ids = alias_rules_by_group.get(int(group_id), set())
+        has_exact = bool(exact_group[int(group_id)])
+        if not alias_ids:
+            mapping_rows.append(("exact_crosswalk", "bc_casfri_crosswalk", "exact_crosswalk", "high"))
+            continue
+        rules = [alias_id_meta[alias_id] for alias_id in sorted(alias_ids)]
+        rule_text = "|".join(sorted({item["rule"] for item in rules}))
+        source_text = "|".join(sorted({item["source"] for item in rules}))
+        confidence_rank = {"low": 0, "medium": 1, "high": 2}
+        confidence = min(
+            (item["confidence"] for item in rules),
+            key=lambda value: confidence_rank.get(value, 0),
+        )
+        if has_exact:
+            mapping_rows.append(
+                ("mixed", f"{source_text}+bc_casfri_crosswalk", rule_text, confidence)
+            )
+        else:
+            mapping_rows.append(("alias", source_text, rule_text, confidence))
+    table["mapping_basis"] = [row[0] for row in mapping_rows]
+    table["alias_source"] = [row[1] for row in mapping_rows]
+    table["alias_rule"] = [row[2] for row in mapping_rows]
+    table["alias_confidence"] = [row[3] for row in mapping_rows]
     table = table.sort_values(
         ["ecoprovince", "ecoregion", "tsa_number", "rsyc_species"]
     ).reset_index(drop=True)
+
+    alias_recovery = []
+    for alias_id, recovered_area in enumerate(alias_area_by_id):
+        if recovered_area <= 0.0:
+            continue
+        meta = alias_id_meta[alias_id]
+        alias_recovery.append(
+            {
+                "bc_code": meta["code"],
+                "target": meta["target"],
+                "ecoprovince": meta["ecoprovince"],
+                "area_ha": float(recovered_area),
+                "rule": meta["rule"],
+                "source": meta["source"],
+                "confidence": meta["confidence"],
+            }
+        )
+    aggregated_recovery: dict[tuple[str, str, str, str, str, str], float] = {}
+    for row in alias_recovery:
+        key = (
+            row["bc_code"],
+            row["target"],
+            row["ecoprovince"],
+            row["rule"],
+            row["source"],
+            row["confidence"],
+        )
+        aggregated_recovery[key] = aggregated_recovery.get(key, 0.0) + row["area_ha"]
+    alias_recovery = [
+        {
+            "bc_code": key[0],
+            "target": key[1],
+            "ecoprovince": key[2],
+            "area_ha": area,
+            "rule": key[3],
+            "source": key[4],
+            "confidence": key[5],
+        }
+        for key, area in aggregated_recovery.items()
+    ]
+    alias_recovery.sort(key=lambda row: (-row["area_ha"], row["bc_code"], row["ecoprovince"]))
 
     diagnostics = {
         "n_polygons_used": int(valid.sum()),
@@ -643,6 +930,9 @@ def _build_area_table(
         "n_polygons_thlb_nodata": invalid_thlb,
         "area_thlb_nodata_ha": invalid_thlb_area,
         "unmapped_by_code": dict(sorted(unmapped_by_code.items(), key=lambda item: -item[1])),
+        "alias_recovery": alias_recovery,
+        "alias_recovered_area_ha": float(sum(row["area_ha"] for row in alias_recovery)),
+        "area_conservation_ha": float(table["area_ha"].sum()),
     }
     return table, diagnostics
 
@@ -941,10 +1231,46 @@ def _write_report(
     ]
     lines.append(_markdown_table(eco_rows, ["Ecoprovince", "Forest ha", "THLB ha", "THLB share"]))
     lines.append("")
+    lines.append("## Species aliases")
+    lines.append("")
+    alias_recovery = diagnostics.get("alias_recovery", [])
+    lines.append(
+        "Documented aliases resolve BC commercial codes whose CASFRI target has no "
+        "RSYC species.  Exact crosswalk targets always win; aliases are flagged and "
+        "carry a confidence, and no alias is applied to a code with a defensible "
+        "species target."
+    )
+    lines.append("")
+    if alias_recovery:
+        alias_rows = [
+            [
+                row["bc_code"],
+                row["target"],
+                row["ecoprovince"],
+                _fmt_ha(row["area_ha"]),
+                row["rule"],
+                row["confidence"],
+            ]
+            for row in alias_recovery[:40]
+        ]
+        lines.append(
+            _markdown_table(
+                alias_rows,
+                ["BC code", "Target", "Ecoprovince", "Area ha", "Rule", "Confidence"],
+            )
+        )
+        lines.append("")
+        lines.append(
+            f"- Recovered alias area: {_fmt_ha(diagnostics.get('alias_recovered_area_ha', 0.0))} ha."
+        )
+    else:
+        lines.append("- No alias area was recovered.")
+    lines.append("")
     lines.append("## Unmapped species")
     lines.append("")
     lines.append(
-        f"- Area with no RSYC species target: {_fmt_ha(totals['unmapped_area_ha'])} ha "
+        f"- Area with no RSYC species target and no documented alias: "
+        f"{_fmt_ha(totals['unmapped_area_ha'])} ha "
         f"({100.0 * totals['unmapped_area_ha'] / totals['forest_area_ha']:.1f}% of forest area)."
     )
     if not unmapped.empty:
@@ -1010,9 +1336,9 @@ def _write_report(
         "targets."
     )
     lines.append(
-        "- `UNMAPPED_BC` is not redistributed.  Hybrid spruce (`SX`), paper birch "
-        "(`EA`), and other codes whose CASFRI target has no RSYC species remain "
-        "explicit gaps."
+        "- `UNMAPPED_BC` is not redistributed.  Codes without an exact RSYC target "
+        "or a documented alias remain explicit gaps; alias area is assigned to a "
+        "named species or model group and is flagged with rule and confidence."
     )
     lines.append(
         "- `LAND_COVER_CLASS_CD_1` was inspected but is null for roughly a quarter "
@@ -1144,6 +1470,10 @@ def run(config: AreaConfig) -> dict[str, Any]:
     )
 
     area_table.to_csv(config.out_dir / "bc_area_weights.csv", index=False)
+    alias_table = alias_table_frame()
+    alias_table.to_csv(
+        config.out_dir / "bc_species_alias_table.csv", index=False, lineterminator="\n"
+    )
     stage(f"area rows={len(area_table):,}")
 
     forest_area_ha = float(area_table["area_ha"].sum())
@@ -1178,6 +1508,7 @@ def run(config: AreaConfig) -> dict[str, Any]:
         "forest_area_ha": forest_area_ha,
         "thlb_area_ha": thlb_area_ha,
         "unmapped_area_ha": unmapped_area_ha,
+        "alias_recovered_area_ha": float(diagnostics.get("alias_recovered_area_ha", 0.0)),
         "no_tsa_area_ha": no_tsa_area,
         "no_ecoregion_area_ha": no_ecoregion_area,
         "thlb_valid_pixel_fraction": thlb_raster_stats["valid_pixel_fraction"],
@@ -1198,6 +1529,8 @@ def run(config: AreaConfig) -> dict[str, Any]:
         "diagnostics": diagnostics,
         "area_by_ecoprovince": ecoprovince_totals.to_dict(orient="records"),
         "unmapped_by_code": unmapped_by_code,
+        "alias_rules": alias_table.to_dict(orient="records"),
+        "alias_recovery": diagnostics.get("alias_recovery", []),
         "batch_join": batch_summary,
         "batch_totals": batch_totals,
         "thlb_raster": thlb_raster_stats,
@@ -1225,6 +1558,7 @@ def run(config: AreaConfig) -> dict[str, Any]:
 
     outputs = [
         "bc_area_weights.csv",
+        "bc_species_alias_table.csv",
         "bc_area_summary.json",
         "bc_national_batch_area_joined.csv",
         "BC_AREA_REPORT.md",

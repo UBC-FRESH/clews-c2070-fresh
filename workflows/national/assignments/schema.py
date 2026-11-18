@@ -431,6 +431,8 @@ class TransportLink:
     evidence: str
     path_confidence: str = "graph_shortest_path"
     capacity_source: str = "absent"
+    ferry_distance_km: float = 0.0
+    ferry_cost_cad_m3: float = 0.0
 
     def __post_init__(self) -> None:
         link_id = _identifier(self.link_id, "link_id")
@@ -469,6 +471,12 @@ class TransportLink:
             raise AssignmentError(
                 f"link {link_id} has capacity but capacity_source='absent'"
             )
+        ferry_distance = _finite(self.ferry_distance_km, "ferry_distance_km", minimum=0.0)
+        ferry_cost = _finite(self.ferry_cost_cad_m3, "ferry_cost_cad_m3", minimum=0.0)
+        if ferry_distance > distance + _TOLERANCE:
+            raise AssignmentError(
+                f"link {link_id} ferry_distance_km exceeds total distance_km"
+            )
         object.__setattr__(self, "link_id", link_id)
         object.__setattr__(self, "period", period)
         object.__setattr__(self, "origin", origin)
@@ -487,6 +495,8 @@ class TransportLink:
         object.__setattr__(self, "evidence", _identifier(self.evidence, "evidence"))
         object.__setattr__(self, "path_confidence", path_confidence)
         object.__setattr__(self, "capacity_source", capacity_source)
+        object.__setattr__(self, "ferry_distance_km", ferry_distance)
+        object.__setattr__(self, "ferry_cost_cad_m3", ferry_cost)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -500,6 +510,8 @@ class TransportLink:
             "cost_cad_m3": self.cost_cad_m3,
             "capacity_m3": "" if self.capacity_m3 is None else self.capacity_m3,
             "capacity_source": self.capacity_source,
+            "ferry_distance_km": self.ferry_distance_km,
+            "ferry_cost_cad_m3": self.ferry_cost_cad_m3,
             "distance_basis": self.distance_basis,
             "cost_basis": self.cost_basis,
             "path_confidence": self.path_confidence,
