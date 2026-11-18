@@ -120,6 +120,57 @@ def test_cross_province_asymmetric_overlay_allocates_by_province_fraction() -> N
     assert math.isclose(float(tile_species["area_ha"].sum()), 300.0, abs_tol=1e-9)
 
 
+def test_province_coverage_denominator_includes_wholly_uncovered_parent() -> None:
+    tiles = _tiles(
+        ("T1", (0.0, 0.0, 1000.0, 1000.0)),
+        ("T2", (1000.0, 0.0, 2000.0, 1000.0)),
+    )
+    ecodistricts = _ecodistricts((1, "TwoTiles", (0.0, 0.0, 2000.0, 1000.0)))
+    provinces = _provinces(("P1", (0.0, 0.0, 1500.0, 1000.0)))
+    district_overlay = build_overlay(tiles, ecodistricts)
+    province_overlay, metrics = build_province_overlay(
+        tiles, ecodistricts, provinces, district_overlay
+    )
+
+    assert province_overlay.shape[0] == 2
+    assert metrics["parent_intersection_area_ha"] == pytest.approx(200.0)
+    assert metrics["province_covered_area_ha"] == pytest.approx(150.0)
+    assert metrics["parent_area_outside_provinces_ha"] == pytest.approx(50.0)
+    assert metrics["province_cover_share_of_intersection"] == pytest.approx(0.75)
+
+
+def test_sub_tolerance_fallback_only_cell_keeps_fallback_provenance() -> None:
+    tiles = _tiles(
+        ("T1", (0.0, 0.0, 1000.0, 1000.0)),
+        ("T2", (1000.0, 0.0, 2000.0, 1000.0)),
+    )
+    ecodistricts = _ecodistricts((1, "TwoTiles", (0.0, 0.0, 2000.0, 1000.0)))
+    provinces = _provinces(
+        ("P1", (0.0, 0.0, 1000.0, 1000.0)),
+        ("P2", (2000.0, 0.0, 3000.0, 1000.0)),
+    )
+    district_overlay = build_overlay(tiles, ecodistricts)
+    province_overlay, _ = build_province_overlay(
+        tiles, ecodistricts, provinces, district_overlay
+    )
+
+    # P2 has no geographic intersection anywhere in the district, so its whole
+    # 0.0001 ha is district fallback.  The old 0.001 ha tolerance relabelled
+    # this sub-tolerance cell as province_intersection.
+    weights = _area_weights([(1, "P2", "PINU.CON", 0.0001)])
+    tile_species, detail, _ = allocate_area_to_tiles(
+        district_overlay, province_overlay, weights
+    )
+    assert set(tile_species["allocation_basis"]) == {
+        "district_fallback_no_province_intersection"
+    }
+    assert float(tile_species["area_ha"].sum()) == pytest.approx(0.0001)
+    assert float(tile_species["no_province_intersection_area_ha"].sum()) == pytest.approx(
+        0.0001
+    )
+    assert detail["is_fallback"].all()
+
+
 def test_boundary_only_contact_is_skipped_not_assigned() -> None:
     tiles = _tiles(("T1", (0.0, 0.0, 1000.0, 1000.0)))
     ecodistricts = _ecodistricts((1, "Edge", (0.0, 0.0, 1000.0, 1000.0)))

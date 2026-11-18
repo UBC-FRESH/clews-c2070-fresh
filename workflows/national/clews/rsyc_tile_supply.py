@@ -587,14 +587,33 @@ def load_backbone_province_factors(path: Path) -> dict[str, dict[str, float]]:
 def load_backbone_harvest(path: Path) -> dict[tuple[int, str], dict[str, float]]:
     rows: dict[tuple[int, str], dict[str, float]] = {}
     with path.open(newline="") as handle:
-        for row in csv.DictReader(handle):
-            rows[(int(row["harvest_level_million_m3_per_year"]), row["case"])] = {
-                "gross_residue_odt_per_year": float(row["gross_residue_odt_per_year"]),
-                "recoverable_residue_odt_per_year": float(
-                    row["recoverable_residue_odt_per_year"]
+        for line_number, row in enumerate(csv.DictReader(handle), start=2):
+            key = (int(row["harvest_level_million_m3_per_year"]), row["case"])
+            require(
+                key not in rows,
+                f"{path}:{line_number}: duplicate harvest comparison key {key}",
+            )
+            rows[key] = {
+                "gross_residue_odt_per_year": parse_float(
+                    row["gross_residue_odt_per_year"],
+                    field="gross_residue_odt_per_year",
+                    source=path,
                 ),
-                "recoverable_pj_per_year": float(row["recoverable_pj_per_year"]),
-                "annual_cost_million_usd": float(row["annual_cost_million_usd"]),
+                "recoverable_residue_odt_per_year": parse_float(
+                    row["recoverable_residue_odt_per_year"],
+                    field="recoverable_residue_odt_per_year",
+                    source=path,
+                ),
+                "recoverable_pj_per_year": parse_float(
+                    row["recoverable_pj_per_year"],
+                    field="recoverable_pj_per_year",
+                    source=path,
+                ),
+                "annual_cost_million_usd": parse_float(
+                    row["annual_cost_million_usd"],
+                    field="annual_cost_million_usd",
+                    source=path,
+                ),
             }
     require(rows, f"{path}: no harvest sensitivity rows")
     return rows

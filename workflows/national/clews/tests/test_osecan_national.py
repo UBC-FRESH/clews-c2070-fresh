@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,7 +19,10 @@ from workflows.national.clews.osecan_national import (
     TILE_FACTOR_ODT_PER_M3,
     TILE_SUPPLY_DIR,
     compute_supply_basis,
+    harmonize_evidence_is_complete,
     national_cap_series,
+    reconcile_pwr_bio_dispatch,
+    sum_pwr_bio,
     write_parameter_files,
 )
 
@@ -71,12 +73,9 @@ class SupplyMathTest(unittest.TestCase):
             for row in summary["harvest_scenarios"]
         }
         self.assertAlmostEqual(factors["tile_mix"], TILE_FACTOR_ODT_PER_M3, places=15)
-        report = (
-            REPO_ROOT / TILE_SUPPLY_DIR / "RSYC_TILE_SUPPLY_REPORT.md"
-        ).read_text(encoding="utf-8")
-        match = re.search(r"total/log ratio ([0-9.]+)", report)
-        self.assertIsNotNone(match)
-        self.assertAlmostEqual(float(match.group(1)), LOG_SHARE, places=4)
+        factor_total_over_log = summary["comparison"]["factor_total_over_log"]
+        self.assertIsInstance(factor_total_over_log, (int, float))
+        self.assertAlmostEqual(factor_total_over_log, LOG_SHARE, places=9)
 
     def test_invalid_inputs_fail_loudly(self) -> None:
         with self.assertRaises(ValueError):
@@ -217,6 +216,53 @@ class ArtifactTest(unittest.TestCase):
             )
             self.assertEqual(path.stat().st_size, entry["bytes"])
 
+    def test_harmonize_evidence_supports_report_claim(self) -> None:
+        evidence = self.summaries["harmonize"]
+        self.assertTrue(evidence["all_passed"])
+        self.assertTrue(harmonize_evidence_is_complete(evidence))
+        self.assertEqual(len(evidence["checks"]), 4)
+        self.assertEqual(
+            {check["parameter_set"] for check in evidence["checks"]},
+            {"base", "baseline", "stress", "baseline_bio"},
+        )
+        for check in evidence["checks"]:
+            self.assertEqual(check["exit_code"], 0, check["parameter_set"])
+            self.assertRegex(check["parameter_set_sha256"], r"^[0-9a-f]{64}$")
+
+        text = (ARTIFACT_DIR / "NATIONAL_150M_OSECAN_REPORT.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("`osecan harmonize` evidence recorded", text)
+        self.assertIn("HARMONIZED", text)
+        for check in evidence["checks"]:
+            self.assertIn(check["parameter_set"], text)
+            self.assertIn(str(check["parameter_set_sha256"])[:12], text)
+
+    def test_harmonize_report_does_not_claim_success_without_evidence(self) -> None:
+        self.assertFalse(harmonize_evidence_is_complete(None))
+        self.assertFalse(
+            harmonize_evidence_is_complete(
+                {"all_passed": True, "checks": [{"parameter_set": "base", "exit_code": 0}]}
+            )
+        )
+
+    def test_pwr_bio_total_reconciles_to_dispatch_table(self) -> None:
+        dispatch_totals = {
+            spec.name: sum(
+                float(row["value_pj"])
+                for row in self.dispatch
+                if row["run"] == spec.name
+                and row["technology"].startswith("PWRBIO")
+            )
+            for spec in RUN_SPECS
+        }
+        for spec in RUN_SPECS:
+            self.assertAlmostEqual(
+                dispatch_totals[spec.name],
+                float(self.summaries["runs"][spec.name]["pwr_bio_total_pj"]),
+                places=6,
+            )
+
     def test_report_contains_required_sections(self) -> None:
         text = (ARTIFACT_DIR / "NATIONAL_150M_OSECAN_REPORT.md").read_text(
             encoding="utf-8"
@@ -225,7 +271,7 @@ class ArtifactTest(unittest.TestCase):
             "## Supply math (150M log -> total m3 -> ODT -> PJ; BC/rest split)",
             "## Parameter files/harmonize",
             "## Baseline (objective, dispatch, binding, emissions)",
-            "## Stress $200/hydro-frozen",
+            "## Stress $200/hydro-capped",
             "## Generic-BIO sensitivity",
             "## Tests/commits/publish/status",
             "## Caveats (RSYC-only, no AAC/THLB, B25, group curves)",
@@ -235,6 +281,36 @@ class ArtifactTest(unittest.TestCase):
         self.assertIn("149.273", text)
         self.assertIn("HARMONIZED", text)
         self.assertIn("1,331,289.52", text)
+        self.assertIn("cap at the 2021 activity, not fixed dispatch", text)
+        self.assertIn("62.410055", text)
+        self.assertIn("62.479153", text)
+        self.assertIn("12.829929", text)
+        self.assertIn("not the national baseline", text)
+        self.assertNotIn("small `SUPBCW` cost difference", text)
+
+
+class PwrBioZonalTest(unittest.TestCase):
+    """Guard that PWRBIO is summed across zonal keys, not read as PWRBIO."""
+
+    def test_sum_pwr_bio_ignores_aggregate_and_sums_zones(self) -> None:
+        production = {
+            "PWRBIOA1": {2021: 1.0, 2022: 2.0},
+            "PWRBIOB2": {2021: 0.25},
+            "PWRBIO": {2021: 99.0},
+            "PWRBCWA1": {2021: 9.0},
+        }
+        self.assertAlmostEqual(sum_pwr_bio(production), 3.25)
+
+    def test_reconcile_rejects_mismatched_zonal_dispatch(self) -> None:
+        summaries = {"runs": {"baseline": {"pwr_bio_total_pj": 3.25}}}
+        rows = [
+            {"run": "baseline", "technology": "PWRBIOA1", "value_pj": 3.0},
+            {"run": "baseline", "technology": "PWRBIOB2", "value_pj": 0.25},
+        ]
+        reconcile_pwr_bio_dispatch(summaries, rows)
+        rows[0]["value_pj"] = 2.0
+        with self.assertRaises(ValueError):
+            reconcile_pwr_bio_dispatch(summaries, rows)
 
 
 class ParameterWriterTest(unittest.TestCase):

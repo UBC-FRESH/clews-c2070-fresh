@@ -317,17 +317,38 @@ def build_province_overlay(
         overlay["intersection_area_ha"] / overlay["district_intersection_area_ha"]
     )
 
-    parent_sum = overlay.groupby(["tile_id", "ecodistrict_id"])[
-        "district_intersection_area_ha"
-    ].first()
-    province_sum = overlay.groupby(["tile_id", "ecodistrict_id"])[
-        "intersection_area_ha"
-    ].sum()
-    parent_outside_province = float((parent_sum - province_sum).sum())
-    if (parent_sum - province_sum).min() < -AREA_TOLERANCE_HA:
+    # The coverage denominator is the full tile x ecodistrict parent overlay,
+    # including parents that no province polygon touches.  Summing only the
+    # province-intersection rows would silently drop those parents.
+    parent_areas = district_overlay[
+        ["tile_id", "ecodistrict_id", "intersection_area_ha"]
+    ].copy()
+    province_areas = (
+        overlay.groupby(["tile_id", "ecodistrict_id"])["intersection_area_ha"]
+        .sum()
+        .rename("province_covered_area_ha")
+    )
+    coverage = parent_areas.merge(
+        province_areas,
+        on=["tile_id", "ecodistrict_id"],
+        how="left",
+        validate="one_to_one",
+    )
+    coverage["province_covered_area_ha"] = coverage[
+        "province_covered_area_ha"
+    ].fillna(0.0)
+    coverage["parent_intersection_area_ha"] = coverage["intersection_area_ha"]
+    coverage["outside_province_area_ha"] = (
+        coverage["parent_intersection_area_ha"]
+        - coverage["province_covered_area_ha"]
+    )
+    parent_outside_province = float(coverage["outside_province_area_ha"].sum())
+    if coverage["outside_province_area_ha"].min() < -AREA_TOLERANCE_HA:
         raise TileProductionError(
             "province pieces exceed their tile x ecodistrict parent intersection"
         )
+    parent_area = float(coverage["parent_intersection_area_ha"].sum())
+    province_area = float(coverage["province_covered_area_ha"].sum())
     metrics = {
         "province_polygons": int(provinces.shape[0]),
         "province_geometry_repaired": int(
@@ -338,12 +359,10 @@ def build_province_overlay(
             overlay[["ecodistrict_id", "province"]].drop_duplicates().shape[0]
         ),
         "province_overlay_zero_area_contacts_skipped": zero_area_contacts,
-        "parent_intersection_area_ha": float(parent_sum.sum()),
-        "province_covered_area_ha": float(province_sum.sum()),
+        "parent_intersection_area_ha": parent_area,
+        "province_covered_area_ha": province_area,
         "parent_area_outside_provinces_ha": parent_outside_province,
-        "province_cover_share_of_intersection": float(
-            province_sum.sum() / parent_sum.sum()
-        ),
+        "province_cover_share_of_intersection": province_area / parent_area,
     }
     return (
         overlay.sort_values(
@@ -836,12 +855,15 @@ def allocate_area_to_tiles(
         geographic_area_ha=("geographic_allocated_area_ha", "sum"),
         fallback_area_ha=("fallback_allocated_area_ha", "sum"),
     )
-    tolerance = AREA_TOLERANCE_HA
-
     def allocation_basis(row: pd.Series) -> str:
-        if row["fallback_area_ha"] > tolerance and row["geographic_area_ha"] > tolerance:
+        # Provenance follows the geographic/fallback contributions themselves.
+        # The 0.001 ha closure tolerance must not relabel a sub-tolerance,
+        # fallback-only cell as a province intersection.
+        has_geographic = row["geographic_area_ha"] > 0.0
+        has_fallback = row["fallback_area_ha"] > 0.0
+        if has_geographic and has_fallback:
             return "mixed_province_intersection_and_district_fallback"
-        if row["fallback_area_ha"] > tolerance:
+        if has_fallback:
             return "district_fallback_no_province_intersection"
         return "province_intersection"
 

@@ -19,6 +19,7 @@ from workflows.national.clews.rsyc_tile_supply import (
     allocate_province_factors,
     build_harvest_sensitivity,
     build_validation,
+    load_backbone_harvest,
     load_library,
     load_matrix_cells,
 )
@@ -370,3 +371,52 @@ def test_evidence_table_has_four_tiers_and_independent_rollups(monkeypatch) -> N
     )
     failed = {check["check"] for check in broken if check["status"] != "PASS"}
     assert "province_rollup_reconciles_independently" in failed
+
+
+HARVEST_FIELDS = [
+    "harvest_level_million_m3_per_year",
+    "case",
+    "gross_residue_odt_per_year",
+    "recoverable_residue_odt_per_year",
+    "recoverable_pj_per_year",
+    "annual_cost_million_usd",
+]
+
+
+def _harvest_row(level: int = 150, case: str = "base", pj: object = 100.0) -> dict[str, object]:
+    return {
+        "harvest_level_million_m3_per_year": level,
+        "case": case,
+        "gross_residue_odt_per_year": 1_000_000.0,
+        "recoverable_residue_odt_per_year": 600_000.0,
+        "recoverable_pj_per_year": pj,
+        "annual_cost_million_usd": 245.6977549,
+    }
+
+
+def _write_harvest(path, rows: list[dict[str, object]]) -> None:
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=HARVEST_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def test_backbone_harvest_rejects_duplicate_keys(tmp_path) -> None:
+    path = tmp_path / "harvest.csv"
+    _write_harvest(path, [_harvest_row(), _harvest_row()])
+    with pytest.raises(TileSupplyError, match="duplicate harvest comparison key"):
+        load_backbone_harvest(path)
+
+
+def test_backbone_harvest_rejects_non_finite_comparison_values(tmp_path) -> None:
+    path = tmp_path / "harvest.csv"
+    _write_harvest(path, [_harvest_row(pj=float("inf"))])
+    with pytest.raises(TileSupplyError, match="non-finite recoverable_pj_per_year"):
+        load_backbone_harvest(path)
+
+
+def test_backbone_harvest_parses_finite_rows(tmp_path) -> None:
+    path = tmp_path / "harvest.csv"
+    _write_harvest(path, [_harvest_row()])
+    rows = load_backbone_harvest(path)
+    assert rows[(150, "base")]["recoverable_pj_per_year"] == pytest.approx(100.0)

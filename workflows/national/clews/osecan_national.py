@@ -20,8 +20,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-import re
+import math
 import shutil
+import subprocess
+import sys
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -79,9 +81,11 @@ KEY_YEARS = (2021, 2022, 2025, 2028, 2030, 2035, 2040, 2050, 2060, 2070)
 # rsyc_tile_supply_summary.json.
 LOG_VOLUME_M3_PER_YEAR = 150_000_000.0
 LOG_SHARE = 0.762716956451988
+LOG_SHARE_TOLERANCE = 1e-9
 TILE_FACTOR_ODT_PER_M3 = 0.08831776452936206
 LHV_GJ_PER_ODT = 18.5
 RECOVERY = {"base": 0.60, "low": 0.35, "high": 0.75}
+PWR_BIO_TECHS = tuple(f"PWRBIO{zone}" for zone in (*BC_ZONES, *OTHER_ZONES))
 
 COST_BASE_USD_PER_GJ = 2.456977549
 COST_MULTIPLIER = {"base": 1.0, "low": 1.30, "high": 0.80}
@@ -112,7 +116,7 @@ class RunSpec:
     label: str
     description: str
     carbon_price_from_2026: float
-    hydro_frozen: bool
+    hydro_capped: bool
     supply_case: str
     generic_bio_cost_usd_per_gj: float
 
@@ -127,19 +131,21 @@ RUN_SPECS = (
             "normal hydro."
         ),
         carbon_price_from_2026=CARBON_PRICE_BASELINE_FROM_2026,
-        hydro_frozen=False,
+        hydro_capped=False,
         supply_case="base",
         generic_bio_cost_usd_per_gj=GENERIC_BIO_BASE_COST,
     ),
     RunSpec(
         name="stress",
-        label="carbon $200/t + hydro frozen",
+        label="carbon $200/t + hydro capped at 2021 activity",
         description=(
             "The baseline national cap/cost with CO2 at 200 $/t from 2026 and "
-            "every PWRHYD<z> fixed at its 2021 base-run activity."
+            "every PWRHYD<z> capped at its 2021 base-run activity through "
+            "TotalTechnologyAnnualActivityUpperLimit (an upper bound, not "
+            "fixed dispatch)."
         ),
         carbon_price_from_2026=CARBON_PRICE_STRESS_FROM_2026,
-        hydro_frozen=True,
+        hydro_capped=True,
         supply_case="base",
         generic_bio_cost_usd_per_gj=GENERIC_BIO_BASE_COST,
     ),
@@ -151,7 +157,7 @@ RUN_SPECS = (
             "4.0 $/GJ (documented biomass-wide bypass sensitivity)."
         ),
         carbon_price_from_2026=CARBON_PRICE_BASELINE_FROM_2026,
-        hydro_frozen=False,
+        hydro_capped=False,
         supply_case="base",
         generic_bio_cost_usd_per_gj=GENERIC_BIO_SENSITIVITY_COST,
     ),
@@ -243,7 +249,8 @@ def _verify_fixed_supply_outputs(root: Path) -> None:
 
     Raises:
         FileNotFoundError: If the fixed summary is missing.
-        ValueError: If the tile-weighted factor differs from the adopted value.
+        TypeError: If the log-share comparison field is missing or non-numeric.
+        ValueError: If a factor differs from the adopted value or is non-finite.
     """
     path = root / TILE_SUPPLY_DIR / "rsyc_tile_supply_summary.json"
     if not path.exists():
@@ -258,13 +265,27 @@ def _verify_fixed_supply_outputs(root: Path) -> None:
             "tile-mix residue factor drifted from the adopted value: "
             f"{factors['tile_mix']} != {TILE_FACTOR_ODT_PER_M3}"
         )
-    report = (root / TILE_SUPPLY_DIR / "RSYC_TILE_SUPPLY_REPORT.md").read_text(
-        encoding="utf-8"
-    )
-    match = re.search(r"diagnostic total/log ratio ([0-9.]+)", report)
-    if match and abs(float(match.group(1)) - LOG_SHARE) > 5e-7:
+
+    comparison = summary.get("comparison")
+    if not isinstance(comparison, Mapping):
+        raise TypeError(f"{path}: missing comparison block for log-share check")
+    raw_factor = comparison.get("factor_total_over_log")
+    if isinstance(raw_factor, bool) or not isinstance(raw_factor, (int, float)):
+        raise TypeError(
+            f"{path}: missing or non-numeric comparison.factor_total_over_log"
+        )
+    factor_total_over_log = float(raw_factor)
+    if not math.isfinite(factor_total_over_log):
         raise ValueError(
-            f"log share drifted from the fixed report: {match.group(1)} != {LOG_SHARE}"
+            f"{path}: non-finite comparison.factor_total_over_log "
+            f"{factor_total_over_log!r}"
+        )
+    divergence = abs(factor_total_over_log - LOG_SHARE)
+    if divergence > LOG_SHARE_TOLERANCE:
+        raise ValueError(
+            "log share drifted from the fixed tile supply summary: "
+            f"{factor_total_over_log} != {LOG_SHARE} "
+            f"(tolerance {LOG_SHARE_TOLERANCE})"
         )
 
 
@@ -527,7 +548,7 @@ def build_scenario_params(
         )
 
     _set_carbon_price(target / "EmissionsPenalty.csv", spec.carbon_price_from_2026)
-    if spec.hydro_frozen:
+    if spec.hydro_capped:
         hydro = _hydro_2021(model_root)
         cap_path = target / "TotalTechnologyAnnualActivityUpperLimit.csv"
         for technology, value in hydro.items():
@@ -591,6 +612,198 @@ def _other_zone_bcw(production: Mapping[str, Mapping[int, float]]) -> dict[str, 
     }
 
 
+def sum_pwr_bio(production: Mapping[str, Mapping[int, float]]) -> float:
+    """Sum the zonal ``PWRBIO<zone>`` dispatch series.
+
+    OSeCAN reports power-biomass activity by zone, not under a single
+    ``PWRBIO`` key.  Summing only that aggregate key silently reports zero.
+    """
+    return round(
+        sum(
+            float(value)
+            for technology in PWR_BIO_TECHS
+            for value in production.get(technology, {}).values()
+        ),
+        6,
+    )
+
+
+def reconcile_pwr_bio_dispatch(
+    summaries: Mapping[str, object],
+    dispatch_rows: Sequence[Mapping[str, object]],
+) -> None:
+    """Check summary PWRBIO totals against the long-format dispatch table."""
+    dispatch_totals: dict[str, float] = defaultdict(float)
+    for row in dispatch_rows:
+        if row.get("technology") in PWR_BIO_TECHS:
+            dispatch_totals[str(row["run"])] += float(row["value_pj"])
+    for name, run in summaries["runs"].items():
+        expected = float(run["pwr_bio_total_pj"])
+        observed = round(dispatch_totals.get(name, 0.0), 6)
+        if abs(observed - expected) > 1e-6:
+            raise ValueError(
+                f"{name}: PWRBIO dispatch total {observed} does not reconcile "
+                f"to summary total {expected}"
+            )
+
+
+def _parameter_set_sha256(path: Path) -> str:
+    """Hash a parameter directory by sorted CSV names and contents."""
+    files = sorted(path.glob("*.csv"))
+    if not files:
+        raise ValueError(f"{path}: no parameter CSVs to hash")
+    digest = hashlib.sha256()
+    for file in files:
+        digest.update(file.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def collect_harmonize_evidence(
+    model_root: Path,
+    runs_root: Path,
+    *,
+    verified_utc: str | None = None,
+) -> dict[str, object]:
+    """Run ``osecan harmonize`` on each parameter set and retain the evidence.
+
+    Args:
+        model_root: Disposable OSeCAN copy containing ``SETs`` and ``data/params``.
+        runs_root: Directory containing the scenario ``params`` directories.
+        verified_utc: Optional timestamp override for deterministic tests.
+
+    Returns:
+        A payload with one check per invocation: exit status, parameter-set
+        SHA-256, and the tool's final message.  ``all_passed`` is true only
+        when all four invocations exited zero.
+
+    Raises:
+        FileNotFoundError: If a parameter directory is missing.
+    """
+    model_root = Path(model_root)
+    runs_root = Path(runs_root)
+    sets_dir = model_root / "SETs"
+    executable = model_root / ".venv/bin/python"
+    if not executable.exists():
+        executable = Path(sys.executable)
+    parameter_sets = [
+        ("base", model_root / "data/params"),
+        *((spec.name, runs_root / spec.name / "params") for spec in RUN_SPECS),
+    ]
+    checks: list[dict[str, object]] = []
+    for name, param_dir in parameter_sets:
+        if not param_dir.is_dir():
+            raise FileNotFoundError(f"missing parameter set {name}: {param_dir}")
+        completed = subprocess.run(
+            [
+                str(executable),
+                "-m",
+                "osecan.cli",
+                "harmonize",
+                "--sets",
+                str(sets_dir),
+                "--params",
+                str(param_dir),
+            ],
+            cwd=model_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        stdout = completed.stdout.strip()
+        stderr = completed.stderr.strip()
+        message = (
+            stdout.splitlines()[-1]
+            if stdout
+            else (stderr.splitlines()[-1] if stderr else "")
+        )
+        checks.append(
+            {
+                "parameter_set": name,
+                "params": str(param_dir),
+                "exit_code": completed.returncode,
+                "parameter_set_sha256": _parameter_set_sha256(param_dir),
+                "message": message,
+            }
+        )
+    all_passed = len(checks) == len(parameter_sets) and all(
+        check["exit_code"] == 0 for check in checks
+    )
+    return {
+        "tool": "python -m osecan.cli harmonize",
+        "sets": str(sets_dir),
+        "all_passed": all_passed,
+        "checks": checks,
+        "verified_utc": verified_utc or datetime.now(UTC).isoformat(timespec="seconds"),
+        "public_repo_modified": False,
+        "note": (
+            "Recorded in the disposable model copy; the public "
+            "github.com/deltae/C2070 clone was not modified."
+        ),
+    }
+
+
+def harmonize_evidence_is_complete(evidence: Mapping[str, object] | None) -> bool:
+    """Return true only when four named, zero-exit, hashed checks are present."""
+    if not evidence or not evidence.get("all_passed"):
+        return False
+    checks = evidence.get("checks")
+    if not isinstance(checks, Sequence) or isinstance(checks, (str, bytes)):
+        return False
+    expected_names = {"base", *(spec.name for spec in RUN_SPECS)}
+    observed_names = {
+        str(check.get("parameter_set"))
+        for check in checks
+        if isinstance(check, Mapping)
+    }
+    if len(checks) != len(expected_names) or observed_names != expected_names:
+        return False
+    for check in checks:
+        if not isinstance(check, Mapping) or check.get("exit_code") != 0:
+            return False
+        digest = check.get("parameter_set_sha256")
+        if not isinstance(digest, str) or len(digest) != 64:
+            return False
+        try:
+            int(digest, 16)
+        except ValueError:
+            return False
+    return True
+
+
+def harmonize_report_line(evidence: Mapping[str, object] | None) -> str:
+    """Render harmonize status from recorded evidence, not from assumption."""
+    suffix = (
+        "  `PWRBCWB1`/`PWRBCWB2` consume `BCWB1`/`BCWB2`; the other eleven "
+        "`PWRBCW<z>` plants consume the national `BCW` pool."
+    )
+    if not harmonize_evidence_is_complete(evidence):
+        checks = (
+            evidence.get("checks", []) if isinstance(evidence, Mapping) else []
+        )
+        observed = ", ".join(
+            f"{check.get('parameter_set', '?')} exit {check.get('exit_code', '?')}"
+            for check in checks
+            if isinstance(check, Mapping)
+        ) or "no recorded checks"
+        return (
+            "`osecan harmonize` success is **not asserted**: evidence is "
+            f"missing or failed ({observed}).{suffix}"
+        )
+    details = ", ".join(
+        f"{check['parameter_set']} exit 0 "
+        f"(SHA-256 {str(check['parameter_set_sha256'])[:12]}…)"
+        for check in evidence["checks"]
+    )
+    return (
+        f"`osecan harmonize` evidence recorded: {details}.  "
+        "**HARMONIZED — all params reference valid SET codes.**"
+        f"{suffix}"
+    )
+
+
 def summarize_run(
     run_dir: Path,
     caps: Mapping[str, Mapping[int, float]],
@@ -606,7 +819,10 @@ def summarize_run(
         "description": spec.description,
         "supply_case": spec.supply_case,
         "carbon_price_from_2026_usd_per_t": spec.carbon_price_from_2026,
-        "hydro_frozen_2021": spec.hydro_frozen,
+        "hydro_capped_at_2021": spec.hydro_capped,
+        "pwr_hyd_b2_2021_pj": round(
+            float(production.get("PWRHYDB2", {}).get(2021, 0.0)), 6
+        ),
         "generic_bio_cost_usd_per_gj": spec.generic_bio_cost_usd_per_gj,
         "solver_status": str(status["status"]),
         "objective_musd": round(float(status["objective"]), 2),
@@ -618,9 +834,7 @@ def summarize_run(
         "pwrbcwb1_pj": _series_summary(production.get("PWRBCWB1", {})),
         "pwrbcwb2_pj": _series_summary(production.get("PWRBCWB2", {})),
         "pwrbcw_other_zone_pj": _other_zone_bcw(production),
-        "pwr_bio_total_pj": round(
-            sum(float(v) for v in production.get("PWRBIO", {}).values()), 6
-        ),
+        "pwr_bio_total_pj": sum_pwr_bio(production),
         "emissions_mt": {
             "by_year": {str(y): round(v, 6) for y, v in emissions.items()},
             "total": round(sum(emissions.values()), 6),
@@ -643,8 +857,17 @@ def build_run_summaries(
     runs_root: Path,
     artifact_dir: Path,
     root: Path = REPO_ROOT,
+    harmonize_evidence: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """Build run summaries and cross-run comparisons from solved runs."""
+    """Build run summaries and cross-run comparisons from solved runs.
+
+    Args:
+        runs_root: Directory containing the solved run directories.
+        artifact_dir: Directory holding the national parameter CSVs.
+        root: Repository root.
+        harmonize_evidence: Recorded ``collect_harmonize_evidence`` payload.
+            Without it the report renders success as unverified.
+    """
     caps = {
         "SUPBCW": _read_series(
             artifact_dir / "SUPBCW_activity_limits_national_150m.csv", "SUPBCW"
@@ -687,7 +910,7 @@ def build_run_summaries(
                 6,
             ),
         }
-    return {
+    payload: dict[str, object] = {
         "schema_version": "1.0",
         "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "status": STATUS,
@@ -708,7 +931,11 @@ def build_run_summaries(
             },
             "hydro": {
                 "baseline": "normal (no cap)",
-                "stress": "every PWRHYD<z> fixed at 2021 base activity",
+                "stress": (
+                    "every PWRHYD<z> capped at 2021 base activity through "
+                    "TotalTechnologyAnnualActivityUpperLimit (upper bound, "
+                    "not fixed dispatch)"
+                ),
             },
             "generic_bio_cost_usd_per_gj": {
                 spec.name: spec.generic_bio_cost_usd_per_gj for spec in RUN_SPECS
@@ -720,7 +947,18 @@ def build_run_summaries(
         },
         "runs": runs,
         "comparison": comparison,
+        "harmonize": (
+            dict(harmonize_evidence)
+            if harmonize_evidence is not None
+            else {
+                "all_passed": False,
+                "checks": [],
+                "note": "No harmonize evidence supplied.",
+            }
+        ),
     }
+    reconcile_pwr_bio_dispatch(payload, build_dispatch_rows(runs_root))
+    return payload
 
 
 def build_dispatch_rows(runs_root: Path) -> list[dict[str, object]]:
@@ -847,8 +1085,9 @@ def build_manifest(
                 "to the national total."
             ),
             (
-                "The stress hydro cap fixes every PWRHYD<z> at its 2021 base-run "
-                "activity; it is a sensitivity probe, not a forecast."
+                "The stress hydro constraint is a TotalTechnologyAnnualActivityUpperLimit "
+                "cap at every PWRHYD<z>'s 2021 base-run activity; it is an upper "
+                "bound, not fixed dispatch, and a sensitivity probe, not a forecast."
             ),
             (
                 "The generic-BIO sensitivity raises RNWBIO VariableCost to 4.0 $/GJ "
@@ -950,13 +1189,7 @@ def write_report(
         "| `SUPBCW_variable_cost_{base,low,high}.csv` | 2.456978, 3.194071, 1.965582 $/GJ |",
         "| `supply_basis.json` | full conversion and cap-split record |",
         "",
-        (
-            "`osecan harmonize` returned exit 0 for the base parameters and for "
-            "all three scenario parameter sets: **HARMONIZED — all params "
-            "reference valid SET codes.**  `PWRBCWB1`/`PWRBCWB2` consume `BCWB1`/"
-            "`BCWB2`; the other eleven `PWRBCW<z>` plants consume the national "
-            "`BCW` pool."
-        ),
+        harmonize_report_line(summaries.get("harmonize")),
         "",
         "## Baseline (objective, dispatch, binding, emissions)",
         "",
@@ -966,7 +1199,7 @@ def write_report(
             f"{_fmt(caps['SUPBCW']['2028'], 3)} PJ (2028+)."
         ),
         "",
-        "| Metric | Baseline | Stress $200/hydro-frozen | Δ stress |",
+        "| Metric | Baseline | Stress $200/hydro-capped | Δ stress |",
         "|---|---:|---:|---:|",
         (
             f"| Solver status | {baseline['solver_status']} | {stress['solver_status']} | — |"
@@ -980,6 +1213,12 @@ def write_report(
             f"| Emissions total (Mt) | {_fmt(baseline['emissions_mt']['total'], 3)} | "
             f"{_fmt(stress['emissions_mt']['total'], 3)} | "
             f"{_fmt(comparison['stress']['emissions_delta_mt'], 3)} |"
+        ),
+        (
+            f"| `PWRHYDB2` 2021 dispatch (PJ) | "
+            f"{_fmt(baseline['pwr_hyd_b2_2021_pj'], 6)} | "
+            f"{_fmt(stress['pwr_hyd_b2_2021_pj'], 6)} | "
+            f"{_fmt(float(stress['pwr_hyd_b2_2021_pj']) - float(baseline['pwr_hyd_b2_2021_pj']), 6)} |"
         ),
         "",
         "### SUP activity by year (PJ)",
@@ -1051,11 +1290,16 @@ def write_report(
         )
     lines += [
         "",
-        "## Stress $200/hydro-frozen",
+        "## Stress $200/hydro-capped",
         "",
         (
-            "The stress run raises the 2026+ carbon price from 115 to 200 $/t and "
-            "fixes every `PWRHYD<z>` at its 2021 base activity.  It keeps the same "
+            "The stress run raises the 2026+ carbon price from 115 to 200 $/t.  "
+            "Its only hydro constraint is a `TotalTechnologyAnnualActivityUpperLimit` "
+            "at each `PWRHYD<z>`'s 2021 base activity; it is a **cap at the 2021 "
+            "activity, not fixed dispatch**.  `PWRHYDB2` dispatches "
+            f"{_fmt(stress['pwr_hyd_b2_2021_pj'], 6)} PJ in 2021 in the stress run "
+            f"versus {_fmt(baseline['pwr_hyd_b2_2021_pj'], 6)} PJ in the baseline.  "
+            "A true fixed-dispatch hydro run is deferred.  The run keeps the same "
             "national/zonal caps and costs as the baseline."
         ),
         "",
@@ -1063,8 +1307,11 @@ def write_report(
             f"Objective {_fmt(stress['objective_musd'], 2)} M$ vs baseline "
             f"{_fmt(baseline['objective_musd'], 2)} M$ "
             f"({_fmt(comparison['stress']['objective_delta_musd'], 2)} M$); "
-            f"cumulative CO2 {_fmt(stress['emissions_mt']['total'], 3)} Mt vs "
-            f"{_fmt(baseline['emissions_mt']['total'], 3)} Mt.  In the stress run "
+            f"cumulative CO2 {_fmt(stress['emissions_mt']['total'], 6)} Mt vs "
+            f"{_fmt(baseline['emissions_mt']['total'], 6)} Mt "
+            f"({_fmt(comparison['stress']['emissions_delta_mt'], 6)} Mt vs baseline).  "
+            "The −23.114 Mt figure is relative to the BC-only stress run "
+            "(61.659 Mt), not the national baseline.  In the stress run "
             f"`SUPBCW` binds in {stress['cap_binding']['SUPBCW']['binding_years']} "
             f"({stress['cap_binding']['SUPBCW']['binding_year_count']} years), "
             f"`SUPBCWB1` in {stress['cap_binding']['SUPBCWB1']['binding_years']} "
@@ -1085,11 +1332,11 @@ def write_report(
             f"{_fmt(baseline['emissions_mt']['total'], 3)} | 0.000 |"
         ),
         (
-            "| BC zonal 43.5238 PJ | stress (200 $/t, hydro frozen) | "
+            "| BC zonal 43.5238 PJ | stress (200 $/t, hydro capped at 2021 activity) | "
             "1,371,599.09 | 61.659 | 1,872.589 |"
         ),
         (
-            f"| National 150M stress | stress (200 $/t, hydro frozen) | "
+            f"| National 150M stress | stress (200 $/t, hydro capped at 2021 activity) | "
             f"{_fmt(stress['objective_musd'], 2)} | "
             f"{_fmt(stress['emissions_mt']['total'], 3)} | "
             f"{_fmt(float(stress['supbcw_pj']['total']) + float(stress['supbcwb1_pj']['total']) + float(stress['supbcwb2_pj']['total']), 3)} |"
@@ -1097,12 +1344,16 @@ def write_report(
         "",
         (
             "At the baseline carbon schedule gas outcompetes biomass, so all three "
-            "biomass supply technologies are zero and the national cap is slack; "
-            "the 150M cap changes the objective only by the small `SUPBCW` cost "
-            "difference relative to the 50 PJ placeholder.  Under the stress "
-            "forcing the national cap binds and supplies about 8.8 EJ over "
-            "2021-2070, versus 1.87 EJ in the BC-only zonal run, lowering "
-            "cumulative CO2 from 61.659 to 38.545 Mt."
+            "national biomass supply technologies are zero and the national cap "
+            "is slack.  The 50 PJ placeholder and the national 150M baseline "
+            "differ by 2.27 M$ (1,331,289.52 vs 1,331,287.25 M$); this delta is "
+            "an **unexplained controlled comparison** and is not attributed to "
+            "`SUPBCW`, whose baseline activity and variable-cost contribution are "
+            "both zero.  Under the stress forcing the national cap binds and "
+            "supplies about 8.8 EJ over 2021-2070, versus 1.87 EJ in the BC-only "
+            "zonal run.  Relative to that BC-only stress run, emissions fall from "
+            "61.659 to 38.545 Mt; relative to the national baseline they rise by "
+            "12.829929 Mt (25.714753 to 38.544682 Mt)."
         ),
         "",
         "## Generic-BIO sensitivity",
