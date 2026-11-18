@@ -319,6 +319,7 @@ def cap_binding(
     caps: Mapping[int, float],
     technology: str,
     tolerance: float = 0.9999,
+    violation_tolerance: float = 1e-4,
 ) -> dict[str, object]:
     """Summarise whether an annual activity cap binds.
 
@@ -327,6 +328,10 @@ def cap_binding(
         caps: Year-to-upper-limit mapping in PJ.
         technology: Technology code, used in error messages and output.
         tolerance: Utilisation at or above this fraction counts as binding.
+        violation_tolerance: Absolute PJ slack allowed before an activity is
+            treated as a cap violation.  The OSeMOSYS datafile stores activity
+            limits with six significant figures, so a solved cap can exceed the
+            exact CSV value by the rounding step.
 
     Returns:
         Cap, activity, utilisation and binding summary.
@@ -345,7 +350,7 @@ def cap_binding(
     violations = [
         year
         for year, cap in caps.items()
-        if float(activity.get(year, 0.0)) > float(cap) + 1e-4
+        if float(activity.get(year, 0.0)) > float(cap) + violation_tolerance
     ]
     if violations:
         raise ValueError(
