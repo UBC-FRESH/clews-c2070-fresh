@@ -2,6 +2,18 @@
 
 ## 2026-11-18
 
+- **Fixed the BC residue co-optimisation review findings.**  Harvest sources
+  now use the period-specific `residue_recoverable_odt` offers in
+  `bc_supply_by_zone.csv` by zone, keeping the Stage A log assignment fixed and
+  reporting Stage A-assigned residue separately.  Route provenance is carried
+  into every co-opt link; `ffcm_route_fallback_road` links are excluded by
+  default and reported as `non_nrn_fallback`, with an explicit
+  `allow_fallback_links` sensitivity.  The road graph now keeps the winning
+  edge mode/provenance per node pair, rejects same-node fallback ferry snaps,
+  and Stage A/Stage B share one road/ferry cost decomposition.  Report shares
+  and utilization are zero-safe.  Re-ran the 2028 chain and co-opt; outputs and
+  `BC_COOPT_FIX_REPORT.md` are under `data/derived/national/bc_chain/`.
+
 - **Refined the all-BC chain with NRN ferry connectivity and documented species
   aliases.** Added NRN `FERRYSEG` edges (53 connected segments plus one
   documented Comox-Powell River fallback; 1,951.95 km) and a flagged

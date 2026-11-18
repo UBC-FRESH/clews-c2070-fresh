@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
+import pandas as pd
 import pytest
 
 from workflows.national.assignments.residue_coopt import (
@@ -11,6 +13,8 @@ from workflows.national.assignments.residue_coopt import (
     CooptLink,
     CooptRecipient,
     CooptSource,
+    _build_harvest_sources,
+    _require_text,
     solve_coopt,
     validate_coopt,
 )
@@ -60,14 +64,22 @@ def recipient(
     )
 
 
-def link(source_id: str, facility_id: str, cost: float = 10.0) -> CooptLink:
+def link(
+    source_id: str,
+    facility_id: str,
+    cost: float = 10.0,
+    path_confidence: str = "real_road_network",
+    ferry_km: float = 0.0,
+) -> CooptLink:
     return CooptLink(
         source_id=source_id,
         recipient_facility=facility_id,
         distance_km=100.0,
         cost_cad_m3=cost,
-        path_confidence="real_road_network",
+        path_confidence=path_confidence,
         evidence="test",
+        ferry_distance_km=ferry_km,
+        ferry_cost_cad_m3=ferry_km * 0.03,
     )
 
 
@@ -136,3 +148,106 @@ def test_capacity_binding_flag_uses_relative_tolerance() -> None:
     result = solve_coopt([sawmill], [pel], [link("S1", "PEL-1")])
     utilization = result.allocations[0].recipient.capacity_odt_y - result.assigned_odt
     assert utilization <= 1e-6
+
+
+def _stage_a_frame(zone: str, assigned_odt: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "period": "2028",
+                "zone": zone,
+                "facility_id": "BC-PEL-1",
+                "grade": "RESIDUE",
+                "volume_m3": assigned_odt / DENSITY,
+                "supply_id": f"{zone}-residue-1",
+            }
+        ]
+    )
+
+
+def _supply_frame(zone: str, recoverable_odt: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "zone": zone,
+                "year": "2028",
+                "product": "residue",
+                "species": "PICE.MAR",
+                "residue_recoverable_odt": recoverable_odt,
+            }
+        ]
+    )
+
+
+def test_harvest_sources_use_recoverable_not_stage_a_assigned() -> None:
+    stage_a = _stage_a_frame("B1", assigned_odt=60.0)
+    supply = _supply_frame("B1", recoverable_odt=100.0)
+    sources = _build_harvest_sources(stage_a, supply, "2028")
+    assert len(sources) == 1
+    assert sources[0].source_id == "HARVEST::B1"
+    assert sources[0].odt == pytest.approx(100.0)
+    assert sources[0].stage_a_assigned_odt == pytest.approx(60.0)
+    assert sources[0].unassigned_by_stage_a_odt == pytest.approx(40.0)
+
+
+def test_harvest_conservation_uses_recoverable_total() -> None:
+    stage_a = _stage_a_frame("B1", assigned_odt=60.0)
+    supply = _supply_frame("B1", recoverable_odt=100.0)
+    harvest = _build_harvest_sources(stage_a, supply, "2028")[0]
+    pel = recipient("PEL-1", "PEL", 500.0)
+    result = solve_coopt([harvest], [pel], [link(harvest.source_id, "PEL-1")])
+    assert result.generated_odt == pytest.approx(100.0)
+    assert result.assigned_odt == pytest.approx(100.0)
+    assert result.assigned_odt + (
+        result.generated_odt - result.assigned_odt
+    ) == pytest.approx(100.0)
+    assert harvest.stage_a_assigned_odt == pytest.approx(60.0)
+
+
+def test_harvest_source_above_recoverable_fails_closed() -> None:
+    stage_a = _stage_a_frame("B1", assigned_odt=120.0)
+    supply = _supply_frame("B1", recoverable_odt=100.0)
+    with pytest.raises(CooptError, match="above recoverable"):
+        _build_harvest_sources(stage_a, supply, "2028")
+
+
+def test_fallback_link_excluded_by_default_and_allowed_on_request() -> None:
+    harvest = source("H1", "harvest_residue", "harvest_residue", 100.0)
+    real = recipient("BIO-REAL", "BIO", 40.0)
+    fallback = recipient("BIO-FALLBACK", "BIO", 100.0)
+    links = [
+        link("H1", "BIO-REAL"),
+        link(
+            "H1",
+            "BIO-FALLBACK",
+            path_confidence="ffcm_route_fallback_road",
+        ),
+    ]
+    default = solve_coopt([harvest], [real, fallback], links)
+    assert {item.recipient.facility_id for item in default.allocations} == {
+        "BIO-REAL"
+    }
+    assert any(
+        pair["reason"] == "non_nrn_fallback"
+        and pair["recipient_facility"] == "BIO-FALLBACK"
+        for pair in default.excluded_pairs
+    )
+    assert validate_coopt(default).passed
+
+    sensitivity = solve_coopt(
+        [harvest], [real, fallback], links, allow_fallback_links=True
+    )
+    assert sensitivity.assigned_odt == pytest.approx(100.0)
+    assert "ffcm_route_fallback_road" in sensitivity.accepted_path_confidence
+    assert validate_coopt(sensitivity).passed
+    tampered = replace(
+        sensitivity, accepted_path_confidence=("real_road_network",)
+    )
+    assert not validate_coopt(tampered).passed
+
+
+def test_missing_path_confidence_is_not_defaulted() -> None:
+    with pytest.raises(CooptError, match="provenance cannot be defaulted"):
+        _require_text(float("nan"), "path_confidence")
+    with pytest.raises(CooptError, match="provenance cannot be defaulted"):
+        _require_text("", "path_confidence")

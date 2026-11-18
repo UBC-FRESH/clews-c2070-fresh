@@ -10,12 +10,16 @@ import pandas as pd
 from pyproj import Transformer
 from scipy.sparse import csr_matrix
 
+from workflows.national.assignments import bc_chain, stage_b
 from workflows.national.assignments.build_road_network import (
     FERRY_FARE_CAD_M3_KM,
     RoadGraph,
     assemble_graph,
     augment_graph_with_edges,
+    ferry_pair_lookup,
+    ferry_path_metrics,
     load_ferry_segments,
+    road_ferry_cost,
     snap_facilities,
 )
 from workflows.national.assignments.transport import (
@@ -175,6 +179,96 @@ class SnapTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(Exception, "declares coord_source=missing"):
             snap_facilities(graph, facilities)
+
+
+class FerryEdgeSelectionTests(unittest.TestCase):
+    def _two_node_graph(self, road_length_m: float = 1000.0) -> RoadGraph:
+        node_xy = np.array([[0.0, 0.0], [100.0, 0.0]])
+        return RoadGraph(
+            node_xy_m=node_xy,
+            edge_u=np.array([0]),
+            edge_v=np.array([1]),
+            edge_length_m=np.array([road_length_m]),
+            matrix=csr_matrix(
+                (np.array([road_length_m]), (np.array([0]), np.array([1]))),
+                shape=(2, 2),
+            ),
+            component_labels=np.array([0, 0]),
+            component_sizes=np.array([2]),
+            total_features=1,
+            kept_features=1,
+            class_counts={"Arterial": 1},
+            excluded_counts={},
+            source_crs="EPSG:4617",
+            bounds_wgs84=(-139.0, 48.0, -114.0, 60.0),
+            traffic_direction_counts={"Unknown": 1},
+            timings_s={"total_s": 0.0},
+            peak_rss_mb=0.0,
+            gpkg_member="test.gpkg",
+            edge_mode=np.array(["road"], dtype=object),
+            edge_provenance=np.array(["nrn_roadseg"], dtype=object),
+        )
+
+    def test_shorter_road_edge_keeps_road_metadata(self) -> None:
+        graph = self._two_node_graph(road_length_m=1000.0)
+        augmented = augment_graph_with_edges(
+            graph,
+            [0],
+            [1],
+            [5000.0],
+            edge_mode=["ferry"],
+            edge_provenance=["nrn_ferryseg"],
+        )
+        self.assertEqual(augmented.edge_length_m.tolist(), [1000.0])
+        self.assertEqual(augmented.edge_mode.tolist(), ["road"])
+        self.assertEqual(augmented.edge_provenance.tolist(), ["nrn_roadseg"])
+
+    def test_shorter_ferry_edge_wins_with_ferry_metadata(self) -> None:
+        graph = self._two_node_graph(road_length_m=5000.0)
+        augmented = augment_graph_with_edges(
+            graph,
+            [0],
+            [1],
+            [1000.0],
+            edge_mode=["ferry"],
+            edge_provenance=["published_fallback_ferry"],
+        )
+        self.assertEqual(augmented.edge_length_m.tolist(), [1000.0])
+        self.assertEqual(augmented.edge_mode.tolist(), ["ferry"])
+        self.assertEqual(
+            augmented.edge_provenance.tolist(), ["published_fallback_ferry"]
+        )
+
+    def test_ferry_lookup_rejects_ambiguous_pair(self) -> None:
+        graph = self._two_node_graph()
+        from dataclasses import replace
+
+        ambiguous = replace(
+            graph,
+            ferry_edge_u=np.array([0, 0]),
+            ferry_edge_v=np.array([1, 1]),
+            ferry_edge_length_m=np.array([1000.0, 1200.0]),
+        )
+        with self.assertRaisesRegex(Exception, "appears more than once"):
+            ferry_pair_lookup(ambiguous)
+
+    def test_path_metrics_and_cost_split_match_stage_a_and_b(self) -> None:
+        predecessors = np.array([-1, 0, 1])
+        ferry_pairs = {(1, 2): 300.0}
+        ferry_m, crossings = ferry_path_metrics(
+            predecessors, 0, 2, ferry_pairs
+        )
+        self.assertEqual(ferry_m, 300.0)
+        self.assertEqual(crossings, 1)
+        road_km, ferry_km, cost = road_ferry_cost(100.0, 30.0, 0.05)
+        self.assertAlmostEqual(road_km, 70.0)
+        self.assertAlmostEqual(ferry_km, 30.0)
+        self.assertAlmostEqual(
+            cost, 70.0 * 0.05 + 30.0 * FERRY_FARE_CAD_M3_KM
+        )
+        # Both stages must call the same decomposition helpers.
+        self.assertIs(stage_b.road_ferry_cost, bc_chain.road_ferry_cost)
+        self.assertIs(stage_b.ferry_path_metrics, bc_chain._ferry_path_metrics)
 
 
 class RoadCostTests(unittest.TestCase):

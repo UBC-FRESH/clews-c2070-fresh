@@ -119,6 +119,12 @@ class RoadGraph:
     ferry_edge_length_m: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=float))
     ferry_routes: tuple[Mapping[str, Any], ...] = ()
     ferry_summary: Mapping[str, Any] = field(default_factory=dict)
+    #: Winning edge mode per ``edge_length_m`` entry: ``road`` or ``ferry``.
+    edge_mode: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=object))
+    #: Winning edge provenance per ``edge_length_m`` entry.
+    edge_provenance: np.ndarray = field(
+        default_factory=lambda: np.zeros(0, dtype=object)
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -317,6 +323,84 @@ def assemble_graph(
     )
 
 
+def _select_winning_edges(
+    node_count: int,
+    edge_u: np.ndarray,
+    edge_v: np.ndarray,
+    edge_length_m: np.ndarray,
+    edge_mode: np.ndarray,
+    edge_provenance: np.ndarray,
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    csr_matrix,
+    np.ndarray,
+    np.ndarray,
+]:
+    """Keep the shortest edge per node pair with its own mode and provenance.
+
+    A pair may carry a road edge and a ferry edge.  The shortest edge wins and
+    its metadata travels with it; never inherit the ferry distance of the
+    losing edge.  Ties prefer the road edge so a ferry crossing is not charged
+    when a road connection of equal length exists.
+    """
+    u = np.asarray(edge_u, dtype=np.int64)
+    v = np.asarray(edge_v, dtype=np.int64)
+    lengths = np.asarray(edge_length_m, dtype=float)
+    modes = np.asarray(edge_mode, dtype=object)
+    provenance = np.asarray(edge_provenance, dtype=object)
+    if not (len(u) == len(v) == len(lengths) == len(modes) == len(provenance)):
+        raise RoadNetworkError("edge arrays must have equal length")
+    if len(lengths) == 0:
+        raise RoadNetworkError("cannot assemble an empty edge set")
+    if not np.isfinite(lengths).all() or (lengths <= 0.0).any():
+        raise RoadNetworkError("edge lengths must be finite and positive")
+    if (u < 0).any() or (v < 0).any():
+        raise RoadNetworkError("edge node indices must be non-negative")
+    if (u >= node_count).any() or (v >= node_count).any():
+        raise RoadNetworkError("edge node index exceeds graph node count")
+
+    frame = pd.DataFrame(
+        {
+            "u": np.minimum(u, v),
+            "v": np.maximum(u, v),
+            "length_m": lengths,
+            "mode": modes,
+            "provenance": provenance,
+        }
+    )
+    frame = frame.loc[frame["u"] != frame["v"]]
+    if frame.empty:
+        raise RoadNetworkError("every edge collapsed to a self-loop")
+    mode_priority = frame["mode"].map({"road": 0, "ferry": 1}).fillna(2)
+    frame = (
+        frame.assign(_mode_priority=mode_priority)
+        .sort_values(["u", "v", "length_m", "_mode_priority"], kind="stable")
+        .drop_duplicates(["u", "v"], keep="first")
+        .sort_values(["u", "v"])
+        .reset_index(drop=True)
+    )
+    matrix = csr_matrix(
+        (frame["length_m"].to_numpy(), (frame["u"].to_numpy(), frame["v"].to_numpy())),
+        shape=(node_count, node_count),
+    )
+    _components, labels = csgraph.connected_components(matrix, directed=False)
+    sizes = np.bincount(labels)
+    return (
+        frame["u"].to_numpy(dtype=np.int64),
+        frame["v"].to_numpy(dtype=np.int64),
+        frame["length_m"].to_numpy(dtype=float),
+        frame["mode"].to_numpy(dtype=object),
+        frame["provenance"].to_numpy(dtype=object),
+        matrix,
+        labels,
+        sizes,
+    )
+
+
 def _assemble_edge_matrix(
     node_xy: np.ndarray,
     edge_u: np.ndarray,
@@ -324,30 +408,17 @@ def _assemble_edge_matrix(
     edge_length_m: np.ndarray,
 ) -> tuple[csr_matrix, np.ndarray, np.ndarray]:
     """Build a deduplicated undirected matrix and component labels from edges."""
-    u = np.asarray(edge_u, dtype=np.int64)
-    v = np.asarray(edge_v, dtype=np.int64)
     lengths = np.asarray(edge_length_m, dtype=float)
-    if not (len(u) == len(v) == len(lengths)):
-        raise RoadNetworkError("edge arrays must have equal length")
-    if len(lengths) == 0:
-        raise RoadNetworkError("cannot assemble an empty edge set")
-    edges = pd.DataFrame(
-        {
-            "u": np.minimum(u, v),
-            "v": np.maximum(u, v),
-            "length_m": lengths,
-        }
+    modes = np.full(len(lengths), "road", dtype=object)
+    provenance = np.full(len(lengths), "nrn_roadseg", dtype=object)
+    *_, matrix, labels, sizes = _select_winning_edges(
+        len(node_xy),
+        edge_u,
+        edge_v,
+        lengths,
+        modes,
+        provenance,
     )
-    edges = edges.loc[edges["u"] != edges["v"]]
-    if edges.empty:
-        raise RoadNetworkError("every edge collapsed to a self-loop")
-    edges = edges.groupby(["u", "v"], as_index=False)["length_m"].min()
-    matrix = csr_matrix(
-        (edges["length_m"].to_numpy(), (edges["u"].to_numpy(), edges["v"].to_numpy())),
-        shape=(len(node_xy), len(node_xy)),
-    )
-    _components, labels = csgraph.connected_components(matrix, directed=False)
-    sizes = np.bincount(labels)
     return matrix, labels, sizes
 
 
@@ -356,8 +427,16 @@ def augment_graph_with_edges(
     edge_u: Sequence[int],
     edge_v: Sequence[int],
     edge_length_m: Sequence[float],
+    *,
+    edge_mode: Sequence[str] | None = None,
+    edge_provenance: Sequence[str] | None = None,
 ) -> RoadGraph:
-    """Return a new graph with extra undirected edges between existing nodes."""
+    """Return a new graph with extra undirected edges between existing nodes.
+
+    ``edge_mode``/``edge_provenance`` describe each new edge.  The winning
+    edge per node pair keeps its own metadata, so a ferry length is never
+    attached to a shorter road edge.
+    """
     new_u = np.asarray(edge_u, dtype=np.int64)
     new_v = np.asarray(edge_v, dtype=np.int64)
     new_lengths = np.asarray(edge_length_m, dtype=float)
@@ -365,25 +444,51 @@ def augment_graph_with_edges(
         raise RoadNetworkError("new edge arrays must have equal length")
     if len(new_lengths) == 0:
         return graph
-    if (new_u < 0).any() or (new_v < 0).any():
-        raise RoadNetworkError("new edge node indices must be non-negative")
-    node_count = len(graph.node_xy_m)
-    if (new_u >= node_count).any() or (new_v >= node_count).any():
-        raise RoadNetworkError("new edge node index exceeds graph node count")
-    if not np.isfinite(new_lengths).all() or (new_lengths <= 0.0).any():
-        raise RoadNetworkError("new edge lengths must be finite and positive")
+    new_modes = (
+        np.full(len(new_lengths), "road", dtype=object)
+        if edge_mode is None
+        else np.asarray(edge_mode, dtype=object)
+    )
+    new_provenance = (
+        np.full(len(new_lengths), "additional_road_edge", dtype=object)
+        if edge_provenance is None
+        else np.asarray(edge_provenance, dtype=object)
+    )
+    if len(new_modes) != len(new_lengths) or len(new_provenance) != len(new_lengths):
+        raise RoadNetworkError("new edge metadata must match the edge count")
+    existing_modes = graph.edge_mode
+    if len(existing_modes) != len(graph.edge_length_m):
+        existing_modes = np.full(len(graph.edge_length_m), "road", dtype=object)
+    existing_provenance = graph.edge_provenance
+    if len(existing_provenance) != len(graph.edge_length_m):
+        existing_provenance = np.full(
+            len(graph.edge_length_m), "nrn_roadseg", dtype=object
+        )
 
-    matrix, labels, sizes = _assemble_edge_matrix(
-        graph.node_xy_m,
+    (
+        winning_u,
+        winning_v,
+        winning_lengths,
+        winning_modes,
+        winning_provenance,
+        matrix,
+        labels,
+        sizes,
+    ) = _select_winning_edges(
+        len(graph.node_xy_m),
         np.concatenate([graph.edge_u, new_u]),
         np.concatenate([graph.edge_v, new_v]),
         np.concatenate([graph.edge_length_m, new_lengths]),
+        np.concatenate([existing_modes, new_modes]),
+        np.concatenate([existing_provenance, new_provenance]),
     )
     return replace(
         graph,
-        edge_u=np.concatenate([graph.edge_u, new_u]),
-        edge_v=np.concatenate([graph.edge_v, new_v]),
-        edge_length_m=np.concatenate([graph.edge_length_m, new_lengths]),
+        edge_u=winning_u,
+        edge_v=winning_v,
+        edge_length_m=winning_lengths,
+        edge_mode=winning_modes,
+        edge_provenance=winning_provenance,
         matrix=matrix,
         component_labels=labels,
         component_sizes=sizes,
@@ -439,6 +544,94 @@ def load_ferry_segments(nrn_zip: Path) -> list[FerrySegment]:
         shutil.rmtree(Path(gpkg_path).parent, ignore_errors=True)
 
 
+def ferry_pair_lookup(graph: Any) -> dict[tuple[int, int], float]:
+    """Map each winning undirected ferry edge to its length in metres.
+
+    ``graph.ferry_edge_*`` is built from the deduplicated winning edges, so a
+    pair appears at most once.  A duplicate means two ferry lengths compete for
+    one pair, which is an ambiguous graph state and fails closed.
+    """
+    lookup: dict[tuple[int, int], float] = {}
+    for u, v, length in zip(
+        getattr(graph, "ferry_edge_u", ()),
+        getattr(graph, "ferry_edge_v", ()),
+        getattr(graph, "ferry_edge_length_m", ()),
+    ):
+        key = (min(int(u), int(v)), max(int(u), int(v)))
+        if key in lookup:
+            raise RoadNetworkError(
+                "ferry edge pair appears more than once in the winning graph: "
+                f"{key}"
+            )
+        lookup[key] = float(length)
+    return lookup
+
+
+def ferry_path_metrics(
+    predecessors: Any,
+    source_node: int,
+    target_node: int,
+    ferry_pairs: Mapping[tuple[int, int], float],
+) -> tuple[float, int]:
+    """Trace one shortest-path predecessor chain and sum ferry edges."""
+    if source_node == target_node:
+        return 0.0, 0
+    chain = np.asarray(predecessors)
+    if chain.ndim == 2:
+        chain = chain[0]
+    ferry_m = 0.0
+    crossings = 0
+    node = int(target_node)
+    guard = 0
+    while node != source_node:
+        previous = int(chain[node])
+        if previous < 0:
+            raise RoadNetworkError(
+                f"shortest-path predecessor chain breaks before source {source_node}"
+            )
+        key = (min(previous, node), max(previous, node))
+        if key in ferry_pairs:
+            ferry_m += float(ferry_pairs[key])
+            crossings += 1
+        node = previous
+        guard += 1
+        if guard > len(chain):
+            raise RoadNetworkError("shortest-path predecessor chain contains a cycle")
+    return ferry_m, crossings
+
+
+def road_ferry_cost(
+    distance_km: float,
+    ferry_distance_km: float,
+    road_cost_per_m3_km: float,
+    *,
+    ferry_cost_per_m3_km: float = FERRY_FARE_CAD_M3_KM,
+) -> tuple[float, float, float]:
+    """Return ``(road_km, ferry_km, cost_cad_m3)`` for one path.
+
+    The road rate applies only to non-ferry kilometres; ferry kilometres carry
+    the explicit placeholder.  Both Stage A and Stage B use this helper so the
+    same shortest path is decomposed identically.
+    """
+    if not math.isfinite(distance_km) or distance_km < 0.0:
+        raise RoadNetworkError(f"invalid path distance {distance_km!r}")
+    if not math.isfinite(ferry_distance_km) or ferry_distance_km < 0.0:
+        raise RoadNetworkError(f"invalid ferry distance {ferry_distance_km!r}")
+    tolerance = max(1e-6, distance_km * 1e-9)
+    if ferry_distance_km > distance_km + tolerance:
+        raise RoadNetworkError(
+            f"ferry distance {ferry_distance_km} exceeds path distance "
+            f"{distance_km}"
+        )
+    ferry_km = min(ferry_distance_km, distance_km)
+    road_km = max(distance_km - ferry_km, 0.0)
+    return (
+        road_km,
+        ferry_km,
+        road_km * road_cost_per_m3_km + ferry_km * ferry_cost_per_m3_km,
+    )
+
+
 def _add_ferry_network(
     graph: RoadGraph,
     nrn_zip: Path,
@@ -458,6 +651,7 @@ def _add_ferry_network(
     ferry_u: list[int] = []
     ferry_v: list[int] = []
     ferry_lengths: list[float] = []
+    ferry_provenance: list[str] = []
     rejected: list[dict[str, Any]] = []
     for segment in segments:
         distances, indices = tree.query(
@@ -487,11 +681,14 @@ def _add_ferry_network(
         ferry_u.append(u)
         ferry_v.append(v)
         ferry_lengths.append(segment.length_m)
+        ferry_provenance.append("nrn_ferryseg")
         route_rows.append(
             {
                 "route_id": segment.ferry_id,
                 "name": segment.name,
                 "source": "nrn_ferryseg",
+                "u": u,
+                "v": v,
                 "distance_km": segment.length_m / 1000.0,
                 "crossing_min": segment.length_m / 1000.0 / FERRY_SPEED_KMH * 60.0,
                 "terminal_snap_m": float(np.max(distances)),
@@ -523,6 +720,19 @@ def _add_ferry_network(
             )
             continue
         u, v = int(indices[0]), int(indices[1])
+        if u == v:
+            route_rows.append(
+                {
+                    "route_id": route["route_id"],
+                    "name": route["name"],
+                    "source": "published_fallback",
+                    "distance_km": route["distance_km"],
+                    "crossing_min": route["crossing_min"],
+                    "terminal_snap_m": float(np.max(distances)),
+                    "status": "rejected_same_node",
+                }
+            )
+            continue
         covered = False
         for pair_u, pair_v in existing_pairs:
             same = (
@@ -556,12 +766,15 @@ def _add_ferry_network(
         ferry_u.append(u)
         ferry_v.append(v)
         ferry_lengths.append(float(route["distance_km"]) * 1000.0)
+        ferry_provenance.append("published_fallback_ferry")
         existing_pairs.append((u, v))
         route_rows.append(
             {
                 "route_id": route["route_id"],
                 "name": route["name"],
                 "source": "published_fallback",
+                "u": u,
+                "v": v,
                 "distance_km": route["distance_km"],
                 "crossing_min": route["crossing_min"],
                 "terminal_snap_m": float(np.max(distances)),
@@ -575,15 +788,43 @@ def _add_ferry_network(
             + (f"; NRN ferry layer error: {layer_error}" if layer_error else "")
         )
 
-    augmented = augment_graph_with_edges(graph, ferry_u, ferry_v, ferry_lengths)
+    augmented = augment_graph_with_edges(
+        graph,
+        ferry_u,
+        ferry_v,
+        ferry_lengths,
+        edge_mode=["ferry"] * len(ferry_lengths),
+        edge_provenance=ferry_provenance,
+    )
+    # Keep only ferry edges that won the per-pair shortest-edge contest.  A
+    # losing ferry must not contribute distance to a road edge's path.
+    winning_modes = np.asarray(augmented.edge_mode, dtype=object)
+    winning_ferry = winning_modes == "ferry"
+    winning_u = np.asarray(augmented.edge_u, dtype=np.int64)[winning_ferry]
+    winning_v = np.asarray(augmented.edge_v, dtype=np.int64)[winning_ferry]
+    winning_lengths = np.asarray(augmented.edge_length_m, dtype=float)[winning_ferry]
+    winning_pairs = {
+        (min(int(u), int(v)), max(int(u), int(v))): float(length)
+        for u, v, length in zip(winning_u, winning_v, winning_lengths)
+    }
+    for row in route_rows:
+        if "u" not in row:
+            continue
+        key = (min(int(row["u"]), int(row["v"])), max(int(row["u"]), int(row["v"])))
+        if key not in winning_pairs:
+            row["status"] = "shadowed_by_shorter_road_edge"
+        row.pop("u", None)
+        row.pop("v", None)
     summary = {
         "layer": NRN_FERRY_LAYER,
         "layer_status": "ok" if not layer_error else f"unusable: {layer_error}",
         "nrn_segments": len(segments),
-        "edges_added": len(ferry_lengths),
+        "candidate_edges": len(ferry_lengths),
+        "edges_added": int(winning_ferry.sum()),
+        "shadowed_edges": len(ferry_lengths) - int(winning_ferry.sum()),
         "nrn_edges": len(segments) - len(rejected) if segments else 0,
         "rejected": rejected,
-        "total_ferry_km": sum(ferry_lengths) / 1000.0,
+        "total_ferry_km": sum(winning_lengths) / 1000.0,
         "speed_kmh": FERRY_SPEED_KMH,
         "fare_placeholder_cad_m3_km": FERRY_FARE_CAD_M3_KM,
         "fare_basis": FERRY_FARE_BASIS,
@@ -591,9 +832,9 @@ def _add_ferry_network(
     }
     return replace(
         augmented,
-        ferry_edge_u=np.asarray(ferry_u, dtype=np.int64),
-        ferry_edge_v=np.asarray(ferry_v, dtype=np.int64),
-        ferry_edge_length_m=np.asarray(ferry_lengths, dtype=float),
+        ferry_edge_u=winning_u,
+        ferry_edge_v=winning_v,
+        ferry_edge_length_m=winning_lengths,
         ferry_routes=tuple(route_rows),
         ferry_summary=summary,
     )
@@ -709,6 +950,8 @@ def build_road_graph(
             timings_s=timings,
             peak_rss_mb=peak_mb,
             gpkg_member=member,
+            edge_mode=np.full(len(edge_length), "road", dtype=object),
+            edge_provenance=np.full(len(edge_length), "nrn_roadseg", dtype=object),
         )
     finally:
         shutil.rmtree(Path(gpkg_path).parent, ignore_errors=True)

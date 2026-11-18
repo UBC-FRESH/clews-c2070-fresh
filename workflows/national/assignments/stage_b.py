@@ -38,8 +38,12 @@ from . import units
 from .build_road_network import (
     DEFAULT_NRN_ZIP,
     FACILITY_SNAP_TOLERANCE_M,
+    FERRY_FARE_CAD_M3_KM,
     RoadGraph,
     build_road_graph,
+    ferry_pair_lookup,
+    ferry_path_metrics,
+    road_ferry_cost,
     snap_facilities,
 )
 from .residue import (
@@ -107,6 +111,8 @@ class StageBLink:
     distance_basis: str
     cost_basis: str
     evidence: str
+    ferry_distance_km: float = 0.0
+    ferry_cost_cad_m3: float = 0.0
 
     def to_row(self) -> dict[str, Any]:
         return {
@@ -114,6 +120,8 @@ class StageBLink:
             "recipient_facility": self.recipient_facility,
             "distance_km": self.distance_km,
             "cost_cad_m3": self.cost_cad_m3,
+            "ferry_distance_km": self.ferry_distance_km,
+            "ferry_cost_cad_m3": self.ferry_cost_cad_m3,
             "path_confidence": self.path_confidence,
             "source_coord_source": self.source_coord_source,
             "recipient_coord_source": self.recipient_coord_source,
@@ -326,7 +334,8 @@ def build_stage_b_links(
 
     route_tables = _load_route_tables(repo_root)
     tl_cache: dict[str, dict[str, float]] = {}
-    source_distances: dict[int, np.ndarray] = {}
+    source_paths: dict[int, tuple[np.ndarray, np.ndarray]] = {}
+    ferry_pairs = ferry_pair_lookup(graph)
     links: list[StageBLink] = []
     status_by_recipient: dict[str, str] = {}
     for recipient in recipients:
@@ -349,17 +358,23 @@ def build_stage_b_links(
                 if source_component != recipient_component:
                     continue
                 source_node = int(source_row["node_index"])
-                if source_node not in source_distances:
-                    source_distances[source_node] = csgraph.dijkstra(
+                if source_node not in source_paths:
+                    source_paths[source_node] = csgraph.dijkstra(
                         graph.matrix,
                         directed=False,
                         indices=[source_node],
-                    )[0]
-                distance_km = (
-                    float(source_distances[source_node][recipient_node]) / 1000.0
-                )
+                        return_predecessors=True,
+                    )
+                distances, predecessors = source_paths[source_node]
+                distance_km = float(distances[0][recipient_node]) / 1000.0
                 if not math.isfinite(distance_km) or distance_km < 0.0:
                     continue
+                ferry_m, ferry_crossings = ferry_path_metrics(
+                    predecessors,
+                    source_node,
+                    recipient_node,
+                    ferry_pairs,
+                )
                 links.append(
                     _make_link(
                         source,
@@ -373,15 +388,18 @@ def build_stage_b_links(
                         recipient_component=recipient_component,
                         network_source=graph.gpkg_member,
                         distance_basis=(
-                            "nrn_bc_road_graph_shortest_path_epsg3005;"
+                            "nrn_bc_road_graph_plus_ferry_shortest_path_epsg3005;"
                             f"source_node={source_node};recipient_node={recipient_node}"
                         ),
                         evidence=(
                             "nrn_bc_real_road_network;"
                             f"snap_source_m={float(source_row['snap_m']):.3f};"
                             f"snap_recipient_m={float(recipient_row['snap_m']):.3f};"
+                            f"ferry_km={ferry_m / 1000.0:.3f};"
+                            f"ferry_crossings={ferry_crossings};"
                             "route_capacity_absent"
                         ),
+                        ferry_distance_km=ferry_m / 1000.0,
                     )
                 )
                 linked = True
@@ -445,6 +463,7 @@ def _make_link(
     network_source: str,
     distance_basis: str,
     evidence: str,
+    ferry_distance_km: float = 0.0,
 ) -> StageBLink:
     if distance_km < 0.0 or not math.isfinite(distance_km):
         raise StageBError(
@@ -453,11 +472,19 @@ def _make_link(
         )
     if distance_km == 0.0:
         evidence = evidence + ";zero_distance_shared_road_node"
+    road_km, ferry_km, cost = road_ferry_cost(
+        distance_km, ferry_distance_km, cost_per_m3_km
+    )
+    ferry_cost = ferry_km * FERRY_FARE_CAD_M3_KM
+    evidence = (
+        f"{evidence};road_km={road_km:.3f};ferry_km={ferry_km:.3f};"
+        f"ferry_cost_cad_m3={ferry_cost:.6f}"
+    )
     return StageBLink(
         source_facility=source.facility_id,
         recipient_facility=recipient.facility_id,
         distance_km=distance_km,
-        cost_cad_m3=distance_km * cost_per_m3_km,
+        cost_cad_m3=cost,
         path_confidence=path_confidence,
         source_coord_source=source.coord_source,
         recipient_coord_source=recipient.coord_source,
@@ -469,10 +496,13 @@ def _make_link(
         distance_basis=distance_basis,
         cost_basis=(
             "stage_a_transporter_rates:BC_residue_truck;"
+            "ferry_placeholder:0.03_cad_m3_km;"
             "fuel_plus_operating_per_hour_over_speed;"
             "vehicle_capacity=25_bdt;density=0.45_odt_m3;no_transload"
         ),
         evidence=evidence,
+        ferry_distance_km=ferry_km,
+        ferry_cost_cad_m3=ferry_cost,
     )
 
 
@@ -506,6 +536,8 @@ class Allocation:
     net_contribution_cad: float
     path_confidence: str
     evidence: str
+    ferry_distance_km: float = 0.0
+    ferry_cost_cad_m3: float = 0.0
 
     def to_row(self) -> dict[str, Any]:
         return {
@@ -519,6 +551,8 @@ class Allocation:
             "volume_m3": self.volume_m3,
             "moisture_wet_basis": self.moisture_wet_basis,
             "distance_km": self.distance_km,
+            "ferry_distance_km": self.ferry_distance_km,
+            "ferry_cost_cad_m3": self.ferry_cost_cad_m3,
             "transport_cost_cad_m3": self.transport_cost_cad_m3,
             "transport_cost_cad": self.transport_cost_cad,
             "processing_cost_cad_per_input_odt": (
@@ -841,10 +875,13 @@ def solve_residue_allocation(
                     f"residue_ratio={supply.ratio_odt_per_m3_log:.12g} odt/m3;"
                     f"transport={link.distance_km:.3f} km @ "
                     f"{link.cost_cad_m3:.6f} CAD/m3;"
+                    f"ferry_km={link.ferry_distance_km:.3f};"
                     f"processing={demand_row.operating_cost_cad_per_input_odt:.6f}"
                     " CAD/odt_in;"
                     f"price_status={demand_row.price_status}"
                 ),
+                ferry_distance_km=link.ferry_distance_km,
+                ferry_cost_cad_m3=link.ferry_cost_cad_m3,
             )
         )
 
@@ -1193,6 +1230,30 @@ def validate_stage_b(
                 f"{item.source_facility}->{item.recipient_facility}: cost "
                 f"{item.transport_cost_cad_m3} != link {link.cost_cad_m3}"
             )
+        if (
+            not _finite(link.ferry_distance_km)
+            or link.ferry_distance_km < 0.0
+            or link.ferry_distance_km > link.distance_km + tolerance
+        ):
+            transport_errors.append(
+                f"{item.source_facility}->{item.recipient_facility}: "
+                f"bad ferry distance {link.ferry_distance_km}"
+            )
+        if not _close(
+            link.ferry_cost_cad_m3,
+            link.ferry_distance_km * FERRY_FARE_CAD_M3_KM,
+            tolerance,
+        ):
+            transport_errors.append(
+                f"{item.source_facility}->{item.recipient_facility}: ferry "
+                f"cost {link.ferry_cost_cad_m3} != placeholder on "
+                f"{link.ferry_distance_km} km"
+            )
+        if not _close(item.ferry_distance_km, link.ferry_distance_km, tolerance):
+            transport_errors.append(
+                f"{item.source_facility}->{item.recipient_facility}: "
+                "assignment ferry distance does not match its link"
+            )
         if link.path_confidence not in {
             "real_road_network",
             "real_road_network_source_proxy_location",
@@ -1323,6 +1384,8 @@ def validate_stage_b(
             item.odt,
             item.volume_m3,
             item.distance_km,
+            item.ferry_distance_km,
+            item.ferry_cost_cad_m3,
             item.transport_cost_cad,
             item.processing_cost_cad,
             item.product_revenue_cad,
@@ -2153,6 +2216,8 @@ def run_stage_b(
             "volume_m3",
             "moisture_wet_basis",
             "distance_km",
+            "ferry_distance_km",
+            "ferry_cost_cad_m3",
             "transport_cost_cad_m3",
             "transport_cost_cad",
             "processing_cost_cad_per_input_odt",

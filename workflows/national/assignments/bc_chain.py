@@ -39,7 +39,10 @@ from .build_road_network import (
     FERRY_FARE_CAD_M3_KM,
     METRIC_CRS,
     build_road_graph,
+    road_ferry_cost,
 )
+from .build_road_network import ferry_pair_lookup as _ferry_pair_lookup
+from .build_road_network import ferry_path_metrics as _ferry_path_metrics
 from .facilities import build_facility_capacities, build_facility_table
 from .fixtures import (
     _GRADE_SORTS,
@@ -665,49 +668,6 @@ def _zone_node_snap(
     return indices, distances
 
 
-def _ferry_pair_lookup(graph: Any) -> dict[tuple[int, int], float]:
-    """Map an undirected node pair to its ferry length in metres."""
-    lookup: dict[tuple[int, int], float] = {}
-    for u, v, length in zip(
-        getattr(graph, "ferry_edge_u", ()),
-        getattr(graph, "ferry_edge_v", ()),
-        getattr(graph, "ferry_edge_length_m", ()),
-    ):
-        key = (min(int(u), int(v)), max(int(u), int(v)))
-        lookup[key] = max(lookup.get(key, 0.0), float(length))
-    return lookup
-
-
-def _ferry_path_metrics(
-    predecessors: np.ndarray,
-    source_node: int,
-    target_node: int,
-    ferry_pairs: Mapping[tuple[int, int], float],
-) -> tuple[float, int]:
-    """Trace one shortest-path predecessor chain and sum ferry edges."""
-    if source_node == target_node:
-        return 0.0, 0
-    ferry_m = 0.0
-    crossings = 0
-    node = int(target_node)
-    guard = 0
-    while node != source_node:
-        previous = int(predecessors[0, node])
-        if previous < 0:
-            raise BcChainError(
-                f"shortest-path predecessor chain breaks before source {source_node}"
-            )
-        key = (min(previous, node), max(previous, node))
-        if key in ferry_pairs:
-            ferry_m += float(ferry_pairs[key])
-            crossings += 1
-        node = previous
-        guard += 1
-        if guard > len(predecessors[0]):
-            raise BcChainError("shortest-path predecessor chain contains a cycle")
-    return ferry_m, crossings
-
-
 def build_zone_transport_links(
     repo_root: Path,
     facilities: Sequence[FacilityCapacity],
@@ -805,10 +765,12 @@ def build_zone_transport_links(
                 ferry_m, ferry_crossings = _ferry_path_metrics(
                     predecessors[zone_node], origin_nodes[zone_node], node_index, ferry_pairs
                 )
-                ferry_km = min(ferry_m / 1000.0, distance_km)
-                road_km = max(distance_km - ferry_km, 0.0)
+                _road_km, ferry_km, cost = road_ferry_cost(
+                    distance_km,
+                    ferry_m / 1000.0,
+                    rate.cost_per_m3_km(density),
+                )
                 ferry_cost = ferry_km * FERRY_FARE_CAD_M3_KM
-                cost = road_km * rate.cost_per_m3_km(density) + ferry_cost
                 links.append(
                     TransportLink(
                         link_id=f"{zone_node}->{facility_id}::{offer.grade_id}",

@@ -39,10 +39,12 @@ from typing import Any
 import pandas as pd
 import pulp
 
+from .build_road_network import FERRY_FARE_CAD_M3_KM, road_ferry_cost
 from .residue import (
     CONSUMER_CLASS_BY_RESIDUE,
     DENSITY_ODT_M3,
 )
+from .transport import load_road_rate_inputs, road_rate_for_grade
 
 __all__ = [
     "CooptError",
@@ -65,6 +67,9 @@ _POSITIVE = 1e-9
 HARVEST_TYPES_BY_CLASS = {"PEL": "sawdust_shavings", "BIO": "hogfuel"}
 HARVEST_SOURCE_TYPE = "harvest_residue"
 ALLOCATABLE_TYPES = ("chips", "sawdust_shavings", "hogfuel")
+FALLBACK_PATH_CONFIDENCE = "ffcm_route_fallback_road"
+ACCEPTED_PATH_CONFIDENCE = ("real_road_network",)
+FALLBACK_ACCEPTED_PATH_CONFIDENCE = (*ACCEPTED_PATH_CONFIDENCE, FALLBACK_PATH_CONFIDENCE)
 
 
 class CooptError(RuntimeError):
@@ -83,6 +88,11 @@ class CooptSource:
     moisture_wet_basis: float
     baseline_recipient: str
     evidence: str
+    stage_a_assigned_odt: float = 0.0
+
+    @property
+    def unassigned_by_stage_a_odt(self) -> float:
+        return max(0.0, self.odt - self.stage_a_assigned_odt)
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +120,16 @@ class CooptLink:
     cost_cad_m3: float
     path_confidence: str
     evidence: str
+    ferry_distance_km: float = 0.0
+    ferry_cost_cad_m3: float = 0.0
+
+    @property
+    def road_distance_km(self) -> float:
+        return max(0.0, self.distance_km - self.ferry_distance_km)
+
+    @property
+    def road_cost_cad_m3(self) -> float:
+        return max(0.0, self.cost_cad_m3 - self.ferry_cost_cad_m3)
 
     def transport_per_odt(self) -> float:
         return self.cost_cad_m3 / DENSITY_ODT_M3
@@ -159,6 +179,7 @@ class CooptResult:
     objective_mode: str
     raw_solver_objective_cad: float
     excluded_pairs: tuple[dict[str, str], ...]
+    accepted_path_confidence: tuple[str, ...] = ACCEPTED_PATH_CONFIDENCE
 
     @property
     def assigned_odt(self) -> float:
@@ -229,51 +250,113 @@ def _finite(value: Any, name: str) -> float:
     return number
 
 
-def _build_harvest_sources(stage_a: pd.DataFrame, period: str) -> list[CooptSource]:
+def _build_harvest_sources(
+    stage_a: pd.DataFrame,
+    supply_by_zone: pd.DataFrame,
+    period: str,
+) -> list[CooptSource]:
+    """Build zonal harvest sources from recoverable residue, not Stage A logs.
+
+    Stage A logs stay fixed.  The co-opt may re-home any recoverable residue
+    that Stage A left unassigned, so the source quantity is the period-specific
+    ``residue_recoverable_odt`` offer in ``bc_supply_by_zone.csv``.  Stage A's
+    assigned residue is carried separately for reporting and is required to be
+    no greater than the recoverable total.
+    """
     _require_columns(
         stage_a,
         ("period", "zone", "facility_id", "grade", "volume_m3", "supply_id"),
         "bc_stage_a_assignment.csv",
     )
-    residue = stage_a[
-        (stage_a["period"].astype(str) == period)
-        & (stage_a["grade"].astype(str) == "RESIDUE")
+    _require_columns(
+        supply_by_zone,
+        ("zone", "year", "product", "residue_recoverable_odt"),
+        "bc_supply_by_zone.csv",
+    )
+    recoverable = supply_by_zone[
+        (supply_by_zone["year"].astype(str) == period)
+        & (supply_by_zone["product"].astype(str).str.lower() == "residue")
     ].copy()
-    if residue.empty:
-        raise CooptError(f"Stage A has no RESIDUE rows for {period}")
-    grouped = (
-        residue.groupby(["zone", "facility_id"], dropna=False)
+    if recoverable.empty:
+        raise CooptError(f"bc_supply_by_zone has no residue rows for {period}")
+    recoverable["residue_recoverable_odt"] = pd.to_numeric(
+        recoverable["residue_recoverable_odt"], errors="coerce"
+    )
+    if recoverable["residue_recoverable_odt"].isna().any():
+        raise CooptError(f"bc_supply_by_zone has non-numeric recoverable odt for {period}")
+    zonal = (
+        recoverable.groupby("zone", dropna=False)
         .agg(
-            volume_m3=("volume_m3", "sum"),
-            supply_rows=("supply_id", "nunique"),
+            odt=("residue_recoverable_odt", "sum"),
+            offer_rows=("residue_recoverable_odt", "size"),
+            species=("species", "nunique"),
         )
         .reset_index()
     )
+
+    stage_residue = stage_a[
+        (stage_a["period"].astype(str) == period)
+        & (stage_a["grade"].astype(str) == "RESIDUE")
+    ].copy()
+    if stage_residue.empty:
+        raise CooptError(f"Stage A has no RESIDUE rows for {period}")
+    stage_residue["volume_m3"] = pd.to_numeric(
+        stage_residue["volume_m3"], errors="coerce"
+    )
+    if stage_residue["volume_m3"].isna().any():
+        raise CooptError(f"Stage A has non-numeric RESIDUE volume for {period}")
+    stage_residue["odt"] = stage_residue["volume_m3"] * DENSITY_ODT_M3
+    assigned_by_zone = (
+        stage_residue.groupby("zone", dropna=False)["odt"].sum().to_dict()
+    )
+    assigned_by_facility = (
+        stage_residue.groupby(["zone", "facility_id"], dropna=False)["odt"]
+        .sum()
+        .to_dict()
+    )
+
     sources: list[CooptSource] = []
-    for row in grouped.itertuples(index=False):
-        volume = _finite(row.volume_m3, "Stage A residue volume_m3")
-        if volume <= 0.0:
+    for row in zonal.itertuples(index=False):
+        zone = str(row.zone)
+        odt = _finite(row.odt, f"recoverable residue odt for zone {zone}")
+        if odt <= 0.0:
             continue
+        assigned = float(assigned_by_zone.get(zone, 0.0))
+        if assigned > odt + max(_TOLERANCE, odt * _RELATIVE_TOLERANCE):
+            raise CooptError(
+                f"Stage A assigned {assigned:.6f} odt in zone {zone}, above "
+                f"recoverable {odt:.6f} odt"
+            )
+        baseline_rows = [
+            (facility, value)
+            for (facility_zone, facility), value in assigned_by_facility.items()
+            if str(facility_zone) == zone and value > 0.0
+        ]
+        baseline = (
+            max(baseline_rows, key=lambda item: item[1])[0] if baseline_rows else ""
+        )
         sources.append(
             CooptSource(
-                source_id=f"HARVEST::{row.zone}::{row.facility_id}",
+                source_id=f"HARVEST::{zone}",
                 source_kind="harvest_residue",
-                source_facility=str(row.zone),
-                zone=str(row.zone),
+                source_facility=zone,
+                zone=zone,
                 residue_type=HARVEST_SOURCE_TYPE,
-                odt=volume * DENSITY_ODT_M3,
-                volume_m3=volume,
+                odt=odt,
+                volume_m3=odt / DENSITY_ODT_M3,
                 moisture_wet_basis=0.45,
-                baseline_recipient=str(row.facility_id),
+                baseline_recipient=str(baseline),
                 evidence=(
-                    "stage_a_2028_RESIDUE;"
-                    f"zone={row.zone};baseline_facility={row.facility_id};"
-                    f"supply_rows={int(row.supply_rows)}"
+                    f"bc_supply_by_zone_{period}_recoverable;zone={zone};"
+                    f"recoverable_odt={odt:.6f};stage_a_assigned_odt={assigned:.6f};"
+                    f"stage_a_unassigned_odt={max(0.0, odt - assigned):.6f};"
+                    f"offer_rows={int(row.offer_rows)};species={int(row.species)}"
                 ),
+                stage_a_assigned_odt=assigned,
             )
         )
     if not sources:
-        raise CooptError("no positive Stage A harvest-residue source survived")
+        raise CooptError("no positive recoverable harvest-residue source survived")
     return sources
 
 
@@ -391,21 +474,105 @@ def _build_recipients(stage_b_demand: pd.DataFrame) -> list[CooptRecipient]:
     return rows
 
 
+def _link_cost_reconciles(
+    distance_km: float,
+    ferry_distance_km: float,
+    cost_cad_m3: float,
+    ferry_cost_cad_m3: float,
+    road_cost_per_m3_km: float,
+) -> tuple[float, float, float]:
+    """Return the canonical ``(road_km, ferry_km, cost)`` or fail closed."""
+    road_km, ferry_km, expected_cost = road_ferry_cost(
+        distance_km, ferry_distance_km, road_cost_per_m3_km
+    )
+    expected_ferry_cost = ferry_km * FERRY_FARE_CAD_M3_KM
+    tolerance = max(_TOLERANCE, abs(expected_cost) * 1e-6)
+    if abs(cost_cad_m3 - expected_cost) > tolerance:
+        raise CooptError(
+            f"transport link cost {cost_cad_m3:.9f} does not match "
+            f"road_ferry_cost {expected_cost:.9f} on {distance_km:.6f} km "
+            f"with {ferry_km:.6f} ferry km"
+        )
+    if abs(ferry_cost_cad_m3 - expected_ferry_cost) > tolerance:
+        raise CooptError(
+            f"ferry cost {ferry_cost_cad_m3:.9f} does not match placeholder "
+            f"{expected_ferry_cost:.9f} on {ferry_km:.6f} ferry km"
+        )
+    return road_km, ferry_km, expected_cost
+
+
+def _require_text(value: object, name: str) -> str:
+    text = "" if value is None else str(value).strip()
+    if not text or text.lower() in {"nan", "none", "null"}:
+        raise CooptError(f"{name} is missing; provenance cannot be defaulted")
+    return text
+
+
+def _coopt_link(
+    row: object,
+    *,
+    source_id: str,
+    recipient_facility: str,
+    road_cost_per_m3_km: float,
+    label: str,
+) -> CooptLink:
+    distance = _finite(row.distance_km, f"{label} distance")
+    ferry = _finite(row.ferry_distance_km, f"{label} ferry distance")
+    cost = _finite(row.cost_cad_m3, f"{label} cost")
+    ferry_cost = _finite(row.ferry_cost_cad_m3, f"{label} ferry cost")
+    _road_km, ferry_km, canonical_cost = _link_cost_reconciles(
+        distance, ferry, cost, ferry_cost, road_cost_per_m3_km
+    )
+    return CooptLink(
+        source_id=source_id,
+        recipient_facility=recipient_facility,
+        distance_km=distance,
+        cost_cad_m3=canonical_cost,
+        path_confidence=_require_text(
+            row.path_confidence, f"{label} path_confidence"
+        ),
+        evidence=_require_text(row.evidence, f"{label} evidence"),
+        ferry_distance_km=ferry_km,
+        ferry_cost_cad_m3=ferry_km * FERRY_FARE_CAD_M3_KM,
+    )
+
+
 def _build_links(
     stage_a_links: pd.DataFrame,
     stage_b_links: pd.DataFrame,
     harvest_sources: Sequence[CooptSource],
     sawmill_sources: Sequence[CooptSource],
     recipients: Sequence[CooptRecipient],
+    *,
+    road_cost_per_m3_km: float,
 ) -> list[CooptLink]:
     _require_columns(
         stage_a_links,
-        ("origin", "destination", "grade_id", "distance_km", "cost_cad_m3"),
+        (
+            "origin",
+            "destination",
+            "grade_id",
+            "distance_km",
+            "cost_cad_m3",
+            "ferry_distance_km",
+            "ferry_cost_cad_m3",
+            "path_confidence",
+            "evidence",
+        ),
         "bc_stage_a_transport_links.csv",
     )
     _require_columns(
         stage_b_links,
-        ("source_facility", "recipient_facility", "distance_km", "cost_cad_m3"),
+        (
+            "source_facility",
+            "recipient_facility",
+            "distance_km",
+            "cost_cad_m3",
+            "ferry_distance_km",
+            "ferry_cost_cad_m3",
+            "path_confidence",
+            "evidence",
+        ),
         "stage_b/stage_b_transport_links.csv",
     )
     recipient_ids = {recipient.facility_id for recipient in recipients}
@@ -418,13 +585,12 @@ def _build_links(
     links: list[CooptLink] = []
     harvest_by_zone: dict[str, list[CooptLink]] = defaultdict(list)
     for row in harvest.itertuples(index=False):
-        link = CooptLink(
+        link = _coopt_link(
+            row,
             source_id="",
             recipient_facility=str(row.destination),
-            distance_km=_finite(row.distance_km, "Stage A link distance"),
-            cost_cad_m3=_finite(row.cost_cad_m3, "Stage A link cost"),
-            path_confidence=str(getattr(row, "path_confidence", "real_road_network")),
-            evidence=str(getattr(row, "evidence", "stage_a_residue_link")),
+            road_cost_per_m3_km=road_cost_per_m3_km,
+            label="Stage A residue link",
         )
         harvest_by_zone[str(row.origin)].append(link)
     for source in harvest_sources:
@@ -437,6 +603,8 @@ def _build_links(
                     cost_cad_m3=link.cost_cad_m3,
                     path_confidence=link.path_confidence,
                     evidence=link.evidence,
+                    ferry_distance_km=link.ferry_distance_km,
+                    ferry_cost_cad_m3=link.ferry_cost_cad_m3,
                 )
             )
     sawmill_ids = {source.source_facility for source in sawmill_sources}
@@ -446,17 +614,22 @@ def _build_links(
     ]
     for row in sawmill.itertuples(index=False):
         links.append(
-            CooptLink(
+            _coopt_link(
+                row,
                 source_id=f"SAWMILL::{row.source_facility}::*",
                 recipient_facility=str(row.recipient_facility),
-                distance_km=_finite(row.distance_km, "Stage B link distance"),
-                cost_cad_m3=_finite(row.cost_cad_m3, "Stage B link cost"),
-                path_confidence=str(row.path_confidence),
-                evidence=str(row.evidence),
+                road_cost_per_m3_km=road_cost_per_m3_km,
+                label="Stage B residue link",
             )
         )
     if not links:
         raise CooptError("no co-optimisation transport link survived")
+    seen: set[tuple[str, str]] = set()
+    for link in links:
+        key = (link.source_id, link.recipient_facility)
+        if key in seen:
+            raise CooptError(f"duplicate transport link for {key}")
+        seen.add(key)
     return links
 
 
@@ -471,16 +644,27 @@ def build_coopt_inputs(
     root = Path(repo_root)
     bc = Path(bc_dir) if bc_dir else root / DEFAULT_BC_DIR
     stage_a = _read_csv(bc / "bc_stage_a_assignment.csv")
+    supply_by_zone = _read_csv(bc / "bc_supply_by_zone.csv")
     stage_b_supply = _read_csv(bc / "stage_b" / "residue_supply.csv")
     stage_b_demand = _read_csv(bc / "stage_b" / "residue_demand.csv")
     stage_a_links = _read_csv(bc / "bc_stage_a_transport_links.csv")
     stage_b_links = _read_csv(bc / "stage_b" / "stage_b_transport_links.csv")
 
-    harvest = _build_harvest_sources(stage_a, period)
+    rates, capacities = load_road_rate_inputs(root)
+    road_rate = road_rate_for_grade(
+        rates, capacities, grade_id="RESIDUE"
+    ).cost_per_m3_km(DENSITY_ODT_M3)
+
+    harvest = _build_harvest_sources(stage_a, supply_by_zone, period)
     sawmill = _build_sawmill_sources(stage_b_supply)
     recipients = _build_recipients(stage_b_demand)
     links = _build_links(
-        stage_a_links, stage_b_links, harvest, sawmill, recipients
+        stage_a_links,
+        stage_b_links,
+        harvest,
+        sawmill,
+        recipients,
+        road_cost_per_m3_km=road_rate,
     )
     sources = harvest + sawmill
     return sources, recipients, links, []
@@ -499,28 +683,51 @@ def _link_key(link: CooptLink, source: CooptSource) -> tuple[str, str]:
     return (source.source_id, link.recipient_facility)
 
 
+def _link_maps(
+    links: Sequence[CooptLink],
+    accepted_path_confidence: Sequence[str],
+) -> tuple[
+    dict[tuple[str, str], CooptLink],
+    dict[tuple[str, str], CooptLink],
+    dict[tuple[str, str], CooptLink],
+    dict[tuple[str, str], CooptLink],
+]:
+    accepted = set(accepted_path_confidence)
+    direct_all: dict[tuple[str, str], CooptLink] = {}
+    direct_accepted: dict[tuple[str, str], CooptLink] = {}
+    sawmill_all: dict[tuple[str, str], CooptLink] = {}
+    sawmill_accepted: dict[tuple[str, str], CooptLink] = {}
+    for link in links:
+        if link.source_id.endswith("::*"):
+            facility = link.source_id.split("::")[1]
+            key = (facility, link.recipient_facility)
+            if key in sawmill_all:
+                raise CooptError(f"duplicate sawmill transport link for {key}")
+            sawmill_all[key] = link
+            if link.path_confidence in accepted:
+                sawmill_accepted[key] = link
+            continue
+        key = (link.source_id, link.recipient_facility)
+        if key in direct_all:
+            raise CooptError(f"duplicate transport link for {key}")
+        direct_all[key] = link
+        if link.path_confidence in accepted:
+            direct_accepted[key] = link
+    return direct_all, direct_accepted, sawmill_all, sawmill_accepted
+
+
 def _feasible_pairs(
     sources: Sequence[CooptSource],
     recipients: Sequence[CooptRecipient],
     links: Sequence[CooptLink],
+    accepted_path_confidence: Sequence[str] = ACCEPTED_PATH_CONFIDENCE,
 ) -> tuple[
     dict[tuple[str, str, str], tuple[CooptSource, CooptRecipient, str, CooptLink]],
     tuple[dict[str, str], ...],
 ]:
-    {recipient.facility_id: recipient for recipient in recipients}
-    link_by_pair: dict[tuple[str, str], CooptLink] = {}
-    for link in links:
-        if link.source_id.endswith("::*"):
-            # Sawmill links are type-neutral; key them by facility source later.
-            continue
-        link_by_pair[(link.source_id, link.recipient_facility)] = link
-    sawmill_links: dict[tuple[str, str], CooptLink] = {}
-    for link in links:
-        if not link.source_id.endswith("::*"):
-            continue
-        facility = link.source_id.split("::")[1]
-        sawmill_links[(facility, link.recipient_facility)] = link
-
+    direct_all, direct_accepted, sawmill_all, sawmill_accepted = _link_maps(
+        links, accepted_path_confidence
+    )
     feasible: dict[
         tuple[str, str, str], tuple[CooptSource, CooptRecipient, str, CooptLink]
     ] = {}
@@ -529,10 +736,7 @@ def _feasible_pairs(
         if source.odt <= 0.0:
             continue
         if source.source_kind == "harvest_residue":
-            candidate_types = tuple(
-                residue_type
-                for residue_type in HARVEST_TYPES_BY_CLASS.values()
-            )
+            candidate_types = tuple(HARVEST_TYPES_BY_CLASS.values())
         else:
             candidate_types = (source.residue_type,)
         for recipient in recipients:
@@ -541,25 +745,52 @@ def _feasible_pairs(
                 if expected_class is None or recipient.facility_class != expected_class:
                     continue
                 if source.source_kind == "harvest_residue":
-                    link = link_by_pair.get((source.source_id, recipient.facility_id))
+                    key = (source.source_id, recipient.facility_id)
+                    candidate = direct_all.get(key)
+                    link = direct_accepted.get(key)
                 else:
-                    link = link_by_pair.get(
+                    key = (source.source_facility, recipient.facility_id)
+                    candidate = direct_all.get(
                         (source.source_id, recipient.facility_id)
-                    ) or sawmill_links.get(
-                        (source.source_facility, recipient.facility_id)
-                    )
-                if link is None:
+                    ) or sawmill_all.get(key)
+                    link = direct_accepted.get(
+                        (source.source_id, recipient.facility_id)
+                    ) or sawmill_accepted.get(key)
+                if candidate is None:
                     excluded.append(
                         {
                             "source_id": source.source_id,
                             "residue_type": residue_type,
                             "recipient_facility": recipient.facility_id,
+                            "path_confidence": "",
+                            "source_odt": f"{source.odt:.6f}",
                             "reason": "no_transport_link",
                         }
                     )
                     continue
-                key = (source.source_id, residue_type, recipient.facility_id)
-                feasible[key] = (source, recipient, residue_type, link)
+                if link is None:
+                    reason = (
+                        "non_nrn_fallback"
+                        if candidate.path_confidence == FALLBACK_PATH_CONFIDENCE
+                        else "unaccepted_provenance"
+                    )
+                    excluded.append(
+                        {
+                            "source_id": source.source_id,
+                            "residue_type": residue_type,
+                            "recipient_facility": recipient.facility_id,
+                            "path_confidence": candidate.path_confidence,
+                            "source_odt": f"{source.odt:.6f}",
+                            "reason": reason,
+                        }
+                    )
+                    continue
+                feasible[(source.source_id, residue_type, recipient.facility_id)] = (
+                    source,
+                    recipient,
+                    residue_type,
+                    link,
+                )
     if not feasible:
         raise CooptError("no eligible source-recipient-residue pair has a link")
     return feasible, tuple(excluded)
@@ -572,6 +803,7 @@ def solve_coopt(
     *,
     period: str = DEFAULT_PERIOD,
     objective_mode: str = "service_max_then_profit",
+    allow_fallback_links: bool = False,
 ) -> CooptResult:
     """Solve the shared-capacity residue LP and return allocations.
 
@@ -584,7 +816,17 @@ def solve_coopt(
     """
     if objective_mode not in {"profit_max", "service_max_then_profit"}:
         raise CooptError(f"unknown objective mode {objective_mode!r}")
-    feasible, excluded = _feasible_pairs(sources, recipients, links)
+    accepted_path_confidence = (
+        FALLBACK_ACCEPTED_PATH_CONFIDENCE
+        if allow_fallback_links
+        else ACCEPTED_PATH_CONFIDENCE
+    )
+    feasible, excluded = _feasible_pairs(
+        sources,
+        recipients,
+        links,
+        accepted_path_confidence=accepted_path_confidence,
+    )
 
     def build_problem() -> tuple[
         pulp.LpProblem, dict[tuple[str, str, str], pulp.LpVariable]
@@ -657,9 +899,17 @@ def solve_coopt(
                 f"status={first_status}"
             )
         assigned_floor = float(pulp.value(first.objective) or 0.0)
+        # CBC can return a first-stage objective a few 1e-3 odt above the
+        # physical source total.  The floor must stay within source balance or
+        # the second stage is falsely infeasible.
+        source_total = math.fsum(
+            source.odt for source in sources if source.odt > 0.0
+        )
+        assigned_floor = min(assigned_floor, source_total)
         problem, variables = build_problem()
+        floor_tolerance = max(_TOLERANCE, assigned_floor * 1e-9)
         problem += (
-            pulp.lpSum(variables.values()) >= assigned_floor - 1e-6,
+            pulp.lpSum(variables.values()) >= assigned_floor - floor_tolerance,
             "assigned_total_floor",
         )
         problem += net_expression(variables)
@@ -698,6 +948,7 @@ def solve_coopt(
         objective_mode=objective_mode,
         raw_solver_objective_cad=raw_objective,
         excluded_pairs=excluded,
+        accepted_path_confidence=accepted_path_confidence,
     )
 
 
@@ -783,16 +1034,34 @@ def validate_coopt(result: CooptResult) -> CooptValidation:
         else "; ".join(sorted(set(eligibility_detail))),
     )
 
-    link_ok = all(
-        math.isfinite(item.link.cost_cad_m3)
-        and item.link.cost_cad_m3 >= 0.0
-        and math.isfinite(item.link.distance_km)
-        for item in result.allocations
-    )
+    accepted_links = set(result.links)
+    link_errors: list[str] = []
+    for item in result.allocations:
+        link = item.link
+        if not (
+            math.isfinite(link.cost_cad_m3)
+            and link.cost_cad_m3 >= 0.0
+            and math.isfinite(link.distance_km)
+            and math.isfinite(link.ferry_distance_km)
+            and link.ferry_distance_km >= 0.0
+            and link.ferry_distance_km <= link.distance_km + _TOLERANCE
+        ):
+            link_errors.append(f"{link.source_id}->{link.recipient_facility}: bad arc")
+        if link not in accepted_links:
+            link_errors.append(
+                f"{link.source_id}->{link.recipient_facility}: not in arc set"
+            )
+        if link.path_confidence not in result.accepted_path_confidence:
+            link_errors.append(
+                f"{link.source_id}->{link.recipient_facility}: "
+                f"unaccepted provenance {link.path_confidence}"
+            )
     add(
         "transport_link_existence",
-        link_ok,
-        "every allocation has a finite, non-negative transport link",
+        not link_errors,
+        "every allocation uses an accepted, provenance-stamped arc"
+        if not link_errors
+        else "; ".join(link_errors[:5]),
     )
 
     objective_delta = abs(
@@ -850,6 +1119,8 @@ def _allocation_rows(result: CooptResult) -> list[dict[str, Any]]:
                 "volume_m3": item.volume_m3,
                 "moisture_wet_basis": item.source.moisture_wet_basis,
                 "distance_km": item.link.distance_km,
+                "ferry_distance_km": item.link.ferry_distance_km,
+                "ferry_cost_cad_m3": item.link.ferry_cost_cad_m3,
                 "transport_cost_cad_m3": item.link.cost_cad_m3,
                 "transport_cost_cad": item.transport_cost_cad,
                 "processing_cost_cad_per_input_odt": (
@@ -860,7 +1131,9 @@ def _allocation_rows(result: CooptResult) -> list[dict[str, Any]]:
                 "product_revenue_cad": item.product_revenue_cad,
                 "net_contribution_cad": item.net_contribution_cad,
                 "path_confidence": item.link.path_confidence,
+                "source_stage_a_assigned_odt": item.source.stage_a_assigned_odt,
                 "evidence": item.source.evidence,
+                "link_evidence": item.link.evidence,
             }
         )
     return rows
@@ -883,6 +1156,8 @@ def _balance_rows(result: CooptResult) -> list[dict[str, Any]]:
                 "generated_odt": source.odt,
                 "assigned_odt": got,
                 "unassigned_odt": max(0.0, source.odt - got),
+                "stage_a_assigned_odt": source.stage_a_assigned_odt,
+                "stage_a_unassigned_odt": source.unassigned_by_stage_a_odt,
             }
         )
     return sorted(
@@ -916,7 +1191,11 @@ def _utilization_rows(result: CooptResult) -> list[dict[str, Any]]:
                 "harvest_residue_odt": harvest.get(recipient.facility_id, 0.0),
                 "sawmill_residue_odt": sawmill.get(recipient.facility_id, 0.0),
                 "unused_capacity_odt": recipient.capacity_odt_y - got,
-                "utilization": got / recipient.capacity_odt_y,
+                "utilization": (
+                    got / recipient.capacity_odt_y
+                    if recipient.capacity_odt_y > 0.0
+                    else None
+                ),
                 "capacity_binding": (
                     recipient.capacity_odt_y - got
                 )
@@ -1025,6 +1304,19 @@ def _manifest(
     }
 
 
+def _share(numerator: float, denominator: float) -> float | None:
+    """Return a finite share, or ``None`` when the denominator is unusable."""
+    if not math.isfinite(numerator) or not math.isfinite(denominator):
+        return None
+    if denominator <= 0.0:
+        return None
+    return numerator / denominator
+
+
+def _pct(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.2%}"
+
+
 def _md_table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> str:
     lines = [
         "| " + " | ".join(str(header) for header in headers) + " |",
@@ -1076,8 +1368,36 @@ def _report(
         float(row["separate_double_booked_odt"]) for row in comparison
     )
     total_separate = math.fsum(separate_total.values())
-    harvest_total = math.fsum(
-        source.odt for source in result.sources if source.source_kind == "harvest_residue"
+    harvest_sources = [
+        source for source in result.sources if source.source_kind == "harvest_residue"
+    ]
+    harvest_total = math.fsum(source.odt for source in harvest_sources)
+    harvest_assigned = math.fsum(
+        item.odt
+        for item in result.allocations
+        if item.source.source_kind == "harvest_residue"
+    )
+    harvest_stage_a = math.fsum(
+        source.stage_a_assigned_odt for source in harvest_sources
+    )
+    harvest_stage_a_unassigned = max(0.0, harvest_total - harvest_stage_a)
+    fallback_pairs = [
+        pair for pair in result.excluded_pairs if pair.get("reason") == "non_nrn_fallback"
+    ]
+    no_link_pairs = [
+        pair for pair in result.excluded_pairs if pair.get("reason") == "no_transport_link"
+    ]
+    other_excluded_pairs = [
+        pair
+        for pair in result.excluded_pairs
+        if pair.get("reason") not in {"non_nrn_fallback", "no_transport_link"}
+    ]
+    fallback_source_odt = math.fsum(
+        {
+            source.source_id: source.odt
+            for source in result.sources
+            if any(pair["source_id"] == source.source_id for pair in fallback_pairs)
+        }.values()
     )
     stage_b_total = max(0.0, total_separate - harvest_total)
     stage_b_bioenergy = math.fsum(
@@ -1108,8 +1428,9 @@ def _report(
         "",
         "## Method",
         "",
-        ("- Stage A log assignment is fixed.  Harvest residue is the Stage A "
-        "`RESIDUE` grade, conserved by zone and baseline facility."),
+        ("- Stage A log assignment is fixed.  Harvest residue is the "
+        "period-specific recoverable residue offer in `bc_supply_by_zone.csv`, "
+        "conserved by zone; Stage A-assigned residue is reported separately."),
         ("- Sawmill residue is the Stage B FFCM outfeed supply derived from the "
         "same Stage A sawlog assignment; `other` remains non-allocatable."),
         ("- One LP allocates both streams over facility-level PAP/PEL/BIO "
@@ -1131,12 +1452,33 @@ def _report(
                     kind,
                     f"{generated_by_kind[kind]:,.0f}",
                     f"{assigned_by_kind[kind]:,.0f}",
-                    f"{generated_by_kind[kind] - assigned_by_kind[kind]:,.0f}",
-                    f"{assigned_by_kind[kind] / generated_by_kind[kind]:.2%}"
-                    if generated_by_kind[kind]
-                    else "n/a",
+                    f"{max(0.0, generated_by_kind[kind] - assigned_by_kind[kind]):,.0f}",
+                    _pct(_share(assigned_by_kind[kind], generated_by_kind[kind])),
                 )
                 for kind in sorted(generated_by_kind)
+            ],
+        ),
+        "",
+        "### Harvest residue conservation (odt)",
+        "",
+        _md_table(
+            (
+                "recoverable",
+                "Stage A assigned",
+                "Stage A unassigned",
+                "co-opt assigned",
+                "co-opt share of recoverable",
+                "co-opt share of Stage A assigned",
+            ),
+            [
+                (
+                    f"{harvest_total:,.0f}",
+                    f"{harvest_stage_a:,.0f}",
+                    f"{harvest_stage_a_unassigned:,.0f}",
+                    f"{harvest_assigned:,.0f}",
+                    _pct(_share(harvest_assigned, harvest_total)),
+                    _pct(_share(harvest_assigned, harvest_stage_a)),
+                )
             ],
         ),
         "",
@@ -1151,9 +1493,12 @@ def _report(
                     f"{float(row['generated_odt']):,.0f}",
                     f"{float(row['assigned_odt']):,.0f}",
                     f"{float(row['unassigned_odt']):,.0f}",
-                    f"{float(row['assigned_odt']) / float(row['generated_odt']):.2%}"
-                    if float(row["generated_odt"])
-                    else "n/a",
+                    _pct(
+                        _share(
+                            float(row["assigned_odt"]),
+                            float(row["generated_odt"]),
+                        )
+                    ),
                 )
                 for row in _type_balance_rows(balance_rows)
                 if float(row["generated_odt"]) > 0.0
@@ -1167,7 +1512,20 @@ def _report(
                     facility_class,
                     f"{sum(float(row['capacity_odt_y']) for row in utilization if row['facility_class'] == facility_class):,.0f}",
                     f"{sum(float(row['received_odt']) for row in utilization if row['facility_class'] == facility_class):,.0f}",
-                    f"{sum(float(row['received_odt']) for row in utilization if row['facility_class'] == facility_class) / sum(float(row['capacity_odt_y']) for row in utilization if row['facility_class'] == facility_class):.2%}",
+                    _pct(
+                        _share(
+                            sum(
+                                float(row["received_odt"])
+                                for row in utilization
+                                if row["facility_class"] == facility_class
+                            ),
+                            sum(
+                                float(row["capacity_odt_y"])
+                                for row in utilization
+                                if row["facility_class"] == facility_class
+                            ),
+                        )
+                    ),
                     sum(
                         1
                         for row in utilization
@@ -1182,10 +1540,15 @@ def _report(
         "",
         (f"- Assigned: **{result.assigned_odt:,.0f} odt** of "
         f"{result.generated_odt:,.0f} odt generated "
-        f"({result.assigned_odt / result.generated_odt:.2%})."),
+        f"({_pct(_share(result.assigned_odt, result.generated_odt))})."),
+        (f"- Harvest residue: **{harvest_assigned:,.0f} odt** of "
+        f"{harvest_total:,.0f} odt recoverable "
+        f"({_pct(_share(harvest_assigned, harvest_total))}); Stage A had "
+        f"assigned {harvest_stage_a:,.0f} odt, leaving "
+        f"{harvest_stage_a_unassigned:,.0f} odt for the co-opt to re-home."),
         (f"- Bioenergy (BIO class): **{bioenergy:,.0f} odt**, "
-        f"{bioenergy / result.assigned_odt:.2%} of assigned and "
-        f"{bioenergy / result.generated_odt:.2%} of generated."),
+        f"{_pct(_share(bioenergy, result.assigned_odt))} of assigned and "
+        f"{_pct(_share(bioenergy, result.generated_odt))} of generated."),
         (f"- Product revenue: **CAD {result.product_revenue_cad:,.0f}**; "
         f"transport **CAD {result.transport_cost_cad:,.0f}**; "
         f"processing **CAD {result.processing_cost_cad:,.0f}**."),
@@ -1206,10 +1569,13 @@ def _report(
         f"**{pel_separate:,.0f} odt** against **{pel_capacity:,.0f} odt** of "
         f"shared PEL capacity; the co-opt books PEL once at "
         f"**{pel_coopt:,.0f} odt**."),
-        (f"- No source/recipient infeasibility was found. "
-        f"**{len(result.excluded_pairs)}** eligible pairs were excluded because "
-        "no NRN road/ferry link exists (all BIO-4007, which lacks links from "
-        "eight harvest sources and eight sawmill hogfuel sources)."),
+        (f"- Route policy: accepted provenance is "
+        f"**{', '.join(result.accepted_path_confidence)}**. "
+        f"**{len(fallback_pairs)}** fallback-link pairs were excluded "
+        f"(`non_nrn_fallback`) covering at most "
+        f"**{fallback_source_odt:,.0f} odt** of source supply; "
+        f"**{len(no_link_pairs)}** pairs had no transport link and "
+        f"**{len(other_excluded_pairs)}** had another unaccepted provenance."),
         "",
         "## Recipient utilization",
         "",
@@ -1232,7 +1598,7 @@ def _report(
                     f"{float(row['received_odt']):,.0f}",
                     f"{float(row['harvest_residue_odt']):,.0f}",
                     f"{float(row['sawmill_residue_odt']):,.0f}",
-                    f"{float(row['utilization']):.2%}",
+                    _pct(row["utilization"]),
                     "yes" if row["capacity_binding"] else "no",
                 )
                 for row in utilization
@@ -1291,6 +1657,15 @@ def _report(
         "points; source-level distances remain the main transport limitation."),
         ("- Route capacity, rail/water modes, and moisture blending limits are not "
         "modelled; all residue is 0.45 wet-basis."),
+        "",
+        "### Remaining independent-review items (next fix pass)",
+        "",
+        ("- Alias-area leakage / `NO_ECOPROVINCE` handling in "
+        "`workflows/national/assortments/bc_area_weights.py`."),
+        "- NaN coercion behaviour in the supply and demand parsers.",
+        "- Period alignment between the supply, Stage A, and Stage B tables.",
+        "- Stage B validation should become fatal rather than reporting a soft status.",
+        "- Add a negative-margin service test at the shared-capacity boundary.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -1299,13 +1674,21 @@ def run_coopt(
     repo_root: Path | str = Path("."),
     period: str = DEFAULT_PERIOD,
     out_dir: Path | None = None,
+    *,
+    allow_fallback_links: bool = False,
 ) -> CooptResult:
     root = Path(repo_root)
     bc = root / DEFAULT_BC_DIR
     sources, recipients, links, _excluded = build_coopt_inputs(
         root, period=period, bc_dir=bc
     )
-    result = solve_coopt(sources, recipients, links, period=period)
+    result = solve_coopt(
+        sources,
+        recipients,
+        links,
+        period=period,
+        allow_fallback_links=allow_fallback_links,
+    )
     validation = validate_coopt(result)
     if not validation.passed:
         failures = "; ".join(
@@ -1345,6 +1728,8 @@ def run_coopt(
             "volume_m3",
             "moisture_wet_basis",
             "distance_km",
+            "ferry_distance_km",
+            "ferry_cost_cad_m3",
             "transport_cost_cad_m3",
             "transport_cost_cad",
             "processing_cost_cad_per_input_odt",
@@ -1353,7 +1738,9 @@ def run_coopt(
             "product_revenue_cad",
             "net_contribution_cad",
             "path_confidence",
+            "source_stage_a_assigned_odt",
             "evidence",
+            "link_evidence",
         ),
     )
     _write_csv(
@@ -1387,6 +1774,8 @@ def run_coopt(
             "generated_odt",
             "assigned_odt",
             "unassigned_odt",
+            "stage_a_assigned_odt",
+            "stage_a_unassigned_odt",
         ),
     )
     bioenergy = math.fsum(
@@ -1395,18 +1784,53 @@ def run_coopt(
     double_booked = math.fsum(
         float(row["separate_double_booked_odt"]) for row in comparison
     )
+    harvest_sources = [
+        source for source in result.sources if source.source_kind == "harvest_residue"
+    ]
+    harvest_recoverable = math.fsum(source.odt for source in harvest_sources)
+    harvest_stage_a_assigned = math.fsum(
+        source.stage_a_assigned_odt for source in harvest_sources
+    )
+    harvest_coopt_assigned = math.fsum(
+        item.odt
+        for item in result.allocations
+        if item.source.source_kind == "harvest_residue"
+    )
+    fallback_pairs = [
+        pair for pair in result.excluded_pairs if pair.get("reason") == "non_nrn_fallback"
+    ]
+    fallback_source_odt = math.fsum(
+        {
+            source.source_id: source.odt
+            for source in result.sources
+            if any(pair["source_id"] == source.source_id for pair in fallback_pairs)
+        }.values()
+    )
     summary = {
         "artifact_version": CODE_VERSION,
         "period": period,
         "objective_mode": result.objective_mode,
         "solver_status": result.solver_status,
+        "accepted_path_confidence": list(result.accepted_path_confidence),
         "generated_odt": result.generated_odt,
         "assigned_odt": result.assigned_odt,
-        "unassigned_odt": result.generated_odt - result.assigned_odt,
-        "assigned_share": result.assigned_odt / result.generated_odt,
+        "unassigned_odt": max(0.0, result.generated_odt - result.assigned_odt),
+        "assigned_share": _share(result.assigned_odt, result.generated_odt),
+        "harvest_recoverable_odt": harvest_recoverable,
+        "harvest_stage_a_assigned_odt": harvest_stage_a_assigned,
+        "harvest_stage_a_unassigned_odt": max(
+            0.0, harvest_recoverable - harvest_stage_a_assigned
+        ),
+        "harvest_coopt_assigned_odt": harvest_coopt_assigned,
+        "harvest_assigned_share_of_recoverable": _share(
+            harvest_coopt_assigned, harvest_recoverable
+        ),
+        "harvest_assigned_share_of_stage_a_assigned": _share(
+            harvest_coopt_assigned, harvest_stage_a_assigned
+        ),
         "bioenergy_odt": bioenergy,
-        "bioenergy_share_of_assigned": bioenergy / result.assigned_odt,
-        "bioenergy_share_of_generated": bioenergy / result.generated_odt,
+        "bioenergy_share_of_assigned": _share(bioenergy, result.assigned_odt),
+        "bioenergy_share_of_generated": _share(bioenergy, result.generated_odt),
         "objective": [
             {
                 "component": "product_revenue",
@@ -1455,6 +1879,22 @@ def run_coopt(
             )
         ],
         "excluded_pair_count": len(result.excluded_pairs),
+        "excluded_pair_reason_counts": dict(
+            sorted(
+                {
+                    reason: sum(
+                        1
+                        for pair in result.excluded_pairs
+                        if pair.get("reason") == reason
+                    )
+                    for reason in {
+                        pair.get("reason", "") for pair in result.excluded_pairs
+                    }
+                }.items()
+            )
+        ),
+        "fallback_excluded_pair_count": len(fallback_pairs),
+        "fallback_excluded_source_odt_upper_bound": fallback_source_odt,
         "excluded_pairs": list(result.excluded_pairs),
         "source_counts": {
             "harvest_source_count": sum(
@@ -1498,6 +1938,13 @@ def run_coopt(
             "route capacity, rail/water modes, and moisture blending are absent",
             "TL-hub proxy coordinates remain for some sawmill sources",
         ],
+        "remaining_review_items": [
+            "alias-area leakage / NO_ECOPROVINCE handling in bc_area_weights.py",
+            "NaN coercion in supply and demand parsers",
+            "period alignment between supply, Stage A, and Stage B tables",
+            "Stage B validation should be fatal",
+            "negative-margin service test at the shared-capacity boundary",
+        ],
     }
     summary_path.write_text(
         json.dumps(_json_ready(summary), indent=2, sort_keys=True) + "\n",
@@ -1513,13 +1960,20 @@ def run_coopt(
     manifest_path = destination / "manifest.json"
     caveats = [
         "Stage A log assignment is fixed; only harvest and sawmill residue are co-optimised",
+        "harvest residue is the period-specific recoverable supply; Stage A assigned residue is reported separately",
         "harvest residue is eligible at PEL and BIO under the Stage A RESIDUE grade, not PAP",
         "recipient capacity is facility-level FFCM line infeed capacity, shared across streams",
         "road and NRN ferry shortest paths only; no route capacity, rail, or water option",
+        (
+            "accepted route provenance is "
+            + ",".join(result.accepted_path_confidence)
+            + "; FFCM fallback links are excluded by default"
+        ),
         "contracts are apportionment-derived diagnostic maxima, not supply agreements",
     ]
     input_paths = [
         bc / "bc_stage_a_assignment.csv",
+        bc / "bc_supply_by_zone.csv",
         bc / "bc_stage_a_transport_links.csv",
         bc / "stage_b" / "residue_supply.csv",
         bc / "stage_b" / "residue_demand.csv",
@@ -1533,6 +1987,9 @@ def run_coopt(
         summary_path,
         report_path,
     ]
+    fix_report_path = destination / "BC_COOPT_FIX_REPORT.md"
+    if fix_report_path.is_file():
+        output_paths.append(fix_report_path)
     new_manifest = _manifest(destination, root, input_paths, output_paths, caveats)
     if manifest_path.is_file():
         existing = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1564,8 +2021,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--period", default=DEFAULT_PERIOD)
     parser.add_argument("--out-dir", type=Path, default=None)
+    parser.add_argument(
+        "--allow-fallback-links",
+        action="store_true",
+        help="sensitivity only: accept ffcm_route_fallback_road links",
+    )
     args = parser.parse_args(argv)
-    result = run_coopt(args.repo_root, args.period, args.out_dir)
+    result = run_coopt(
+        args.repo_root,
+        args.period,
+        args.out_dir,
+        allow_fallback_links=args.allow_fallback_links,
+    )
     print(
         json.dumps(
             {
