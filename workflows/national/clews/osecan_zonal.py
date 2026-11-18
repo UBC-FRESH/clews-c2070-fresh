@@ -1364,9 +1364,9 @@ def _markdown_report(
         "",
         ("The zonal caps bind because BCW is the cheapest non-hydro option.  "
         "B1 is a small cap (3.67 PJ) and binds from 2026; B2 (39.29 PJ from "
-        "2028) binds from 2032.  The early-year ramp is spatial: B1/B2 biomass "
-        "is not needed until local demand and transmission make it economic, "
-        "whereas the national control can site BCW in other zones from 2022."),
+        "2028) binds from 2032.  The early-year ramp is spatial: the national "
+        "control can site BCW in other zones from 2022, while the zonal run "
+        "can serve only B1/B2, so its output ramps as local demand grows."),
         "",
         "## Tests/commits/publish/status",
         "",
