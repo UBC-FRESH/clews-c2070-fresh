@@ -1904,6 +1904,8 @@ def summary_payload(artifacts: BuildArtifacts) -> dict[str, object]:
             "B1/B2 is the FRESH-side provisional crosswalk; C2070 has no published boundary.",
             "FFCM InitialContent is a stock, so the recovery comparison is per unit log volume, not annual stock-to-flow.",
             "FFCM has no FMU-to-TSA/zone crosswalk in the repo; BC totals are allocated by the documented 2018 AAC zone log share and flagged.",
+            "The zone taper ratio is the matched-cell batch aggregate, the same basis as the refined all-BC chain; ecoprovince-ratio weighting is not used for the cap.",
+            "Base recovery is held at the published 2026-11-17 FFCM calibration; the refined-batch FFCM-implied fraction is a diagnostic, not the cap driver.",
             "FFCM logging_residue is a roadside-recoverable stream (0.063 ODT/m3), not full aboveground slash.",
             "Cost is FFCM SupplyCost on a dry ODT basis; no moisture credit, deflator, or exchange-rate adjustment is applied.",
             "The time path uses workbook AAC 2021-2028 and holds 2028 flat to 2070; no MPB, climate, or wildfire trajectory is invented.",
