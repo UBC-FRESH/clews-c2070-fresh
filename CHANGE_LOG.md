@@ -2,6 +2,27 @@
 
 ## 2026-11-18
 
+- **Completed the full public QC BFEC/Woodstock extraction.** Crawled all 13
+  diffusion regions, selected the latest public model ZIP for 52
+  `Modeles_compresses` units plus notice-bearing root bundles `08462` and
+  `08562`, and parsed all 54 units with 0 failures. Hardened ws3 with
+  text/comma constants, `#CONST` yield cells, missing-theme skip warnings,
+  `FOREACH` block skips, and case-insensitive/multi-shapefile inventory
+  handling. Results: 9,857,465 inventory polygons, 880,096 inventory
+  development types, 2,622 unique yield tables, 37,852,030.7 ha. Inventory
+  `SUPERFICIE` matched the `.are` area exactly for every unit; 52 units have
+  100% DT coverage and two have small flagged gaps (08462 99.85%, 09351
+  99.77%). Three units (`06451`, `08462`, `08562`) carry confidentiality
+  notices; their curves are published with provenance, while their
+  development-type aggregates and inventory crosswalks stay in the
+  unpublished `restricted/` scratch output. Public derivatives are under
+  `data/derived/national/qc_bfec_full/`; scripts are
+  `scripts/qc_bfec_index.py` and `scripts/qc_bfec_extract.py`; source index is
+  `metadata/qc-bfec-source-index.json`; report is
+  `docs/qc-bfec-full-extraction-report.md`. Large public CSVs are
+  git-annex-backed and copied to `arbutus-s3`; the restricted crosswalk is not
+  committed or pushed.
+
 - **Built national SCANFI v2 area weights and inventoried donor candidates.**
   Added `scripts/national/build_scanfi_area_weights.py` and
   `scripts/national/build_donor_candidates.py`.  The full 30 m national grid

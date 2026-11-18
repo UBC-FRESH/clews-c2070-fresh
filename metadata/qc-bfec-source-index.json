@@ -1,0 +1,1308 @@
+{
+  "generated_at": "2026-11-18T17:10:59.475791+00:00",
+  "index_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/",
+  "units": [
+    {
+      "unit": "01171",
+      "region": "R01",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R01/01171/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R01/01171/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R01/01171/Modeles_compresses/01171.zip",
+      "file": "01171.zip",
+      "bytes": 102053269,
+      "listed_timestamp": "2019-02-04T11:30:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "01171.zip",
+          "bytes": 102053269,
+          "listed_timestamp": "2019-02-04T11:30:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "01272",
+      "region": "R01",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R01/01272/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R01/01272/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R01/01272/Modeles_compresses/01272_Diffusion2018-23_modif2022.zip",
+      "file": "01272_Diffusion2018-23_modif2022.zip",
+      "bytes": 837457320,
+      "listed_timestamp": "2022-04-12T07:32:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "01272_Diffusion2018-23_modif2022.zip",
+          "bytes": 837457320,
+          "listed_timestamp": "2022-04-12T07:32:00+00:00"
+        },
+        {
+          "file": "01272.zip",
+          "bytes": 218144597,
+          "listed_timestamp": "2019-02-04T11:31:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02251",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02251/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02251/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02251/Modeles_compresses/02251.zip",
+      "file": "02251.zip",
+      "bytes": 141914726,
+      "listed_timestamp": "2019-02-04T11:31:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02251.zip",
+          "bytes": 141914726,
+          "listed_timestamp": "2019-02-04T11:31:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02351",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02351/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02351/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02351/Modeles_compresses/02351.zip",
+      "file": "02351.zip",
+      "bytes": 94710874,
+      "listed_timestamp": "2019-02-04T11:31:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02351.zip",
+          "bytes": 94710874,
+          "listed_timestamp": "2019-02-04T11:31:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02352",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02352/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02352/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02352/Modeles_compresses/02352.zip",
+      "file": "02352.zip",
+      "bytes": 428661984,
+      "listed_timestamp": "2019-02-04T11:32:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02352.zip",
+          "bytes": 428661984,
+          "listed_timestamp": "2019-02-04T11:32:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02451",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02451/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02451/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02451/Modeles_compresses/02451.zip",
+      "file": "02451.zip",
+      "bytes": 192101314,
+      "listed_timestamp": "2019-02-04T11:32:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02451.zip",
+          "bytes": 192101314,
+          "listed_timestamp": "2019-02-04T11:32:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02452",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02452/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02452/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02452/Modeles_compresses/02452.zip",
+      "file": "02452.zip",
+      "bytes": 216923230,
+      "listed_timestamp": "2019-02-04T11:32:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02452.zip",
+          "bytes": 216923230,
+          "listed_timestamp": "2019-02-04T11:32:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02551",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02551/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02551/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02551/Modeles_compresses/02551.zip",
+      "file": "02551.zip",
+      "bytes": 561306777,
+      "listed_timestamp": "2019-02-04T11:33:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02551.zip",
+          "bytes": 561306777,
+          "listed_timestamp": "2019-02-04T11:33:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02651",
+      "region": "R04",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/02651/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/02651/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/02651/Modeles_compresses/02651.zip",
+      "file": "02651.zip",
+      "bytes": 36193271,
+      "listed_timestamp": "2019-02-04T11:34:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02651.zip",
+          "bytes": 36193271,
+          "listed_timestamp": "2019-02-04T11:34:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "02751",
+      "region": "R02",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02751/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02751/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R02/02751/Modeles_compresses/02751.zip",
+      "file": "02751.zip",
+      "bytes": 231530438,
+      "listed_timestamp": "2019-02-04T11:33:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "02751.zip",
+          "bytes": 231530438,
+          "listed_timestamp": "2019-02-04T11:33:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03151",
+      "region": "R03",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03151/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03151/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03151/Modeles_compresses/03151.zip",
+      "file": "03151.zip",
+      "bytes": 49337618,
+      "listed_timestamp": "2019-02-04T11:34:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "03151.zip",
+          "bytes": 49337618,
+          "listed_timestamp": "2019-02-04T11:34:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03152",
+      "region": "R03",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03152/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03152/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03152/Modeles_compresses/03152.zip",
+      "file": "03152.zip",
+      "bytes": 45594968,
+      "listed_timestamp": "2019-02-04T11:34:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "03152.zip",
+          "bytes": 45594968,
+          "listed_timestamp": "2019-02-04T11:34:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03153",
+      "region": "R03",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03153/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03153/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03153/Modeles_compresses/03153.zip",
+      "file": "03153.zip",
+      "bytes": 67826163,
+      "listed_timestamp": "2019-02-04T11:34:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "03153.zip",
+          "bytes": 67826163,
+          "listed_timestamp": "2019-02-04T11:34:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03351",
+      "region": "R03",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03351/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03351/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R03/03351/Modeles_compresses/03351.zip",
+      "file": "03351.zip",
+      "bytes": 157920262,
+      "listed_timestamp": "2019-02-04T11:34:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "03351.zip",
+          "bytes": 157920262,
+          "listed_timestamp": "2019-02-04T11:34:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03451",
+      "region": "R12",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03451/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03451/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03451/Modeles_compresses/03451_Diffusion2013-18_modif2022.zip",
+      "file": "03451_Diffusion2013-18_modif2022.zip",
+      "bytes": 8280329,
+      "listed_timestamp": "2022-04-12T15:47:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "03451_Diffusion2013-18_modif2022.zip",
+          "bytes": 8280329,
+          "listed_timestamp": "2022-04-12T15:47:00+00:00"
+        },
+        {
+          "file": "03451.zip",
+          "bytes": 8585654,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03453",
+      "region": "R12",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03453/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03453/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03453/Modeles_compresses/03453.zip",
+      "file": "03453.zip",
+      "bytes": 23506184,
+      "listed_timestamp": "2019-02-04T11:43:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "03453.zip",
+          "bytes": 23506184,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "03551",
+      "region": "R12",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03551/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03551/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R12/03551/Modeles_compresses/03551.zip",
+      "file": "03551.zip",
+      "bytes": 33271997,
+      "listed_timestamp": "2019-02-04T11:43:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "03551.zip",
+          "bytes": 33271997,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "04151",
+      "region": "R04",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04151/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04151/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04151/Modeles_compresses/04151.zip",
+      "file": "04151.zip",
+      "bytes": 286652532,
+      "listed_timestamp": "2019-02-04T11:34:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "04151.zip",
+          "bytes": 286652532,
+          "listed_timestamp": "2019-02-04T11:34:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "04251",
+      "region": "R04",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04251/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04251/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04251/Modeles_compresses/04251.zip",
+      "file": "04251.zip",
+      "bytes": 253155487,
+      "listed_timestamp": "2019-02-04T11:35:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "04251.zip",
+          "bytes": 253155487,
+          "listed_timestamp": "2019-02-04T11:35:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "04351",
+      "region": "R04",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04351/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04351/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04351/Modeles_compresses/04351.zip",
+      "file": "04351.zip",
+      "bytes": 376436236,
+      "listed_timestamp": "2019-02-04T11:35:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "04351.zip",
+          "bytes": 376436236,
+          "listed_timestamp": "2019-02-04T11:35:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "04352",
+      "region": "R04",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04352/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04352/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R04/04352/Modeles_compresses/04352.zip",
+      "file": "04352.zip",
+      "bytes": 185469087,
+      "listed_timestamp": "2019-02-04T11:35:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "04352.zip",
+          "bytes": 185469087,
+          "listed_timestamp": "2019-02-04T11:35:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "05151",
+      "region": "R05",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R05/05151/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R05/05151/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R05/05151/Modeles_compresses/05151.zip",
+      "file": "05151.zip",
+      "bytes": 37613083,
+      "listed_timestamp": "2019-02-04T11:35:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "05151.zip",
+          "bytes": 37613083,
+          "listed_timestamp": "2019-02-04T11:35:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "06151",
+      "region": "R15",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06151/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06151/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06151/Modeles_compresses/06151_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "06151_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 24142781,
+      "listed_timestamp": "2022-03-24T13:28:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "06151_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 24142781,
+          "listed_timestamp": "2022-03-24T13:28:00+00:00"
+        },
+        {
+          "file": "06151.zip",
+          "bytes": 25787266,
+          "listed_timestamp": "2019-02-04T11:44:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "06152",
+      "region": "R15",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06152/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06152/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06152/Modeles_compresses/06152.zip",
+      "file": "06152.zip",
+      "bytes": 41865551,
+      "listed_timestamp": "2019-02-04T11:44:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "06152.zip",
+          "bytes": 41865551,
+          "listed_timestamp": "2019-02-04T11:44:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "06251",
+      "region": "R14",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R14/06251/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R14/06251/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R14/06251/Modeles_compresses/06251_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "06251_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 147367379,
+      "listed_timestamp": "2022-03-24T13:47:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "06251_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 147367379,
+          "listed_timestamp": "2022-03-24T13:47:00+00:00"
+        },
+        {
+          "file": "06251.zip",
+          "bytes": 152392637,
+          "listed_timestamp": "2019-02-04T11:44:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "06252",
+      "region": "R14",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R14/06252/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R14/06252/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R14/06252/Modeles_compresses/06252_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "06252_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 78391851,
+      "listed_timestamp": "2022-03-24T13:47:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "06252_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 78391851,
+          "listed_timestamp": "2022-03-24T13:47:00+00:00"
+        },
+        {
+          "file": "06252.zip",
+          "bytes": 82904188,
+          "listed_timestamp": "2019-02-04T11:44:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "06451",
+      "region": "R15",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06451/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06451/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06451/Modeles_compresses/06451_Diffusion_CPF2013-2018_Modif2022.zip",
+      "file": "06451_Diffusion_CPF2013-2018_Modif2022.zip",
+      "bytes": 265482140,
+      "listed_timestamp": "2022-03-24T14:08:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "06451_Diffusion_CPF2013-2018_Modif2022.zip",
+          "bytes": 265482140,
+          "listed_timestamp": "2022-03-24T14:08:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "06452",
+      "region": "R15",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06452/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06452/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R15/06452/Modeles_compresses/06452.zip",
+      "file": "06452.zip",
+      "bytes": 71170355,
+      "listed_timestamp": "2019-02-04T11:44:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "06452.zip",
+          "bytes": 71170355,
+          "listed_timestamp": "2019-02-04T11:44:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "07151",
+      "region": "R07",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07151/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07151/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07151/Modeles_compresses/07151.zip",
+      "file": "07151.zip",
+      "bytes": 70839650,
+      "listed_timestamp": "2019-02-04T11:36:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "07151.zip",
+          "bytes": 70839650,
+          "listed_timestamp": "2019-02-04T11:36:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "07152",
+      "region": "R07",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07152/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07152/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07152/Modeles_compresses/07152.zip",
+      "file": "07152.zip",
+      "bytes": 132274794,
+      "listed_timestamp": "2019-02-04T11:36:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "07152.zip",
+          "bytes": 132274794,
+          "listed_timestamp": "2019-02-04T11:36:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "07251",
+      "region": "R07",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07251/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07251/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07251/Modeles_compresses/07251.zip",
+      "file": "07251.zip",
+      "bytes": 52336910,
+      "listed_timestamp": "2019-02-04T11:36:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "07251.zip",
+          "bytes": 52336910,
+          "listed_timestamp": "2019-02-04T11:36:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "07351",
+      "region": "R07",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07351/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07351/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07351/Modeles_compresses/07351.zip",
+      "file": "07351.zip",
+      "bytes": 101058142,
+      "listed_timestamp": "2019-02-04T11:36:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "07351.zip",
+          "bytes": 101058142,
+          "listed_timestamp": "2019-02-04T11:36:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "07352",
+      "region": "R07",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07352/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07352/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07352/Modeles_compresses/07352.zip",
+      "file": "07352.zip",
+      "bytes": 79518777,
+      "listed_timestamp": "2019-02-04T11:36:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "07352.zip",
+          "bytes": 79518777,
+          "listed_timestamp": "2019-02-04T11:36:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "07451",
+      "region": "R07",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07451/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07451/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R07/07451/Modeles_compresses/07451.zip",
+      "file": "07451.zip",
+      "bytes": 186424422,
+      "listed_timestamp": "2019-02-04T11:37:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "07451.zip",
+          "bytes": 186424422,
+          "listed_timestamp": "2019-02-04T11:37:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08151",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08151/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08151/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08151/Modeles_compresses/08151.zip",
+      "file": "08151.zip",
+      "bytes": 92121588,
+      "listed_timestamp": "2019-02-04T11:37:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "08151.zip",
+          "bytes": 92121588,
+          "listed_timestamp": "2019-02-04T11:37:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08152",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08152/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08152/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08152/Modeles_compresses/08152.zip",
+      "file": "08152.zip",
+      "bytes": 233691012,
+      "listed_timestamp": "2019-02-04T11:37:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "08152.zip",
+          "bytes": 233691012,
+          "listed_timestamp": "2019-02-04T11:37:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08251",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08251/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08251/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08251/Modeles_compresses/08251_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "08251_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 198311695,
+      "listed_timestamp": "2022-03-24T13:48:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "08251_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 198311695,
+          "listed_timestamp": "2022-03-24T13:48:00+00:00"
+        },
+        {
+          "file": "08251.zip",
+          "bytes": 207414278,
+          "listed_timestamp": "2019-02-04T11:37:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08351",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08351/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08351/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08351/Modeles_compresses/08351.zip",
+      "file": "08351.zip",
+      "bytes": 312615324,
+      "listed_timestamp": "2019-02-04T11:38:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "08351.zip",
+          "bytes": 312615324,
+          "listed_timestamp": "2019-02-04T11:38:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08451",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08451/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08451/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08451/Modeles_compresses/08451_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "08451_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 267843957,
+      "listed_timestamp": "2022-03-24T13:49:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "08451_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 267843957,
+          "listed_timestamp": "2022-03-24T13:49:00+00:00"
+        },
+        {
+          "file": "08451.zip",
+          "bytes": 283485462,
+          "listed_timestamp": "2019-02-04T11:38:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08462",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08462/",
+      "model_source": "unit_root_zip",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08462/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08462/08462_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "08462_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 94787056,
+      "listed_timestamp": "2022-03-24T13:49:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "08462_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 94787056,
+          "listed_timestamp": "2022-03-24T13:49:00+00:00"
+        },
+        {
+          "file": "08462_Diffusion_CPF2013-2018_Modif2015.zip",
+          "bytes": 6812080,
+          "listed_timestamp": "2019-02-04T11:39:00+00:00"
+        }
+      ],
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08462/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08551",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08551/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08551/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08551/Modeles_compresses/08551.zip",
+      "file": "08551.zip",
+      "bytes": 187569792,
+      "listed_timestamp": "2019-02-04T11:42:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "08551.zip",
+          "bytes": 187569792,
+          "listed_timestamp": "2019-02-04T11:42:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08562",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08562/",
+      "model_source": "unit_root_zip",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08562/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08562/08562_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "08562_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 26677516,
+      "listed_timestamp": "2022-03-24T13:50:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "08562_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 26677516,
+          "listed_timestamp": "2022-03-24T13:50:00+00:00"
+        },
+        {
+          "file": "08562_Diffusion_CPF2013-2018_Modif2015.zip",
+          "bytes": 4611911,
+          "listed_timestamp": "2019-02-04T11:42:00+00:00"
+        }
+      ],
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08562/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08651",
+      "region": "R08",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08651/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08651/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R08/08651/Modeles_compresses/08651.zip",
+      "file": "08651.zip",
+      "bytes": 140297142,
+      "listed_timestamp": "2019-02-04T11:39:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "08651.zip",
+          "bytes": 140297142,
+          "listed_timestamp": "2019-02-04T11:39:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08652",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08652/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08652/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08652/Modeles_compresses/08652.zip",
+      "file": "08652.zip",
+      "bytes": 101279307,
+      "listed_timestamp": "2019-02-04T11:42:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "08652.zip",
+          "bytes": 101279307,
+          "listed_timestamp": "2019-02-04T11:42:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "08751",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08751/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08751/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08751/Modeles_compresses/08751_Diffusion_CPF2018-2023_Modif2022.zip",
+      "file": "08751_Diffusion_CPF2018-2023_Modif2022.zip",
+      "bytes": 153754998,
+      "listed_timestamp": "2022-03-24T13:50:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "08751_Diffusion_CPF2018-2023_Modif2022.zip",
+          "bytes": 153754998,
+          "listed_timestamp": "2022-03-24T13:50:00+00:00"
+        },
+        {
+          "file": "08751.zip",
+          "bytes": 159004535,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "09351",
+      "region": "R09",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09351/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09351/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09351/Modeles_compresses/09351.zip",
+      "file": "09351.zip",
+      "bytes": 458132272,
+      "listed_timestamp": "2019-02-04T11:40:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "09351.zip",
+          "bytes": 458132272,
+          "listed_timestamp": "2019-02-04T11:40:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "09352",
+      "region": "R09",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09352/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09352/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09352/Modeles_compresses/09352.zip",
+      "file": "09352.zip",
+      "bytes": 194119379,
+      "listed_timestamp": "2019-02-04T11:40:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "09352.zip",
+          "bytes": 194119379,
+          "listed_timestamp": "2019-02-04T11:40:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "09451",
+      "region": "R09",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09451/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09451/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09451/Modeles_compresses/09451.zip",
+      "file": "09451.zip",
+      "bytes": 334432491,
+      "listed_timestamp": "2019-02-04T11:41:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "09451.zip",
+          "bytes": 334432491,
+          "listed_timestamp": "2019-02-04T11:41:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "09452",
+      "region": "R09",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09452/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09452/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09452/Modeles_compresses/09452.zip",
+      "file": "09452.zip",
+      "bytes": 166259565,
+      "listed_timestamp": "2019-02-04T11:41:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "09452.zip",
+          "bytes": 166259565,
+          "listed_timestamp": "2019-02-04T11:41:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "09551",
+      "region": "R09",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09551/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09551/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09551/Modeles_compresses/09951_Diffusion2013-18_modif2022.zip",
+      "file": "09951_Diffusion2013-18_modif2022.zip",
+      "bytes": 51855889,
+      "listed_timestamp": "2022-04-12T15:19:00+00:00",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "file": "09951_Diffusion2013-18_modif2022.zip",
+          "bytes": 51855889,
+          "listed_timestamp": "2022-04-12T15:19:00+00:00"
+        },
+        {
+          "file": "09551.zip",
+          "bytes": 52794614,
+          "listed_timestamp": "2019-02-04T11:41:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "09751",
+      "region": "R09",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09751/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09751/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R09/09751/Modeles_compresses/09751.zip",
+      "file": "09751.zip",
+      "bytes": 332707521,
+      "listed_timestamp": "2019-02-04T11:42:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "09751.zip",
+          "bytes": 332707521,
+          "listed_timestamp": "2019-02-04T11:42:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "11161",
+      "region": "R11",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11161/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11161/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11161/Modeles_compresses/11161.zip",
+      "file": "11161.zip",
+      "bytes": 211896496,
+      "listed_timestamp": "2019-02-04T11:43:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "11161.zip",
+          "bytes": 211896496,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "11262",
+      "region": "R11",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11262/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11262/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11262/Modeles_compresses/11262.zip",
+      "file": "11262.zip",
+      "bytes": 124149353,
+      "listed_timestamp": "2019-02-04T11:43:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "11262.zip",
+          "bytes": 124149353,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    },
+    {
+      "unit": "11263",
+      "region": "R11",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11263/",
+      "model_source": "Modeles_compresses",
+      "model_dir_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11263/Modeles_compresses/",
+      "url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R11/11263/Modeles_compresses/11263.zip",
+      "file": "11263.zip",
+      "bytes": 120901674,
+      "listed_timestamp": "2019-02-04T11:43:00+00:00",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "file": "11263.zip",
+          "bytes": 120901674,
+          "listed_timestamp": "2019-02-04T11:43:00+00:00"
+        }
+      ],
+      "notice_present": false
+    }
+  ],
+  "skipped_units": [
+    {
+      "unit": "02661",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02661/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02661/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "02662",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02662/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02662/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "02663",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02663/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02663/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "02664",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02664/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02664/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "02665",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02665/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02665/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "02666",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02666/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/02666/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08663",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08663/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08663/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08664",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08664/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08664/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08665",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08665/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08665/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08666",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08666/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08666/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08762",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08762/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08762/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08763",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08763/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08763/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    },
+    {
+      "unit": "08764",
+      "region": "R10",
+      "unit_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08764/",
+      "reason": "no_public_model_directory",
+      "notice_present": true,
+      "notice_kind": "confidentiality",
+      "notice_url": "https://diffusion.mffp.gouv.qc.ca/diffusion/fec/diffusion/R10/08764/Lisez_moi.txt",
+      "notice_bytes": 674,
+      "notice_sha256": "304887f1ead3aa592199c917963355f834441a15ef4d276d4b3ddabebd2ad8d2"
+    }
+  ],
+  "counts": {
+    "regions": 13,
+    "units_with_public_model": 54,
+    "units_with_compressed_dir": 52,
+    "units_without_public_model": 13,
+    "listed_bytes": 9422193928
+  },
+  "policy": {
+    "model_units_without_compressed_dir": [
+      "08462",
+      "08562"
+    ],
+    "no_model_units_downloaded": false
+  }
+}

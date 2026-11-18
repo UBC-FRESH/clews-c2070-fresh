@@ -58,6 +58,18 @@ forest-biomass supply modelling before model implementation work depends on it.
 - [x] Add regression tests for provider metadata, overlay parsing, command
   generation, workflow planning, and report-only smoke execution.
 
+### P1.6 QC BFEC/Woodstock Extraction
+
+Governing note: `planning/qc-bfec-full-extraction.md`.
+
+- [x] Extract a five-unit QC BFEC sample and publish normalized derivatives.
+- [x] Harden the ws3 parser for BFEC constants, `#CONST` yields, and missing
+  theme mask codes.
+- [x] Download, verify, extract, and parse every public BFEC model bundle.
+- [x] Publish public curve/development-type derivatives plus manifest and
+  validation report; keep restricted inventory crosswalks out of git.
+
+
 ## Phase 2: FFCM Archive Reverse Engineering
 
 Target window: June 2026 to October 2026.
