@@ -555,8 +555,11 @@ def _write_report(
             f"{0.10 * reference_2050_generation_pj / max_pwrbcw:.2f} (10%).  "
             "The exact limiting constraint is the national BCW cap: 1,149.861490 PJ "
             "(5%) or 2,299.722980 PJ (10%) of BCW fuel is required against "
-            f"{NATIONAL_TOTAL_PJ:.6f} PJ available.  These cases are therefore not "
-            "solved; no dispatch is fabricated.",
+            f"{NATIONAL_TOTAL_PJ:.6f} PJ available.  A 5% case was solved with the "
+            "same zonal-limit construction and returned solver status `unknown` "
+            "(GLPK no primal feasible solution; the wrapper maps GLP_UNDEF to "
+            "unknown); no dispatch is reported for it.  The 10% case was not "
+            "solved because it fails the same cap by a wider margin.",
             "",
         ]
     )
