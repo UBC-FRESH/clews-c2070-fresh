@@ -11,6 +11,9 @@
   for (var y = YEAR_FIRST; y <= YEAR_LAST; y += 1) YEARS.push(y);
 
   var C2070_ZONES = ['A1', 'A2', 'B1', 'B2', 'L1', 'M1', 'N1', 'O1', 'O2', 'Q1', 'Q2', 'S1', 'T1'];
+  var CANADA_BOUNDS = [[-141, 41], [-52, 84]];
+  var CANADA_FIT_OPTIONS = { padding: 34 };
+  var MOBILE_RAIL_QUERY = '(max-width: 720px)';
 
   var FAMILY_SHORT = {
     emission_factor_fix: 'Emission factor fix',
@@ -125,6 +128,17 @@
     if (Math.abs(n) >= 1e6) return fmt(n / 1e6, d) + 'M';
     if (Math.abs(n) >= 1e3) return fmt(n / 1e3, d) + 'k';
     return fmt(n, d);
+  }
+  function fmtAxis(value) {
+    if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
+    var abs = Math.abs(Number(value));
+    if (abs === 0) return '0';
+    if (abs >= 1e9) return fmtCompact(value, 3);
+    if (abs >= 1e6) return fmtCompact(value, 3);
+    if (abs >= 1e3) return fmtCompact(value, 1);
+    if (abs >= 10) return fmtCompact(value, 0);
+    if (abs >= 1) return fmtCompact(value, 1);
+    return fmtCompact(value, 2);
   }
   function fmtPct(value, digits) {
     if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
@@ -320,6 +334,7 @@
     renderHeader(core);
     renderFamilies();
     selectScenario(initialId, { silent: true });
+    bindRailToggle();
     bindTabs();
     bindDispatchControls();
     bindOsecanControls();
@@ -375,6 +390,11 @@
     return haystack.indexOf(query) !== -1;
   }
 
+  function setRailCount(text) {
+    $('rail-count').textContent = text;
+    $('rail-toggle-count').textContent = text;
+  }
+
   function renderScenarioList() {
     var core = state.core;
     if (!core) return;
@@ -390,7 +410,7 @@
 
     if (!rows.length) {
       list.innerHTML = '<li class="rail-foot">No scenario matches this filter.</li>';
-      $('rail-count').textContent = '0 shown';
+      setRailCount('0 shown');
       return;
     }
 
@@ -415,7 +435,7 @@
     });
     list.innerHTML = html;
     list.scrollTop = scrollTop;
-    $('rail-count').textContent = rows.length + ' of ' + core.scenarios.scenarios.length + ' shown';
+    setRailCount(rows.length + ' of ' + core.scenarios.scenarios.length + ' shown');
   }
 
   function selectScenario(id, options) {
@@ -593,6 +613,24 @@
       updateHash();
       announce('Opened ' + state.tab + ' view.');
     }
+  }
+
+  function bindRailToggle() {
+    var rail = $('scenario-navigator');
+    var toggle = $('rail-toggle');
+    if (!rail || !toggle) return;
+    toggle.addEventListener('click', function () {
+      var open = rail.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    var media = window.matchMedia(MOBILE_RAIL_QUERY);
+    var collapseOnDesktop = function () {
+      if (media.matches) return;
+      rail.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    };
+    if (media.addEventListener) media.addEventListener('change', collapseOnDesktop);
+    else media.addListener(collapseOnDesktop);
   }
 
   function bindTabs() {
@@ -985,7 +1023,7 @@
         type: 'value',
         name: unit,
         nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', padding: [0, 0, 4, 0] },
-        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: function (value) { return fmtCompact(value, 0); } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: fmtAxis },
         splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } },
         axisLine: { show: false }
       },
@@ -1059,7 +1097,14 @@
       };
     });
 
-    if (!state.tradeoffChart) state.tradeoffChart = window.echarts.init(chartEl, null, { renderer: 'canvas' });
+    if (!state.tradeoffChart) {
+      state.tradeoffChart = window.echarts.init(chartEl, null, { renderer: 'canvas' });
+      state.tradeoffChart.on('click', function (params) {
+        var meta = params && params.data && params.data.meta;
+        if (!meta || !meta.id) return;
+        selectScenario(meta.id);
+      });
+    }
     state.tradeoffChart.setOption({
       animationDuration: 500,
       textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
@@ -1099,7 +1144,7 @@
         nameGap: 34,
         scale: true,
         nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#435347' },
-        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: function (v) { return fmtCompact(v, 0); } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: fmtAxis },
         splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } },
         axisLine: { lineStyle: { color: '#b8a57e' } }
       },
@@ -1110,7 +1155,7 @@
         nameGap: 52,
         scale: true,
         nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#435347' },
-        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c' },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: fmtAxis },
         splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } },
         axisLine: { show: false }
       },
@@ -1257,8 +1302,9 @@
         state.mapState.loading = false;
         state.mapState.data = { provinces: provinces, ecoprovinces: ecoprovinces, tiles: tiles, zoneNodes: zoneNodes, breaks: breaks, colors: colors };
         map.resize();
+        map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 0 });
       });
-      $('map-fit').onclick = function () { map.fitBounds([[-141, 41], [-52, 84]], { padding: 34, duration: 700 }); };
+      $('map-fit').onclick = function () { map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 700 }); };
     } catch (error) {
       state.mapState.loading = false;
       state.mapState.error = true;
@@ -1560,7 +1606,7 @@
       ' · national = 200 Mm³ total ' + (validation.all_national_equals_200m_total ? '✓' : '✗') +
       ' · max residual ' + fmt(validation.max_abs_tier_residual_pj, 6) + ' PJ</div>';
 
-    familyHtml += links.families.map(function (family) {
+    var familyRows = links.families.map(function (family) {
       var scenarioFamily = state.core.scenarios.families.filter(function (f) { return f.family === family.family; })[0];
       var familyScenarios = state.core.scenarios.scenarios.filter(function (sc) { return sc.family === family.family; });
       var diagnostic = familyScenarios.some(function (sc) { return sc.flags.diagnostic; });
@@ -1569,14 +1615,14 @@
       var statusBadge = family.superseded_for_emissions
         ? '<span class="badge badge--superseded">superseded</span>'
         : (family.post_fix_emissions ? '<span class="badge badge--postfix">post-fix</span>' : '<span class="badge badge--ink">pre-fix</span>');
-      familyHtml += '<details class="family-row"><summary>' +
+      return '<details class="family-row"><summary>' +
         '<span class="check-pill' + (filesOk && shaOk ? '' : ' is-warn') + '">' + (filesOk && shaOk ? 'files recorded' : 'check') + '</span>' +
         '<span class="family-summary-label">' + esc(scenarioFamily ? scenarioFamily.label : family.family) + '</span>' +
         statusBadge + (diagnostic ? '<span class="badge badge--diag">diagnostic</span>' : '') +
         '<span class="family-summary-path">' + esc(family.source_dir) + '</span></summary>' +
         '<div class="family-body">' + fileTable(family.files) + '</div></details>';
     }).join('');
-    $('osecan-family-table').innerHTML = familyHtml;
+    $('osecan-family-table').innerHTML = familyHtml + familyRows;
     $('osecan-input-table').innerHTML = fileTable(links.input_files);
     $('osecan-supbcw-table').innerHTML = fileTable(links.supbcw_inputs);
   }

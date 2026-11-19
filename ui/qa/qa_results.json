@@ -1,0 +1,616 @@
+{
+  "base_url": "http://127.0.0.1:8012/",
+  "desktop": {
+    "header": {
+      "scenarioCount": "47",
+      "eligible": "26",
+      "railCount": "47 of 47 shown",
+      "scenarioRows": 47,
+      "familyChips": 16
+    },
+    "overflow": {
+      "docScrollWidth": 1440,
+      "innerWidth": 1440,
+      "horizontalOverflow": false
+    },
+    "screenshot": {
+      "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/desktop.png",
+      "size": [
+        1440,
+        1610
+      ],
+      "mean": [
+        156.26,
+        158.23,
+        143.74
+      ],
+      "stddev": [
+        108.67,
+        96.05,
+        92.05
+      ],
+      "unique_sample_colors": 3111,
+      "nonblank": true
+    },
+    "mapWrapper": "wrapped"
+  },
+  "tabs": {
+    "overview": {
+      "click_state": {
+        "activeTab": "tab-overview",
+        "selected": [
+          "tab-overview"
+        ],
+        "visiblePanels": [
+          "panel-overview"
+        ],
+        "hash": "#overview/emission_factor_fix__efix_stress_119m"
+      }
+    },
+    "dispatch": {
+      "click_state": {
+        "activeTab": "tab-dispatch",
+        "selected": [
+          "tab-dispatch"
+        ],
+        "visiblePanels": [
+          "panel-dispatch"
+        ],
+        "hash": "#dispatch/emission_factor_fix__efix_stress_119m"
+      },
+      "canvas": [
+        {
+          "width": 1030,
+          "height": 560,
+          "cssWidth": 1030,
+          "cssHeight": 560
+        }
+      ],
+      "yLabels": [
+        "0",
+        "500",
+        "1.0k",
+        "1.5k",
+        "2.0k",
+        "2.5k",
+        "3.0k",
+        "3.5k"
+      ],
+      "legendItems": 6,
+      "screenshot": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/dispatch.png",
+        "size": [
+          1440,
+          1610
+        ],
+        "mean": [
+          141.5,
+          151.03,
+          139.2
+        ],
+        "stddev": [
+          103.36,
+          89.92,
+          86.23
+        ],
+        "unique_sample_colors": 2681,
+        "nonblank": true
+      }
+    },
+    "tradeoff": {
+      "click_state": {
+        "activeTab": "tab-tradeoff",
+        "selected": [
+          "tab-tradeoff"
+        ],
+        "visiblePanels": [
+          "panel-tradeoff"
+        ],
+        "hash": "#tradeoff/emission_factor_fix__efix_stress_119m"
+      },
+      "guardHidden": true,
+      "count": "26 eligible \u00b7 21 excluded (21 superseded, 2 diagnostic) \u00b7 expected ledger 26",
+      "canvas": [
+        {
+          "width": 1030,
+          "height": 560,
+          "cssWidth": 1030,
+          "cssHeight": 560
+        }
+      ],
+      "xLabels": [
+        "1.320M",
+        "1.340M",
+        "1.360M",
+        "1.380M",
+        "1.400M",
+        "1.420M"
+      ],
+      "yLabels": [
+        "0.44",
+        "0.46",
+        "0.48",
+        "0.50",
+        "0.52",
+        "0.54",
+        "0.56"
+      ],
+      "points": 26,
+      "screenshotAfterClick": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/tradeoff.png",
+        "size": [
+          1440,
+          1610
+        ],
+        "mean": [
+          162.85,
+          164.43,
+          150.24
+        ],
+        "stddev": [
+          107.96,
+          95.6,
+          91.92
+        ],
+        "unique_sample_colors": 2337,
+        "nonblank": true
+      },
+      "clickedPoint": {
+        "seriesName": "Emission factor fix",
+        "name": "119M base stress: $200/t from 2026, hydro upper cap at 2021",
+        "id": "emission_factor_fix__efix_stress_119m",
+        "value": [
+          1371773.42,
+          0.460752
+        ],
+        "pageX": 932.0034366,
+        "pageY": 1004.2459249999997
+      }
+    },
+    "map": {
+      "click_state": {
+        "activeTab": "tab-map",
+        "selected": [
+          "tab-map"
+        ],
+        "visiblePanels": [
+          "panel-map"
+        ],
+        "hash": "#map/emission_factor_fix__efix_stress_119m"
+      },
+      "canvas": [],
+      "loadStateHidden": true,
+      "stats": "Provinces\n13\nEcoprovinces\n36\nRSYC tiles\n385\nTile recoverable base\n54,157.3 PJ\nZone anchors\n2 / 13\nZone gaps\n11",
+      "gapChips": [
+        "A1",
+        "A2",
+        "L1",
+        "M1",
+        "N1",
+        "O1",
+        "O2",
+        "Q1",
+        "Q2",
+        "S1",
+        "T1"
+      ],
+      "mapSize": {
+        "w": 722,
+        "h": 725
+      },
+      "bounds": {
+        "west": -164.5907801274297,
+        "south": 35.984230763125765,
+        "east": -28.409219872569764,
+        "north": 84.63436327049675,
+        "center": {
+          "lng": -96.5,
+          "lat": 72.42965476386473
+        },
+        "zoom": 1.8983205658475013,
+        "stJohnsPixel": [
+          593,
+          643
+        ],
+        "stJohnsInCanvas": true
+      },
+      "screenshot": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/map.png",
+        "size": [
+          1440,
+          1610
+        ],
+        "mean": [
+          115.6,
+          121.12,
+          107.39
+        ],
+        "stddev": [
+          109.35,
+          95.66,
+          90.8
+        ],
+        "unique_sample_colors": 3594,
+        "nonblank": true
+      },
+      "fitCanvas": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/map-fit.png",
+        "size": [
+          723,
+          726
+        ],
+        "mean": [
+          39.82,
+          52.09,
+          39.71
+        ],
+        "stddev": [
+          60.95,
+          45.73,
+          35.04
+        ],
+        "unique_sample_colors": 3013,
+        "nonblank": true
+      }
+    },
+    "osecan": {
+      "click_state": {
+        "activeTab": "tab-osecan",
+        "selected": [
+          "tab-osecan"
+        ],
+        "visiblePanels": [
+          "panel-osecan"
+        ],
+        "hash": "#osecan/emission_factor_fix__efix_stress_119m"
+      },
+      "values": {
+        "national": "109.42",
+        "bc": "43.53",
+        "rest": "65.89",
+        "cost": "$2.457",
+        "validation": "\u2713 tier-sum validated \u00b7 4 tiers = 213.538 PJ \u00b7 max reconciliation residual 0.000000 PJ"
+      },
+      "familyRows": 15,
+      "familyRowTexts": [
+        "Post-fix emission factors (canonical iteration-0)",
+        "PWRBIO cap ladder",
+        "PWRBIO tight absolute caps",
+        "Nuclear cap audit",
+        "Wind integration audit",
+        "Full constraint set",
+        "Full constraint set with 20% zonal wind cap",
+        "Harvest sensitivity 100/200 Mm3 (pre-fix)",
+        "BC zonal reconciliation (pre-fix)",
+        "BC/national cap reconciliation (pre-fix)",
+        "FFCM BC cap reconciliation (pre-fix)",
+        "National supply curve (pre-fix, 200 Mm3)",
+        "National demand sensitivity (pre-fix)",
+        "National 150 Mm3 high bound (pre-fix)",
+        "National 119 Mm3 base (pre-fix)"
+      ],
+      "tierRows": 5,
+      "screenshot": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/osecan.png",
+        "size": [
+          1440,
+          2764
+        ],
+        "mean": [
+          172.4,
+          173.06,
+          158.92
+        ],
+        "stddev": [
+          104.86,
+          93.23,
+          90.14
+        ],
+        "unique_sample_colors": 3514,
+        "nonblank": true
+      }
+    },
+    "inputs": {
+      "click_state": {
+        "activeTab": "tab-inputs",
+        "selected": [
+          "tab-inputs"
+        ],
+        "visiblePanels": [
+          "panel-inputs"
+        ],
+        "hash": "#inputs/emission_factor_fix__efix_stress_119m"
+      },
+      "harvestCanvas": [
+        {
+          "width": 1030,
+          "height": 360,
+          "cssWidth": 1030,
+          "cssHeight": 360
+        }
+      ],
+      "tierTableRows": 6,
+      "managedRows": 14,
+      "summary": "SCENARIOS / OUTPUTS\n47 / 47\nrecords\n47 scenario contracts \u00b7 47 columnar outputs\nHARVEST TEMPLATE\n750\nrows\n13 provinces \u00b7 50 years\nSUPPLY TIER SUM\n213.54\nPJ fuel\nterminal upper bound \u00b7 reconciles\nMANAGED PROXY\n166.3\nMha\nscreening only \u2014 not legal THLB"
+    }
+  },
+  "badges": {
+    "items": [
+      {
+        "text": "post-fix emissions",
+        "className": "badge badge--postfix",
+        "fontSizePx": 12,
+        "color": "rgb(23, 59, 34)",
+        "background": "rgb(216, 233, 209)",
+        "contrast": 9.79
+      },
+      {
+        "text": "publishable",
+        "className": "badge badge--postfix",
+        "fontSizePx": 12,
+        "color": "rgb(23, 59, 34)",
+        "background": "rgb(216, 233, 209)",
+        "contrast": 9.79
+      },
+      {
+        "text": "trade-off eligible",
+        "className": "badge badge--family",
+        "fontSizePx": 12,
+        "color": "rgb(28, 61, 82)",
+        "background": "rgb(219, 232, 240)",
+        "contrast": 9.14
+      }
+    ],
+    "minFontSizePx": 12,
+    "minContrast": 9.14,
+    "pass": true
+  },
+  "axes": {
+    "dispatchY": [
+      "0",
+      "500",
+      "1.0k",
+      "1.5k",
+      "2.0k",
+      "2.5k",
+      "3.0k",
+      "3.5k"
+    ],
+    "tradeoffX": [
+      "1.320M",
+      "1.340M",
+      "1.360M",
+      "1.380M",
+      "1.400M",
+      "1.420M"
+    ],
+    "tradeoffY": [
+      "0.44",
+      "0.46",
+      "0.48",
+      "0.50",
+      "0.52",
+      "0.54",
+      "0.56"
+    ],
+    "dispatchYUnique": true,
+    "tradeoffXUnique": true,
+    "tradeoffYUnique": true,
+    "pass": true
+  },
+  "scenario_selection": {
+    "target": {
+      "id": "emission_factor_fix__efix_baseline_119m",
+      "label": "119M base baseline: $95->115/t, normal hydro",
+      "family": "emission_factor_fix"
+    },
+    "before": {
+      "masthead": "119M base stress: $200/t from 2026, hydro upper cap at 2021",
+      "scenarioId": "emission_factor_fix__efix_stress_119m",
+      "selectedRail": [
+        "emission_factor_fix__efix_stress_119m"
+      ],
+      "status": "Post-fix canonical"
+    },
+    "after": {
+      "masthead": "119M base baseline: $95->115/t, normal hydro",
+      "scenarioId": "emission_factor_fix__efix_baseline_119m",
+      "selectedRail": [
+        "emission_factor_fix__efix_baseline_119m"
+      ],
+      "status": "Post-fix canonical"
+    },
+    "updated": true,
+    "labelMatches": true,
+    "selectedRowCount": 1,
+    "hash": "#overview/emission_factor_fix__efix_baseline_119m"
+  },
+  "tradeoff_selection": {
+    "point": {
+      "seriesName": "Emission factor fix",
+      "name": "119M base stress: $200/t from 2026, hydro upper cap at 2021",
+      "id": "emission_factor_fix__efix_stress_119m",
+      "value": [
+        1371773.42,
+        0.460752
+      ],
+      "pageX": 932.0034366,
+      "pageY": 1004.2459249999997
+    },
+    "clickedId": "wind_integration_audit__efix_tier_200",
+    "before": {
+      "masthead": "119M base baseline: $95->115/t, normal hydro",
+      "scenarioId": "emission_factor_fix__efix_baseline_119m",
+      "selectedRail": [
+        "emission_factor_fix__efix_baseline_119m"
+      ],
+      "status": "Post-fix canonical"
+    },
+    "after": {
+      "masthead": "Post-fix $200/t reference: tiered supply, hydro capped",
+      "scenarioId": "wind_integration_audit__efix_tier_200",
+      "selectedRail": [
+        "wind_integration_audit__efix_tier_200"
+      ],
+      "status": "Post-fix canonical"
+    },
+    "overviewUpdated": true,
+    "selectedMatchesPoint": true,
+    "selectedRowCount": 1,
+    "hash": "#tradeoff/wind_integration_audit__efix_tier_200",
+    "tabAfterClick": {
+      "activeTab": "tab-tradeoff",
+      "selected": [
+        "tab-tradeoff"
+      ],
+      "visiblePanels": [
+        "panel-tradeoff"
+      ],
+      "hash": "#tradeoff/wind_integration_audit__efix_tier_200"
+    }
+  },
+  "map": {},
+  "osecan": {},
+  "inputs": {},
+  "mobile": {
+    "header": {
+      "scenarioCount": "47",
+      "railCount": "47 of 47 shown",
+      "scenarioRows": 47
+    },
+    "layout": {
+      "headerHeight": 291,
+      "railHeight": 46,
+      "railInnerDisplay": "none",
+      "railInnerMaxHeight": "none",
+      "toggleDisplay": "flex",
+      "toggleExpanded": "false",
+      "overviewTop": 457,
+      "tabs": [
+        {
+          "id": "tab-overview",
+          "text": "Overview",
+          "left": 18,
+          "right": 111,
+          "top": 354,
+          "bottom": 392,
+          "visible": true
+        },
+        {
+          "id": "tab-dispatch",
+          "text": "Dispatch",
+          "left": 111,
+          "right": 203,
+          "top": 354,
+          "bottom": 392,
+          "visible": true
+        },
+        {
+          "id": "tab-tradeoff",
+          "text": "Trade-off",
+          "left": 203,
+          "right": 296,
+          "top": 354,
+          "bottom": 392,
+          "visible": true
+        },
+        {
+          "id": "tab-map",
+          "text": "Map",
+          "left": 18,
+          "right": 111,
+          "top": 392,
+          "bottom": 430,
+          "visible": true
+        },
+        {
+          "id": "tab-osecan",
+          "text": "OSeCAN Links",
+          "left": 111,
+          "right": 203,
+          "top": 392,
+          "bottom": 430,
+          "visible": true
+        },
+        {
+          "id": "tab-inputs",
+          "text": "Inputs",
+          "left": 203,
+          "right": 296,
+          "top": 392,
+          "bottom": 430,
+          "visible": true
+        }
+      ],
+      "allTabsVisible": true,
+      "tabbarScrollWidth": 278,
+      "tabbarClientWidth": 278,
+      "tabbarFits": true,
+      "docScrollWidth": 390,
+      "innerWidth": 390,
+      "horizontalOverflow": false
+    },
+    "screenshot": {
+      "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/mobile.png",
+      "size": [
+        390,
+        2904
+      ],
+      "mean": [
+        208.79,
+        204.62,
+        187.87
+      ],
+      "stddev": [
+        78.4,
+        70.97,
+        70.53
+      ],
+      "unique_sample_colors": 8864,
+      "nonblank": true
+    },
+    "expanded": {
+      "railInnerDisplay": "flex",
+      "railInnerMaxHeight": "295.4px",
+      "toggleExpanded": "true"
+    },
+    "collapsedAgain": {
+      "railInnerDisplay": "none",
+      "toggleExpanded": "false"
+    },
+    "inputsTab": {
+      "state": {
+        "activeTab": "tab-inputs",
+        "selected": [
+          "tab-inputs"
+        ],
+        "visiblePanels": [
+          "panel-inputs"
+        ],
+        "hash": "#inputs/emission_factor_fix__efix_stress_119m"
+      },
+      "visible": true
+    }
+  },
+  "console": [
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x2e74003b1200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x2e74003b1200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x2e74003b1200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+    },
+    {
+      "type": "warning",
+      "text": "[.WebGL-0x2e74003b1200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    }
+  ],
+  "pageerrors": [],
+  "failed_requests": [],
+  "http_errors": []
+}

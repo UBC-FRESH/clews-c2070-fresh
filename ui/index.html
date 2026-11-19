@@ -51,7 +51,12 @@
 
   <div class="app-shell">
     <aside class="rail" id="scenario-navigator" aria-label="Scenario navigator">
-      <div class="rail-inner">
+      <button class="rail-toggle" id="rail-toggle" type="button" aria-expanded="false" aria-controls="rail-body">
+        <span>Scenario ledger</span>
+        <span class="rail-toggle-count" id="rail-toggle-count">—</span>
+        <span class="rail-toggle-icon" aria-hidden="true"></span>
+      </button>
+      <div class="rail-inner" id="rail-body">
         <div class="rail-head">
           <p class="rail-kicker">Scenario ledger</p>
           <p class="rail-count" id="rail-count">—</p>
@@ -133,7 +138,7 @@
           <div class="chart" id="tradeoff-chart" role="img" aria-label="Scatter plot of objective cost versus cumulative emissions for eligible scenarios"></div>
         </div>
         <div class="chart-foot chart-foot--split">
-          <p class="method-note">X: objective, M$ (million USD). Y: cumulative emissions, Mt CO₂. Colour: scenario family. Hover for labels; select in the rail to ring a point.</p>
+          <p class="method-note">X: objective, M$ (million USD). Y: cumulative emissions, Mt CO₂. Colour: scenario family. Hover for labels; click a point or select in the rail to load that scenario.</p>
           <p class="mono small" id="tradeoff-count"></p>
         </div>
       </section>
