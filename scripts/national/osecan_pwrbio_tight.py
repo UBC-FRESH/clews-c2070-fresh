@@ -18,17 +18,15 @@ import argparse
 import csv
 import hashlib
 import json
-import shutil
 import sys
-from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from workflows.national.clews import osecan_national_supply_curve as tiers  # noqa: E402
+from workflows.national.clews import osecan_national_supply_curve as tiers
 
 MODEL_ROOT = Path("/tmp/osecan_pwrbio_tight")
 SOURCE_ROOT = Path("/tmp/osecan_emfix")
@@ -438,7 +436,7 @@ def summarize(case: str, run_dir: Path) -> dict[str, object]:
 
 
 def _tier_caps() -> dict[str, dict[int, float]]:
-    fields, rows = _read_rows(
+    _fields, rows = _read_rows(
         ARTIFACT_DIR / "national_supply_curve/tier_activity_limits.csv"
     )
     caps: dict[str, dict[int, float]] = {tier.technology: {} for tier in tiers.TIERS}
@@ -466,7 +464,7 @@ def _cap_rows(params: Path, technology: str) -> dict[int, float]:
 def test_cap_loading(case: str) -> list[str]:
     failures: list[str] = []
     params = MODEL_ROOT / "results" / case / "params"
-    caps, definition = _cap_series("reference" if "cap0" not in case else "zero")
+    caps, _definition = _cap_series("reference" if "cap0" not in case else "zero")
     for technology, expected in caps.items():
         series = _cap_rows(params, technology)
         if set(series) != set(tiers.YEARS):
@@ -708,23 +706,23 @@ def write_report(payload: Mapping[str, object]) -> None:
     lines = [
         "# Tight PWRBIO backstop cap on the corrected-emission OSeCAN model",
         "",
-        f"**Status:** `{payload['status']}`. The public "
-        "[deltae/C2070](https://github.com/deltae/C2070) repository was not modified.",
+        (f"**Status:** `{payload['status']}`. The public "
+        "[deltae/C2070](https://github.com/deltae/C2070) repository was not modified."),
         "",
         "## 1. What was implemented",
         "",
-        "The cap is an annual ceiling on BIO fuel input to the `PWRBIO<zone>` "
+        ("The cap is an annual ceiling on BIO fuel input to the `PWRBIO<zone>` "
         "power plants. `PWRBIO` has one mode, one output fuel, an output ratio "
         "of 1, and a constant BIO input ratio of 2.85 PJ fuel per PJ output in "
         "every year. The ceiling is written as "
         "`TotalTechnologyAnnualActivityUpperLimit` on each `PWRBIO<zone>` at "
         "the reference 2050 output level, held in every year 2021-2070. That is "
-        "exactly equivalent to a BIO-input cap because the input ratio is fixed.",
+        "exactly equivalent to a BIO-input cap because the input ratio is fixed."),
         "",
-        f"The total cap is **{PWRBIO_TOTAL_INPUT_PJ:.2f} PJ/yr of BIO input**, "
+        (f"The total cap is **{PWRBIO_TOTAL_INPUT_PJ:.2f} PJ/yr of BIO input**, "
         f"equal to **{sum(payload['pwr_bio_cap']['zonal_output_pj'].values()):.6f} "
         "PJ/yr of electricity output**. Per-zone caps are the reference 2050 "
-        "`PWRBIO` distribution:",
+        "`PWRBIO` distribution:"),
         "",
         "| Zone | Reference 2050 output (PJ) | BIO input cap (PJ) |",
         "|---|---:|---:|",
@@ -734,11 +732,11 @@ def write_report(payload: Mapping[str, object]) -> None:
     lines.extend(
         [
             "",
-            "`RNWBIO` is uncapped. It remains the sole BIO producer and continues "
+            ("`RNWBIO` is uncapped. It remains the sole BIO producer and continues "
             "to serve the fixed non-power BIO demand. The tier stack, BC zonal "
             "caps, demand, and corrected emission factors are unchanged.  The BC "
             "zonal caps `SUPBCWB1` / `SUPBCWB2` remain at their reference values "
-            "and bind in every solved case (3.6055 and 39.9183 PJ in 2050).",
+            "and bind in every solved case (3.6055 and 39.9183 PJ in 2050)."),
             "",
             "## 2. Headline results",
             "",
@@ -850,18 +848,18 @@ def write_report(payload: Mapping[str, object]) -> None:
     lines.extend(
         [
             "",
-            "The uncapped comparison rows are the committed post-fix and wind-audit "
+            ("The uncapped comparison rows are the committed post-fix and wind-audit "
             "runs; they are not rerun here.  The wind-audit's `BIO 2050 = 980 PJ` is "
             "PWRBIO **electricity output**; the corresponding BIO **fuel input** is "
             "2,792.99 PJ at the fixed 2.85 input ratio.  The cap in this test is on "
-            "the fuel input, so it is 35.72 PJ, not 980 PJ.",
+            "the fuel input, so it is 35.72 PJ, not 980 PJ."),
             "",
-            "The cap-0 case has slightly higher emissions than the reference "
+            ("The cap-0 case has slightly higher emissions than the reference "
             "(0.542358 vs 0.460752 Mt) because removing the 12.5 PJ of bio power "
             "raises pre-2026 gas use.  Post-2026 gas is unchanged at the reference "
             "sliver: 0.037 PJ in `PWRNGSN1` in 2037 (0.00509 Mt) and 0.0018 PJ in "
             "2042 (0.000245 Mt).  The wind +$3 capped case also keeps the 2037 "
-            "sliver and adds a 0.037 PJ `PWRNGSN1` sliver in 2042 (0.00509 Mt).",
+            "sliver and adds a 0.037 PJ `PWRNGSN1` sliver in 2042 (0.00509 Mt)."),
             "",
             "## 4. Verdict",
             "",
@@ -947,17 +945,17 @@ def write_report(payload: Mapping[str, object]) -> None:
             "## 6. Caveats",
             "",
             "- The cap is a scenario constraint, not a policy recommendation.",
-            "- Single annual timeslice: no diurnal, seasonal, ramping, reserve-margin, "
-            "or curtailment constraints.",
-            "- `RNWBIO` remains uncapped for non-power BIO demand. The test caps "
-            "`PWRBIO` only; it does not test a national BIO inventory ceiling.",
-            "- Per-zone caps are the reference 2050 distribution, held constant in "
-            "every year. They are not an engineering limit.",
-            "- Uranium expansion is not constrained by a fuel-cycle, lead-time, or "
+            ("- Single annual timeslice: no diurnal, seasonal, ramping, reserve-margin, "
+            "or curtailment constraints."),
+            ("- `RNWBIO` remains uncapped for non-power BIO demand. The test caps "
+            "`PWRBIO` only; it does not test a national BIO inventory ceiling."),
+            ("- Per-zone caps are the reference 2050 distribution, held constant in "
+            "every year. They are not an engineering limit."),
+            ("- Uranium expansion is not constrained by a fuel-cycle, lead-time, or "
             "site limit in this single-ANN model; the 957 PJ of 2050 uranium in the "
-            "wind +$3 capped case is a model outcome, not a project schedule.",
-            "- The uncapped comparison rows come from the committed post-fix and "
-            "wind-audit artefacts; only the three capped cases are solved here.",
+            "wind +$3 capped case is a model outcome, not a project schedule."),
+            ("- The uncapped comparison rows come from the committed post-fix and "
+            "wind-audit artefacts; only the three capped cases are solved here."),
             "",
         ]
     )
