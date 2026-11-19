@@ -12,6 +12,7 @@ from workflows.national.clews.osecan_biomass_module import (
     BCW_EFFICIENCY,
     CASES,
     DISCOUNT_RATE,
+    GJ_PER_MWH,
     HORIZON_END,
     HORIZON_START,
     MODEL_COMMIT,
@@ -97,13 +98,32 @@ class OsecanBiomassModuleTest(unittest.TestCase):
         )
         self.assertAlmostEqual(
             float(self.lcoe[("carbon_2026", "PWRNGS")]["lcoe_usd_per_mwh"]),
-            70.369577,
+            100.020977,
             places=5,
         )
         self.assertAlmostEqual(
             float(self.lcoe[("carbon_2030", "PWRNGS")]["lcoe_usd_per_mwh"]),
-            74.041577,
+            109.935377,
             places=5,
+        )
+
+    def test_gas_carbon_cost_uses_output_basis_factor(self) -> None:
+        plant = PLANTS["PWRNGS"]
+        carbon_price = 200.0
+        economics = plant_lcoe(plant, 0.0, carbon_price)
+        output_factor = (
+            plant.emission_factor_t_per_gj * plant.input_activity_ratio
+        )
+        self.assertAlmostEqual(output_factor, 0.1377, places=9)
+        self.assertAlmostEqual(
+            economics.carbon_usd_per_mwh,
+            GJ_PER_MWH * output_factor * carbon_price,
+            places=9,
+        )
+        self.assertAlmostEqual(
+            economics.co2_t_per_mwh,
+            GJ_PER_MWH * output_factor,
+            places=9,
         )
 
     def test_bcw_fuel_cost_formula(self) -> None:
@@ -129,26 +149,26 @@ class OsecanBiomassModuleTest(unittest.TestCase):
     def test_break_even_against_gas(self) -> None:
         self.assertAlmostEqual(
             float(self.comparison["base"]["breakeven_bcw_vs_gas95_usd_per_gj"]),
-            1.5628598904296849,
+            3.776972793655491,
             places=9,
         )
         self.assertAlmostEqual(
             float(self.comparison["base"]["breakeven_bcw_vs_gas115_usd_per_gj"]),
-            1.8370534388167814,
+            4.517295374300651,
             places=9,
         )
         self.assertAlmostEqual(
             float(
                 self.comparison["high"]["carbon_price_for_parity_with_gas_usd_per_t"]
             ),
-            124.375027,
+            46.064825,
             places=5,
         )
         self.assertAlmostEqual(
             float(
                 self.comparison["base"]["carbon_price_for_parity_with_gas_usd_per_t"]
             ),
-            160.217994,
+            59.339998,
             places=5,
         )
 
@@ -204,7 +224,7 @@ class OsecanBiomassModuleTest(unittest.TestCase):
         self.assertAlmostEqual(frozen["pwrbcw_pj"]["2050"], 11.548065, places=6)
         self.assertEqual(frozen["pwr_bio_pj"]["total"], 0.0)
         self.assertEqual(frozen["emissions_mt"]["total"], 43.990577)
-        self.assertIn("160 $/t", sensitivity["conditions_for_bcw_dispatch"][0])
+        self.assertIn("59 $/t", sensitivity["conditions_for_bcw_dispatch"][0])
         self.assertGreater(frozen["objective_musd"], carbon["objective_musd"])
 
     def test_zonal_files_are_rejected(self) -> None:

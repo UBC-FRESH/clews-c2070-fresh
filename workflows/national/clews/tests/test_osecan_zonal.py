@@ -222,12 +222,12 @@ class OsecanZonalArtifactTest(unittest.TestCase):
         )
         self.assertAlmostEqual(
             float(lookup[("PWRNGS", 200.0, 3.0)]["lcoe_usd_per_mwh"]),
-            89.6476,
+            152.0716,
             places=4,
         )
         self.assertAlmostEqual(
             float(lookup[("PWRNGS", 95.0, 3.0)]["lcoe_usd_per_mwh"]),
-            70.3696,
+            100.0210,
             places=4,
         )
         self.assertAlmostEqual(

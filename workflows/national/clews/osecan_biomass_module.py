@@ -21,7 +21,8 @@ All plant parameters are the documented OSeCAN v0.3 placeholders:
 * ``src/osecan/model_structure.py``: PWRBCW IAR 3.72 (26.9% efficiency),
   PWRBIO IAR 2.85 (35.1%), PWRBSW IAR 3.72, PWRNGS IAR 2.70, PWRHYD IAR 1.00.
 * ``src/osecan/data/build_params.py``: capital/fixed/variable costs, life,
-  capacity factor, and gas CO2 factor (0.051 Mt/PJ = 0.051 t/GJ).
+  capacity factor, and gas CO2 fuel-input factor (0.051 t/GJ of fuel;
+  0.051 x 2.70 IAR = 0.1377 t/GJ of output activity).
 * ``docs/model-description.md`` and ``README.md``: 2021-2070 horizon, 5%
   discount rate, 2020 CAD, $95/t CO2 in 2026 rising to $115/t in 2030.
 
@@ -97,9 +98,11 @@ MODEL_SCENARIO = "Current Measures"
 CASES = ("low", "base", "high")
 
 
-# Documented OSeCAN v0.3 plant parameters.  ``emission_factor`` is in
-# t CO2 per GJ of technology activity, which is numerically equal to the
-# documented Mt/PJ value.
+# Documented OSeCAN v0.3 plant parameters.  ``emission_factor_t_per_gj`` is a
+# fuel-input factor in t CO2 per GJ of fuel (numerically Mt/PJ of fuel).
+# OSeMOSYS applies ``EmissionActivityRatio`` to output activity, so the
+# output-basis factor used for the carbon cost is
+# ``emission_factor_t_per_gj * input_activity_ratio``.
 @dataclass(frozen=True, slots=True)
 class Plant:
     """A dispatchable plant's cost and conversion parameters."""
@@ -622,8 +625,10 @@ def plant_lcoe(
     """Compute a simplified LCOE for one plant.
 
     The calculation includes annualised capital, fixed O&M, fuel, a separate
-    CO2 cost for plants with an emission factor, and variable O&M.  It excludes
-    transmission, backup, and financing outside the discount rate.
+    CO2 cost for plants with an emission factor, and variable O&M.  The CO2
+    cost uses the output-basis factor (fuel-input factor times the plant input
+    activity ratio), matching how OSeMOSYS applies ``EmissionActivityRatio``.
+    It excludes transmission, backup, and financing outside the discount rate.
 
     Args:
         plant: Plant parameters.
@@ -642,6 +647,11 @@ def plant_lcoe(
             f"{plant.name} capacity factor must be in (0, 1], "
             f"got {plant.capacity_factor}"
         )
+    if plant.input_activity_ratio <= 0:
+        raise ValueError(
+            f"{plant.name} input activity ratio must be positive, "
+            f"got {plant.input_activity_ratio}"
+        )
     if plant.capex_usd_per_kw < 0 or plant.fixed_usd_per_kw_yr < 0:
         raise ValueError(f"{plant.name} has a negative capital or fixed cost")
     if plant.var_usd_per_gj < 0 or fuel_price_usd_per_gj < 0:
@@ -656,8 +666,11 @@ def plant_lcoe(
     capital_fixed = (
         plant.capex_usd_per_kw * crf + plant.fixed_usd_per_kw_yr
     ) / mwh_per_kw_year
+    output_emission_factor = (
+        plant.emission_factor_t_per_gj * plant.input_activity_ratio
+    )
     fuel = GJ_PER_MWH * plant.input_activity_ratio * fuel_price_usd_per_gj
-    carbon = GJ_PER_MWH * plant.emission_factor_t_per_gj * carbon_price_usd_per_t
+    carbon = GJ_PER_MWH * output_emission_factor * carbon_price_usd_per_t
     variable = GJ_PER_MWH * plant.var_usd_per_gj
     return Lcoe(
         capital_fixed_usd_per_mwh=capital_fixed,
@@ -666,7 +679,7 @@ def plant_lcoe(
         var_usd_per_mwh=variable,
         total_usd_per_mwh=capital_fixed + fuel + carbon + variable,
         crf=crf,
-        co2_t_per_mwh=GJ_PER_MWH * plant.emission_factor_t_per_gj,
+        co2_t_per_mwh=GJ_PER_MWH * output_emission_factor,
     )
 
 
@@ -963,6 +976,12 @@ def build_bcw_vs_bio_rows(
     bcw_fuel_slope = GJ_PER_MWH * PLANTS["PWRBCW"].input_activity_ratio
     if bcw_fuel_slope <= 0:
         raise AssertionError("PWRBCW fuel slope must be positive")
+    gas_output_emission_factor = (
+        PLANTS["PWRNGS"].emission_factor_t_per_gj
+        * PLANTS["PWRNGS"].input_activity_ratio
+    )
+    if gas_output_emission_factor <= 0:
+        raise AssertionError("PWRNGS output emission factor must be positive")
 
     rows: list[dict[str, object]] = []
     for case in CASES:
@@ -972,7 +991,7 @@ def build_bcw_vs_bio_rows(
         breakeven_gas_95 = (gas_95 - bcw_capital_fixed) / bcw_fuel_slope
         breakeven_gas_115 = (gas_115 - bcw_capital_fixed) / bcw_fuel_slope
         carbon_parity = 95.0 + (bcw_lcoe - gas_95) / (
-            GJ_PER_MWH * PLANTS["PWRNGS"].emission_factor_t_per_gj
+            GJ_PER_MWH * gas_output_emission_factor
         )
         rows.append(
             {
@@ -1230,9 +1249,9 @@ def build_sensitivity() -> dict[str, object]:
         "runs": dict(SENSITIVITY_RUNS),
         "conditions_for_bcw_dispatch": [
             (
-                "The CO2 price must exceed the BCW-vs-gas parity price: about "
-                "160 $/t for the base case, 124 $/t for the high case, and "
-                "214 $/t for the low case."
+                "The CO2 price must exceed the output-basis BCW-vs-gas parity "
+                "price: about 59 $/t for the base case, 46 $/t for the high "
+                "case, and 79 $/t for the low case."
             ),
             (
                 "A cheaper clean firm resource must be constrained. With "
@@ -1356,7 +1375,7 @@ def build_manifest(
             "OSeCAN plant parameters are the documented v0.3 placeholders, not Canadian fleet averages.",
             "PWRBCW and PWRBIO use the documented input activity ratios 3.72 and 2.85 (26.9% and 35.1% efficiency).",
             "LCOE is a simplified busbar calculation at 5% discount; it excludes transmission, backup, and financing outside the discount rate.",
-            "Gas LCOE is the model's placeholder gas plant (capex 1100 $/kW, fuel $3/GJ, CO2 0.051 t/GJ, carbon $95 or $115/t), not a market forecast.",
+            "Gas LCOE is the model's placeholder gas plant (capex 1100 $/kW, fuel $3/GJ, CO2 0.051 t/GJ of fuel input x 2.70 IAR = 0.1377 t/GJ of output, carbon $95 or $115/t), not a market forecast.",
             "The BC zonal caps are FRESH-side provisional, not a C2070 official boundary.",
             "The model has no SUPBCWB1/B2 technology; the BC base run is the national SUPBCW rollup.",
             "The diagnostic hydro-frozen runs are sensitivity probes, not scenarios.",
@@ -1512,9 +1531,10 @@ def _sensitivity_markdown(sensitivity: Mapping[str, object]) -> list[str]:
         "The cap that binds is the national `SUPBCW` cap. The model has no",
         "zonal BC supply technology, so a zonal cap cannot be tested here.",
         "",
-        "The documented 95-115 $/t schedule is below the base-case parity",
-        "price of about 160 $/t even with hydro frozen, which is why the",
-        "earlier hydro-frozen diagnostic also had zero BCW.",
+        "The documented 95-115 $/t schedule is above the output-basis",
+        "base-case parity price of about 59 $/t, so BCW is competitive with",
+        "gas on carbon cost alone; the binding competitor is hydro, which is",
+        "why the earlier hydro-frozen diagnostic still had zero BCW.",
         "",
         "### Sensitivity limitations",
         "",
@@ -1689,7 +1709,7 @@ def _markdown_report(
         "",
         "### Plant parameters",
         "",
-        "| Plant | Fuel | IAR | Efficiency | Capex ($/kW) | Fixed ($/kW-yr) | Var ($/GJ) | Life (yr) | CF | CO2 (t/GJ) |",
+        "| Plant | Fuel | IAR | Efficiency | Capex ($/kW) | Fixed ($/kW-yr) | Var ($/GJ) | Life (yr) | CF | CO2 fuel input (t/GJ) |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
         "| PWRBCW | BCW | 3.72 | 26.9% | 3,200 | 95 | 0 | 30 | 0.70 | 0 |",
         "| PWRBIO | BIO | 2.85 | 35.1% | 3,000 | 90 | 2.5 | 30 | 0.70 | 0 |",
@@ -1768,8 +1788,14 @@ def _markdown_report(
             f" (base by {_fmt(-comparison['base']['lcoe_delta_vs_bio_usd_per_mwh'])} $/MWh, "
             f"high by {_fmt(-comparison['high']['lcoe_delta_vs_bio_usd_per_mwh'])} $/MWh)."
         ),
-        "The low case loses to BIO. All three cases lose to the model's gas",
-        "plant at the documented $95-115/t carbon schedule.",
+        "The low case loses to BIO. Every case beats the model's gas plant at",
+        "both carbon prices on the corrected output-basis gas factor:",
+        (
+            f"low {-comparison['low']['lcoe_delta_vs_gas95_usd_per_mwh']:.2f}, "
+            f"base {-comparison['base']['lcoe_delta_vs_gas95_usd_per_mwh']:.2f}, "
+            f"high {-comparison['high']['lcoe_delta_vs_gas95_usd_per_mwh']:.2f} "
+            "$/MWh below gas at $95/t."
+        ),
         "",
         "### Cap metrics",
         "",
@@ -1847,8 +1873,9 @@ def _markdown_report(
         "- PWRBCW and PWRBIO use the documented v0.3 input activity ratios and",
         "  placeholder costs. They are not Canadian fleet averages.",
         "- The gas comparator is the model's placeholder plant (capex 1,100 $/kW,",
-        "  fuel $3/GJ, CO2 0.051 t/GJ, carbon $95-115/t). A market gas price or",
-        "  a different capex would move the break-even.",
+        "  fuel $3/GJ, CO2 0.051 t/GJ of fuel input (0.1377 t/GJ output),",
+        "  carbon $95-115/t). A market gas price or a different capex would",
+        "  move the break-even.",
         "- The BC zonal caps are FRESH-side provisional and not a C2070 boundary.",
         "- The hydro-frozen diagnostic is a sensitivity probe, not a scenario.",
         "- The model has no `SUPBCWB1/B2`; the BC base run is the national",
