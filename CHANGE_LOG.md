@@ -2,6 +2,20 @@
 
 ## 2026-11-19
 
+- **Built the iteration-0 static data contract for the CLEWS/C2070 web UI.**
+  Added `workflows/ui/export_iteration0.py`, which normalizes the OSeCAN
+  `runs`/`cases` shapes, maps `objective_musd || objective` and
+  `emissions_total_mt || emissions_mt.total`, normalizes solver statuses, and
+  fails loudly on unknown shapes or units.  It writes 47 scenarios under
+  `ui/public/data/` (26 publishable post-fix/tradeoff scenarios; pre-fix
+  families retained with `superseded_for_emissions=true`), columnar dispatch
+  outputs split by category/unit, harvest/supply/landbase/links inputs, and
+  simplified EPSG:4326 provinces, ecoprovinces, RSYC tile supply, and B1/B2
+  zone anchors with explicit gaps for the other 11 C2070 zones.  Bundle is
+  7.5 MB total (spatial 3.96 MB); all build-time checks and focused contract
+  tests pass.  No scenario artifacts were modified; frontend intentionally not
+  built.
+
 - **Ran the final 20%-zonal-wind-cap full-constraint test on the corrected-
   emission OSeCAN model.**  Started from the existing full-constraint case
   (5%-of-zone-generation `PWRBIO<z>` caps, 0 GW nuclear, T4=0, T3 kept or zero,
