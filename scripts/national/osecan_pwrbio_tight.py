@@ -735,7 +735,9 @@ def write_report(payload: Mapping[str, object]) -> None:
             "",
             "`RNWBIO` is uncapped. It remains the sole BIO producer and continues "
             "to serve the fixed non-power BIO demand. The tier stack, BC zonal "
-            "caps, demand, and corrected emission factors are unchanged.",
+            "caps, demand, and corrected emission factors are unchanged.  The BC "
+            "zonal caps `SUPBCWB1` / `SUPBCWB2` remain at their reference values "
+            "and bind in every solved case (3.6055 and 39.9183 PJ in 2050).",
             "",
             "## 2. Headline results",
             "",
@@ -872,8 +874,8 @@ def write_report(payload: Mapping[str, object]) -> None:
         lines.append(
             f"- **Cap 35.72 PJ:** the cap reproduces the reference: gas 2050 "
             f"{_fmt(gas)} PJ, emissions {_fmt(cap35['emissions_total_mt'], 6)} Mt, "
-            f"T1/T2 bind, T3/T4 idle. The cap is non-binding beyond the reference "
-            "because it equals the reference zonal maxima."
+            f"T1/T2 bind, T3/T4 idle. The cap is set at the reference zonal "
+            "maxima, so it reproduces the reference instead of cutting it."
         )
     if cap0:
         lines.append(
