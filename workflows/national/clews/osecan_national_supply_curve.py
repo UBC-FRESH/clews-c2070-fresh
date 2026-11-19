@@ -1013,8 +1013,18 @@ def summarize_run(
     name: str,
     run_dir: Path,
     tier_cap_series: Mapping[str, Mapping[int, float]],
+    *,
+    label: str | None = None,
 ) -> dict[str, object]:
-    """Build the JSON summary for one solved run."""
+    """Build the JSON summary for one solved run.
+
+    Args:
+        name: Run name.
+        run_dir: Solved run directory.
+        tier_cap_series: Tier technology year-to-cap mapping.
+        label: Optional human-readable label.  Defaults to the label of the
+            matching entry in :data:`RUN_SPECS`.
+    """
     status = read_status(run_dir)
     if status.get("status") != "optimal":
         raise RuntimeError(f"{name}: solver status {status.get('status')!r}")
@@ -1069,7 +1079,9 @@ def summarize_run(
     binding = cap_binding(production, tier_cap_series)
 
     return {
-        "label": next(spec["label"] for spec in RUN_SPECS if spec["name"] == name),
+        "label": label
+        if label is not None
+        else next(spec["label"] for spec in RUN_SPECS if spec["name"] == name),
         "status": status,
         "objective": status.get("objective"),
         "tier_activity_pj": {
