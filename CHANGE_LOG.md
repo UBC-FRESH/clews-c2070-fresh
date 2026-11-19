@@ -2,6 +2,24 @@
 
 ## 2026-11-19
 
+- **Ran the full-backstop constraint test on the corrected-emission OSeCAN
+  model.**  Applied every backstop constraint at once: 5%-of-zone-generation
+  `PWRBIO<z>` caps (162.608451 PJ/yr total), +$3/GJ on all `PWRWND<z>`, 0 GW
+  nuclear via `TotalAnnualMaxCapacity` and `TotalAnnualMaxCapacityInvestment`
+  for all 13 `PWRURN<z>`, `SUPBCWT4` = 0 (primary), and `SUPBCWT3` +
+  `SUPBCWT4` = 0 (optional), keeping T1/T2 at 109.398863 PJ and the BC zonal
+  caps at 43.523816 PJ; `RNWBIO` stays uncapped.  Both cases solve optimal.
+  Primary (T4=0): 1,387,944.73 M$, 0.465597 Mt, 2050 gas 0, wind 807.19 PJ,
+  BIO 162.61 PJ, PWRBCW 51.83 PJ, T3 binding at 1,610.71 PJ over the horizon,
+  T4 zero; all 13 PWRBIO caps and T1/T2/BC zonal caps bind.  Optional
+  (T3=T4=0): 1,388,092.40 M$, same emissions, wind 817.91 PJ, PWRBCW 41.11 PJ.
+  Gas does not return: all-years gas is 3.381 PJ (3.307 PJ in 2022-2024,
+  0.074 PJ in 2037/2042) and 2050 gas is zero.  The remaining zero-carbon
+  backstop is uncapped wind; the +$3/GJ adder does not suppress it.  Cap
+  loading, dispatch reconciliation, tier caps and `osecan harmonize` pass.
+  Artifacts under `data/derived/national/clews/osecan/full_constraint/`;
+  public OSeCAN untouched.
+
 - **Ran the tight PWRBIO backstop-cap test on the corrected-emission OSeCAN
   model.**  Capped BIO fuel input to power bioenergy at the reference 2050
   level, 35.72 PJ/yr (12.533855 PJ/yr of output at the fixed 2.85 input ratio),
