@@ -2,6 +2,22 @@
 
 ## 2026-11-19
 
+- **Audited the uncapped nuclear backstop in the corrected-emission OSeCAN
+  stress.**  Added `TotalAnnualMaxCapacity` and
+  `TotalAnnualMaxCapacityInvestment` caps for all 13 `PWRURN<z>` technologies in
+  every year 2021-2070, holding the 5% PWRBIO cap, +$3/GJ wind adder, BCW tiers,
+  BC zonal caps, 2021 hydro cap and corrected EAR fixed.  No-nuclear case:
+  optimal, 1,387,922.37 M$, 0.465597 Mt, 2050 gas 0, wind 789.91 PJ, T4 binding
+  at 2,531.55 PJ over the horizon.  10 GW case: optimal, 1,385,098.46 M$,
+  0.496039 Mt, nuclear 283.82 PJ at 2050, gas 0, T4 binding at 2,142.21 PJ.
+  The zero-nuclear $200/t reference is unchanged (1,371,773.03 M$, 0.460752 Mt)
+  because the reference has no nuclear dispatch.  Gas does not return; T3 and
+  T4 both activate once nuclear is capped, and the near-zero result is robust
+  to the nuclear cap but still relies on uncapped wind and the high-cost T3/T4
+  biomass tier.  `osecan harmonize` and the cap-loading, dispatch-reconciliation
+  and tier-cap tests pass.  Artifacts under
+  `data/derived/national/clews/osecan/nuclear_audit/`; public OSeCAN untouched.
+
 - **Corrected the OSeCAN emission-factor unit and reran the core national
   cases.**  `EmissionActivityRatio` and the UDC emission-cap multiplier now
   multiply the fuel-input factors by each plant's `InputActivityRatio`
