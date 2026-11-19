@@ -2,6 +2,23 @@
 
 ## 2026-11-19
 
+- **Ran the tight PWRBIO backstop-cap test on the corrected-emission OSeCAN
+  model.**  Capped BIO fuel input to power bioenergy at the reference 2050
+  level, 35.72 PJ/yr (12.533855 PJ/yr of output at the fixed 2.85 input ratio),
+  using per-zone `TotalTechnologyAnnualActivityUpperLimit` rows from the
+  reference 2050 distribution in every year 2021-2070.  `RNWBIO` stays uncapped
+  for the fixed non-power BIO demand (801.96 PJ/yr); tiers, BC zonal caps,
+  demand, hydro cap and corrected EAR are unchanged.  Results: 35.72 PJ cap
+  reproduces the post-fix $200 reference (1,371,773.03 M$, 0.460752 Mt, gas
+  2050 0, wind 967.98 PJ, T1/T2 bind, T3/T4 idle); 0 PJ cap gives 1,371,789.49
+  M$, 0.542358 Mt, wind 980.52 PJ, gas 2050 0; wind +$3/GJ with the 35.72 PJ
+  cap gives 1,385,135.04 M$, 0.530558 Mt, gas 2050 0, wind 0, uranium 957.26
+  PJ, PWRBCW 51.83 PJ, T3 binding at 39.8737 PJ and T4 idle.  Gas does not
+  return at scale; post-2026 gas is a 0.037 PJ `PWRNGSN1` sliver in 2037 and
+  2042.  `osecan harmonize` and the cap-loading, dispatch-reconciliation and
+  tier-cap tests pass.  Artifacts under
+  `data/derived/national/clews/osecan/pwrbio_tight/`; public OSeCAN untouched.
+
 - **Audited the uncapped nuclear backstop in the corrected-emission OSeCAN
   stress.**  Added `TotalAnnualMaxCapacity` and
   `TotalAnnualMaxCapacityInvestment` caps for all 13 `PWRURN<z>` technologies in
