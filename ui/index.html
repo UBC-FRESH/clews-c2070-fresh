@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forest Ledger — CLEWS/C2070 iteration-0 scenario explorer</title>
+  <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0, no live solver.">
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="vendor/echarts.min.js"></script>
+  <script defer src="vendor/maplibre-gl.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
+
+  <header class="site-header">
+    <div class="header-contours" aria-hidden="true">
+      <svg viewBox="0 0 760 340" preserveAspectRatio="xMidYMid slice">
+        <g fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M-40 280C90 150 160 330 310 205S540 60 800 155"/>
+          <path d="M-40 250C80 135 180 300 320 180S560 45 800 125"/>
+          <path d="M-40 320C100 205 200 360 350 245S600 115 800 190"/>
+          <path d="M-30 205C100 90 210 240 340 140S590 5 810 85"/>
+          <path d="M40 355C170 265 250 390 390 290S610 175 800 230"/>
+        </g>
+      </svg>
+    </div>
+    <div class="header-sun" aria-hidden="true"></div>
+    <div class="header-inner">
+      <div class="brand-block">
+        <p class="eyebrow">UBC FRESH · CLEWS-C2070 · forest biomass supply</p>
+        <h1>Forest <em>Ledger</em></h1>
+        <p class="subtitle">Iteration-0 scenario explorer for harvest, bioenergy, and the national supply curve.</p>
+      </div>
+      <div class="header-aside">
+        <p class="provisional-banner"><span class="pulse-dot" aria-hidden="true"></span>FRESH-side provisional — not C2070 official</p>
+        <dl class="header-stats">
+          <div><dt>Scenarios</dt><dd id="header-scenario-count">—</dd></div>
+          <div><dt>Trade-off eligible</dt><dd id="header-eligible-count">—</dd></div>
+          <div><dt>Model commit</dt><dd class="mono">b5df675</dd></div>
+          <div><dt>Horizon</dt><dd class="mono">2021—2070</dd></div>
+        </dl>
+        <p class="header-note" id="header-generated">Loading data contract…</p>
+      </div>
+    </div>
+  </header>
+
+  <div id="fatal-banner" class="fatal-banner" role="alert" hidden></div>
+
+  <div class="app-shell">
+    <aside class="rail" id="scenario-navigator" aria-label="Scenario navigator">
+      <div class="rail-inner">
+        <div class="rail-head">
+          <p class="rail-kicker">Scenario ledger</p>
+          <p class="rail-count" id="rail-count">—</p>
+        </div>
+        <div class="search-field">
+          <label for="scenario-search">Search scenarios</label>
+          <input id="scenario-search" type="search" placeholder="name, family, id…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="family-filter" id="family-filter" role="group" aria-label="Filter by scenario family"></div>
+        <div class="rail-divider" aria-hidden="true"></div>
+        <ol class="scenario-list" id="scenario-list" aria-label="Scenarios"></ol>
+        <p class="rail-foot">Post-fix = canonical iteration-0 emissions. Superseded rows remain visible for audit.</p>
+      </div>
+    </aside>
+
+    <main class="workspace" id="workspace">
+      <div class="tabbar-wrap">
+        <div class="tabbar" role="tablist" aria-label="Explorer views">
+          <button class="tab is-active" id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" data-tab="overview" type="button">Overview</button>
+          <button class="tab" id="tab-dispatch" role="tab" aria-selected="false" aria-controls="panel-dispatch" data-tab="dispatch" tabindex="-1" type="button">Dispatch</button>
+          <button class="tab" id="tab-tradeoff" role="tab" aria-selected="false" aria-controls="panel-tradeoff" data-tab="tradeoff" tabindex="-1" type="button">Trade-off</button>
+          <button class="tab" id="tab-map" role="tab" aria-selected="false" aria-controls="panel-map" data-tab="map" tabindex="-1" type="button">Map</button>
+          <button class="tab" id="tab-osecan" role="tab" aria-selected="false" aria-controls="panel-osecan" data-tab="osecan" tabindex="-1" type="button">OSeCAN Links</button>
+          <button class="tab" id="tab-inputs" role="tab" aria-selected="false" aria-controls="panel-inputs" data-tab="inputs" tabindex="-1" type="button">Inputs</button>
+        </div>
+        <div class="tab-meta" id="tab-scenario-meta" aria-live="polite"></div>
+      </div>
+
+      <section class="panel is-active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div id="overview-content">
+          <div class="skeleton-block">Reading scenario ledger…</div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-dispatch" role="tabpanel" aria-labelledby="tab-dispatch" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Electricity vs fuel</p>
+            <h2>Dispatch, 2021—2070</h2>
+          </div>
+          <p class="panel-deck">Stacked annual energy by technology family. Electricity and fuel are separate ledgers — categories are never summed across units.</p>
+        </div>
+        <div class="control-deck" role="group" aria-label="Dispatch controls">
+          <fieldset class="segmented">
+            <legend>Energy ledger</legend>
+            <label><input type="radio" name="energy-ledger" value="electricity" checked><span>Electricity</span></label>
+            <label><input type="radio" name="energy-ledger" value="fuel"><span>Fuel</span></label>
+          </fieldset>
+          <label class="select-field">Zone
+            <select id="dispatch-zone"></select>
+          </label>
+          <div class="range-field">
+            <span class="range-title">Years <span class="mono" id="year-range-label">2021—2070</span></span>
+            <label class="range-row">From <input id="year-min" type="range" min="2021" max="2070" step="1" value="2021"><output id="year-min-out">2021</output></label>
+            <label class="range-row">To <input id="year-max" type="range" min="2021" max="2070" step="1" value="2070"><output id="year-max-out">2070</output></label>
+          </div>
+        </div>
+        <div class="chart-frame chart-frame--dispatch">
+          <div class="chart-loading" id="dispatch-loading">Loading scenario output…</div>
+          <div class="chart" id="dispatch-chart" role="img" aria-label="Stacked area chart of annual dispatch by technology family"></div>
+          <div class="empty-state" id="dispatch-empty" hidden></div>
+        </div>
+        <div class="chart-foot">
+          <p id="dispatch-source-note" class="method-note">Source category and units will appear after the scenario output loads.</p>
+          <div class="swatch-legend" id="dispatch-legend" aria-label="Technology family colours"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-tradeoff" role="tabpanel" aria-labelledby="tab-tradeoff" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Eligible frontier</p>
+            <h2>Objective vs cumulative emissions</h2>
+          </div>
+          <p class="panel-deck">Only the 26 published post-fix scenarios are eligible. Superseded and diagnostic scenarios are excluded even when their IDs appear elsewhere.</p>
+        </div>
+        <div id="tradeoff-guard" class="guard-note" hidden></div>
+        <div class="chart-frame chart-frame--scatter">
+          <div class="chart" id="tradeoff-chart" role="img" aria-label="Scatter plot of objective cost versus cumulative emissions for eligible scenarios"></div>
+        </div>
+        <div class="chart-foot chart-foot--split">
+          <p class="method-note">X: objective, M$ (million USD). Y: cumulative emissions, Mt CO₂. Colour: scenario family. Hover for labels; select in the rail to ring a point.</p>
+          <p class="mono small" id="tradeoff-count"></p>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-map" role="tabpanel" aria-labelledby="tab-map" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Spatial bundle</p>
+            <h2>Provinces, ecoprovinces &amp; RSYC tiles</h2>
+          </div>
+          <p class="panel-deck">Tile choropleth shows recoverable base energy. C2070 zone polygons are not invented: only B1 and B2 have authoritative anchors.</p>
+        </div>
+        <div class="map-layout">
+          <div class="map-stage">
+            <div id="map" aria-label="Map of Canada with provinces, ecoprovinces, and RSYC supply tiles"></div>
+            <div id="map-load-state" class="map-state">Spatial bundle loads when this tab opens.</div>
+            <div class="map-legend" id="map-legend" hidden>
+              <span class="map-legend-title">Recoverable base (PJ)</span>
+              <div id="map-legend-items"></div>
+            </div>
+          </div>
+          <aside class="map-side" aria-label="Map layers and spatial caveats">
+            <h3>Layers</h3>
+            <div class="layer-toggles">
+              <label><input type="checkbox" id="layer-provinces" checked><span>Provinces <span class="mono muted">13</span></span></label>
+              <label><input type="checkbox" id="layer-ecoprovinces" checked><span>Ecoprovinces <span class="mono muted">36</span></span></label>
+              <label><input type="checkbox" id="layer-tiles" checked><span>RSYC tiles <span class="mono muted">385</span></span></label>
+              <label><input type="checkbox" id="layer-anchors" checked><span>B1 / B2 anchors <span class="mono muted">2</span></span></label>
+            </div>
+            <button class="button button--quiet" id="map-fit" type="button">Fit to Canada</button>
+            <div class="spatial-gap-note">
+              <strong>11 C2070 zones lack polygons</strong>
+              <p>No authoritative geometry exists in the repository. Nothing is fabricated. Gap zones:</p>
+              <div class="chip-row" id="gap-zones"></div>
+            </div>
+            <dl class="mini-stats" id="map-stats"></dl>
+            <p class="method-note">Choropleth classes are quantiles of <span class="mono">recoverable_pj_base</span> across 385 RSYC tiles. Click a tile for its record.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-osecan" role="tabpanel" aria-labelledby="tab-osecan" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Supply-curve workbench</p>
+            <h2>OSeCAN links &amp; SUPBCW inputs</h2>
+          </div>
+          <p class="panel-deck">A transparent screening calculator over the committed supply curve. It does not call the solver and cannot produce a new model run.</p>
+        </div>
+        <div class="needs-run-banner" role="status"><span class="needs-run-mark">!</span><strong>Needs run — no live solver in iteration 0.</strong> Exports are illustrative inputs, not solved CLEWS results.</div>
+
+        <div class="osecan-grid">
+          <div class="control-card">
+            <h3>Lever calculator</h3>
+            <label class="select-field">Harvest lever
+              <select id="osecan-harvest"></select>
+            </label>
+            <label class="select-field">Recovery fraction
+              <select id="osecan-recovery"></select>
+            </label>
+            <label class="select-field">Cost basis
+              <select id="osecan-cost"></select>
+            </label>
+            <div class="validation-strip" id="osecan-validation"></div>
+            <div class="export-row">
+              <button class="button" id="export-limits" type="button">Export activity limits CSV</button>
+              <button class="button" id="export-costs" type="button">Export variable cost CSV</button>
+            </div>
+            <p class="method-note" id="export-note">REGION,TECHNOLOGY,YEAR,VALUE · national tier rows, 2021—2070.</p>
+          </div>
+          <div class="result-card">
+            <h3>2050 screening result</h3>
+            <div class="result-grid">
+              <div class="result"><span>National</span><strong id="osecan-national">—</strong><small>PJ fuel / yr</small></div>
+              <div class="result"><span>BC zonal</span><strong id="osecan-bc">—</strong><small>PJ fuel / yr</small></div>
+              <div class="result"><span>Rest of Canada</span><strong id="osecan-rest">—</strong><small>PJ fuel / yr</small></div>
+              <div class="result"><span>Supply cost</span><strong id="osecan-cost-value">—</strong><small>USD/GJ</small></div>
+            </div>
+            <p class="result-note" id="osecan-result-note"></p>
+            <h4>Tier allocation</h4>
+            <div class="tier-stack" id="osecan-tier-stack"></div>
+            <table class="data-table data-table--compact" id="osecan-tier-table"></table>
+            <p class="method-note">Proportional screening model: national PJ = reference 2050 cap × (harvest ÷ 119 Mm³) × (recovery ÷ 0.60). BC scales from the committed BC zonal total. Tier sum is validated against the committed curve; over-cap requests are clamped and flagged.</p>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>File &amp; check ledger</h3>
+            <p>Recorded by the exporter — hashes are snapshots, not re-hashed in the browser.</p>
+          </div>
+          <div id="osecan-family-table"></div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>Input files</h3>
+            <p>Source inventory behind harvest basis, supply curve, landbase, and spatial layers.</p>
+          </div>
+          <div id="osecan-input-table"></div>
+        </div>
+
+        <details class="fold-block">
+          <summary>SUPBCW input file inventory</summary>
+          <div id="osecan-supbcw-table"></div>
+        </details>
+      </section>
+
+      <section class="panel" id="panel-inputs" role="tabpanel" aria-labelledby="tab-inputs" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Basis &amp; caveats</p>
+            <h2>Input ledger</h2>
+          </div>
+          <p class="panel-deck">Harvest reference paths, supply-curve tiers, and the managed-landbase screening proxy — with the caveats attached.</p>
+        </div>
+        <div id="inputs-summary" class="metric-grid metric-grid--four"></div>
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>Harvest reference paths</h3>
+            <p>m³/year, 2021—2070. Low-100M and high-150M are scenario bounds, not forecasts.</p>
+          </div>
+          <div class="chart-frame chart-frame--harvest">
+            <div class="chart" id="harvest-chart" role="img" aria-label="Line chart of national harvest reference paths"></div>
+          </div>
+          <div class="caveat-inline" id="harvest-caveats"></div>
+        </div>
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>National supply-curve tiers</h3>
+            <p>Committed incremental caps and variable costs. Tier sum must equal the terminal upper bound.</p>
+          </div>
+          <div class="tier-bar" id="input-tier-bar" aria-hidden="true"></div>
+          <div id="input-tier-table"></div>
+        </div>
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>Managed-landbase proxy</h3>
+            <p id="landbase-status"></p>
+          </div>
+          <div class="caveat-callout">
+            <strong>Screening proxy — not a legal THLB or AAC landbase.</strong>
+            <ul id="landbase-caveats"></ul>
+          </div>
+          <div id="managed-table"></div>
+          <p class="method-note" id="managed-supply-note"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <p><span class="footer-mark" aria-hidden="true"></span> Forest Ledger · iteration-0 static UI · no build step, no backend, no live solver.</p>
+    <p class="mono" id="footer-contract">Data contract: loading…</p>
+  </footer>
+
+  <div class="live-region" id="live-region" aria-live="polite"></div>
+</body>
+</html>
