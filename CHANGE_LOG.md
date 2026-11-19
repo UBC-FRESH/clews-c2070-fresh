@@ -2,6 +2,25 @@
 
 ## 2026-11-19
 
+- **Ran the final 20%-zonal-wind-cap full-constraint test on the corrected-
+  emission OSeCAN model.**  Started from the existing full-constraint case
+  (5%-of-zone-generation `PWRBIO<z>` caps, 0 GW nuclear, T4=0, T3 kept or zero,
+  $200/t, 2021 hydro upper cap, corrected EAR, BCW tiers/BC zonal unchanged)
+  and added hard `PWRWND<z>` annual activity caps at 20% of each zone's
+  `efix_tier_200` 2050 activity, held constant 2021-2070.  The 13 caps total
+  193.596136 PJ/yr; the +$3/GJ wind adder is retained as a price but the cap
+  binds.  Both cases solve optimal.  Primary (T4=0, T3 kept): 1,410,717.32 M$,
+  0.523856 Mt, 2050 gas 0, wind 193.60 PJ, hydro 2,230.55 PJ, BIO 162.61 PJ,
+  PWRBCW 51.83 PJ, T3 binding at 1,598.59 PJ over the horizon, solar 600.15 PJ.
+  Optional (T3=T4=0): 1,411,456.31 M$, 0.538720 Mt, 2050 gas 0, wind 193.60 PJ,
+  solar 610.87 PJ, PWRBCW 41.11 PJ.  Gas does not return at scale: all-years
+  gas is 3.804 PJ (3.340 PJ in 2022-2024, 0.464 PJ in a 2036-2042 trace) and
+  2050 gas is zero.  The remaining uncapped backstop is solar PV (plus 13.44 PJ
+  of BSW), not gas.  All 13 wind caps, PWRBIO caps, hydro caps, T1/T2/T3 and
+  BC zonal caps bind; nuclear stays zero.  Cap loading, dispatch reconciliation,
+  tier caps and `osecan harmonize` pass.  Artifacts under
+  `data/derived/national/clews/osecan/full_windcap/`; public OSeCAN untouched.
+
 - **Ran the full-backstop constraint test on the corrected-emission OSeCAN
   model.**  Applied every backstop constraint at once: 5%-of-zone-generation
   `PWRBIO<z>` caps (162.608451 PJ/yr total), +$3/GJ on all `PWRWND<z>`, 0 GW
