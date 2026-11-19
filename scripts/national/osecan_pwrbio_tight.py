@@ -390,7 +390,8 @@ def summarize(case: str, run_dir: Path) -> dict[str, object]:
                 year: sum(
                     float(series.get(year, 0.0))
                     for technology, series in production.items()
-                    if technology.startswith("PWR") and technology != "PWRTRN"
+                    if technology.startswith("PWR")
+                    and not technology.startswith("PWRTRN")
                 )
                 for year in tiers.YEARS
             }
