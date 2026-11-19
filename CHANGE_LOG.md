@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-11-19
+
+- **Corrected the OSeCAN emission-factor unit and reran the core national
+  cases.**  `EmissionActivityRatio` and the UDC emission-cap multiplier now
+  multiply the fuel-input factors by each plant's `InputActivityRatio`
+  (gas 0.051 -> 0.1377, coal 0.090 -> 0.261 Mt/PJ output).  A 10 PJ gas check
+  gives 27 PJ fuel x 0.051 = 1.377 Mt, equal to 10 x 0.1377; coal is 2.61 Mt.
+  Post-fix: 119M baseline objective 1,331,575.72 M$ and 0.484962 Mt; 119M
+  stress 1,371,773.42 M$ and 0.460752 Mt; tiered $200 stress 1,371,773.03 M$
+  and 0.460752 Mt with T1+T2 binding and T3/T4 zero; $250/$300 1,371,773.13 M$
+  and 0.450327 Mt with unchanged dispatch.  The pre-fix $200->$250 36 Mt
+  emissions switch disappears because $200 is already near-zero gas.  Artifacts
+  under `data/derived/national/clews/osecan/emission_factor_fix/`; numeric files
+  in `national_150m`, `national_base_119m`, `national_supply_curve`, and
+  `demand_sensitivity` are retained but marked superseded for emissions and
+  objective.  Local disposable model patch only; public OSeCAN untouched.
+
 ## 2026-11-18
 
 - **Filled the national harvest basis and ran the C2070 base at 119M m3
