@@ -135,6 +135,8 @@ The 200M result is robust to the main data ambiguities:
 
 The managed-landbase report is explicit: the proxy has no growth, yield, operability, accessibility, or economic constraints and "is not a legal timber harvesting landbase (THLB), not an AAC landbase, and is not applied to the 150 Mt supply estimate" (`NATIONAL_MANAGED_LANDBASE_REPORT.md`). It cannot decide feasibility. It can only show whether an implied harvest intensity is plausible.
 
+The 2026-11-20 operable-proxy workstream tightens this screen: SCANFI merchantable area (height >= 5 m, biomass >= 20 Mg/ha, closure >= 10%) intersected with the share-based 2016 tenure proxy gives **144.69 Mha**, 87.0% of the managed proxy. That operand is the intensity basis of record in section 10. The older managed-proxy numbers in this section are retained only as a comparison.
+
 | Case | National harvest (Mm3) | Implied intensity on 166.28 Mha proxy (m3/ha/yr) | Relative to 2024 (0.716) |
 |---|---:|---:|---:|
 | 2024 | 118.98 | 0.716 | 1.00× |
@@ -294,28 +296,95 @@ For the UI/runner now: cap the exposed ladder at 150M, reject 200M, keep 119M as
 
 **Decision requested:** approve the 150M runner cap and the Pareto exclusion as the immediate fix; leave the 150–157.3M band, the harvest cost curve, and the forest-sector LP to later milestones.
 
-## 10. THLB/operability intensity screen (2026-11-20)
+## 10. Operable-proxy intensity screen (2026-11-20)
 
-The provincial allocation LP now applies a managed-landbase intensity cap
-`h_p <= min(documented AAC/NFD/proxy, I * managed_proxy_ha)` as a sensitivity,
-with `I = 1.0` and `1.2 m3/ha/yr`. The proxy is the 2016 tenure-union
-`managed_proxy_ha`, **not a THLB**; it has no operability, accessibility, growth,
-yield, or economic content. PE and NU have no proxy and keep their documented
-caps.
+The provincial allocation LP now applies the **operable merchantable-forest
+proxy** as its intensity screening landbase. The operable proxy is SCANFI v2
+treed area screened at height >= 5 m, aboveground biomass >= 20 Mg/ha, and crown
+closure >= 10%, then multiplied by the share-based 2016 tenure proxy inside each
+province-ecoprovince. It is **not a legal THLB**: it has no slope, road-access,
+age/disturbance, growth, yield, silvicultural, or economic constraint. The
+166.28 Mha tenure-union managed proxy is retained only as a comparison basis.
 
-Results (landbase screen only; no energy solve):
+Base-case national area: **144.69 Mha**, or **87.0%** of the managed proxy and
+**34.2%** of SCANFI treed area. PE and NU have no accepted 2016 tenure coverage,
+so their operable area is blank, not zero. The LP keeps their documented caps
+and flags them `operable_missing`.
+
+### 10.1 Caps and basis
+
+`upper_p = min(documented AAC/NFD/planning proxy, I * operable_proxy_ha)` with
+`I = 1.0` and `1.2 m3/ha/yr`. The per-province cap matters: where a documented
+cap is below the operable-intensity product, the documented cap still binds.
+
+| Province | Managed proxy (Mha) | Operable proxy (Mha) | Effective cap at 1.0 (Mm3/yr) | Effective cap at 1.2 (Mm3/yr) |
+|---|---:|---:|---:|---:|
+| BC | 54.37 | 49.26 | 45.224 | 45.224 |
+| AB | 21.79 | 18.40 | 18.401 | 22.082 |
+| SK | 7.49 | 4.93 | 4.933 | 5.920 |
+| MB | 6.90 | 5.49 | 5.485 | 6.582 |
+| ON | 33.81 | 30.01 | 28.700 | 28.700 |
+| QC | 28.27 | 26.16 | 26.159 | 31.390 |
+| NB | 2.56 | 2.14 | 2.136 | 2.564 |
+| NS | 1.10 | 1.02 | 1.024 | 1.228 |
+| NL | 1.11 | 0.88 | 0.884 | 1.061 |
+| PE | missing | missing | 0.460 | 0.460 |
+| YT | 8.07 | 5.76 | 0.261 | 0.261 |
+| NT | 0.82 | 0.64 | 0.036 | 0.036 |
+| NU | missing | missing | 0.000 | 0.000 |
+
+BC, ON, YT, and NT documented caps bind below `I * operable_proxy_ha` at both
+intensities. PE and NU are fallbacks, not zero-area provinces: PE keeps its
+460,000 m3/yr planning volume and NU remains not assessed.
+
+### 10.2 Results
 
 | National total | 1.0 m3/ha/yr | 1.2 m3/ha/yr |
 |---|---|---|
-| 100 Mm3 | feasible; 143.887 Mm3 capacity; 0 deficit | feasible; 157.090 Mm3 capacity; 0 deficit |
+| 100 Mm3 | feasible; 133.704 Mm3 capacity; 0 deficit | feasible; 145.508 Mm3 capacity; 0 deficit |
 | 119 Mm3 | feasible; 0 deficit | feasible; 0 deficit |
-| 150 Mm3 | **infeasible; 6.113 Mm3 deficit** | feasible; 157.090 Mm3 capacity; 0 deficit |
+| 150 Mm3 | **infeasible; 16.296 Mm3 deficit** | **infeasible; 4.492 Mm3 deficit** |
+
+The national operable envelope `I * 144.690 Mha` is 144.690 Mm3/yr at 1.0 and
+173.628 Mm3/yr at 1.2. That envelope alone would leave a 5.310 Mm3 deficit at
+1.0 and clear 150 Mm3 at 1.2. Those are the numbers a national area-only check
+produces. They are **not** the LP result: the model of record applies the cap
+per province, and BC (45.224), ON (28.700), YT (0.261), and NT (0.036 Mm3/yr)
+documented caps bind below the operable product. At 1.2 the provincial LP is
+therefore still 4.492 Mm3 short even though the national envelope passes.
+
+The 150 Mm3 case remains **conditional** and is never Pareto eligible. The
+superseded managed-proxy screen had a 6.113 Mm3 deficit at 1.0 and was feasible
+at 1.2; the tighter operable proxy moves the result to "1.0 infeasible, 1.2
+still short".
+
+### 10.3 Sensitivity and caveats
+
+- Operable threshold sensitivity (national): low (h >= 3 m, biomass >= 10
+  Mg/ha, closure >= 5%) 383.38 Mha merchantable/155.17 Mha operable; base
+  332.60/144.69 Mha; high (h >= 7 m, biomass >= 30 Mg/ha, closure >= 20%)
+  267.94/129.69 Mha. The LP uses the base case.
+- The tenure component is a **share-based approximation**: the managed
+  numerator is divided by local SCANFI treed area and applied uniformly inside
+  each province-ecoprovince. Tenure polygons were not re-intersected with the
+  merchantable raster.
+- **No slope/operability**: steep terrain, inoperable sites, and site
+  degradation are not removed.
+- **No road/access**: NRN bundles exist but distance-to-road and access classes
+  are not integrated; this remains a gap.
+- **No age/disturbance**: recent burns, insect mortality, and non-commercial
+  stands are not removed beyond the SCANFI attributes used here.
+- **No legal THLB**: the screen is not an AAC landbase and does not establish a
+  legal provincial cap.
+- **No cost**: harvest, road, haul, stumpage, silviculture, and forest-sector
+  opportunity costs are absent.
 
 Artifacts are under
 `data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/` and
-`intensity_1.2/` (CSVs for feasible cases and a per-intensity summary JSON). The
-150 Mm3 / 1.0 case has no allocation CSV because it is infeasible. The UI exports
-the observed-vs-reallocated comparison as `allocation_screening` context only;
-the energy Pareto remains the single canonical observed 119 Mm3 fleet case.
-This screen still does not establish a legal provincial cap, a THLB, a harvest
-cost curve, or a policy frontier.
+`intensity_1.2/` (CSVs for feasible cases and a per-intensity summary JSON).
+The 150 Mm3 cases have no allocation CSV because they are infeasible. The UI
+exports the observed-vs-reallocated comparison as `allocation_screening` context
+only and shows the operable area, missing-jurisdiction fallback, both the
+provincial and national-envelope deficits, and the "screening proxy, not legal
+THLB" caveat. The energy Pareto remains the single canonical observed 119 Mm3
+fleet case.

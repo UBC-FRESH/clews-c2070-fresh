@@ -166,7 +166,7 @@
         </div>
         <div class="harvest-caveat harvest-caveat--feasibility" role="note">
           <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
-          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates the status-quo mix under documented caps, but the 1.0 m³/ha/yr THLB-proxy screen fails by 6.113 Mm³; 1.2 passes. Harvest is exogenous and free, so neither the ladder nor the allocation-LP variants can define an energy Pareto front.</p>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates the status-quo mix under documented caps, but the 1.0 m³/ha/yr operable-proxy screen fails by 16.296 Mm³ and 1.2 is still 4.492 Mm³ short; the national operable envelope alone clears at 1.2. Harvest is exogenous and free, so neither the ladder nor the allocation-LP variants can define an energy Pareto front.</p>
         </div>
         <div id="tradeoff-guard" class="guard-note" hidden></div>
         <div class="chart-frame chart-frame--scatter">
@@ -186,9 +186,10 @@
             <p class="explore-hint">Observed rows keep the 2024 provincial shares. LP rows reallocate the same national total under documented provincial caps with the 2024-share L1 objective. Neither row is policy-grade, and the allocation-LP family is excluded from the energy Pareto.</p>
           </div>
           <div class="harvest-caveat harvest-caveat--feasibility" role="note">
-            <strong>THLB intensity caveat — managed proxy, not a THLB</strong>
-            <p id="allocation-caveat">The intensity screen uses the 2016 tenure-union managed proxy, not a THLB. 150 Mm³ fails the 1.0 m³/ha/yr screen by 6.113 Mm³ and passes at 1.2; 119 Mm³ passes both.</p>
+            <strong>Operable-proxy intensity caveat — screening landbase, not a THLB</strong>
+            <p id="allocation-caveat">The intensity screen uses the SCANFI operable merchantable-forest proxy, not a legal THLB. 150 Mm³ fails the 1.0 m³/ha/yr per-province screen by 16.296 Mm³ and is still 4.492 Mm³ short at 1.2 because documented caps bind; the national operable envelope alone clears at 1.2. 119 Mm³ passes both.</p>
           </div>
+          <div id="allocation-operable"></div>
           <div class="table-wrap">
             <table class="data-table data-table--compact" id="allocation-table"></table>
           </div>
@@ -206,7 +207,7 @@
         </div>
         <div class="harvest-caveat harvest-caveat--feasibility" role="note">
           <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
-          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates 150 Mm³ under documented caps but fails the 1.0 m³/ha/yr THLB-proxy screen by 6.113 Mm³ (1.2 passes). Harvest is exogenous and free, so the ladder and the allocation-LP family are sensitivity/compare context, not a Pareto frontier.</p>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates 150 Mm³ under documented caps but fails the 1.0 m³/ha/yr operable-proxy screen by 16.296 Mm³; 1.2 is still 4.492 Mm³ short because documented caps bind. Harvest is exogenous and free, so the ladder and the allocation-LP family are sensitivity/compare context, not a Pareto frontier.</p>
         </div>
         <div id="explore-mode-note" class="guard-note" hidden></div>
 
@@ -273,7 +274,7 @@
           </div>
           <div class="harvest-caveat harvest-caveat--feasibility" role="note">
             <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
-            <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. Allocation-LP rows compare observed 2024 shares with the LP reallocation; the 1.0 m³/ha/yr THLB-proxy screen fails at 150 Mm³ by 6.113 Mm³. Comparisons are sensitivity/context, not a policy frontier.</p>
+            <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. Allocation-LP rows compare observed 2024 shares with the LP reallocation; the 1.0 m³/ha/yr operable-proxy screen fails at 150 Mm³ by 16.296 Mm³ and 1.2 is still 4.492 Mm³ short. Comparisons are sensitivity/context, not a policy frontier.</p>
           </div>
           <div id="compare-grade" class="compare-grade"></div>
           <div class="table-wrap" id="compare-table-wrap">
@@ -559,7 +560,7 @@
             <p class="kicker">Basis &amp; caveats</p>
             <h2>Input ledger</h2>
           </div>
-          <p class="panel-deck">Harvest reference paths, supply-curve tiers, and the managed-landbase screening proxy — with the caveats attached.</p>
+          <p class="panel-deck">Harvest reference paths, supply-curve tiers, and the operable-proxy screening landbase — with the caveats attached. The 166.28 Mha managed proxy remains as a comparison column, not the intensity basis.</p>
         </div>
         <div id="inputs-summary" class="metric-grid metric-grid--four"></div>
         <div class="section-block">
@@ -582,11 +583,11 @@
         </div>
         <div class="section-block">
           <div class="section-heading">
-            <h3>Managed-landbase proxy</h3>
+            <h3>Operable-proxy landbase screen</h3>
             <p id="landbase-status"></p>
           </div>
           <div class="caveat-callout">
-            <strong>Screening proxy — not a legal THLB or AAC landbase.</strong>
+            <strong>Screening landbase — not a legal THLB or AAC landbase.</strong>
             <ul id="landbase-caveats"></ul>
           </div>
           <div id="managed-table"></div>

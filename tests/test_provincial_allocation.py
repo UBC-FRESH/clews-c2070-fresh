@@ -16,9 +16,11 @@ sys.path.insert(0, str(REPO_ROOT))
 from workflows.national.harvest.provincial_allocation import (
     DIAGNOSTIC_TOTAL_200M,
     NATIONAL_OBSERVED_2024_M3,
+    load_operable_proxy,
     load_province_basis,
     solve_allocation,
     with_managed_intensity_cap,
+    with_operable_intensity_cap,
 )
 
 OUTPUT_DIR = REPO_ROOT / "data/derived/national/harvest_basis/provincial_allocation"
@@ -132,20 +134,68 @@ def test_no_negative_or_nan_values() -> None:
         assert share_sum == pytest.approx(1.0, abs=1e-6)
 
 
-def test_managed_intensity_sensitivity() -> None:
+def test_operable_proxy_areas_and_missing_fallback() -> None:
+    areas = load_operable_proxy()
+    assert areas["PE"] is None
+    assert areas["NU"] is None
+    assert areas["BC"] == pytest.approx(49_257_580.364, abs=1.0)
+    assert sum(value for value in areas.values() if value is not None) == pytest.approx(
+        144_689_810.131, abs=1.0
+    )
+
+    basis = {row.province: row for row in load_province_basis()}
+    assert basis["PE"].operable_missing is True
+    assert basis["PE"].upper_bound_m3 == pytest.approx(460_000.0)
+    assert basis["NU"].operable_missing is True
+    assert basis["NU"].upper_bound_m3 == 0.0
+    assert basis["BC"].operable_missing is False
+
+    capped = {row.province: row for row in with_operable_intensity_cap(basis.values(), 1.0)}
+    assert capped["PE"].upper_bound_m3 == pytest.approx(460_000.0)
+    assert "operable_missing_fallback" in capped["PE"].basis
+    assert capped["NU"].upper_bound_m3 == 0.0
+    assert "operable_missing_fallback" in capped["NU"].basis
+    assert capped["BC"].upper_bound_m3 == pytest.approx(45_224_000.0, abs=1_000.0)
+
+
+def test_operable_intensity_sensitivity() -> None:
     basis = load_province_basis()
     strict = solve_allocation(
-        with_managed_intensity_cap(basis, 1.0), 150_000_000.0, label="test_intensity_1_0"
+        with_operable_intensity_cap(basis, 1.0), 150_000_000.0, label="test_operable_1_0"
     )
     assert strict.status == "infeasible"
-    assert strict.deficit_m3 == pytest.approx(6_113_051.0, abs=100.0)
+    assert strict.deficit_m3 == pytest.approx(16_296_351.859, abs=100.0)
 
     moderate = solve_allocation(
-        with_managed_intensity_cap(basis, 1.2), 150_000_000.0, label="test_intensity_1_2"
+        with_operable_intensity_cap(basis, 1.2), 150_000_000.0, label="test_operable_1_2"
     )
-    assert moderate.status == "optimal"
-    assert moderate.harvest_sum_m3 == pytest.approx(150_000_000.0, abs=2.0)
-    assert all(row.harvest_m3 <= row.upper_bound_m3 + 2.0 for row in moderate.rows)
+    assert moderate.status == "infeasible"
+    assert moderate.deficit_m3 == pytest.approx(4_491_872.990, abs=100.0)
+
+    for intensity in (1.0, 1.2):
+        for total in (100_000_000.0, 118_977_339.0):
+            result = solve_allocation(
+                with_operable_intensity_cap(basis, intensity),
+                total,
+                label=f"test_operable_{total}_{intensity}",
+            )
+            assert result.status == "optimal"
+            assert result.deficit_m3 == 0.0
+            assert all(row.harvest_m3 <= row.upper_bound_m3 + 2.0 for row in result.rows)
+
+
+def test_national_operable_envelope_diagnostic() -> None:
+    summary = _summary()["thlb_intensity_screen"]
+    area = summary["operable_proxy"]["national_operable_proxy_ha"]
+    assert area == pytest.approx(144_689_810.131, abs=1.0)
+    assert summary["national_envelope"]["1.0"]["deficits_m3"]["150m"] == pytest.approx(
+        5_310_189.869, abs=100.0
+    )
+    assert summary["national_envelope"]["1.2"]["deficits_m3"]["150m"] == 0.0
+    assert summary["operable_proxy"]["missing_provinces"] == ["NU", "PE"]
+    assert summary["managed_proxy_comparison"]["deficits_m3"]["1.0"]["150m"] == pytest.approx(
+        6_113_051.149, abs=100.0
+    )
 
 
 def test_intensity_output_directories_and_summary() -> None:
@@ -153,8 +203,8 @@ def test_intensity_output_directories_and_summary() -> None:
     screen = summary["thlb_intensity_screen"]
     assert screen["intensity_values_m3_per_ha_yr"] == [1.0, 1.2]
     deficits = screen["deficits_m3"]
-    assert deficits["150m"]["1.0"] == pytest.approx(6_113_051.149, abs=100.0)
-    assert deficits["150m"]["1.2"] == 0.0
+    assert deficits["150m"]["1.0"] == pytest.approx(16_296_351.859, abs=100.0)
+    assert deficits["150m"]["1.2"] == pytest.approx(4_491_872.990, abs=100.0)
     assert deficits["119m"] == {"1.0": 0.0, "1.2": 0.0}
     assert deficits["100m"] == {"1.0": 0.0, "1.2": 0.0}
 
@@ -166,22 +216,29 @@ def test_intensity_output_directories_and_summary() -> None:
             (directory / "provincial_allocation_summary.json").read_text(encoding="utf-8")
         )
         assert payload["intensity_m3_per_ha_yr"] in (1.0, 1.2)
-        assert payload["cases"]["150m"]["status"] in {"optimal", "infeasible"}
+        assert payload["cases"]["150m"]["status"] == "infeasible"
+        assert payload["national_operable_proxy_ha"] == pytest.approx(144_689_810.131, abs=1.0)
     assert (strict_dir / "100m.csv").is_file()
     assert (strict_dir / "119m.csv").is_file()
     assert not (strict_dir / "150m.csv").exists()
     assert (moderate_dir / "100m.csv").is_file()
     assert (moderate_dir / "119m.csv").is_file()
-    assert (moderate_dir / "150m.csv").is_file()
+    assert not (moderate_dir / "150m.csv").exists()
 
-    for path in (strict_dir / "119m.csv", moderate_dir / "150m.csv"):
+    for path in (strict_dir / "119m.csv", moderate_dir / "119m.csv"):
         with path.open(newline="", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
         assert len(rows) == 13
         for row in rows:
             assert float(row["harvest_m3"]) <= float(row["upper_bound"]) + 2.0
-            if row["province"] not in {"PE", "NU"}:
-                assert "managed_intensity" in row["basis"]
+            if row["province"] in {"PE", "NU"}:
+                assert "operable_missing_fallback" in row["basis"]
+                assert row["operable_proxy_ha"] == ""
+                assert row["operable_missing"] == "true"
+            else:
+                assert "operable_intensity" in row["basis"]
+                assert float(row["operable_proxy_ha"]) > 0.0
+                assert row["operable_missing"] == "false"
         nu = next(row for row in rows if row["province"] == "NU")
         assert float(nu["harvest_m3"]) == 0.0
 

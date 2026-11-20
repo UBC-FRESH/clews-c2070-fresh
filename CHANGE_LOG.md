@@ -2,6 +2,22 @@
 
 ## 2026-11-20
 
+- **Integrated the operable-proxy landbase into the provincial allocation LP
+  and forestry UI.** The intensity screen now uses
+  `upper_p = min(documented AAC/NFD/planning proxy, I * operable_proxy_ha)` with
+  the 144.69 Mha base operable proxy, not the 166.28 Mha managed proxy. PE and
+  NU have no operable proxy, so their documented caps are retained and flagged
+  `operable_missing` (no zero substitution). Recomputing the 100/119/150 Mm3
+  cases at I=1.0/1.2 gives 150 Mm3 deficits of **16.296 Mm3** and **4.492 Mm3**
+  under the per-province min caps; the national operable envelope alone gives
+  **5.310 Mm3** at 1.0 and clears at 1.2, because BC/ON/YT/NT documented caps
+  bind below the operable product. 100 and 119 Mm3 remain feasible at both
+  intensities. The UI adds an operable-proxy context card and Inputs table,
+  keeps the managed proxy as a comparison column, and labels 150 Mm3
+  conditional and the proxy as a screening landbase, not a legal THLB.
+  Screenshots: `ui/qa/operable-{overview,allocation,inputs}.png`. No public
+  OSeCAN changes.
+
 - **Built the national merchantable/operable screening proxy from SCANFI v2
   and the managed-landbase proxy.** Added
   `scripts/national/build_operable_proxy.py`, which makes one national 30 m

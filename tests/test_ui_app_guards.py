@@ -107,8 +107,11 @@ def test_ui_allocation_family_guards() -> None:
     html = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert 'id="allocation-block"' in html
     assert 'id="allocation-table"' in html
-    assert "THLB intensity caveat" in html
-    assert "6.113 Mm³" in html
+    assert "Operable-proxy intensity caveat" in html
+    assert "16.296 Mm³" in html
+    assert "4.492 Mm³" in html
+    assert 'id="allocation-operable"' in html
+    assert "operable proxy" in APP_JS.lower()
 
 
 def test_ui_policy_selector_and_feasibility_badges() -> None:

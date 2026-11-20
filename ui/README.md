@@ -47,7 +47,7 @@ Plex Mono. No runtime CDN request is required.
   context but explicitly excluded from the front; colour by family. A separate
   allocation-screening table shows observed 119/150 Mm³ against the LP
   reallocated variants, with observed/reallocated and feasibility badges and the
-  THLB intensity caveat. Pre-fleet, superseded, and diagnostic rows are excluded
+  operable-proxy THLB caveat. Pre-fleet, superseded, and diagnostic rows are excluded
   but remain visible in the rail for audit as **pre-fleet model — not
   comparable**. A prominent caveat states that harvest is exogenous and free, so
   neither the ladder nor the allocation-LP variants are a policy frontier.
@@ -150,13 +150,19 @@ with `lp_119m` and `lp_150m` (`allocation=lp_*`, `allocation_role=reallocated`,
 `pareto_eligible=false`, `tradeoff_eligible=false`). The observed 119 Mm³
 canonical and 150 Mm³ ladder cases are paired with the reallocated variants in
 `scenarios.json.allocation_screening`; the UI shows observed vs reallocated
-badges, AAC/NFD feasibility, and the managed-proxy intensity screen. The 119 Mm³
-LP case is feasible at both 1.0 and 1.2 m³/ha/yr; the 150 Mm³ LP case is feasible
-at 1.2 but fails the 1.0 screen by **6.113 Mm³**. The proxy is a 2016
-tenure-union managed area, **not a THLB**, and the allocation is not a legal AAC,
-enforced provincial constraint, or policy frontier. Per-intensity LP artifacts
-are under `data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/`
-and `intensity_1.2/` (feasible-case CSVs plus summary JSON).
+badges, AAC/NFD feasibility, and the operable-proxy intensity screen. The
+base operable proxy is **144.69 Mha** (87.0% of the 166.28 Mha managed comparison
+proxy). The 119 Mm³ LP case is feasible at both 1.0 and 1.2 m³/ha/yr. The 150 Mm³
+LP case is conditional: the 1.0 per-province screen is infeasible by
+**16.296 Mm³**, and the 1.2 screen is still short by **4.492 Mm³** because
+documented BC/ON/YT/NT caps bind. The national operable envelope alone is
+5.310 Mm³ short at 1.0 and clears at 1.2. PE and NU have no operable proxy; their
+documented caps are retained and flagged `operable_missing`, not zero. The proxy
+is a screening landbase, **not a legal THLB**, and the allocation is not a legal
+AAC, enforced provincial constraint, or policy frontier. Per-intensity LP
+artifacts are under
+`data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/` and
+`intensity_1.2/` (feasible-case CSVs plus summary JSON).
 
 ### Units and guards
 
@@ -183,14 +189,14 @@ and `intensity_1.2/` (feasible-case CSVs plus summary JSON).
   **exogenous harvest** and carry **AAC/NFD pass/conditional/fail** badges; the
   canonical run is labelled **canonical/base**. The two
   `allocation_screening__lp_*` runs are labelled **allocation LP** and
-  **observed → reallocated**, carry the same feasibility badges plus the THLB
+  **observed → reallocated**, carry the same feasibility badges plus the operable-proxy
   intensity screen, and are never Pareto eligible. Every earlier scenario carries
   `superseded_for_fleet=true` and the visible **pre-fleet model — not comparable**
   badge/banner.
 - The default trade-off/Pareto front contains only the canonical 119 Mm³ case.
   Explore plots the ladder and allocation-LP rows as context, but dominance is
   evaluated only on `pareto_eligible=true` rows. The UI shows the feasibility and
-  THLB-proxy caveats rather than treating the unpriced-harvest ordering as a
+  operable-proxy caveats rather than treating the unpriced-harvest ordering as a
   policy frontier.
 - Superseded and diagnostic flags are visible in the rail, masthead, and file
   ledger.

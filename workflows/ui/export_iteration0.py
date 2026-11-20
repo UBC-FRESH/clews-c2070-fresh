@@ -94,12 +94,15 @@ HARVEST_EXOGENOUS_CAVEAT = (
 )
 
 ALLOCATION_THLB_CAVEAT = (
-    "The managed-landbase intensity screen is applied to the 2016 tenure-union "
-    "managed proxy, not a THLB. It has no operability, accessibility, growth, "
-    "yield, or economic content. 150 Mm3 fails the 1.0 m3/ha/yr screen by 6.113 "
-    "Mm3 and passes at 1.2; 119 Mm3 passes both. The LP allocation is a "
-    "comparison/screening result, not a legal AAC, enforced provincial constraint, "
-    "or policy frontier."
+    "The operable-proxy intensity screen uses SCANFI merchantable area intersected "
+    "with a share-based 2016 tenure proxy, not a THLB. It has no slope, road "
+    "access, age/disturbance, growth, yield, or economic content. 150 Mm3 is "
+    "conditional: the 1.0 m3/ha/yr per-province screen is infeasible by 16.296 "
+    "Mm3, and the 1.2 screen is still short by 4.492 Mm3 because BC, ON, YT, and "
+    "NT documented caps bind below 1.2 x operable area. The national operable "
+    "envelope alone would clear 150 Mm3 at 1.2. 119 Mm3 passes both. The LP "
+    "allocation is a comparison/screening result, not a legal AAC, enforced "
+    "provincial constraint, or policy frontier."
 )
 
 ALLOCATION_COMPARISON_NOTE = (
@@ -228,7 +231,7 @@ FAMILY_SPECS: tuple[dict[str, Any], ...] = (
                     "notes": (
                         "Provincial allocation LP reallocates the 119 Mm3 national total "
                         "under documented caps. No documented-cap deficit; the 1.0 and 1.2 "
-                        "m3/ha/yr managed-proxy screens are both feasible. The proxy is not "
+                        "m3/ha/yr operable-proxy screens are both feasible. The proxy is not "
                         "a THLB. Compare only: this variant is not a policy frontier."
                     ),
                 },
@@ -244,9 +247,12 @@ FAMILY_SPECS: tuple[dict[str, Any], ...] = (
                     "status": "conditional",
                     "notes": (
                         "Provincial allocation LP reallocates the 150 Mm3 national total "
-                        "under documented caps, but the 1.0 m3/ha/yr managed-proxy screen is "
-                        "infeasible by 6.113 Mm3; the 1.2 screen is feasible. The proxy is "
-                        "not a THLB. Conditional screening/compare only, not a policy frontier."
+                        "under documented caps, but the 1.0 m3/ha/yr operable-proxy screen is "
+                        "infeasible by 16.296 Mm3 and the 1.2 screen is still short by 4.492 "
+                        "Mm3 because BC/ON/YT/NT documented caps bind below 1.2 x operable "
+                        "area; the national operable envelope alone would clear 150 Mm3 at "
+                        "1.2. The proxy is not a THLB. Conditional screening/compare only, "
+                        "not a policy frontier."
                     ),
                 },
             },
@@ -439,6 +445,9 @@ INPUT_PATHS: dict[str, str] = {
     "managed_landbase_province": "data/derived/national/managed_landbase/managed_landbase_by_province.csv",
     "managed_landbase_ecoprovince": "data/derived/national/managed_landbase/managed_landbase_by_ecoprovince.csv",
     "managed_landbase_manifest": "data/derived/national/managed_landbase/manifest.json",
+    "operable_proxy_province": "data/derived/national/managed_landbase/operable_proxy/operable_proxy_by_province.csv",
+    "operable_proxy_ecoprovince": "data/derived/national/managed_landbase/operable_proxy/operable_proxy_by_ecoprovince.csv",
+    "operable_proxy_summary": "data/derived/national/managed_landbase/operable_proxy/operable_proxy_summary.json",
     "provincial_allocation_summary": "data/derived/national/harvest_basis/provincial_allocation/provincial_allocation_summary.json",
     "provincial_allocation_report": "data/derived/national/harvest_basis/provincial_allocation/PROVINCIAL_ALLOCATION_REPORT.md",
     "provincial_allocation_intensity_1_0": "data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/provincial_allocation_summary.json",
@@ -859,7 +868,7 @@ def _summary_harvest_m3(entry: dict[str, Any], *, label: str) -> float | None:
 
 
 def load_thlb_intensity_screen(root: Path) -> dict[str, Any]:
-    """Read the LP intensity-screen metadata (deficits by case and intensity)."""
+    """Read the LP operable-proxy intensity-screen metadata."""
     path = root / ALLOCATION_LP_SUMMARY
     summary = _read_json(path, label="provincial allocation summary")
     screen = summary.get("thlb_intensity_screen")
@@ -867,8 +876,17 @@ def load_thlb_intensity_screen(root: Path) -> dict[str, Any]:
         raise ExportError(f"{path}: thlb_intensity_screen block is missing")
     values = screen.get("intensity_values_m3_per_ha_yr")
     deficits = screen.get("deficits_m3")
+    operable = screen.get("operable_proxy")
+    envelope = screen.get("national_envelope")
     if not isinstance(values, list) or not isinstance(deficits, dict):
         raise ExportError(f"{path}: thlb_intensity_screen is incomplete")
+    if not isinstance(operable, dict) or not isinstance(envelope, dict):
+        raise ExportError(f"{path}: operable-proxy or national-envelope block is missing")
+    if operable.get("missing_provinces") != ["NU", "PE"]:
+        raise ExportError(
+            f"{path}: operable proxy missing provinces must be NU and PE only, "
+            f"got {operable.get('missing_provinces')!r}"
+        )
     return screen
 
 
@@ -883,10 +901,21 @@ def thlb_intensity_for(screen: dict[str, Any], level: str) -> dict[str, Any]:
         if key not in deficits:
             raise ExportError(f"thlb intensity screen has no {key} deficit for {level}")
         deficit = _finite(deficits[key], label=f"thlb_intensity.{level}.{key}")
+        envelope_block = screen["national_envelope"].get(key)
+        if not isinstance(envelope_block, dict):
+            raise ExportError(f"thlb intensity screen has no national envelope for {key}")
+        envelope_deficit = _finite(
+            envelope_block["deficits_m3"][level],
+            label=f"thlb_intensity.envelope.{level}.{key}",
+        )
         result[key] = {
             "intensity_m3_per_ha_yr": float(value),
             "status": "pass" if deficit <= 0.0 else "fail",
             "deficit_m3": deficit,
+            "national_envelope_deficit_m3": envelope_deficit,
+            "national_envelope_status": "pass" if envelope_deficit <= 0.0 else "fail",
+            "basis": "provincial_min_documented_and_operable",
+            "operable_missing_fallback": ["NU", "PE"],
         }
     return result
 
@@ -1101,6 +1130,8 @@ def build_allocation_comparison(
         "status": "comparison/context only; excluded from the energy Pareto",
         "note": ALLOCATION_COMPARISON_NOTE,
         "thlb_caveat": ALLOCATION_THLB_CAVEAT,
+        "operable_proxy": load_thlb_intensity_screen(root)["operable_proxy"],
+        "national_envelope": load_thlb_intensity_screen(root)["national_envelope"],
         "intensity_values_m3_per_ha_yr": sorted(
             float(value)
             for value in next(iter(pairs))["intensity"].keys()
@@ -1422,6 +1453,11 @@ def build_managed_landbase(root: Path) -> dict[str, Any]:
         "schema_version": SCHEMA_VERSION,
         "manifest_status": manifest.get("status"),
         "status": "screening_proxy_not_legal_thlb",
+        "comparison_only": True,
+        "note": (
+            "2016 tenure-union managed proxy retained for comparison only; the "
+            "operable proxy is the tighter screening landbase of record."
+        ),
         "rows": {"by_province": len(province_rows), "by_ecoprovince": len(ecoprovince_rows)},
         "by_province": by_province,
         "ecoprovinces": sorted({row["ecoprovince"] for row in ecoprovince_rows}),
@@ -1429,6 +1465,112 @@ def build_managed_landbase(root: Path) -> dict[str, Any]:
         "caveats": [
             "500 m grid overlay; 2016 tenure vintage; screening proxy only.",
             "NOT a legal THLB or AAC landbase.",
+            "Comparison only: superseded by the operable-proxy screen for intensity.",
+        ],
+    }
+
+
+def build_operable_proxy(root: Path) -> dict[str, Any]:
+    """Read the operable-proxy province table and national summary."""
+    province_rows = _read_csv(
+        root / INPUT_PATHS["operable_proxy_province"], label="operable proxy"
+    )
+    summary = _read_json(
+        root / INPUT_PATHS["operable_proxy_summary"], label="operable proxy summary"
+    )
+    base_rows = [
+        row
+        for row in province_rows
+        if row.get("ecoprovince") == "ALL" and row.get("threshold_case") == "base"
+    ]
+    if len(base_rows) != 13:
+        raise ExportError(
+            f"operable proxy must have 13 province-total base rows, got {len(base_rows)}"
+        )
+    if len({row["province"] for row in base_rows}) != 13:
+        raise ExportError("operable proxy has duplicate province-total rows")
+
+    by_province: list[dict[str, Any]] = []
+    missing: list[str] = []
+    for row in sorted(base_rows, key=lambda item: item["province"]):
+        operable_raw = row.get("operable_proxy_ha", "")
+        managed_raw = row.get("managed_proxy_ha", "")
+        operable = _finite(float(operable_raw), label=f"operable.{row['province']}") if operable_raw.strip() else None
+        managed = _finite(float(managed_raw), label=f"managed.{row['province']}") if managed_raw.strip() else None
+        if operable is None:
+            missing.append(row["province"])
+        by_province.append(
+            {
+                "province": row["province"],
+                "scanfi_forest_ha": round(_finite(float(row["scanfi_forest_ha"]), label="scanfi"), 1),
+                "merchantable_ha": round(_finite(float(row["merchantable_ha"]), label="merchantable"), 1),
+                "managed_proxy_ha": round(managed, 1) if managed is not None else None,
+                "operable_proxy_ha": round(operable, 1) if operable is not None else None,
+                "managed_share": (
+                    round(_finite(float(row["managed_share"]), label="managed_share"), 6)
+                    if row.get("managed_share", "").strip()
+                    else None
+                ),
+                "operable_missing": operable is None,
+            }
+        )
+    if missing != ["NU", "PE"]:
+        raise ExportError(
+            f"operable proxy missing provinces must be NU and PE only, got {missing}"
+        )
+
+    national = summary.get("national")
+    validation = summary.get("validation")
+    thresholds = summary.get("thresholds")
+    if not isinstance(national, dict) or not isinstance(validation, dict) or not isinstance(thresholds, dict):
+        raise ExportError("operable proxy summary is missing national/validation/thresholds")
+
+    operable_national = _finite(
+        validation["national_operable_proxy_ha"], label="national_operable_proxy_ha"
+    )
+    managed_national = _finite(
+        validation["existing_managed_proxy_ha"], label="existing_managed_proxy_ha"
+    )
+    sensitivity = []
+    for key, block in summary.get("sensitivity", {}).items():
+        sensitivity.append(
+            {
+                "case": key,
+                "label": block["label"],
+                "national_ha": _finite(block["national_ha"], label=f"sensitivity.{key}"),
+                "share_of_treed": _finite(
+                    block["share_of_treed"], label=f"sensitivity.{key}.share"
+                ),
+            }
+        )
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "status": "screening_proxy_not_legal_thlb",
+        "source": INPUT_PATHS["operable_proxy_province"],
+        "threshold_case": "base",
+        "thresholds": thresholds,
+        "national": {
+            "treed_ha": _finite(national["treed"], label="national.treed"),
+            "merchantable_ha": _finite(national["base"], label="national.base"),
+            "operable_proxy_ha": operable_national,
+            "managed_proxy_ha": managed_national,
+            "operable_share_of_managed": (
+                operable_national / managed_national if managed_national > 0 else None
+            ),
+            "operable_share_of_treed": (
+                operable_national / float(national["treed"]) if national["treed"] else None
+            ),
+        },
+        "by_province": by_province,
+        "missing_provinces": missing,
+        "missing_policy": "blank, not zero; documented cap retained in the allocation LP",
+        "sensitivity": sensitivity,
+        "units": {"area": "ha", "share": "fraction"},
+        "caveats": list(summary.get("caveats", []))
+        + [
+            "Not a legal THLB: no slope, road access, age/disturbance, growth, yield, or economic constraint.",
+            "Tenure is a share-based approximation inside each province-ecoprovince, not a spatial tenure overlay.",
         ],
     }
 
@@ -1835,11 +1977,13 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
         "allocation_caveat": ALLOCATION_THLB_CAVEAT,
         "feasibility_caveat": (
             "200 Mm3 is not admissible under documented AAC/NFD; 150 Mm3 is "
-            "conditional (national bound only; the LP reallocates it but the "
-            "1.0 m3/ha/yr THLB-proxy screen fails by 6.113 Mm3); harvest is "
-            "exogenous and free. The default energy Pareto contains only the "
-            "canonical 119 Mm3 fleet scenario. Allocation-LP variants are "
-            "comparison/context only."
+            "conditional (national bound only; the LP reallocates it, but the "
+            "1.0 m3/ha/yr operable-proxy screen fails by 16.296 Mm3 and the 1.2 "
+            "screen is still short by 4.492 Mm3 because BC/ON/YT/NT documented "
+            "caps bind; the national operable envelope alone clears at 1.2). "
+            "Harvest is exogenous and free. The default energy Pareto contains "
+            "only the canonical 119 Mm3 fleet scenario. Allocation-LP variants "
+            "are comparison/context only."
         ),
         "scenario_ids": [scenario["scenario_id"] for scenario in pareto_scenarios],
         "sensitivity_scenario_ids": [
@@ -1917,14 +2061,35 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
         [scenario["scenario_id"] for scenario in allocation_scenarios],
     )
     allocation_comparison = build_allocation_comparison(root, scenarios)
-    deficit_150_1_0 = next(
+    pair_150 = next(
         pair for pair in allocation_comparison["pairs"] if pair["harvest_m3"] == 150_000_000.0
-    )["intensity"]["1.0"]["deficit_m3"]
+    )
+    deficit_150_1_0 = pair_150["intensity"]["1.0"]["deficit_m3"]
+    deficit_150_1_2 = pair_150["intensity"]["1.2"]["deficit_m3"]
     _record(
         checks,
-        "allocation_150m_intensity_deficit",
-        abs(deficit_150_1_0 - 6_113_051.149) < 100.0,
+        "allocation_150m_operable_1_0_deficit",
+        abs(deficit_150_1_0 - 16_296_351.859) < 100.0,
         deficit_150_1_0,
+    )
+    _record(
+        checks,
+        "allocation_150m_operable_1_2_deficit",
+        abs(deficit_150_1_2 - 4_491_872.990) < 100.0,
+        deficit_150_1_2,
+    )
+    _record(
+        checks,
+        "allocation_150m_national_envelope_1_0_deficit",
+        abs(pair_150["intensity"]["1.0"]["national_envelope_deficit_m3"] - 5_310_189.869)
+        < 100.0,
+        pair_150["intensity"]["1.0"]["national_envelope_deficit_m3"],
+    )
+    _record(
+        checks,
+        "allocation_150m_national_envelope_1_2",
+        pair_150["intensity"]["1.2"]["national_envelope_status"] == "pass",
+        pair_150["intensity"]["1.2"]["national_envelope_status"],
     )
     superseded_ids = {
         scenario["scenario_id"]
@@ -1991,10 +2156,24 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
         "harvest_basis.json": build_harvest_basis(root),
         "supply_curve.json": build_supply_curve(root),
         "managed_landbase.json": build_managed_landbase(root),
+        "operable_proxy.json": build_operable_proxy(root),
         "osecan_links.json": build_osecan_links(root, artifacts_root),
     }
     for filename, payload in inputs.items():
         _write_json(out_dir / "inputs" / filename, payload)
+    operable = inputs["operable_proxy.json"]
+    _record(
+        checks,
+        "operable_proxy_national_area",
+        abs(operable["national"]["operable_proxy_ha"] - 144_689_810.131) < 100.0,
+        operable["national"]["operable_proxy_ha"],
+    )
+    _record(
+        checks,
+        "operable_proxy_missing_pe_nu",
+        operable["missing_provinces"] == ["NU", "PE"],
+        operable["missing_provinces"],
+    )
 
     spatial = build_spatial(root, out_dir / "spatial")
     _record(checks, "spatial_total_bytes", spatial["total_bytes"] < 5 * 1024 * 1024, spatial["total_bytes"])

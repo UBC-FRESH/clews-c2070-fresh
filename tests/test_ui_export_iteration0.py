@@ -241,9 +241,16 @@ def test_allocation_screening_family_contract(scenarios: dict) -> None:
     lp_150 = by_id["allocation_screening__lp_150m"]
     assert lp_150["thlb_intensity"]["1.0"]["status"] == "fail"
     assert lp_150["thlb_intensity"]["1.0"]["deficit_m3"] == pytest.approx(
-        6_113_051.149, abs=100.0
+        16_296_351.859, abs=100.0
     )
-    assert lp_150["thlb_intensity"]["1.2"]["status"] == "pass"
+    assert lp_150["thlb_intensity"]["1.0"]["national_envelope_deficit_m3"] == pytest.approx(
+        5_310_189.869, abs=100.0
+    )
+    assert lp_150["thlb_intensity"]["1.2"]["status"] == "fail"
+    assert lp_150["thlb_intensity"]["1.2"]["deficit_m3"] == pytest.approx(
+        4_491_872.990, abs=100.0
+    )
+    assert lp_150["thlb_intensity"]["1.2"]["national_envelope_status"] == "pass"
 
     family = next(
         item for item in scenarios["families"] if item["family"] == "allocation_screening"
@@ -278,7 +285,14 @@ def test_allocation_comparison_pairs(scenarios: dict) -> None:
         )
     assert (
         pairs[150_000_000.0]["intensity"]["1.0"]["deficit_m3"]
-        == pytest.approx(6_113_051.149, abs=100.0)
+        == pytest.approx(16_296_351.859, abs=100.0)
+    )
+    assert (
+        pairs[150_000_000.0]["intensity"]["1.2"]["deficit_m3"]
+        == pytest.approx(4_491_872.990, abs=100.0)
+    )
+    assert comparison["operable_proxy"]["national_operable_proxy_ha"] == pytest.approx(
+        144_689_810.131, abs=1.0
     )
     assert scenarios["tradeoff"]["allocation_scenario_ids"] == [
         "allocation_screening__lp_119m",
@@ -445,6 +459,13 @@ def test_inputs_contract() -> None:
     assert len(supply["reconciliation"]["tier_sum_pj"]) == 50
     landbase = json.loads((BUNDLE / "inputs/managed_landbase.json").read_text())
     assert landbase["rows"]["by_province"] == 42
+    operable = json.loads((BUNDLE / "inputs/operable_proxy.json").read_text())
+    assert len(operable["by_province"]) == 13
+    assert operable["missing_provinces"] == ["NU", "PE"]
+    assert operable["national"]["operable_proxy_ha"] == pytest.approx(144_689_810.131, abs=1.0)
+    assert operable["national"]["operable_share_of_managed"] == pytest.approx(0.8702, abs=1e-4)
+    assert next(row for row in operable["by_province"] if row["province"] == "PE")["operable_proxy_ha"] is None
+    assert next(row for row in operable["by_province"] if row["province"] == "NU")["operable_proxy_ha"] is None
     links = json.loads((BUNDLE / "inputs/osecan_links.json").read_text())
     assert len(links["families"]) == 18
     fleet_link = next(item for item in links["families"] if item["family"] == "fleet_capacity")

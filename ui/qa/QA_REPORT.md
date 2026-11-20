@@ -535,7 +535,7 @@ fleet case. Counts are **53 scenarios / 18 families / 1 Pareto-eligible**.
 | Boot guard | **PASS** — 53 scenarios, 18 families, 1 Pareto eligible; fatal banner hidden. |
 | Family chip | **PASS** — `Allocation LP 2`; rail filter shows exactly 2 allocation rows with **allocation LP** and **observed → reallocated** badges. |
 | Allocation pair table | **PASS** — 4 rows: observed 119 vs LP 119, observed 150 vs LP 150; feasibility, objective, emissions, and 1.0/1.2 intensity cells render. |
-| THLB caveat | **PASS** — exact managed-proxy caveat text present above the table; 150 Mm³ 1.0 deficit reads **6.113 Mm³**, 1.2 feasible. |
+| THLB caveat | **PASS** — exact operable-proxy caveat text present above the table; 150 Mm³ 1.0 deficit reads **16.296 Mm³**, 1.2 reads **4.492 Mm³** (national envelope 5.310/0). |
 | Provincial detail | **PASS** — two expandable reallocation tables (13 provinces including NU at zero). |
 | LP 150 overview | **PASS** — allocation banner and badges; objective **1,444,917.38 M$**, emissions **422.927 Mt CO₂**; `policy_grade=false`, `pareto_eligible=false`. |
 | Explore | **PASS** — 6 parallel-coordinate lines (1 canonical + 3 ladder + 2 allocation); Pareto count `1 on front · 1 Pareto-eligible evaluated · 5 context excluded`; context guard names ladder, allocation-LP, and live rows. |
@@ -550,6 +550,39 @@ fleet case. Counts are **53 scenarios / 18 families / 1 Pareto-eligible**.
 | `allocation-overview.png` | LP 150 Mm³ overview with allocation banner and flags |
 | `allocation-explore.png` | 6 parallel-coordinate context lines and Pareto guard |
 | `allocation-compare.png` | Observed 150 vs LP 150 comparison with allocation dimension delta |
+
+`git status --porcelain` contains no `D` entries. No public OSeCAN repository
+changes.
+
+
+---
+
+## Operable-proxy intensity integration (2026-11-20)
+
+**Scope:** static UI bundle after replacing the managed-proxy intensity screen
+with the operable merchantable-forest proxy. Viewport 1600×1200, Chromium via
+`/tmp/ui-qa-venv` (Playwright 1.65.2), static `python3 -m http.server 8020
+--bind 127.0.0.1 -d ui`.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Boot guard | **PASS** — 53 scenarios, 18 families, 1 Pareto eligible; fatal banner hidden; `page_errors=[]`. |
+| Allocation caveat | **PASS** — exact operable-proxy caveat: screening landbase, not legal THLB; 150 Mm³ conditional; 1.0 deficit 16.296 Mm³; 1.2 provincial deficit 4.492 Mm³; national envelope 5.310/0. |
+| Operable context card | **PASS** — 144.69 Mha, 87.0% of the 166.28 Mha managed comparison proxy; missing NU/PE retained, not zero; provincial and national-envelope deficits both shown. |
+| Allocation table | **PASS** — 4 rows; 119 LP passes both screens; 150 LP shows `deficit 16.296 Mm³` and `deficit 4.492 Mm³`. |
+| Provincial detail | **PASS** — 12 reporting provinces plus NU; new operable-proxy (Mha) column; PE/NU show `missing`, not zero. |
+| Inputs | **PASS** — metric card reads **144.7 Mha**; table has treed, merchantable, managed comparison, operable proxy, operable share, and relative bars; 13 provinces; missing NU/PE badges. |
+| Static live probe | **NOTE** — one `404 /api/health` console message from the optional live-mode probe; no page errors and no failed data requests. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `operable-overview.png` | Overview after the operable-proxy data contract loads |
+| `operable-allocation.png` | Trade-off allocation view with caveat, operable context card, pair table, and provincial folds |
+| `operable-inputs.png` | Inputs view with operable-proxy metric, provincial table, managed comparison column, and missing-jurisdiction badges |
 
 `git status --porcelain` contains no `D` entries. No public OSeCAN repository
 changes.

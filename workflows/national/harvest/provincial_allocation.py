@@ -49,6 +49,15 @@ PROVINCES_PATH = HARVEST_DIR / "provinces.csv"
 MANAGED_LANDBASE_PATH = (
     REPO_ROOT / "data/derived/national/managed_landbase/managed_landbase_province_summary.csv"
 )
+OPERABLE_PROXY_PATH = (
+    REPO_ROOT
+    / "data/derived/national/managed_landbase/operable_proxy/operable_proxy_by_province.csv"
+)
+OPERABLE_PROXY_SUMMARY_PATH = (
+    REPO_ROOT
+    / "data/derived/national/managed_landbase/operable_proxy/operable_proxy_summary.json"
+)
+OPERABLE_PROXY_THRESHOLD_CASE = "base"
 FEASIBILITY_DOC_PATH = REPO_ROOT / "planning/harvest-aac-feasibility.md"
 OUTPUT_DIR = HARVEST_DIR / "provincial_allocation"
 
@@ -74,9 +83,15 @@ CAP_TOLERANCE_M3 = 1.0
 
 INTENSITY_CAP_LEVELS = ("1.0", "1.2")
 INTENSITY_PROXY_CAVEAT = (
-    "The managed-landbase proxy is a 2016 tenure union, not a THLB. It has no "
-    "operability, accessibility, growth, yield, or economic content; intensity "
-    "caps are sensitivity screens only."
+    "The operable-proxy landbase is a SCANFI merchantability screen intersected "
+    "with a share-based 2016 tenure proxy. It is not a legal THLB: it carries no "
+    "slope, road access, age/disturbance, growth, yield, or economic constraint. "
+    "Intensity caps are screening sensitivities only."
+)
+MANAGED_PROXY_COMPARISON_CAVEAT = (
+    "The 2016 tenure-union managed proxy (166.28 Mha) is retained only as a "
+    "comparison basis. It is not a THLB and is superseded by the tighter "
+    "operable proxy for the intensity screen."
 )
 
 
@@ -94,6 +109,8 @@ class ProvinceBasis:
     upper_bound_m3: float
     basis: str
     caveat: str
+    operable_proxy_ha: float | None = None
+    operable_missing: bool = False
 
 
 @dataclass(frozen=True)
@@ -109,6 +126,8 @@ class AllocationRow:
     binding: bool
     basis: str
     caveat: str
+    operable_proxy_ha: float | None = None
+    operable_missing: bool = False
 
 
 @dataclass(frozen=True)
@@ -167,8 +186,49 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def load_operable_proxy() -> dict[str, float | None]:
+    """Read the base-case operable-proxy area by province/territory.
+
+    PE and NU have no accepted 2016 tenure coverage and are intentionally blank
+    in the source.  Any other missing jurisdiction, or a non-positive area, is
+    an input-contract failure rather than a zero.
+    """
+    rows = _read_csv(OPERABLE_PROXY_PATH)
+    base_rows = [
+        row
+        for row in rows
+        if row.get("ecoprovince") == "ALL"
+        and row.get("threshold_case") == OPERABLE_PROXY_THRESHOLD_CASE
+    ]
+    if len(base_rows) != len(PROVINCE_ORDER):
+        raise AllocationError(
+            "operable proxy must have one province-total row per jurisdiction at "
+            f"threshold_case={OPERABLE_PROXY_THRESHOLD_CASE!r}; got {len(base_rows)}"
+        )
+    if len({row["province"] for row in base_rows}) != len(base_rows):
+        raise AllocationError("operable proxy has duplicate province-total rows")
+
+    areas: dict[str, float | None] = {}
+    for row in base_rows:
+        province = row["province"]
+        if province not in PROVINCE_ORDER:
+            raise AllocationError(f"operable proxy has unexpected province {province!r}")
+        area = _optional_float(row.get("operable_proxy_ha"))
+        if area is not None and area <= 0.0:
+            raise AllocationError(f"{province}: operable proxy area must be positive, got {area}")
+        areas[province] = area
+
+    missing = sorted(province for province, area in areas.items() if area is None)
+    if missing != ["NU", "PE"]:
+        raise AllocationError(
+            "operable proxy is missing for unexpected jurisdictions: "
+            f"{', '.join(missing) or 'none'}; expected only PE and NU"
+        )
+    return areas
+
+
 def load_province_basis() -> tuple[ProvinceBasis, ...]:
-    """Parse the 2024 template and managed-landbase proxy into trusted caps."""
+    """Parse the 2024 template, tenure proxy, and operable proxy into trusted caps."""
     template_rows = _read_csv(TEMPLATE_PATH)
     observed_rows = {
         row["province"]: row
@@ -183,6 +243,7 @@ def load_province_basis() -> tuple[ProvinceBasis, ...]:
         row["province"]: _optional_float(row.get("managed_proxy_ha"))
         for row in _read_csv(MANAGED_LANDBASE_PATH)
     }
+    operable = load_operable_proxy()
 
     basis_rows: list[ProvinceBasis] = []
     for province in REPORTING_PROVINCES:
@@ -191,7 +252,16 @@ def load_province_basis() -> tuple[ProvinceBasis, ...]:
         aac = _optional_float(row.get("aac_m3"))
         nfd = _optional_float(row.get("wood_supply_m3"))
         proxy = proxies.get(province)
+        operable_ha = operable.get(province)
+        operable_missing = operable_ha is None
         upper_bound, basis, caveat = _resolve_cap(province, aac, nfd)
+        if operable_missing:
+            basis = f"{basis}+operable_missing"
+            caveat = (
+                f"{caveat} No operable proxy (2016 tenure coverage is missing); "
+                "the documented cap is retained and flagged operable_missing; "
+                "the missing area is not substituted with zero."
+            )
         basis_rows.append(
             ProvinceBasis(
                 province=province,
@@ -202,6 +272,8 @@ def load_province_basis() -> tuple[ProvinceBasis, ...]:
                 upper_bound_m3=upper_bound,
                 basis=basis,
                 caveat=caveat,
+                operable_proxy_ha=operable_ha,
+                operable_missing=operable_missing,
             )
         )
 
@@ -213,8 +285,14 @@ def load_province_basis() -> tuple[ProvinceBasis, ...]:
             nfd_m3=None,
             managed_proxy_ha=None,
             upper_bound_m3=0.0,
-            basis="not_assessed_no_data",
-            caveat="No FSD harvest row, no AAC, and no managed-landbase proxy; held at zero, not assumed commercially exhausted.",
+            basis="not_assessed_no_data+operable_missing",
+            caveat=(
+                "No FSD harvest row, no AAC, no managed-landbase proxy, and no "
+                "operable proxy; held at zero, not assumed commercially exhausted. "
+                "operable_missing is flagged; no area is substituted."
+            ),
+            operable_proxy_ha=None,
+            operable_missing=True,
         )
     )
 
@@ -279,7 +357,7 @@ def _resolve_cap(
 def with_managed_intensity_cap(
     basis: Iterable[ProvinceBasis], intensity_m3_per_ha_yr: float
 ) -> tuple[ProvinceBasis, ...]:
-    """Apply a screening intensity cap on the tenure-union proxy."""
+    """Apply the legacy managed-proxy intensity screen (comparison only)."""
     if intensity_m3_per_ha_yr <= 0:
         raise AllocationError("managed-landbase intensity cap must be positive")
     capped: list[ProvinceBasis] = []
@@ -296,6 +374,56 @@ def with_managed_intensity_cap(
                 caveat=(
                     f"{row.caveat} Managed proxy {row.managed_proxy_ha / 1e6:.2f} Mha implies "
                     f"{intensity_bound / 1e6:.2f} Mm3/yr at {intensity_m3_per_ha_yr:g} m3/ha/yr."
+                ),
+            )
+        )
+    return tuple(capped)
+
+
+def with_operable_intensity_cap(
+    basis: Iterable[ProvinceBasis], intensity_m3_per_ha_yr: float
+) -> tuple[ProvinceBasis, ...]:
+    """Apply the operable-proxy intensity screen to each documented cap.
+
+    ``upper_p = min(documented AAC/NFD/proxy, I * operable_proxy_ha)``.  PE and
+    NU have no operable proxy: their documented caps are retained and flagged
+    ``operable_missing``; the missing area is never replaced by zero.
+    """
+    if intensity_m3_per_ha_yr <= 0:
+        raise AllocationError("operable-proxy intensity cap must be positive")
+    capped: list[ProvinceBasis] = []
+    for row in basis:
+        if row.operable_proxy_ha is None:
+            capped.append(
+                replace(
+                    row,
+                    basis=f"{row.basis}+operable_missing_fallback",
+                    caveat=(
+                        f"{row.caveat} Operable proxy missing; documented cap "
+                        f"{row.upper_bound_m3 / 1e6:.3f} Mm3/yr retained at "
+                        f"{intensity_m3_per_ha_yr:g} m3/ha/yr (no zero substitution)."
+                    ),
+                )
+            )
+            continue
+        if row.upper_bound_m3 == 0.0:
+            capped.append(row)
+            continue
+        intensity_bound = intensity_m3_per_ha_yr * row.operable_proxy_ha
+        effective = min(row.upper_bound_m3, intensity_bound)
+        binding_basis = (
+            "operable" if intensity_bound < row.upper_bound_m3 else "documented"
+        )
+        capped.append(
+            replace(
+                row,
+                upper_bound_m3=effective,
+                basis=f"{row.basis}+operable_intensity_{intensity_m3_per_ha_yr:g}",
+                caveat=(
+                    f"{row.caveat} Operable proxy {row.operable_proxy_ha / 1e6:.3f} Mha "
+                    f"implies {intensity_bound / 1e6:.3f} Mm3/yr at "
+                    f"{intensity_m3_per_ha_yr:g} m3/ha/yr; the {binding_basis} cap binds "
+                    f"at {effective / 1e6:.3f} Mm3/yr."
                 ),
             )
         )
@@ -423,6 +551,8 @@ def solve_allocation(
             and row.upper_bound_m3 - allocated[row.province] <= CAP_TOLERANCE_M3,
             basis=row.basis,
             caveat=row.caveat,
+            operable_proxy_ha=row.operable_proxy_ha,
+            operable_missing=row.operable_missing,
         )
         for row in rows
     )
@@ -485,6 +615,8 @@ def _case_payload(result: CaseResult) -> dict[str, object]:
                 "binding": row.binding,
                 "basis": row.basis,
                 "caveat": row.caveat,
+                "operable_proxy_ha": row.operable_proxy_ha,
+                "operable_missing": row.operable_missing,
             }
             for row in result.rows
         ],
@@ -508,6 +640,49 @@ def build_summary(
     generous_sum = sum(row.upper_bound_m3 for row in generous_basis)
     cases_payload = {label: _case_payload(result) for label, result in cases.items()}
     cases_payload["200m"]["deficit_vs_generous_m3"] = DIAGNOSTIC_TOTAL_200M - generous_sum
+
+    operable_area_ha = sum(
+        row.operable_proxy_ha for row in basis if row.operable_proxy_ha is not None
+    )
+    operable_missing = sorted(row.province for row in basis if row.operable_missing)
+    operable_capacities = {
+        intensity: sum(
+            row.upper_bound_m3 for row in with_operable_intensity_cap(basis, float(intensity))
+        )
+        for intensity in INTENSITY_CAP_LEVELS
+    }
+    national_envelope = {
+        intensity: {
+            "national_operable_proxy_ha": operable_area_ha,
+            "capacity_m3": float(intensity) * operable_area_ha,
+            "deficits_m3": {
+                label: max(0.0, total - float(intensity) * operable_area_ha)
+                for label, total in LADDER_TOTALS
+            },
+        }
+        for intensity in INTENSITY_CAP_LEVELS
+    }
+    managed_capacities = {
+        intensity: sum(
+            row.upper_bound_m3 for row in with_managed_intensity_cap(basis, float(intensity))
+        )
+        for intensity in INTENSITY_CAP_LEVELS
+    }
+    managed_comparison = {
+        "status": "comparison only; superseded by the operable-proxy screen",
+        "proxy": MANAGED_PROXY_COMPARISON_CAVEAT,
+        "national_managed_proxy_ha": sum(
+            row.managed_proxy_ha for row in basis if row.managed_proxy_ha is not None
+        ),
+        "capacities_m3": managed_capacities,
+        "deficits_m3": {
+            intensity: {
+                label: max(0.0, total - managed_capacities[intensity])
+                for label, total in LADDER_TOTALS
+            }
+            for intensity in INTENSITY_CAP_LEVELS
+        },
+    }
 
     return {
         "product": "provincial harvest-allocation LP",
@@ -535,7 +710,7 @@ def build_summary(
             "solver": "PuLP 2.9.0 / CBC (bundled), threads=1",
         },
         "cases": cases_payload,
-        "sensitivity_managed_intensity": {
+        "sensitivity_operable_intensity": {
             level: {
                 intensity: _case_payload(result) for intensity, result in by_intensity.items()
             }
@@ -544,10 +719,32 @@ def build_summary(
         "thlb_intensity_screen": {
             "intensity_values_m3_per_ha_yr": [float(value) for value in INTENSITY_CAP_LEVELS],
             "proxy": INTENSITY_PROXY_CAVEAT,
+            "operable_proxy": {
+                "path": str(OPERABLE_PROXY_PATH.relative_to(REPO_ROOT)),
+                "threshold_case": OPERABLE_PROXY_THRESHOLD_CASE,
+                "national_operable_proxy_ha": operable_area_ha,
+                "national_managed_proxy_ha": managed_comparison["national_managed_proxy_ha"],
+                "operable_share_of_managed_proxy": (
+                    operable_area_ha / managed_comparison["national_managed_proxy_ha"]
+                    if managed_comparison["national_managed_proxy_ha"] > 0
+                    else None
+                ),
+                "missing_provinces": operable_missing,
+                "missing_policy": "documented cap retained; flagged operable_missing; no zero substitution",
+                "by_province": [
+                    {
+                        "province": row.province,
+                        "operable_proxy_ha": row.operable_proxy_ha,
+                        "operable_missing": row.operable_missing,
+                    }
+                    for row in basis
+                ],
+            },
             "output_dirs": [
                 f"data/derived/national/harvest_basis/provincial_allocation/intensity_{intensity}"
                 for intensity in INTENSITY_CAP_LEVELS
             ],
+            "provincial_capacity_m3": operable_capacities,
             "deficits_m3": {
                 level: {
                     intensity: by_intensity[intensity].deficit_m3
@@ -555,12 +752,21 @@ def build_summary(
                 }
                 for level, by_intensity in intensity_results.items()
             },
+            "national_envelope": national_envelope,
+            "national_envelope_note": (
+                "The national envelope is I * national operable area and ignores "
+                "provincial documented-cap allocation. It is reported for comparison "
+                "with the per-province min-cap LP, which is the model of record."
+            ),
+            "managed_proxy_comparison": managed_comparison,
         },
         "sensitivity_bc_crown_60m": _case_payload(bc_sensitivity),
         "caveats": [
             "Upper bounds are a mixed set of statutory AAC, approximate AAC, a repo TSA path, a documented range midpoint, planning volumes, and actual-mean proxies. Their sum is not a national AAC.",
             "NB, NS, and QC AACs are Crown-only; FSD harvest is total provincial harvest. NB private supply is undocumented, so the NB cap is conservative.",
-            "The managed-landbase proxy is a 2016 tenure union, not a THLB; intensity caps are sensitivities only.",
+            "The operable-proxy landbase is a SCANFI merchantability screen intersected with a share-based 2016 tenure proxy. It is not a legal THLB and has no slope, road access, age/disturbance, growth, yield, or economic content.",
+            "PE and NU have no operable proxy; their documented caps are retained and flagged operable_missing, not set to zero.",
+            "The managed-landbase proxy is retained only as a comparison basis and is not used for the intensity screen of record.",
             "The allocation minimizes deviation from 2024 shares. It is not a forecast, a sustainable-supply estimate, or an economic equilibrium.",
             "No harvest, transport, stumpage, silviculture, or forest-sector opportunity cost enters the objective.",
         ],
@@ -583,6 +789,8 @@ def write_case_csv(path: Path, result: CaseResult) -> None:
         "allocated_share",
         "aac_m3",
         "nfd_m3",
+        "operable_proxy_ha",
+        "operable_missing",
         "upper_bound",
         "binding",
         "basis",
@@ -601,6 +809,8 @@ def write_case_csv(path: Path, result: CaseResult) -> None:
                     "allocated_share": f"{row.allocated_share:.9f}",
                     "aac_m3": _format_float(row.aac_m3),
                     "nfd_m3": _format_float(row.nfd_m3),
+                    "operable_proxy_ha": _format_float(row.operable_proxy_ha),
+                    "operable_missing": "true" if row.operable_missing else "false",
                     "upper_bound": _format_float(row.upper_bound_m3),
                     "binding": "true" if row.binding else "false",
                     "basis": row.basis,
@@ -623,24 +833,47 @@ def write_intensity_outputs(
         intensity_dir.mkdir(parents=True, exist_ok=True)
 
         for label, result in by_case.items():
-            if not result.is_optimal:
-                continue
             path = intensity_dir / f"{label}.csv"
+            if not result.is_optimal:
+                if path.exists():
+                    path.unlink()
+                continue
             write_case_csv(path, result)
             output_paths.append(path)
 
         capacity_m3 = next(iter(by_case.values())).capacity_m3
+        operable_area_ha = sum(
+            row.operable_proxy_ha for row in by_case["100m"].rows if row.operable_proxy_ha is not None
+        )
+        national_envelope_capacity_m3 = float(intensity) * operable_area_ha
         summary_payload = {
-            "product": "provincial harvest-allocation LP - managed-landbase intensity screen",
-            "status": "screening sensitivity only; the managed proxy is not a THLB",
+            "product": "provincial harvest-allocation LP - operable-proxy intensity screen",
+            "status": "screening sensitivity only; the operable proxy is not a legal THLB",
             "intensity_m3_per_ha_yr": float(intensity),
             "capacity_m3": capacity_m3,
+            "national_operable_proxy_ha": operable_area_ha,
+            "national_envelope_capacity_m3": national_envelope_capacity_m3,
             "national_observed_2024_m3": NATIONAL_OBSERVED_2024_M3,
             "cases": {label: _case_payload(result) for label, result in by_case.items()},
+            "national_envelope_deficits_m3": {
+                label: max(0.0, result.national_total_m3 - national_envelope_capacity_m3)
+                for label, result in by_case.items()
+            },
+            "province_caps": [
+                {
+                    "province": row.province,
+                    "operable_proxy_ha": row.operable_proxy_ha,
+                    "operable_missing": row.operable_missing,
+                    "upper_bound_m3": row.upper_bound_m3,
+                    "basis": row.basis,
+                }
+                for row in by_case["100m"].rows
+            ],
             "caveats": [
                 INTENSITY_PROXY_CAVEAT,
-                "Effective caps are min(documented AAC/NFD/proxy, intensity * managed_proxy_ha).",
-                "PE and NU have no managed proxy; their documented caps are unchanged.",
+                "Effective caps are min(documented AAC/NFD/proxy, intensity * operable_proxy_ha).",
+                "PE and NU have no operable proxy; their documented caps are retained and flagged operable_missing, not set to zero.",
+                "The national envelope (intensity * national operable area) is a diagnostic; the per-province min-cap LP is the model of record.",
                 "This is a landbase feasibility screen, not an energy-model run, legal AAC, or sustainable-supply estimate.",
             ],
         }
@@ -709,6 +942,11 @@ def write_report(
 ) -> None:
     upper_sum = float(summary["upper_bound_sum_m3"])
     generous_sum = float(summary["most_generous_documented_ceiling_m3"])
+    operable_area = sum(
+        row.operable_proxy_ha for row in basis if row.operable_proxy_ha is not None
+    )
+    managed_area = sum(row.managed_proxy_ha for row in basis if row.managed_proxy_ha is not None)
+    operable_share = operable_area / managed_area if managed_area > 0 else 0.0
     diag = cases["200m"]
     generous_deficit = diag.national_total_m3 - generous_sum
 
@@ -745,17 +983,18 @@ def write_report(
         "",
         "## Caps and basis",
         "",
-        "| Province | 2024 observed (Mm3) | AAC (Mm3) | NFD (Mm3) | Managed proxy (Mha) | Upper bound (Mm3) | Basis |",
-        "|---|---:|---:|---:|---:|---:|---|",
+        "| Province | 2024 observed (Mm3) | AAC (Mm3) | NFD (Mm3) | Managed proxy (Mha) | Operable proxy (Mha) | Upper bound (Mm3) | Basis |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
     ]
     for row in basis:
         lines.append(
-            "| {p} | {o:.3f} | {aac} | {nfd} | {proxy} | {ub:.3f} | `{basis}` |".format(
+            "| {p} | {o:.3f} | {aac} | {nfd} | {proxy} | {op} | {ub:.3f} | `{basis}` |".format(
                 p=row.province,
                 o=row.observed_2024_m3 / 1e6,
                 aac="—" if row.aac_m3 is None else f"{row.aac_m3 / 1e6:.3f}",
                 nfd="—" if row.nfd_m3 is None else f"{row.nfd_m3 / 1e6:.3f}",
                 proxy="—" if row.managed_proxy_ha is None else f"{row.managed_proxy_ha / 1e6:.2f}",
+                op="missing" if row.operable_missing else f"{row.operable_proxy_ha / 1e6:.2f}",
                 ub=row.upper_bound_m3 / 1e6,
                 basis=row.basis,
             )
@@ -828,12 +1067,14 @@ def write_report(
             "",
             f"The 200M diagnostic is infeasible by construction: the model ceiling is {upper_sum / 1e6:.3f} Mm3/yr, so the exact deficit is **{diag.deficit_m3 / 1e6:.3f} Mm3**. Even the most generous documented ceiling ({generous_sum / 1e6:.3f} Mm3/yr: BC 60M, MB 7.99M, NS 5.75M, PE 0.46M) leaves a deficit of **{generous_deficit / 1e6:.3f} Mm3**. No allocation is forced; the case is reported as infeasible.",
             "",
-            "## Managed-landbase intensity sensitivity",
+            "## Operable-proxy intensity sensitivity",
             "",
-            "The tenure-union proxy is not a THLB. The intensity cap is applied as `upper_bound_p = min(upper_bound_p, I * managed_proxy_ha)` and excludes PE/NU, which have no proxy. This is a landbase feasibility screen, not an energy solve and not a legal constraint.",
+            "The screening landbase is the national **operable merchantable-forest proxy** (SCANFI height >= 5 m, biomass >= 20 Mg/ha, closure >= 10%, intersected with a share-based 2016 tenure proxy). It is **not a legal THLB**. The intensity cap is applied as `upper_bound_p = min(documented AAC/NFD/planning proxy, I * operable_proxy_ha)`. PE and NU have no operable proxy: their documented caps are retained and flagged `operable_missing`; no area is substituted with zero. The 166.28 Mha managed proxy is retained only as a comparison basis.",
             "",
-            "| Case | Intensity (m3/ha/yr) | Status | Capacity (Mm3) | Binding provinces | L1 (Mm3) | Deficit (Mm3) |",
-            "|---|---:|---|---:|---|---:|---:|",
+            f"National operable proxy: **{operable_area / 1e6:.3f} Mha** ({operable_share:.1%} of the 166.28 Mha managed proxy). The national envelope `I * national operable area` is {1.0 * operable_area / 1e6:.3f} Mm3/yr at I=1.0 and {1.2 * operable_area / 1e6:.3f} Mm3/yr at I=1.2. That envelope is a diagnostic only; the model of record applies the cap per province, so a documented cap below `I * operable_proxy_ha` still binds.",
+            "",
+            "| Case | Intensity (m3/ha/yr) | Status | Provincial capacity (Mm3) | National envelope (Mm3) | Binding provinces | L1 (Mm3) | Provincial deficit (Mm3) | Envelope deficit (Mm3) |",
+            "|---|---:|---|---:|---:|---|---:|---:|---:|",
         ]
     )
     for label in ("100m", "119m", "150m"):
@@ -841,8 +1082,11 @@ def write_report(
             binding = ", ".join(result.binding_provinces) or "—"
             l1 = "—" if result.optimal_l1_deviation_m3 is None else f"{result.optimal_l1_deviation_m3 / 1e6:.3f}"
             deficit = "—" if result.deficit_m3 == 0.0 else f"{result.deficit_m3 / 1e6:.3f}"
+            envelope_capacity = float(intensity) * operable_area
+            envelope_deficit = max(0.0, result.national_total_m3 - envelope_capacity)
+            envelope_deficit_text = "—" if envelope_deficit == 0.0 else f"{envelope_deficit / 1e6:.3f}"
             lines.append(
-                f"| {label.upper()} | {intensity} | {result.status} | {result.capacity_m3 / 1e6:.3f} | {binding} | {l1} | {deficit} |"
+                f"| {label.upper()} | {intensity} | {result.status} | {result.capacity_m3 / 1e6:.3f} | {envelope_capacity / 1e6:.3f} | {binding} | {l1} | {deficit} | {envelope_deficit_text} |"
             )
 
     intensity_150_1_0 = intensity_results["150m"]["1.0"]
@@ -850,9 +1094,13 @@ def write_report(
     lines.extend(
         [
             "",
-            f"At 150M the effective caps under a 1.0 m3/ha/yr screen sum to {intensity_150_1_0.capacity_m3 / 1e6:.3f} Mm3/yr, so that screen is infeasible by **{intensity_150_1_0.deficit_m3 / 1e6:.3f} Mm3**. The 1.2 m3/ha/yr effective caps sum to {intensity_150_1_2.capacity_m3 / 1e6:.3f} Mm3/yr and the case remains feasible with {intensity_150_1_2.max_relative_increase:.3%} maximum proportional increase over 2024 shares. The 100M and 119M cases are feasible at both intensities; their binding sets are 100M `NB, NS, NL` and 119M `AB, QC, NB, NS, NL, NT` at 1.0.",
+            f"At 150M the per-province min caps under a 1.0 m3/ha/yr screen sum to {intensity_150_1_0.capacity_m3 / 1e6:.3f} Mm3/yr, so the LP is infeasible by **{intensity_150_1_0.deficit_m3 / 1e6:.3f} Mm3**. The national operable envelope alone would be short by {max(0.0, 150_000_000.0 - operable_area) / 1e6:.3f} Mm3; the larger provincial deficit arises because BC, ON, YT, and NT documented caps bind below `1.0 * operable_proxy_ha`.",
             "",
-            f"This confirms that the proxy cannot certify a 150M provincial pattern under a 1.0 m3/ha/yr screen; it does not establish a legal constraint. Per-intensity outputs are under `intensity_1.0/` and `intensity_1.2/` (CSVs for feasible cases plus `provincial_allocation_summary.json`). The 150M 1.0 case is infeasible and has no CSV.",
+            f"At 1.2 m3/ha/yr the per-province min caps sum to {intensity_150_1_2.capacity_m3 / 1e6:.3f} Mm3/yr, so the LP is **still infeasible by {intensity_150_1_2.deficit_m3 / 1e6:.3f} Mm3** under the per-province formula. The national envelope is {1.2 * operable_area / 1e6:.3f} Mm3/yr and would clear 150M by {max(0.0, 1.2 * operable_area - 150_000_000.0) / 1e6:.3f} Mm3, but it cannot be allocated because BC (45.224), ON (28.700), YT (0.261), and NT (0.036 Mm3/yr) documented caps bind first. Reporting 1.2 as feasible would require dropping either the documented-cap constraint or the per-province operable constraint; neither is done here.",
+            "",
+            "The 100M and 119M cases are feasible at both intensities. At 1.0 the binding sets are 100M `AB, NB, NS, NL` and 119M `BC, AB, SK, QC, NB, NS, NL, NT`; at 1.2 they are 100M `NB, NS, NL` and 119M `AB, NB, NS, NL, NT`. PE and NU retain their documented caps and are flagged `operable_missing`.",
+            "",
+            "For comparison, the superseded managed-proxy screen at 1.0 has a 150M deficit of 6.113 Mm3 and is feasible at 1.2. The tighter operable proxy therefore moves the 150M screen from '1.2 feasible' to '1.2 still short by 4.492 Mm3'. Per-intensity outputs are under `intensity_1.0/` and `intensity_1.2/` (CSVs for feasible cases plus `provincial_allocation_summary.json`). The 150M cases are infeasible at both intensities and have no CSV.",
             "",
             "## Caveats",
             "",
@@ -861,13 +1109,13 @@ def write_report(
             "- NS uses Crown 1.72M plus documented private 4.03M. The Crown-only comparison is retained in the feasibility note.",
             "- BC uses the repo-parsed 2024 TSA AAC (45.22M). The current reported Crown AAC (~58-60M) and the 2028+ path (43.37M) bracket this value; the 60M sensitivity is reported above.",
             "- MB uses the midpoint of the documented 7.39-7.99M range; it is non-binding at every ladder level, so the choice does not affect the allocations.",
-            "- PE has no statutory AAC; 460,000 m3/yr is a planning volume. NT uses the 2020-2024 actual-harvest mean, not a legal AAC. NU is not assessed.",
-            "- The managed-landbase proxy has no growth, yield, operability, accessibility, or economic content. Intensity caps are sensitivity screens, not constraints.",
+            "- PE has no statutory AAC; 460,000 m3/yr is a planning volume. NT uses the 2020-2024 actual-harvest mean, not a legal AAC. NU is not assessed. PE and NU have no operable proxy and keep their documented caps with `operable_missing`.",
+            "- The operable proxy has no slope, road access, age/disturbance, growth, yield, silvicultural, or economic content. Intensity caps are sensitivity screens, not constraints.",
             "- The objective is a share-deviation rule. It has no harvest cost, log value, stumpage, silviculture, transport, or forest-sector employment content.",
             "",
             "## Next steps",
             "",
-            "1. Replace the tenure-union proxy with a real THLB and operability filter before interpreting intensity.",
+            "1. Replace the share-based operable proxy with a legal THLB that removes slope, road-access, age/disturbance, and non-commercial stands before interpreting intensity.",
             "2. Build a harvest/residue cost curve (stumpage, harvest, road, haul, silviculture) and integrate it with the forest-sector LP.",
             "3. Carry the 100/119/150 provincial allocations into runner metadata as `screening_only`, not as a legal allocation.",
             "4. Revisit the NB private-supply gap and the BC current-Crown-AAC discrepancy with provincial sources.",
@@ -877,7 +1125,7 @@ def write_report(
             "- `100m.csv`, `119m.csv`, `150m.csv`: provincial allocations.",
             "- `provincial_allocation_summary.json`: totals, objectives, binding provinces, sensitivities, 200M deficit, THLB intensity deficits.",
             "- `manifest.json`: input/output hashes, solver, statuses, caveats.",
-            "- `intensity_1.0/`, `intensity_1.2/`: feasible-case CSVs and per-intensity summary JSON for the managed-proxy screen.",
+            "- `intensity_1.0/`, `intensity_1.2/`: feasible-case CSVs and per-intensity summary JSON for the operable-proxy screen.",
             "",
         ]
     )
@@ -939,7 +1187,7 @@ def run() -> dict[str, object]:
     for label, total in LADDER_TOTALS:
         intensity_results[label] = {
             intensity: solve_allocation(
-                with_managed_intensity_cap(basis, float(intensity)),
+                with_operable_intensity_cap(basis, float(intensity)),
                 total,
                 label=f"{label}_intensity_{intensity}",
             )
@@ -974,7 +1222,7 @@ def run() -> dict[str, object]:
     write_manifest(
         manifest_path,
         summary,
-        (TEMPLATE_PATH, PROVINCES_PATH, MANAGED_LANDBASE_PATH, FEASIBILITY_DOC_PATH),
+        (TEMPLATE_PATH, PROVINCES_PATH, MANAGED_LANDBASE_PATH, OPERABLE_PROXY_PATH, FEASIBILITY_DOC_PATH),
         tuple(output_paths),
     )
     return summary

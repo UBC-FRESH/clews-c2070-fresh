@@ -151,10 +151,13 @@ sum_s H[p,s,t] <= I[t] * sum_s OperableArea[p,s]           (optional)
 
 `OperableArea` is the screening operable-proxy area in hectares and `I[t]` is
 the intensity screen in m3/ha/yr. The current sensitivity is `I = 1.0` and
-`1.2`; at `I = 1.0`, the 150 Mm3 case is infeasible by 6.113 Mm3, and at
-`I = 1.2` it is feasible. The cap is omitted, with an explicit manifest flag,
-when the proxy has not passed its own validation. It must never be described
-as a THLB, an AAC, or an operability determination.
+`1.2`. The base operable proxy is 144.69 Mha. Per-province min caps give a
+150 Mm3 deficit of 16.296 Mm3 at `I = 1.0` and 4.492 Mm3 at `I = 1.2`; the
+national area envelope alone gives 5.310 Mm3 at 1.0 and clears at 1.2, but the
+provincial LP does not because documented BC/ON/YT/NT caps bind. The cap is
+omitted, with an explicit manifest flag, when the proxy has not passed its own
+validation. It must never be described as a THLB, an AAC, or an operability
+determination.
 
 ### 3.4 Residue mass balance and recovery
 
@@ -453,7 +456,7 @@ transfer ownership or signoff.
 |---|---|---|---|
 | FS-LP-01 | Harvest conservation | `abs(sum H - T) <= 1 m3/yr` for every case | Error; do not rescale silently |
 | FS-LP-02 | Provincial caps | `sum_s H[p,s] <= U[p] + 1 m3/yr`; no province above its documented ceiling | Error; report province and basis |
-| FS-LP-03 | Operable cap | If enabled, `sum_s H[p,s] <= I * OperableArea[p] + 1 m3/yr`; 150M at `I=1.0` reports infeasible with a 6.113 Mm3 deficit, not a clamp | Error/infeasible; no fallback to no cap |
+| FS-LP-03 | Operable cap | If enabled, `sum_s H[p,s] <= I * OperableArea[p] + 1 m3/yr`; 150M at `I=1.0` reports infeasible with a 16.296 Mm3 deficit and at `I=1.2` with 4.492 Mm3, not a clamp; PE/NU fall back to documented caps with `operable_missing` | Error/infeasible; no fallback to no cap |
 | FS-LP-04 | Residue mass balance | `G = f_gross * H`; `R = rho * G`; `0 <= rho <= 1`; no negative or NaN | Error |
 | FS-LP-05 | PJ conversion | `PJ = ODT * 18.5 / 1e6`; caps sum to the national total in split mode; tiers sum to `SUPBCW` | Error on mismatch > 1e-6 PJ |
 | FS-LP-06 | Cost signs and bounds | Every `c >= 0`; weighted `c` within `[min, max]` of contributors; cost basis/currency present | Error; no missing-as-zero |
@@ -462,7 +465,7 @@ transfer ownership or signoff.
 | FS-LP-09 | Fail-closed inputs | Missing province, missing factor, unknown province, allocation sum mismatch, missing label/provenance, or unsupported cost basis raises a descriptive error | Error; no default row |
 | FS-LP-10 | Interface split/comparison | Split mode reconciles `SUPBCW + B1 + B2 = CAN`; comparison mode loads `SUPBCW` alone; no double counting | Error; no mixed mode |
 | FS-LP-11 | Labels | v1 artifacts are `screening_only`/`draft`, `policy_grade=false`; a policy-grade flag cannot be inherited | Error |
-| FS-LP-12 | Regression anchors | With the operable cap disabled, reproduce the current allocation anchors: 100M L1 3.233 Mm3, 119M 6.213, 150M 18.683, 200M deficit 30.477. With `I=1.0`, the 150M deficit is 6.113 | Error; record any intended change as a new scenario |
+| FS-LP-12 | Regression anchors | With the operable cap disabled, reproduce the current allocation anchors: 100M L1 3.233 Mm3, 119M 6.213, 150M 18.683, 200M deficit 30.477. With `I=1.0`, the 150M deficit is 16.296; with `I=1.2`, 4.492; the national area envelope is 5.310/0 | Error; record any intended change as a new scenario |
 
 **No fake curve checks.** The suite must also assert that no v1 cost row is
 derived by interpolating the five FFCM flat levels, that no full log cost is

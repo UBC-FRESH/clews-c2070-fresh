@@ -24,8 +24,8 @@
   var ALLOCATION_FAMILY = 'allocation_screening';
   var FLEET_BANNER_TEXT = 'pre-fleet model — not comparable';
   var HARVEST_CAVEAT = 'Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.';
-  var FEASIBILITY_CAVEAT = '200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is conditional (national bound only; the provincial allocation LP reallocates it, but the 1.0 m³/ha/yr THLB-proxy screen fails by 6.113 Mm³); harvest is exogenous. The default energy Pareto contains only the canonical 119 Mm³ fleet case. Allocation-LP variants are comparison/context only.';
-  var ALLOCATION_CAVEAT = 'The managed-landbase intensity screen is applied to the 2016 tenure-union managed proxy, not a THLB. It has no operability, accessibility, growth, yield, or economic content. 150 Mm3 fails the 1.0 m3/ha/yr screen by 6.113 Mm3 and passes at 1.2; 119 Mm3 passes both. The LP allocation is a comparison/screening result, not a legal AAC, enforced provincial constraint, or policy frontier.';
+  var FEASIBILITY_CAVEAT = '200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is conditional (national bound only; the provincial allocation LP reallocates it, but the 1.0 m³/ha/yr operable-proxy screen fails by 16.296 Mm³ and the 1.2 screen is still short by 4.492 Mm³; the national operable envelope alone clears at 1.2); harvest is exogenous. The default energy Pareto contains only the canonical 119 Mm³ fleet case. Allocation-LP variants are comparison/context only.';
+  var ALLOCATION_CAVEAT = 'The operable-proxy intensity screen uses SCANFI merchantable area intersected with a share-based 2016 tenure proxy, not a THLB. It has no slope, road access, age/disturbance, growth, yield, or economic content. 150 Mm3 is conditional: the 1.0 m3/ha/yr per-province screen is infeasible by 16.296 Mm3, and the 1.2 screen is still short by 4.492 Mm3 because BC, ON, YT, and NT documented caps bind below 1.2 x operable area. The national operable envelope alone would clear 150 Mm3 at 1.2. 119 Mm3 passes both. The LP allocation is a comparison/screening result, not a legal AAC, enforced provincial constraint, or policy frontier.';
   var MAX_NORMAL_HARVEST_M3 = 150000000;
 
   var FAMILY_SHORT = {
@@ -439,6 +439,10 @@
 
     requireTrue(core.landbase && Array.isArray(core.landbase.by_province), 'managed landbase summary is missing');
     requireTrue(core.landbase.caveats && core.landbase.caveats.length >= 2, 'managed landbase caveats are missing');
+    requireTrue(core.operable && Array.isArray(core.operable.by_province), 'operable proxy summary is missing');
+    requireTrue(core.operable.national && Number.isFinite(Number(core.operable.national.operable_proxy_ha)), 'operable proxy national area is missing');
+    requireTrue(core.operable.missing_provinces.length === 2 && core.operable.missing_provinces.indexOf('PE') >= 0 && core.operable.missing_provinces.indexOf('NU') >= 0, 'operable proxy missing provinces must be PE and NU');
+    requireTrue(core.operable.by_province.length === 13, 'operable proxy province table is incomplete');
   }
 
   function validateOutput(output, id) {
@@ -762,12 +766,12 @@
     var isAllocationScreening = sc.family === ALLOCATION_FAMILY;
     var feasibilityCaveat = isAllocationScreening
       ? (sc.feasibility_status === 'conditional'
-        ? 'Conditional — LP reallocation is feasible under documented caps, but the 1.0 m³/ha/yr managed-proxy screen fails by 6.113 Mm³; 1.2 passes. The proxy is not a THLB.'
-        : 'Pass — LP reallocation is feasible under documented caps and both 1.0 and 1.2 m³/ha/yr managed-proxy screens. The proxy is not a THLB.')
+        ? 'Conditional — LP reallocation is feasible under documented caps, but the 1.0 m³/ha/yr operable-proxy screen fails by 16.296 Mm³ and the 1.2 screen is still 4.492 Mm³ short; the national operable envelope alone clears at 1.2. The proxy is not a THLB.'
+        : 'Pass — LP reallocation is feasible under documented caps and both 1.0 and 1.2 m³/ha/yr operable-proxy screens. The proxy is not a THLB.')
       : (sc.feasibility_status === 'fail'
         ? 'AAC/NFD fail — historical/diagnostic only; not admissible and not Pareto eligible.'
         : (sc.feasibility_status === 'conditional'
-          ? 'Conditional — national 150 Mm³ bound only; the status-quo provincial mix fails NB/BC and the LP reallocation is conditional on the THLB proxy.'
+          ? 'Conditional — national 150 Mm³ bound only; the status-quo provincial mix fails NB/BC and the LP reallocation is conditional on the operable-proxy screen.'
           : 'AAC/NFD pass — national screens only; NB/NS Crown-only tenure caveats apply.'));
     var statusTitle = sc.flags.canonical
       ? 'Fleet-corrected canonical/base · Pareto eligible'
@@ -1807,7 +1811,10 @@
     if (screen.status === 'pass') {
       return '<span class="badge badge--feas-pass">feasible · 0 deficit</span>';
     }
-    return '<span class="badge badge--feas-fail">deficit ' + fmt(-screen.deficit_m3 / 1e6, 3) + ' Mm³</span>';
+    var envelope = screen.national_envelope_status === 'pass'
+      ? ' · national envelope pass'
+      : ' · national envelope short ' + fmt(-screen.national_envelope_deficit_m3 / 1e6, 3) + ' Mm³';
+    return '<span class="badge badge--feas-fail" title="Per-province min(documented, I × operable)' + esc(envelope) + '">deficit ' + fmt(screen.deficit_m3 / 1e6, 3) + ' Mm³</span>';
   }
 
   function allocationRoleBadge(role) {
@@ -1833,30 +1840,62 @@
   }
 
   function allocationProvinceTable(pair) {
+    var operableByProvince = {};
+    if (state.core.operable) {
+      state.core.operable.by_province.forEach(function (row) {
+        operableByProvince[row.province] = row;
+      });
+    }
     var rows = pair.province_rows.map(function (row) {
       var cls = row.delta_m3 > 1.0 ? 'is-pos' : (row.delta_m3 < -1.0 ? 'is-neg' : '');
+      var op = operableByProvince[row.province];
+      var opText = !op ? '—' : (op.operable_proxy_ha == null ? 'missing' : fmt(op.operable_proxy_ha / 1e6, 2));
       return '<tr><th scope="row">' + esc(row.province) + '</th>' +
         '<td>' + fmt(row.observed_2024_m3 / 1e6, 3) + '</td>' +
         '<td>' + fmt(row.harvest_m3 / 1e6, 3) + '</td>' +
         '<td class="' + cls + '">' + (row.delta_m3 >= 0 ? '+' : '') + fmt(row.delta_m3 / 1e6, 3) + '</td>' +
         '<td>' + fmt(row.upper_bound_m3 / 1e6, 3) + '</td>' +
+        '<td>' + opText + '</td>' +
         '<td>' + (row.binding ? '<span class="badge badge--diag">binding</span>' : '') + '</td></tr>';
     }).join('');
-    return '<table class="data-table data-table--compact"><caption>Mm³/yr. Delta is LP reallocated − observed 2024 share.</caption>' +
+    return '<table class="data-table data-table--compact"><caption>Mm³/yr and Mha. Delta is LP reallocated − observed 2024 share. Operable is the base-case screening proxy; PE/NU are missing, not zero.</caption>' +
       '<thead><tr><th scope="col">Province</th><th scope="col">Observed</th><th scope="col">LP</th>' +
-      '<th scope="col">Δ</th><th scope="col">Cap</th><th scope="col">Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      '<th scope="col">Δ</th><th scope="col">Cap</th><th scope="col">Operable (Mha)</th><th scope="col">Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function allocationOperableContext(comparison) {
+    var op = comparison.operable_proxy;
+    if (!op) return '';
+    var pair150 = comparison.pairs.filter(function (pair) { return pair.harvest_m3 === 150000000; })[0];
+    if (!pair150) return '';
+    var env = comparison.national_envelope || {};
+    var env10 = env['1.0'] || {};
+    var env12 = env['1.2'] || {};
+    return '<div class="operable-context" role="note">' +
+      '<div class="operable-context__head"><span class="kicker">Screening landbase</span>' +
+      '<strong>Operable proxy · ' + fmt(op.national_operable_proxy_ha / 1e6, 2) + ' Mha</strong></div>' +
+      '<p>' + fmt(op.operable_share_of_managed_proxy * 100, 1) + '% of the 166.28 Mha managed proxy. ' +
+      'Missing: ' + esc((op.missing_provinces || []).join(', ')) + ' — documented caps retained, not zero.</p>' +
+      '<dl class="operable-stats">' +
+      '<div><dt>1.0 m³/ha/yr</dt><dd class="is-neg">provincial LP −' + fmt(pair150.intensity['1.0'].deficit_m3 / 1e6, 3) + ' Mm³</dd><dd class="mono small">national envelope −' + fmt(env10.deficits_m3 ? env10.deficits_m3['150m'] / 1e6 : 0, 3) + ' Mm³</dd></div>' +
+      '<div><dt>1.2 m³/ha/yr</dt><dd class="is-neg">provincial LP −' + fmt(pair150.intensity['1.2'].deficit_m3 / 1e6, 3) + ' Mm³</dd><dd class="mono small">national envelope ' + (env12.deficits_m3 && env12.deficits_m3['150m'] > 0 ? '−' + fmt(env12.deficits_m3['150m'] / 1e6, 3) + ' Mm³' : 'pass') + '</dd></div>' +
+      '</dl>' +
+      '<p class="mono small">Screening proxy, not a legal THLB. 150 Mm³ stays conditional.</p>' +
+      '</div>';
   }
 
   function renderAllocationComparison() {
     var block = $('allocation-block');
     var table = $('allocation-table');
     var detail = $('allocation-province');
+    var operable = $('allocation-operable');
     var caveat = $('allocation-caveat');
     if (!block || !table || !detail || !caveat || !state.core) return;
     var comparison = state.core.scenarios.allocation_screening;
     if (!comparison) { block.hidden = true; return; }
     block.hidden = false;
     caveat.textContent = comparison.thlb_caveat;
+    if (operable) operable.innerHTML = allocationOperableContext(comparison);
     var body = '';
     comparison.pairs.forEach(function (pair) {
       var observed = state.core.scenarioById.get(pair.observed_scenario_id);
@@ -5433,7 +5472,7 @@
       metricCard('Scenarios / outputs', core.scenarios.scenarios.length + ' / ' + core.manifest.output_count, 'records', core.scenarios.scenarios.length + ' scenario contracts · ' + core.manifest.output_count + ' columnar outputs', true) +
       metricCard('Harvest template', fmt(harvest.template.rows, 0), 'rows', harvest.template.provinces.length + ' provinces · 50 years', false) +
       metricCard('Supply tier sum', fmt(supply.tier_sum_pj, 2), 'PJ fuel', 'terminal upper bound · reconciles', false) +
-      metricCard('Managed proxy', fmt(landbase.by_province.reduce(function (sum, row) { return sum + row.managed_proxy_ha; }, 0) / 1e6, 1), 'Mha', 'screening only — not legal THLB', false);
+      metricCard('Operable proxy', fmt(core.operable.national.operable_proxy_ha / 1e6, 1), 'Mha', 'screening landbase — not legal THLB', false);
 
     var caveats = harvest.caveats || [];
     $('harvest-caveats').innerHTML = caveats.length
@@ -5458,20 +5497,26 @@
       }).join('') +
       '</tbody><tfoot><tr><th colspan="4">Tier sum</th><th class="num">' + fmt(tierSum, 3) + '</th><th colspan="2">terminal upper ' + fmt(supply.tier_terminal_upper_pj, 3) + ' PJ</th></tr></tfoot></table></div>';
 
-    $('landbase-status').textContent = landbase.manifest_status + ' · ' + landbase.status + ' · ' + landbase.rows.by_province +
-      ' province rows, ' + landbase.rows.by_ecoprovince + ' ecoprovince rows';
-    $('landbase-caveats').innerHTML = landbase.caveats.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('');
+    var operable = core.operable;
+    $('landbase-status').textContent = operable.status + ' · base thresholds: h ≥ ' + fmt(operable.thresholds.cases.base.height_m, 0) +
+      ' m, biomass ≥ ' + fmt(operable.thresholds.cases.base.biomass_mg_ha, 0) + ' Mg/ha, closure ≥ ' +
+      fmt(operable.thresholds.cases.base.closure_pct, 0) + '% · ' + operable.by_province.length +
+      ' provinces · missing ' + operable.missing_provinces.join(', ');
+    $('landbase-caveats').innerHTML = operable.caveats.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('');
 
-    var maxManaged = Math.max.apply(null, landbase.by_province.map(function (row) { return row.managed_proxy_ha; }));
+    var maxOperable = Math.max.apply(null, operable.by_province.map(function (row) { return row.operable_proxy_ha || 0; }));
     $('managed-table').innerHTML = '<div class="table-wrap"><table class="data-table">' +
-      '<caption>Managed-landbase screening proxy by province · ' + esc(landbase.manifest_status) + '</caption>' +
-      '<thead><tr><th>Province</th><th class="num">Forest area (Mha)</th><th class="num">Managed proxy (Mha)</th><th class="num">Share</th><th>Relative proxy</th></tr></thead><tbody>' +
-      landbase.by_province.map(function (row) {
-        var share = row.managed_share == null ? '—' : fmtPct(row.managed_share, 1);
-        var width = maxManaged > 0 ? (row.managed_proxy_ha / maxManaged) * 100 : 0;
+      '<caption>Operable-proxy screening landbase by province · base case · not a legal THLB</caption>' +
+      '<thead><tr><th>Province</th><th class="num">Treed (Mha)</th><th class="num">Merchantable (Mha)</th><th class="num">Managed comparison (Mha)</th><th class="num">Operable proxy (Mha)</th><th class="num">Operable share</th><th>Relative operable</th></tr></thead><tbody>' +
+      operable.by_province.map(function (row) {
+        var share = row.operable_proxy_ha == null || !row.scanfi_forest_ha ? 'missing' : fmtPct(row.operable_proxy_ha / row.scanfi_forest_ha, 1);
+        var width = maxOperable > 0 && row.operable_proxy_ha ? (row.operable_proxy_ha / maxOperable) * 100 : 0;
+        var operableText = row.operable_proxy_ha == null ? '<span class="badge badge--ink">missing</span>' : fmt(row.operable_proxy_ha / 1e6, 2);
         return '<tr><td>' + esc(row.province) + '</td>' +
-          '<td class="num">' + fmt(row.forest_area_ha / 1e6, 2) + '</td>' +
-          '<td class="num">' + fmt(row.managed_proxy_ha / 1e6, 2) + '</td>' +
+          '<td class="num">' + fmt(row.scanfi_forest_ha / 1e6, 2) + '</td>' +
+          '<td class="num">' + fmt(row.merchantable_ha / 1e6, 2) + '</td>' +
+          '<td class="num">' + (row.managed_proxy_ha == null ? '—' : fmt(row.managed_proxy_ha / 1e6, 2)) + '</td>' +
+          '<td class="num">' + operableText + '</td>' +
           '<td class="num">' + share + '</td>' +
           '<td><span class="bar-track"><span class="bar-fill" style="width:' + width + '%"></span></span></td></tr>';
       }).join('') +
@@ -5563,7 +5608,8 @@
         loadJSON('inputs/osecan_links.json'),
         loadJSON('inputs/harvest_basis.json'),
         loadJSON('inputs/supply_curve.json'),
-        loadJSON('inputs/managed_landbase.json')
+        loadJSON('inputs/managed_landbase.json'),
+        loadJSON('inputs/operable_proxy.json')
       ]);
       buildCoreState({
         manifest: bundle[0],
@@ -5571,7 +5617,8 @@
         links: bundle[2],
         harvest: bundle[3],
         supply: bundle[4],
-        landbase: bundle[5]
+        landbase: bundle[5],
+        operable: bundle[6]
       });
       await initLiveMode();
       if (state.warnings.length) {
