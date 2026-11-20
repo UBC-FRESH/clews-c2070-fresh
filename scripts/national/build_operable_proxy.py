@@ -611,11 +611,15 @@ def validate(
     area_weights_path: Path,
     nfi_path: Path,
     strip_residual: int,
-    filled_blocks: int,
+    province_fill: int,
+    district_fill: int,
 ) -> dict[str, Any]:
     checks: dict[str, Any] = {}
     checks["strip_pixel_conservation_max_residual"] = int(strip_residual)
-    checks["blocks_filled_by_nearest_unit"] = int(filled_blocks)
+    # These are block-grid cells whose centroid fell outside every polygon,
+    # mainly ocean/coastline blocks.  They are counted per attribution layer.
+    checks["blocks_filled_by_nearest_province"] = int(province_fill)
+    checks["blocks_filled_by_nearest_ecodistrict"] = int(district_fill)
 
     checks["national_treed_ha"] = float(national_treed_ha)
     if area_weights_path.exists():
@@ -1080,7 +1084,8 @@ def main() -> int:
         args.area_weights,
         args.nfi,
         strip_residual,
-        province_fill + district_fill,
+        province_fill,
+        district_fill,
     )
     summary = build_summary(
         args, time.time() - start, unit_areas, ecoprovince_out, province_out, checks, input_metadata

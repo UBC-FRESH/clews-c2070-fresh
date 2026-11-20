@@ -4,8 +4,8 @@
 
 **Status: screening proxy. This is not a legal timber harvesting landbase (THLB), not an AAC landbase, and not an operability or access model.**
 
-Generated: 2026-11-20T15:01:27+00:00  
-Runtime: 81.3 s  
+Generated: 2026-11-20T15:03:49+00:00  
+Runtime: 81.2 s  
 Grid: 30 m SCANFI pixels aggregated to 990 m blocks.
 
 ## Method
