@@ -46,6 +46,7 @@ def built_model(tmp_path_factory: pytest.TempPathFactory) -> Path:
         commit=DEFAULT_COMMIT,
         out=out,
         python=BASE_PYTHON,
+        external_data=BASE_SOURCE / "data/external",
     )
     return out
 
@@ -83,6 +84,9 @@ def test_setup_applies_patches_and_writes_manifest(built_model: Path) -> None:
     assert manifest["checks"]["zonal_bc_fuels"] == ["BCWB1", "BCWB2"]
     assert manifest["checks"]["gas_output_factor_mt_per_pj"] == 0.1377
     assert manifest["checks"]["coal_output_factor_mt_per_pj"] == 0.261
+    assert manifest["checks"]["demand_basis"] == "CER EF2026 Current Measures"
+    assert manifest["checks"]["demand_2050_pj"] == pytest.approx(10300.9, abs=0.1)
+    assert manifest["demand"]["sha256"].startswith("ec178ec0")
     assert manifest["model_tree_sha256"] == tree_sha256(built_model)
 
 

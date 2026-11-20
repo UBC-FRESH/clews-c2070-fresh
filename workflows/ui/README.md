@@ -180,21 +180,29 @@ the public base commit and the committed patches:
 .venv/bin/python -m workflows.ui.setup_osecan_model \
   --base /path/to/C2070 \
   --out runtime/osecan_model \
-  --python /path/to/osecan/.venv/bin/python
+  --python /path/to/osecan/.venv/bin/python \
+  --external-data /path/to/C2070/data/external
 ```
 
 Omit `--base` to clone `https://github.com/deltae/C2070.git`. The script checks
 out `40d5b43bb3f8b3f69c16e953144d35eeed5f0f44`, applies
 `workflows/ui/patches/01_emission_factors.patch`,
 `02_zonal_bc.patch`, and `03_tiered_supply.patch` in order, verifies each patch
-SHA-256, runs `osecan build-sets`, `osecan build-params`, and
-`osecan harmonize`, and writes `model_manifest.json` with the source commit,
-patch hashes, and a deterministic model-tree hash.
+SHA-256, runs `osecan build-sets`, `osecan build-params`, `osecan clean-demand
+"Current Measures"`, and `osecan harmonize`, and writes `model_manifest.json`
+with the source commit, patch hashes, demand provenance, and a deterministic
+model-tree hash.
+
+The CER Energy Futures 2026 end-use demand file is pinned by SHA-256. It is
+copied from `--external-data` when that cache exists and otherwise downloaded
+from the public CER URL. `--skip-demand` keeps the public base's 10 PJ
+placeholder demand for structure-only checks.
 
 The setup fails closed on a commit mismatch, patch-hash mismatch, unexpected
 patched file, missing `SUPBCWT1`-`T4` / `SUPBCWB1`-`B2` structure, raw
-fuel-basis emission factor, or harmonization failure. The runner also verifies
-the manifest tree hash when one is present.
+fuel-basis emission factor, placeholder demand when demand was requested, or
+harmonization failure. The runner also verifies the manifest tree hash when one
+is present.
 
 ### Model source
 

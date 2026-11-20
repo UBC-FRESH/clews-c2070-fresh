@@ -11,9 +11,14 @@ Example::
     .venv/bin/python -m workflows.ui.setup_osecan_model \
         --base /tmp/osecan_src \
         --out runtime/osecan_model \
-        --python /tmp/osecan_src/.venv/bin/python
+        --python /tmp/osecan_src/.venv/bin/python \
+        --external-data /tmp/osecan_src/data/external
 
-The rebuilt tree is deliberately left dirty relative to the base commit: the
+The pinned CER Energy Futures 2026 demand file is copied from
+``--external-data`` when available and otherwise downloaded and SHA-256
+verified.  ``--skip-demand`` keeps the public base's 10 PJ placeholder demand
+for structure-only checks.  The rebuilt tree is deliberately left dirty
+relative to the base commit: the
 patches are applied to the working tree and recorded by SHA-256 in
 ``model_manifest.json``.  A run's manifest therefore identifies both the public
 base commit and the exact patch bytes that produced the model.
@@ -30,6 +35,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.request
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -87,6 +93,10 @@ PATCHED_FILES = frozenset(
         "src/osecan/sets_n_ratios.py",
     }
 )
+DEMAND_SCENARIO = "Current Measures"
+DEMAND_URL = "https://www.cer-rec.gc.ca/open/energy/energyfutures2026/end-use-demand-2026.csv"
+DEMAND_SHA256 = "ec178ec02c3f5560b98056232d1fc9e705f243a31744d557e8a2442a290d70f0"
+DEMAND_RELATIVE = Path("data/external/cer_ef2026_end_use_demand/end-use-demand-2026.csv")
 TIER_TECHS = ("SUPBCWT1", "SUPBCWT2", "SUPBCWT3", "SUPBCWT4")
 BC_ZONAL_TECHS = ("SUPBCWB1", "SUPBCWB2")
 BC_ZONAL_FUELS = ("BCWB1", "BCWB2")
@@ -232,32 +242,131 @@ def _has_module(python: Path, module: str) -> bool:
     return completed.returncode == 0
 
 
-def _build(repository: Path, python: Path) -> list[str]:
-    """Regenerate SETs and placeholder parameters, then harmonize."""
+def _download(url: str, destination: Path) -> None:
+    """Download one pinned dataset, failing closed on network errors."""
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(url, headers={"User-Agent": "clews-osecan-setup/1"})
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response, destination.open(
+            "wb"
+        ) as handle:
+            shutil.copyfileobj(response, handle)
+    except OSError as exc:
+        raise SetupError(f"cannot download {url}: {exc}") from exc
+
+
+def _local_demand_source(external_data: Path | None, base: str) -> Path | None:
+    """Find a cached CER demand CSV without touching the network."""
+
+    candidates: list[Path] = []
+    if external_data is not None:
+        external_data = external_data.expanduser()
+        candidates.extend(
+            (
+                external_data / DEMAND_RELATIVE,
+                external_data / DEMAND_RELATIVE.relative_to("data/external"),
+                external_data,
+            )
+        )
+    base_path = Path(base).expanduser()
+    if base_path.is_dir():
+        candidates.append(base_path / DEMAND_RELATIVE)
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _provision_demand(
+    repository: Path,
+    python: Path,
+    *,
+    external_data: Path | None,
+    base: str,
+) -> dict[str, Any]:
+    """Install the pinned CER demand file and run ``osecan clean-demand``."""
+
+    target = repository / DEMAND_RELATIVE
+    local = _local_demand_source(external_data, base)
+    if local is not None:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(local, target)
+        origin = str(local)
+    else:
+        _download(DEMAND_URL, target)
+        origin = DEMAND_URL
+    digest = _sha256_file(target)
+    if digest != DEMAND_SHA256:
+        raise SetupError(
+            f"demand source hash mismatch: got {digest}, expected {DEMAND_SHA256}"
+        )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(repository / "src")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONHASHSEED"] = "0"
+    _run(
+        [str(python), "-m", "osecan.cli", "clean-demand", DEMAND_SCENARIO],
+        cwd=repository,
+        env=env,
+    )
+    return {
+        "basis": f"CER EF2026 {DEMAND_SCENARIO}",
+        "source": origin,
+        "sha256": digest,
+        "scenario": DEMAND_SCENARIO,
+    }
+
+
+def _build(
+    repository: Path,
+    python: Path,
+    *,
+    external_data: Path | None,
+    base: str,
+    skip_demand: bool,
+) -> tuple[list[str], dict[str, Any]]:
+    """Regenerate SETs, parameters, and demand, then harmonize."""
 
     env = dict(os.environ)
     env["PYTHONPATH"] = str(repository / "src")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["PYTHONHASHSEED"] = "0"
-    commands = (
+    commands = [
         [str(python), "-m", "osecan.cli", "build-sets", "--out", "SETs"],
         [str(python), "-m", "osecan.cli", "build-params", "--out", "data/params"],
-        [
-            str(python),
-            "-m",
-            "osecan.cli",
-            "harmonize",
-            "--sets",
-            "SETs",
-            "--params",
-            "data/params",
-        ],
-    )
+    ]
     for command in commands:
-        output = _run(command, cwd=repository, env=env)
-        if "harmonize" in command and "HARMONIZED" not in output:
-            raise SetupError("osecan harmonize did not report HARMONIZED")
-    return [" ".join(command) for command in commands]
+        _run(command, cwd=repository, env=env)
+
+    if skip_demand:
+        demand = {"basis": "placeholder (10 PJ per fuel)", "source": None, "sha256": None}
+    else:
+        demand = _provision_demand(
+            repository,
+            python,
+            external_data=external_data,
+            base=base,
+        )
+        commands.append(
+            [str(python), "-m", "osecan.cli", "clean-demand", DEMAND_SCENARIO]
+        )
+
+    harmonize = [
+        str(python),
+        "-m",
+        "osecan.cli",
+        "harmonize",
+        "--sets",
+        "SETs",
+        "--params",
+        "data/params",
+    ]
+    output = _run(harmonize, cwd=repository, env=env)
+    if "HARMONIZED" not in output:
+        raise SetupError("osecan harmonize did not report HARMONIZED")
+    commands.append(harmonize)
+    return [" ".join(command) for command in commands], demand
 
 
 def _read_rows(path: Path) -> list[dict[str, str]]:
@@ -276,7 +385,11 @@ def _require(condition: bool, message: str) -> None:
         raise SetupError(message)
 
 
-def _verify_structure(repository: Path) -> dict[str, Any]:
+def _verify_structure(
+    repository: Path,
+    *,
+    expect_cleaned_demand: bool,
+) -> dict[str, Any]:
     """Verify the zonal/tier structure and corrected emission factors."""
 
     technologies = _values(repository / "SETs/TECHNOLOGY.csv")
@@ -336,6 +449,20 @@ def _verify_structure(repository: Path) -> dict[str, Any]:
         "base parameters must not price tier technologies",
     )
 
+    demand_rows = _read_rows(repository / "data/params/SpecifiedAnnualDemand.csv")
+    demand_values = {float(row["VALUE"]) for row in demand_rows}
+    demand_2050_pj = round(
+        sum(float(row["VALUE"]) for row in demand_rows if row["YEAR"] == "2050"), 6
+    )
+    if expect_cleaned_demand:
+        _require(
+            demand_values != {10.0},
+            "demand is still the 10 PJ placeholder; rerun without --skip-demand",
+        )
+        _require(demand_2050_pj > 0.0, "cleaned demand has no 2050 value")
+    else:
+        _require(demand_values == {10.0}, "placeholder demand missing under --skip-demand")
+
     return {
         "technologies": len(technologies),
         "fuels": len(fuels),
@@ -346,6 +473,10 @@ def _verify_structure(repository: Path) -> dict[str, Any]:
         "tier_technologies": list(TIER_TECHS),
         "tier_base_caps_absent": True,
         "tier_base_costs_absent": True,
+        "demand_2050_pj": demand_2050_pj,
+        "demand_basis": "CER EF2026 Current Measures"
+        if expect_cleaned_demand
+        else "placeholder",
     }
 
 
@@ -369,6 +500,7 @@ def _write_manifest(
     patches: list[dict[str, str]],
     commands: list[str],
     checks: dict[str, Any],
+    demand: dict[str, Any],
 ) -> dict[str, Any]:
     manifest = {
         "schema_version": "clews.osecan_model_manifest.v1",
@@ -382,6 +514,7 @@ def _write_manifest(
         "solver_ready": solver_ready,
         "model_tree_sha256": tree_sha256(repository),
         "build_commands": commands,
+        "demand": demand,
         "checks": checks,
         "parameter_files": _parameter_inventory(repository),
     }
@@ -415,6 +548,8 @@ def setup_model(
     out: Path,
     python: Path | None = None,
     force: bool = False,
+    external_data: Path | None = None,
+    skip_demand: bool = False,
 ) -> dict[str, Any]:
     """Rebuild one model tree and return its manifest.
 
@@ -424,6 +559,10 @@ def setup_model(
         out: Destination model root.
         python: Optional interpreter with OSeCAN dependencies.
         force: Replace an existing setup tree.
+        external_data: Optional cached ``data/external`` directory holding the
+            pinned CER demand file.
+        skip_demand: Leave the 10 PJ placeholder demand instead of cleaning the
+            CER Current Measures path.
 
     Returns:
         The manifest written to ``out/model_manifest.json``.
@@ -440,8 +579,17 @@ def setup_model(
         repository = _clone_base(base, commit, staging)
         patches = _apply_patches(repository)
         interpreter = _select_python(python, repository)
-        commands = _build(repository, interpreter)
-        checks = _verify_structure(repository)
+        commands, demand = _build(
+            repository,
+            interpreter,
+            external_data=external_data,
+            base=base,
+            skip_demand=skip_demand,
+        )
+        checks = _verify_structure(
+            repository,
+            expect_cleaned_demand=not skip_demand,
+        )
         otoole = interpreter.parent / "otoole"
         otoole_path = otoole if otoole.is_file() and os.access(otoole, os.X_OK) else None
         solver_ready = _has_module(interpreter, "swiglpk") and _has_module(interpreter, "otoole")
@@ -455,6 +603,7 @@ def setup_model(
             patches=patches,
             commands=commands,
             checks=checks,
+            demand=demand,
         )
         os.replace(repository, out)
     finally:
@@ -494,6 +643,20 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="replace an existing setup tree",
     )
+    parser.add_argument(
+        "--external-data",
+        type=Path,
+        default=None,
+        help=(
+            "cached OSeCAN data/external directory (or demand CSV); "
+            "downloaded when omitted"
+        ),
+    )
+    parser.add_argument(
+        "--skip-demand",
+        action="store_true",
+        help="keep the 10 PJ placeholder demand instead of CER Current Measures",
+    )
     return parser
 
 
@@ -506,6 +669,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             out=args.out,
             python=args.python,
             force=args.force,
+            external_data=args.external_data,
+            skip_demand=args.skip_demand,
         )
     except SetupError as exc:
         print(f"setup failed: {exc}", file=sys.stderr)
