@@ -2,6 +2,24 @@
 
 ## 2026-11-20
 
+- **Exported the fleet-corrected harvest ladder to the UI with an explicit
+  exogenous-harvest caveat.** Added family `fleet_screening_ladder` with the
+  100/150/200 Mm³ cases (the 119 Mm³ case remains the single canonical/base
+  scenario `fleet_capacity__screening_119m_fleet`). Each ladder scenario carries
+  `fleet_corrected=true`, `screening_only=true`, `policy_grade=false`,
+  `harvest_exogenous=true`, and `tradeoff_eligible=true`; the exporter reads
+  `harvest_m3_per_year` dimensions and metrics from each `run_summaries.json`.
+  Regenerated `ui/public/data` to **51 scenarios / 17 families / 4 trade-off
+  eligible**, updated boot guards, rail/overview labels (**canonical/base** vs
+  **sensitivity**), Explore/Pareto/Compare, and pinned the caveat on Trade-off
+  and Explore: *“Harvest is exogenous and free in this model; higher harvest
+  lowers cost and emissions because no harvest cost/THLB/AAC constraint is
+  modeled. This is a sensitivity ladder, not a policy frontier.”* The Pareto
+  front remains mechanically computed: with the default objectives the 200 Mm³
+  case dominates the 119/100/150 cases, which is expected when harvest is free
+  and is not presented as a policy frontier. Updated exporter/app-guard tests,
+  `ui/README.md`, and Chromium QA (`ui/qa/ladder-*.png`). No data/submodule or
+  public OSeCAN repository changes.
 - **Added the fleet-corrected harvest ladder.** Solved 100/119/150/200 Mm³
   log/yr under canonical `screening_v0` with the CER 2021 fleet model
   (`runtime/osecan_model`, tree `61dace92...f1fb0`) at two concurrent solves.
@@ -16,8 +34,9 @@
   (`eeba3efd...4da96`). National BCW 2050 was **128.530929 / 152.922679 /
   192.796393 / 257.061857 PJ** and PWRBCW 2050 **34.551309 / 41.108218 /
   51.826955 / 69.102626 PJ**; the national supply cap binds from 2028 in every
-  case. No UI or public OSeCAN repository changes; raw model copies and solve
-  directories were not committed.
+  case. The artifact commit made no UI or public OSeCAN repository changes; the
+  UI export follows above. Raw model copies and solve directories were not
+  committed.
 - **Made the fleet-corrected 119 Mm³ run the canonical UI screening result.**
   Committed the lightweight artifact
   `data/derived/national/clews/osecan/fleet_capacity_119m/` (summary, dispatch,

@@ -41,23 +41,29 @@ Plex Mono. No runtime CDN request is required.
   and a dashed total line. A shared 2021–2070 year control (slider, play/pause,
   reset) draws a vertical guide on the chart and drives a dispatch snapshot
   table by technology family for the selected year.
-- **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for the
-  canonical fleet-corrected screening scenario; colour by family. Pre-fleet,
+- **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for the four
+  eligible fleet-corrected scenarios: the 119 Mm³ canonical/base run plus the
+  100/150/200 Mm³ harvest sensitivity ladder; colour by family. Pre-fleet,
   superseded, and diagnostic rows are explicitly excluded but remain visible in
-  the rail for audit as **pre-fleet model — not comparable**.
-- **Explore** — multi-criteria workspace over the same canonical fleet-corrected
-  scenario plus any live session runs. Parallel coordinates cover 11 axes (objective,
-  emissions, national BCW, PWRBCW, bio share, harvest, carbon price, recovery,
-  PWRBIO cap, nuclear cap, wind cap/integration). Vertically brush an axis or use
-  the range form; every filter appears as a removable chip, and active filters
-  persist in the URL hash. A three-objective Pareto view defaults to minimize
-  objective, minimize cumulative emissions, and maximize national BCW 2050;
-  dominance is computed on min–max normalized metrics, the front can be exported
-  as CSV, and missing metrics are excluded with a visible label. Scenario A/B
-  comparison shows absolute and relative deltas with units, lists differing
-  dimensions, and offers an optional annual dispatch overlay for one energy
-  ledger at a time. Live session runs are dashed/marked `screening_only` and are
-  never folded into the canonical fleet-corrected ledger.
+  the rail for audit as **pre-fleet model — not comparable**. A prominent caveat
+  states that harvest is exogenous and free, so the ladder is a sensitivity
+  exercise, not a policy frontier.
+- **Explore** — multi-criteria workspace over the four eligible fleet-corrected
+  scenarios (119 Mm³ canonical/base + 100/150/200 Mm³ sensitivity) plus any live
+  session runs. The same exogenous-harvest caveat is pinned above the workspace.
+  Parallel coordinates cover 11 axes (objective, emissions, national BCW, PWRBCW,
+  bio share, harvest, carbon price, recovery, PWRBIO cap, nuclear cap, wind
+  cap/integration). Vertically brush an axis or use the range form; every filter
+  appears as a removable chip, and active filters persist in the URL hash. A
+  three-objective Pareto view defaults to minimize objective, minimize cumulative
+  emissions, and maximize national BCW 2050; dominance is computed mechanically
+  on min–max normalized metrics, the front can be exported as CSV, and missing
+  metrics are excluded with a visible label. Because harvest is free, the 200 Mm³
+  sensitivity case can dominate the canonical base; the UI says so rather than
+  forcing the base onto the front. Scenario A/B comparison shows absolute and
+  relative deltas with units, lists differing dimensions, and offers an optional
+  annual dispatch overlay for one energy ledger at a time. Live session runs are
+  dashed/marked `screening_only` and are never folded into the canonical ledger.
 - **Map** — MapLibre with 13 provinces, 36 ecoprovinces, 385 RSYC tiles, and a
   `recoverable_pj_base` choropleth. Linked Canada → province → ecoprovince →
   RSYC tile drill-down with breadcrumbs, a selection panel (area, recoverable
@@ -96,7 +102,7 @@ fleet-corrected 119 Mm³ run and the historical pre-fleet scenarios):
 
 | Path | Content |
 |---|---|
-| `scenarios.json` | 48 scenarios, 16 families, 1 canonical trade-off ID, units, flags, dimensions, metrics |
+| `scenarios.json` | 51 scenarios, 17 families, 4 trade-off IDs (1 canonical/base + 3 harvest sensitivity), units, flags, dimensions, metrics |
 | `outputs/{scenario_id}.json` | Columnar `technology`, `category`, `zone`, `year`, `value_pj`; units per category |
 | `inputs/harvest_basis.json` | Harvest template summary and 2021–2070 reference paths |
 | `inputs/supply_curve.json` | Four-tier national supply curve, reconciliation, physical basis |
@@ -107,13 +113,25 @@ fleet-corrected 119 Mm³ run and the historical pre-fleet scenarios):
 | `spatial/rsyc_tiles.geojson` | 385 RSYC tiles with `recoverable_pj_base` |
 | `spatial/zone_nodes.json` | 13 C2070 zones; B1/B2 anchors; 11 explicit gaps |
 
-The canonical fleet-corrected artifact is
+The canonical fleet-corrected base artifact is
 `data/derived/national/clews/osecan/fleet_capacity_119m/` (summary, dispatch,
 manifest only; raw model/results are not committed). Its headline metrics are
 objective **1,445,655.44 M$**, cumulative emissions **424.710127 Mt CO₂**, and
 2050 emissions **0.0 Mt CO₂**. The fleet run records demand/audit rows under
 `category=other`; the exporter omits them from the supply-side columnar output
 and reports the count in `excluded_categories`.
+
+The sensitivity ladder lives under
+`data/derived/national/clews/osecan/fleet_screening_ladder/{100m,150m,200m}/`
+(the 119m directory duplicates the canonical case and is deliberately not
+exported twice). It is exported as family `fleet_screening_ladder` with
+`harvest_m3_per_year` dimensions and metrics read from each run summary. All
+three cases are `fleet_corrected=true`, `screening_only=true`,
+`policy_grade=false`, `harvest_exogenous=true`, and `tradeoff_eligible=true`.
+
+> **Harvest is exogenous and free in this model; higher harvest lowers cost and
+> emissions because no harvest cost/THLB/AAC constraint is modeled. This is a
+> sensitivity ladder, not a policy frontier.**
 
 ### Units and guards
 
@@ -130,13 +148,19 @@ and reports the count in `excluded_categories`.
   scenario output is validated on load (scenario ID, column lengths, finite
   values, 50-year coverage, category units).
 - Trade-off eligibility is re-derived from flags (`publishable`,
-  `post_fix_emissions`, `fleet_corrected`, `canonical`, and neither
+  `post_fix_emissions`, `fleet_corrected`, `tradeoff_eligible`, and neither
   `superseded_for_emissions` nor `superseded_for_fleet`) and checked against the
-  1-ID canonical ledger. A visible guard appears if they disagree.
-- `fleet_capacity__screening_119m_fleet` is `screening_only=true` and
-  `policy_grade=false`. Every earlier scenario carries
-  `superseded_for_fleet=true` and the visible **pre-fleet model — not comparable**
-  badge/banner; the canonical run shows **fleet-corrected**.
+  4-ID ledger. A visible guard appears if they disagree.
+- `fleet_capacity__screening_119m_fleet` is the single canonical/base scenario
+  and is `screening_only=true`, `policy_grade=false`. The three
+  `fleet_screening_ladder__*` runs are labelled **sensitivity** with
+  **exogenous harvest**; the canonical run is labelled **canonical/base**. Every
+  earlier scenario carries `superseded_for_fleet=true` and the visible
+  **pre-fleet model — not comparable** badge/banner.
+- The trade-off/Pareto front is computed mechanically. It is legitimate for the
+  200 Mm³ sensitivity to dominate the 119 Mm³ base because harvest has no cost,
+  THLB, or AAC constraint in this model; the UI shows the caveat rather than
+  hiding the dominated base.
 - Superseded and diagnostic flags are visible in the rail, masthead, and file
   ledger.
 - Spatial counts and the 11-zone gap count are guarded. No C2070 zone polygon is

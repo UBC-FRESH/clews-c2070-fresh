@@ -162,7 +162,11 @@
             <p class="kicker">Eligible frontier</p>
             <h2>Objective vs cumulative emissions</h2>
           </div>
-          <p class="panel-deck">Only the canonical fleet-corrected screening run is eligible. Pre-fleet, superseded, and diagnostic scenarios are excluded even when their IDs appear elsewhere.</p>
+          <p class="panel-deck">Four fleet-corrected scenarios are eligible: the 119 Mm³ canonical/base run plus the 100/150/200 Mm³ harvest sensitivity ladder. Pre-fleet, superseded, and diagnostic scenarios remain excluded even when their IDs appear elsewhere.</p>
+        </div>
+        <div class="harvest-caveat" role="note">
+          <strong>Harvest is exogenous and free in this model</strong>
+          <p>Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.</p>
         </div>
         <div id="tradeoff-guard" class="guard-note" hidden></div>
         <div class="chart-frame chart-frame--scatter">
@@ -180,7 +184,11 @@
             <p class="kicker">Multi-criteria workspace</p>
             <h2>Explore the trade space</h2>
           </div>
-          <p class="panel-deck">The canonical fleet-corrected scenario plus live session runs. Every filter is visible as a removable chip and survives in the URL hash; pre-fleet and live runs stay screening-only and never enter the canonical ledger.</p>
+          <p class="panel-deck">The 119 Mm³ canonical/base run, the 100/150/200 Mm³ harvest sensitivity ladder, and live session runs. Every filter is visible as a removable chip and survives in the URL hash; pre-fleet and live runs stay screening-only.</p>
+        </div>
+        <div class="harvest-caveat" role="note">
+          <strong>Harvest is exogenous and free in this model</strong>
+          <p>Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.</p>
         </div>
         <div id="explore-mode-note" class="guard-note" hidden></div>
 
@@ -215,7 +223,7 @@
               <p class="kicker">Nondominated set</p>
               <h3 id="pareto-title">Pareto front</h3>
             </div>
-            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. Points outside the front remain as context.</p>
+            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. The front is computed mechanically; because harvest is free, the 200 Mm³ sensitivity case can dominate the canonical 119 Mm³ base. Points outside the front remain as context. This is not a policy frontier.</p>
           </div>
           <div class="pareto-controls">
             <label>Projection X <select id="pareto-x"></select></label>

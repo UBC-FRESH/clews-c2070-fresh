@@ -1,9 +1,11 @@
 # UI QA report — iteration 0, fix pass 1
 
 > **Historical note (2026-11-20):** the sections below record the pre-fleet
-> bundle (47 scenarios, 26 trade-off eligible). The current bundle is 48
-> scenarios / 16 families / 1 canonical eligible; see the
-> **Fleet-correction canonicalization pass** section at the end of this file.
+> bundle (47 scenarios, 26 trade-off eligible) and the intermediate
+> one-canonical fleet pass. The current bundle is 51 scenarios / 17 families /
+> 4 trade-off eligible (1 canonical/base + 3 harvest sensitivity); see the
+> **Fleet-correction canonicalization** and **Harvest ladder export** sections
+> at the end of this file.
 
 **Date:** 2026-11-19 (post-fix rerun)
 **Scope:** real Chromium rendering and interaction QA of `ui/` served over HTTP,
@@ -431,3 +433,39 @@ intentional `/api/health` probe in static mode; it is handled by the mode badge.
 
 Data artifact commit `fb877d2` in the data submodule. `git status --porcelain`
 contains no `D` entries. No public OSeCAN repository was changed.
+
+## Harvest ladder export — 2026-11-20
+
+**Scope:** static bundle regenerated with the fleet-corrected 100/150/200 Mm³
+harvest sensitivity ladder plus the canonical 119 Mm³ base. Boot guards moved to
+51 scenarios / 17 families / 4 trade-off eligible; the exogenous-harvest caveat
+was added to Trade-off and Explore.
+
+**Environment:** Chromium headless shell (`chrome-headless-shell`), static
+`python3 -m http.server 8123 -d ui`, viewport 1600 px wide; screenshots captured
+with virtual time. No backend was used. The only expected network miss is the
+intentional static-mode `/api/health` probe.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Boot guard | **PASS** — 51 scenarios, 17 families, 4 trade-off eligible; fatal banner absent in DOM dump. |
+| Ladder family | **PASS** — `fleet_screening_ladder` has 3 scenarios at 100/150/200 Mm³; each is fleet-corrected, screening-only, not policy-grade, harvest-exogenous, and trade-off eligible. |
+| Canonical role | **PASS** — 119 Mm³ remains the single canonical/base scenario and is not duplicated by the ladder export. |
+| Trade-off | **PASS** — 4 eligible points visible, ledger count `4 eligible · 1 canonical/base + 3 harvest sensitivity`; guard hidden. |
+| Caveat | **PASS** — exact caveat visible above both Trade-off and Explore. |
+| Pareto | **PASS** — mechanically computed; 1 on front (200 Mm³) and 4 eligible evaluated. The canonical base is shown as dominated, not forced onto the front. |
+| Compare | **PASS** — 119 Mm³ vs 200 Mm³ shows 2 of 11 differing dimensions (harvest and harvest volume) and the expected metric deltas. |
+| Errors | **PASS** — no data-contract failure in the DOM dump; static-mode badge only. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `ladder-tradeoff.png` | Four eligible points, canonical/base + sensitivity badges, and the prominent exogenous-harvest caveat |
+| `ladder-explore.png` | Explore workspace with the caveat, 4 eligible rows, and the mechanical Pareto front (200 Mm³ on front) |
+| `ladder-compare.png` | 119 Mm³ canonical/base vs 200 Mm³ sensitivity comparison and differing dimensions |
+
+`git status --porcelain` contains no `D` entries. No data submodule or public
+OSeCAN repository changes were made by the UI export.

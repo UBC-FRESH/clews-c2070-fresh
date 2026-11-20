@@ -69,11 +69,27 @@ def test_ui_log_rendering_is_bounded_and_throttled() -> None:
 
 
 def test_ui_fleet_correction_banner_and_counts() -> None:
-    assert "EXPECTED_SCENARIO_COUNT = 48" in APP_JS
-    assert "EXPECTED_FAMILY_COUNT = 16" in APP_JS
-    assert "EXPECTED_ELIGIBLE_COUNT = 1" in APP_JS
+    assert "EXPECTED_SCENARIO_COUNT = 51" in APP_JS
+    assert "EXPECTED_FAMILY_COUNT = 17" in APP_JS
+    assert "EXPECTED_ELIGIBLE_COUNT = 4" in APP_JS
     assert "FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet'" in APP_JS
+    assert "FLEET_LADDER_FAMILY = 'fleet_screening_ladder'" in APP_JS
     assert "FLEET_BANNER_TEXT = 'pre-fleet model — not comparable'" in APP_JS
     assert "badge--fleet" in APP_JS and "badge--prefleet" in APP_JS
     assert "sc.flags.fleet_corrected &&" in APP_JS
     assert "!sc.flags.superseded_for_fleet" in APP_JS
+
+
+def test_ui_harvest_ladder_caveat_and_flags() -> None:
+    assert (
+        "Harvest is exogenous and free in this model; higher harvest lowers cost and emissions "
+        "because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, "
+        "not a policy frontier." in APP_JS
+    )
+    assert "sc.flags.tradeoff_eligible &&" in APP_JS
+    assert "sc.flags.harvest_exogenous" in APP_JS
+    assert "harvest_exogenous_caveat === HARVEST_CAVEAT" in APP_JS
+    assert "sensitivity ladder, not a policy frontier" in APP_JS
+    html = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
+    assert html.count("This is a sensitivity ladder, not a policy frontier.") == 2
+    assert "harvest-caveat" in html

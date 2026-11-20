@@ -626,6 +626,34 @@ svg { display: block; }
   background: repeating-linear-gradient(135deg, rgba(169, 79, 49, 0.13), rgba(169, 79, 49, 0.13) 8px, rgba(169, 79, 49, 0.07) 8px, rgba(169, 79, 49, 0.07) 16px);
 }
 
+.harvest-caveat {
+  position: relative;
+  margin: 0 0 18px;
+  padding: 16px 20px 15px 22px;
+  border: 1px solid rgba(169, 79, 49, 0.42);
+  border-left: 5px solid var(--rust);
+  background:
+    repeating-linear-gradient(135deg, rgba(169, 79, 49, 0.055), rgba(169, 79, 49, 0.055) 7px, transparent 7px, transparent 14px),
+    linear-gradient(90deg, rgba(242, 196, 111, 0.3), rgba(251, 246, 233, 0.72));
+  box-shadow: 0 10px 24px -18px rgba(85, 53, 10, 0.55);
+  color: #46260f;
+}
+.harvest-caveat strong {
+  display: block;
+  margin-bottom: 5px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rust-dark);
+}
+.harvest-caveat p {
+  max-width: 92ch;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  font-weight: 540;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

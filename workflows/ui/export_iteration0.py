@@ -80,6 +80,12 @@ HARVEST_LEVELS = {
     },
 }
 
+HARVEST_EXOGENOUS_CAVEAT = (
+    "Harvest is exogenous and free in this model; higher harvest lowers cost and "
+    "emissions because no harvest cost/THLB/AAC constraint is modeled. This is a "
+    "sensitivity ladder, not a policy frontier."
+)
+
 C2070_ZONES = (
     "A1",
     "A2",
@@ -121,7 +127,54 @@ FAMILY_SPECS: tuple[dict[str, Any], ...] = (
         "screening_only": True,
         "policy_grade": False,
         "canonical": True,
+        "harvest_exogenous": True,
+        "tradeoff_eligible": True,
         "harvest": "119m",
+        "supply_curve": "tiered_t1_t4",
+        "hydro": "upper_2021",
+        "carbon_price_default": 200.0,
+        "pwrbio_cap": "5pct_zone_generation",
+        "nuclear_cap_gw": 0.0,
+        "wind_cost_usd_per_gj": 3.0,
+        "wind_cap": "20pct_zonal",
+    },
+    {
+        "family": "fleet_screening_ladder",
+        "label": "Fleet-corrected harvest sensitivity ladder",
+        "dir": "fleet_screening_ladder",
+        "cases": (
+            {
+                "case_id": "screening_100m",
+                "dir": "100m",
+                "harvest": "100m",
+                "label": "100 Mm3 harvest sensitivity — fleet-corrected",
+            },
+            {
+                "case_id": "screening_150m",
+                "dir": "150m",
+                "harvest": "150m",
+                "label": "150 Mm3 harvest sensitivity — fleet-corrected",
+            },
+            {
+                "case_id": "screening_200m",
+                "dir": "200m",
+                "harvest": "200m",
+                "label": "200 Mm3 harvest sensitivity — fleet-corrected",
+            },
+        ),
+        "description_override": (
+            "Screening_v0 harvest sensitivity solved with the CER 2021 capacity fleet. "
+            "Harvest is exogenous and free: no harvest cost, THLB, or AAC constraint is modeled. "
+            "Sensitivity only; not a policy frontier and not policy-grade."
+        ),
+        "post_fix": True,
+        "superseded": False,
+        "fleet_corrected": True,
+        "screening_only": True,
+        "policy_grade": False,
+        "canonical": False,
+        "harvest_exogenous": True,
+        "tradeoff_eligible": True,
         "supply_curve": "tiered_t1_t4",
         "hydro": "upper_2021",
         "carbon_price_default": 200.0,
@@ -310,6 +363,7 @@ class RunCase:
     family: str
     case_id: str
     entry: dict[str, Any]
+    source_dir: Path
 
 
 def utc_now() -> str:
@@ -492,17 +546,55 @@ def select_case_table(summaries: dict[str, Any], *, family: str) -> tuple[str, d
 def discover_runs(artifacts_root: Path) -> list[RunCase]:
     runs: list[RunCase] = []
     for spec in FAMILY_SPECS:
+        cases = spec.get("cases")
+        if cases:
+            for case in cases:
+                source_dir = artifacts_root / spec["dir"] / case["dir"]
+                summaries = _read_json(
+                    source_dir / "run_summaries.json", label=spec["family"]
+                )
+                if not _has_metrics(summaries):
+                    raise ExportError(
+                        f"{spec['family']}/{case['case_id']}: flat summary has no metrics"
+                    )
+                entry = dict(summaries)
+                entry["harvest_level"] = case["harvest"]
+                entry["label"] = case["label"]
+                runs.append(
+                    RunCase(
+                        family=spec["family"],
+                        case_id=case["case_id"],
+                        entry=entry,
+                        source_dir=source_dir,
+                    )
+                )
+            continue
+
         family_dir = artifacts_root / spec["dir"]
         summaries = _read_json(family_dir / "run_summaries.json", label=spec["family"])
         if _has_metrics(summaries):
             case_id = spec.get("case_id") or summaries.get("scenario_id")
             if not isinstance(case_id, str) or not case_id:
                 raise ExportError(f"{spec['family']}: flat summary has no scenario_id")
-            runs.append(RunCase(family=spec["family"], case_id=case_id, entry=summaries))
+            runs.append(
+                RunCase(
+                    family=spec["family"],
+                    case_id=case_id,
+                    entry=summaries,
+                    source_dir=family_dir,
+                )
+            )
             continue
         table_key, table = select_case_table(summaries, family=spec["family"])
         for case_id, entry in table.items():
-            runs.append(RunCase(family=spec["family"], case_id=case_id, entry=entry))
+            runs.append(
+                RunCase(
+                    family=spec["family"],
+                    case_id=case_id,
+                    entry=entry,
+                    source_dir=family_dir,
+                )
+            )
         if table_key not in ("runs", "cases"):
             raise ExportError(f"{spec['family']}: impossible case table {table_key}")
     if not runs:
@@ -654,6 +746,19 @@ def _bio_cost_for(entry: dict[str, Any], summaries: dict[str, Any]) -> float | N
     return 3.0
 
 
+def _summary_harvest_m3(entry: dict[str, Any], *, label: str) -> float | None:
+    supply = entry.get("supply")
+    if not isinstance(supply, dict):
+        return None
+    raw = supply.get("harvest_level_m3_per_year")
+    if raw is None:
+        return None
+    value = _finite(raw, label=f"{label}.supply.harvest_level_m3_per_year")
+    if value <= 0:
+        raise ExportError(f"{label}: harvest volume must be positive, got {value}")
+    return value
+
+
 def build_dimensions(
     spec: dict[str, Any],
     summaries: dict[str, Any],
@@ -668,9 +773,18 @@ def build_dimensions(
     if harvest_level not in HARVEST_LEVELS:
         raise ExportError(f"{case_id}: missing harvest level")
     harvest = dict(HARVEST_LEVELS[harvest_level])
+    summary_harvest = _summary_harvest_m3(entry, label=case_id)
+    if summary_harvest is not None:
+        if abs(summary_harvest - harvest["m3_per_year"]) > 0.5:
+            raise ExportError(
+                f"{case_id}: summary harvest {summary_harvest} does not match "
+                f"the {harvest_level} basis {harvest['m3_per_year']}"
+            )
+        harvest["m3_per_year"] = summary_harvest
 
     return {
         "harvest": harvest,
+        "harvest_m3_per_year": harvest["m3_per_year"],
         "carbon_price_usd_per_t": _carbon_price_for(spec, summaries, entry, case_id),
         "bio_cost_usd_per_gj": _bio_cost_for(entry, summaries),
         "recovery_fraction": _recovery_for(entry, summaries),
@@ -694,6 +808,8 @@ def _zero_tiers_for(case_id: str) -> list[str]:
 def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str, entry: dict[str, Any]) -> dict[str, Any]:
     scenario_key = scenario_id(spec["family"], case_id)
     metrics = normalize_metrics(entry, label=scenario_key)
+    dimensions = build_dimensions(spec, summaries, entry, case_id)
+    metrics["harvest_m3_per_year"] = dimensions["harvest_m3_per_year"]
     solver = normalize_status(
         entry.get("solver_status", entry.get("status")), label=scenario_key
     )
@@ -712,6 +828,8 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
         and not is_diagnostic
         and not superseded_for_fleet
     )
+    harvest_exogenous = bool(spec.get("harvest_exogenous"))
+    tradeoff_eligible = bool(spec.get("tradeoff_eligible")) and publishable
 
     return {
         "scenario_id": scenario_key,
@@ -726,7 +844,7 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
             _relative(Path(spec["source_dir"]) / "manifest.json", spec["repo_root"]),
             _relative(Path(spec["source_dir"]) / "dispatch_by_zone.csv", spec["repo_root"]),
         ],
-        "dimensions": build_dimensions(spec, summaries, entry, case_id),
+        "dimensions": dimensions,
         "metrics": metrics,
         "flags": {
             "solver": solver,
@@ -737,6 +855,8 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
             "canonical": bool(spec.get("canonical")) and publishable,
             "screening_only": bool(spec.get("screening_only")),
             "policy_grade": bool(spec.get("policy_grade")),
+            "harvest_exogenous": harvest_exogenous,
+            "tradeoff_eligible": tradeoff_eligible,
             "diagnostic": is_diagnostic,
             "post_fix_emissions": bool(spec["post_fix"]),
         },
@@ -1082,19 +1202,34 @@ def _file_link(path: Path, root: Path, *, role: str) -> dict[str, Any]:
 def build_osecan_links(root: Path, artifacts_root: Path) -> dict[str, Any]:
     family_links: list[dict[str, Any]] = []
     for spec in FAMILY_SPECS:
-        family_dir = artifacts_root / spec["dir"]
+        family_root = artifacts_root / spec["dir"]
+        cases = spec.get("cases")
+        scenario_dirs = (
+            [family_root / case["dir"] for case in cases]
+            if cases
+            else [family_root]
+        )
         files = [
-            _file_link(family_dir / name, root, role=name)
+            _file_link(scenario_dir / name, root, role=name)
+            for scenario_dir in scenario_dirs
             for name in ("run_summaries.json", "manifest.json", "dispatch_by_zone.csv")
         ]
         family_links.append(
             {
                 "family": spec["family"],
-                "source_dir": _relative(family_dir, root),
+                "source_dir": _relative(family_root, root),
+                "scenario_dirs": [
+                    _relative(scenario_dir, root) for scenario_dir in scenario_dirs
+                ],
+                "scenario_count": len(scenario_dirs),
                 "post_fix_emissions": bool(spec["post_fix"]),
                 "superseded_for_emissions": bool(spec["superseded"]),
                 "superseded_for_fleet": not bool(spec.get("fleet_corrected")),
                 "fleet_corrected": bool(spec.get("fleet_corrected")),
+                "screening_only": bool(spec.get("screening_only")),
+                "policy_grade": bool(spec.get("policy_grade")),
+                "harvest_exogenous": bool(spec.get("harvest_exogenous")),
+                "tradeoff_eligible": bool(spec.get("tradeoff_eligible")),
                 "files": files,
             }
         )
@@ -1356,10 +1491,10 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
     for run in runs:
         spec = next(item for item in FAMILY_SPECS if item["family"] == run.family)
         spec = dict(spec)
-        spec["source_dir"] = str(artifacts_root / spec["dir"])
+        spec["source_dir"] = str(run.source_dir)
         spec["repo_root"] = str(root)
         summaries = _read_json(
-            artifacts_root / spec["dir"] / "run_summaries.json", label=run.family
+            run.source_dir / "run_summaries.json", label=run.family
         )
         scenario = build_scenario(spec, summaries, run.case_id, run.entry)
         key = scenario["scenario_id"]
@@ -1377,7 +1512,7 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
             scenario["metrics"],
         )
 
-        dispatch_path = artifacts_root / spec["dir"] / "dispatch_by_zone.csv"
+        dispatch_path = run.source_dir / "dispatch_by_zone.csv"
         rows = load_dispatch_rows(
             dispatch_path, run_id=scenario["dispatch_run"], scenario_key=key
         )
@@ -1427,25 +1562,35 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
 
     tradeoff = {
         "rule": (
-            "publishable fleet-corrected scenario, not superseded for emissions "
-            "or for the CER 2021 fleet"
+            "publishable fleet-corrected scenario with tradeoff_eligible=true, not "
+            "superseded for emissions or for the CER 2021 fleet"
         ),
         "canonical_scenario_id": canonical_ids[0],
+        "canonical_role": "canonical/base",
+        "harvest_exogenous_caveat": HARVEST_EXOGENOUS_CAVEAT,
         "scenario_ids": [
             scenario["scenario_id"]
             for scenario in scenarios
-            if scenario["flags"]["publishable"]
+            if scenario["flags"]["tradeoff_eligible"]
         ],
         "metrics": [
             {
                 "scenario_id": scenario["scenario_id"],
                 "family": scenario["family"],
+                "harvest_exogenous": scenario["flags"]["harvest_exogenous"],
+                "canonical": scenario["flags"]["canonical"],
                 **scenario["metrics"],
             }
             for scenario in scenarios
-            if scenario["flags"]["publishable"]
+            if scenario["flags"]["tradeoff_eligible"]
         ],
     }
+    _record(
+        checks,
+        "tradeoff_eligibility_count",
+        len(tradeoff["scenario_ids"]) == 4,
+        tradeoff["scenario_ids"],
+    )
     superseded_ids = {
         scenario["scenario_id"]
         for scenario in scenarios
@@ -1493,6 +1638,8 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
                 "screening_only": bool(spec.get("screening_only")),
                 "policy_grade": bool(spec.get("policy_grade")),
                 "canonical": bool(spec.get("canonical")),
+                "harvest_exogenous": bool(spec.get("harvest_exogenous")),
+                "tradeoff_eligible": bool(spec.get("tradeoff_eligible")),
                 "scenario_count": sum(1 for run in runs if run.family == spec["family"]),
             }
             for spec in FAMILY_SPECS

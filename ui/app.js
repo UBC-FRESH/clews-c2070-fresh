@@ -16,14 +16,17 @@
   var MOBILE_RAIL_QUERY = '(max-width: 720px)';
   var TEMPORAL_DEFAULT = 2050;
   var PROVINCE_ALIAS = { QC: 'CA-QB' };
-  var EXPECTED_SCENARIO_COUNT = 48;
-  var EXPECTED_FAMILY_COUNT = 16;
-  var EXPECTED_ELIGIBLE_COUNT = 1;
+  var EXPECTED_SCENARIO_COUNT = 51;
+  var EXPECTED_FAMILY_COUNT = 17;
+  var EXPECTED_ELIGIBLE_COUNT = 4;
   var FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet';
+  var FLEET_LADDER_FAMILY = 'fleet_screening_ladder';
   var FLEET_BANNER_TEXT = 'pre-fleet model — not comparable';
+  var HARVEST_CAVEAT = 'Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.';
 
   var FAMILY_SHORT = {
     fleet_capacity: 'Fleet capacity',
+    fleet_screening_ladder: 'Harvest ladder',
     emission_factor_fix: 'Emission factor fix',
     pwrbio_cap: 'PWRBIO cap',
     pwrbio_tight: 'PWRBIO tight',
@@ -43,7 +46,8 @@
 
   var FAMILY_CHART_COLORS = {
     fleet_capacity: '#b23b1c',
-    emission_factor_fix: '#d98a2b',
+    fleet_screening_ladder: '#d98a2b',
+    emission_factor_fix: '#b9791f',
     pwrbio_cap: '#4f7d80',
     pwrbio_tight: '#a94f31',
     nuclear_audit: '#7c5a68',
@@ -126,6 +130,7 @@
     { key: 'national_bcw_2050', label: 'National BCW 2050', unit: 'PJ fuel', digits: 2 },
     { key: 'pwrbcw_2050', label: 'PWRBCW 2050', unit: 'PJ electricity', digits: 2 },
     { key: 'bio_share_2050', label: 'Bio share 2050', unit: 'share of electricity', digits: 3, percent: true },
+    { key: 'harvest_m3_per_year', label: 'Harvest volume', unit: 'Mm³/yr', digits: 2, scale: 1e6 },
     { key: 'pwrbio_2050', label: 'PWRBIO 2050', unit: 'PJ electricity', digits: 2, optional: true }
   ];
 
@@ -363,6 +368,8 @@
       requireTrue(typeof sc.flags.fleet_corrected === 'boolean', 'missing fleet-corrected flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.canonical === 'boolean', 'missing canonical flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.policy_grade === 'boolean', 'missing policy-grade flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.harvest_exogenous === 'boolean', 'missing harvest-exogenous flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.tradeoff_eligible === 'boolean', 'missing trade-off eligibility flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.post_fix_emissions === 'boolean', 'missing post-fix flag on ' + sc.scenario_id);
       requireTrue(Array.isArray(sc.sources) && sc.sources.length > 0, 'missing sources on ' + sc.scenario_id);
     });
@@ -374,6 +381,7 @@
     requireTrue(s.tradeoff && Array.isArray(s.tradeoff.scenario_ids), 'trade-off ledger is missing');
     requireTrue(s.tradeoff.scenario_ids.length === EXPECTED_ELIGIBLE_COUNT, 'expected ' + EXPECTED_ELIGIBLE_COUNT + ' trade-off scenario(s), found ' + s.tradeoff.scenario_ids.length);
     requireTrue(s.tradeoff.canonical_scenario_id === FLEET_SCENARIO_ID, 'canonical scenario is not the fleet-corrected run');
+    requireTrue(s.tradeoff.harvest_exogenous_caveat === HARVEST_CAVEAT, 'harvest-exogenous caveat is missing or changed');
     var canonicalCount = s.scenarios.filter(function (sc) { return sc.flags.canonical === true; }).length;
     requireTrue(canonicalCount === 1, 'expected exactly one canonical scenario, found ' + canonicalCount);
     s.tradeoff.scenario_ids.forEach(function (id) {
@@ -383,7 +391,7 @@
     requireTrue(links && Array.isArray(links.families), 'osecan_links.json families are missing');
     requireTrue(links.families.length === EXPECTED_FAMILY_COUNT, 'expected ' + EXPECTED_FAMILY_COUNT + ' linked source families');
     links.families.forEach(function (f) {
-      requireTrue(Array.isArray(f.files) && f.files.length === 3, 'linked family ' + f.family + ' does not have 3 files');
+      requireTrue(Array.isArray(f.files) && f.files.length >= 3 && f.files.length % 3 === 0, 'linked family ' + f.family + ' does not have 3 files per scenario');
       f.files.forEach(function (file) {
         requireTrue(file.path && file.sha256 && file.sha256.length === 64, 'bad file record in ' + f.family);
       });
@@ -455,6 +463,7 @@
       var sc = core.scenarioById.get(metric.scenario_id);
       if (!sc) return;
       if (sc.flags.publishable && sc.flags.post_fix_emissions && sc.flags.fleet_corrected &&
+          sc.flags.tradeoff_eligible &&
           !sc.flags.superseded_for_emissions && !sc.flags.superseded_for_fleet) {
         eligible.push(sc);
         eligibleIds.add(sc.scenario_id);
@@ -507,7 +516,7 @@
       ' · ' + core.manifest.output_count + ' outputs · ' + fmtBytes(core.manifest.total_bytes) +
       (state.live.sessionRuns.length ? ' · ' + state.live.sessionRuns.length + ' live session run(s)' : '');
     $('footer-contract').textContent = 'Data contract ' + core.scenarios.schema_version + ' · ' +
-      core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' trade-off eligible · canonical ' + FLEET_SCENARIO_ID + ' · 2026-11-20 fleet run';
+      core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' trade-off eligible (1 canonical base + 3 harvest sensitivity) · canonical ' + FLEET_SCENARIO_ID + ' · 2026-11-20 fleet run';
   }
 
   function updateHeaderCounts() {
@@ -605,12 +614,17 @@
       var fleetBadge = sc.flags.fleet_corrected
         ? '<span class="badge badge--fleet">fleet-corrected</span>'
         : '<span class="badge badge--prefleet">' + esc(FLEET_BANNER_TEXT) + '</span>';
+      var roleBadge = sc.flags.canonical
+        ? '<span class="badge badge--fleet">canonical/base</span>'
+        : (sc.family === FLEET_LADDER_FAMILY
+          ? '<span class="badge badge--diag">sensitivity</span><span class="badge badge--ink">exogenous harvest</span>'
+          : '');
       html += '<li><button type="button" class="scenario-item' + (selected ? ' is-selected' : '') +
         '" data-scenario-id="' + esc(sc.scenario_id) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
         '<span class="s-label">' + esc(sc.label) + '</span>' +
         '<span class="s-id">' + esc(sc.scenario_id) + '</span>' +
         '<span class="s-badges"><span class="badge badge--family">' + esc(shortFamily(sc.family)) + '</span>' +
-        fleetBadge + statusBadge + diagnosticBadge + solverBadge + '</span></button></li>';
+        fleetBadge + roleBadge + statusBadge + diagnosticBadge + solverBadge + '</span></button></li>';
     });
     list.innerHTML = html;
     list.scrollTop = scrollTop;
@@ -679,22 +693,31 @@
     var eligible = state.eligibleIds.has(sc.scenario_id);
     var superseded = sc.flags.superseded_for_emissions;
     var preFleet = sc.flags.superseded_for_fleet;
-    var statusTitle = sc.flags.fleet_corrected
-      ? 'Fleet-corrected canonical'
-      : (preFleet ? FLEET_BANNER_TEXT : 'Historical record');
-    var statusCopy = sc.flags.fleet_corrected
-      ? 'Canonical 119 Mm³ screening result under the CER 2021 capacity fleet. screening_only=true and policy_grade=false; not a policy or forecast.'
-      : 'This run predates the CER 2021 capacity-fleet correction. It remains visible for audit but is excluded from the default trade-off/Pareto ledger and is not comparable with fleet-corrected results.' +
-        (superseded ? ' Its emissions factors are also superseded by the emission-factor fix.' : '');
+    var isLadderSensitivity = sc.family === FLEET_LADDER_FAMILY;
+    var statusTitle = sc.flags.canonical
+      ? 'Fleet-corrected canonical/base'
+      : (isLadderSensitivity
+        ? 'Harvest sensitivity — exogenous'
+        : (preFleet ? FLEET_BANNER_TEXT : 'Historical record'));
+    var statusCopy = sc.flags.canonical
+      ? 'Canonical 119 Mm³ screening base under the CER 2021 capacity fleet. screening_only=true and policy_grade=false; not a policy or forecast.'
+      : (isLadderSensitivity
+        ? 'Sensitivity case on the fleet-corrected harvest ladder. Harvest is exogenous and free; no harvest cost, THLB, or AAC constraint is modeled. Not a policy frontier.'
+        : 'This run predates the CER 2021 capacity-fleet correction. It remains visible for audit but is excluded from the default trade-off/Pareto ledger and is not comparable with fleet-corrected results.' +
+          (superseded ? ' Its emissions factors are also superseded by the emission-factor fix.' : ''));
 
-    var fleetBanner = sc.flags.fleet_corrected
-      ? '<div class="overview-callout fleet-banner fleet-banner--corrected" role="status"><strong>Fleet-corrected</strong><br>' +
-        'CER 2021 capacity fleet applied. This is the canonical screening run: objective ' + fmt(m.objective, 2) +
+    var fleetBanner = sc.flags.canonical
+      ? '<div class="overview-callout fleet-banner fleet-banner--corrected" role="status"><strong>Fleet-corrected · canonical/base</strong><br>' +
+        'CER 2021 capacity fleet applied. This is the 119 Mm³ canonical screening base: objective ' + fmt(m.objective, 2) +
         ' M$, cumulative emissions ' + fmt(m.emissions_total, 3) + ' Mt CO₂, 2050 emissions ' + fmt(m.emissions_2050, 3) +
         ' Mt CO₂. Screening only — not policy-grade.</div>'
-      : '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' + esc(FLEET_BANNER_TEXT) + '</strong><br>' +
-        'This scenario predates the CER 2021 capacity-fleet correction. It is historical audit evidence only: ' +
-        'excluded from the canonical trade-off/Pareto ledger and not comparable with fleet-corrected results.</div>';
+      : (isLadderSensitivity
+        ? '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>Sensitivity · harvest is exogenous and free</strong><br>' +
+          esc(HARVEST_CAVEAT) + ' Objective ' + fmt(m.objective, 2) + ' M$, cumulative emissions ' +
+          fmt(m.emissions_total, 3) + ' Mt CO₂.</div>'
+        : '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' + esc(FLEET_BANNER_TEXT) + '</strong><br>' +
+          'This scenario predates the CER 2021 capacity-fleet correction. It is historical audit evidence only: ' +
+          'excluded from the canonical trade-off/Pareto ledger and not comparable with fleet-corrected results.</div>');
 
     var html = linkedContextHtml() + fleetBanner + '<div class="scenario-masthead">' +
       '<div>' +
@@ -709,13 +732,14 @@
           '<span class="badge ' + (superseded ? 'badge--superseded' : (sc.flags.post_fix_emissions ? 'badge--postfix' : 'badge--ink')) + '">' +
             (superseded ? 'superseded for emissions' : (sc.flags.post_fix_emissions ? 'post-fix emissions' : 'pre-fix emissions')) + '</span>' +
           (sc.flags.publishable ? '<span class="badge badge--postfix">publishable</span>' : '<span class="badge badge--superseded">not publishable</span>') +
-          (sc.flags.canonical ? '<span class="badge badge--fleet">canonical screening</span>' : '') +
+          (sc.flags.canonical ? '<span class="badge badge--fleet">canonical/base</span>' : '') +
+          (isLadderSensitivity ? '<span class="badge badge--diag">sensitivity</span><span class="badge badge--ink">exogenous harvest</span>' : '') +
           (sc.flags.diagnostic ? '<span class="badge badge--diag">diagnostic</span>' : '') +
           (eligible ? '<span class="badge badge--family">trade-off eligible</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="masthead-side">' +
-        '<div><p class="kicker">Status</p><p class="status-large' + ((superseded || preFleet) ? ' is-warn' : '') + '">' + statusTitle + '</p></div>' +
+        '<div><p class="kicker">Status</p><p class="status-large' + ((superseded || preFleet || isLadderSensitivity) ? ' is-warn' : '') + '">' + statusTitle + '</p></div>' +
         '<p>' + statusCopy + '</p>' +
         '<p class="mono">solver: ' + esc(sc.flags.solver || '—') + '</p>' +
       '</div>' +
@@ -814,6 +838,7 @@
   function dimensionLabel(key) {
     var labels = {
       harvest: 'Harvest basis',
+      harvest_m3_per_year: 'Harvest volume',
       carbon_price_usd_per_t: 'Carbon price',
       bio_cost_usd_per_gj: 'Bio cost',
       recovery_fraction: 'Recovery',
@@ -832,6 +857,7 @@
     if (key === 'harvest' && value && typeof value === 'object') {
       return esc(value.level) + ' <span class="mono">· ' + fmt(value.m3_per_year, 0) + ' m³/yr · ' + esc(value.basis) + '</span>';
     }
+    if (key === 'harvest_m3_per_year') return '<span class="mono">' + fmt(value / 1e6, 2) + ' Mm³/yr (' + fmt(value, 0) + ' m³/yr)</span>';
     if (key === 'carbon_price_usd_per_t') return '<span class="mono">$' + fmt(value, 2) + ' / t CO₂</span>';
     if (key === 'bio_cost_usd_per_gj') return '<span class="mono">$' + fmt(value, 2) + ' / GJ</span>';
     if (key === 'recovery_fraction') return '<span class="mono">' + fmtPct(value, 0) + ' (' + fmt(value, 2) + ')</span>';
@@ -1720,6 +1746,7 @@
           return {
             value: [Number(sc.metrics.objective), Number(sc.metrics.emissions_total)],
             name: sc.label,
+            symbol: sc.flags.canonical ? 'circle' : 'diamond',
             symbolSize: selected ? 19 : 13,
             itemStyle: selected
               ? { color: familyColor(family), borderColor: '#d98a2b', borderWidth: 3, shadowBlur: 14, shadowColor: 'rgba(217,138,43,0.55)' }
@@ -1728,6 +1755,7 @@
               id: sc.scenario_id,
               family: sc.family_label,
               label: sc.label,
+              role: sc.flags.canonical ? 'canonical/base' : 'sensitivity · exogenous harvest',
               objective: sc.metrics.objective,
               emissions: sc.metrics.emissions_total,
               national: sc.metrics.national_bcw_2050,
@@ -1807,7 +1835,7 @@
           var meta = params.data.meta;
           return '<div class="chart-tip"><div class="chart-tip-head"><span>' + esc(meta.id) + '</span></div>' +
             '<div class="chart-tip-title">' + esc(meta.label) + '</div>' +
-            '<div class="chart-tip-sub">' + esc(meta.family) + '</div>' +
+            '<div class="chart-tip-sub">' + esc(meta.family) + ' · ' + esc(meta.role || '') + '</div>' +
             '<div class="chart-tip-kv"><span>Objective</span><b>' + fmt(meta.objective, 2) + ' M$</b></div>' +
             '<div class="chart-tip-kv"><span>Cumulative emissions</span><b>' + fmt(meta.emissions, 3) + ' Mt CO₂</b></div>' +
             '<div class="chart-tip-kv"><span>National BCW 2050</span><b>' + fmt(meta.national, 2) + ' PJ</b></div>' +
@@ -1843,8 +1871,10 @@
     var superseded = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_emissions; }).length;
     var preFleet = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_fleet; }).length;
     var diagnostic = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.diagnostic; }).length;
-    $('tradeoff-count').textContent = eligible.length + ' canonical fleet-corrected eligible · ' +
-      (state.core.scenarios.scenarios.length - eligible.length) + ' historical/excluded (' + preFleet +
+    var sensitivity = eligible.filter(function (sc) { return sc.family === FLEET_LADDER_FAMILY; }).length;
+    var canonical = eligible.length - sensitivity;
+    $('tradeoff-count').textContent = eligible.length + ' eligible · ' + canonical + ' canonical/base + ' + sensitivity +
+      ' harvest sensitivity · ' + (state.core.scenarios.scenarios.length - eligible.length) + ' historical/excluded (' + preFleet +
       ' pre-fleet, ' + superseded + ' emissions-superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length +
       (state.live.sessionRuns.length ? ' · +' + state.live.sessionRuns.length + ' live session run(s), screening only' : '');
   }
@@ -1861,7 +1891,9 @@
 
   function exploreGrade(sc) {
     if (exploreIsLive(sc)) return 'live · screening_only';
-    return sc.flags.canonical ? 'fleet-corrected · canonical' : 'historical · not comparable';
+    if (sc.flags.canonical) return 'fleet-corrected · canonical/base';
+    if (sc.family === FLEET_LADDER_FAMILY) return 'fleet-corrected · harvest sensitivity';
+    return 'historical · not comparable';
   }
 
   function explorePassesBrushes(sc) {
@@ -2272,7 +2304,7 @@
       return {
         value: [row.raw[xi], row.raw[yi]],
         name: sc.label,
-        symbol: onFront ? 'diamond' : 'circle',
+        symbol: sc.flags.canonical ? 'circle' : 'diamond',
         symbolSize: isSelected ? (onFront ? 22 : 16) : (onFront ? 17 : 10),
         itemStyle: {
           color: exploreIsLive(sc) ? '#a94f31' : familyColor(sc.family),
@@ -2365,9 +2397,9 @@
       })
     };
 
-    var labelText = frontRows.length + ' on front · ' + complete.length + ' evaluated · ' +
+    var labelText = frontRows.length + ' on front · ' + complete.length + ' eligible evaluated · ' +
       (missing.length ? missing.length + ' excluded for missing metrics' : 'no missing metrics') +
-      ' · dominance on min–max normalized values';
+      ' · dominance on min–max normalized values · mechanically computed, not a policy frontier';
     countEl.textContent = labelText;
 
     if (selected) {
@@ -2466,7 +2498,8 @@
 
   function compareDisplay(metric, value) {
     if (value === null) return '—';
-    return metric.percent ? fmtPct(value, 3) : fmt(value, metric.digits);
+    if (metric.percent) return fmtPct(value, 3);
+    return fmt(value / (metric.scale || 1), metric.digits);
   }
 
   function compareDelta(metric, a, b) {
@@ -2479,7 +2512,7 @@
       };
     }
     return {
-      absolute: (delta >= 0 ? '+' : '') + fmt(delta, metric.digits),
+      absolute: (delta >= 0 ? '+' : '') + fmt(delta / (metric.scale || 1), metric.digits),
       relative: a === 0 ? 'n/a (A = 0)' : (delta >= 0 ? '+' : '') + fmt(delta / Math.abs(a) * 100, 1) + '%',
       numeric: delta
     };
@@ -2502,6 +2535,7 @@
     }
     return [
       { label: 'Harvest', value: harvest.level ? harvest.level + ' · ' + fmt(harvest.m3_per_year / 1e6, 2) + ' Mm³/yr' : 'not set' },
+      { label: 'Harvest volume', value: dims.harvest_m3_per_year === null || dims.harvest_m3_per_year === undefined ? 'not set' : fmt(dims.harvest_m3_per_year / 1e6, 2) + ' Mm³/yr' },
       { label: 'Carbon price', value: dims.carbon_price_usd_per_t === null || dims.carbon_price_usd_per_t === undefined ? 'not set' : '$' + fmt(dims.carbon_price_usd_per_t, 2) + '/t' },
       { label: 'Bio cost', value: dims.bio_cost_usd_per_gj === null || dims.bio_cost_usd_per_gj === undefined ? 'not set' : '$' + fmt(dims.bio_cost_usd_per_gj, 2) + '/GJ' },
       { label: 'Recovery', value: dims.recovery_fraction === null || dims.recovery_fraction === undefined ? 'not set' : fmtPct(dims.recovery_fraction, 1) },
@@ -2524,7 +2558,7 @@
       if (item.value === other.value) same.push(item.label);
       else differing.push({ label: item.label, a: item.value, b: other.value });
     });
-    return { differing: differing, same: same };
+    return { differing: differing, same: same, total: left.length };
   }
 
   function renderCompare() {
@@ -2575,8 +2609,8 @@
     var diffHtml = diff.differing.map(function (item) {
       return '<span class="diff-chip"><b>' + esc(item.label) + '</b> ' + esc(item.a) + ' → ' + esc(item.b) + '</span>';
     }).join('');
-    if (!diff.differing.length) diffHtml = '<span class="diff-chip diff-chip--same">All 10 dimensions identical</span>';
-    dims.innerHTML = '<span class="kicker">Differing dimensions · ' + diff.differing.length + ' of 10</span>' + diffHtml;
+    if (!diff.differing.length) diffHtml = '<span class="diff-chip diff-chip--same">All ' + diff.total + ' dimensions identical</span>';
+    dims.innerHTML = '<span class="kicker">Differing dimensions · ' + diff.differing.length + ' of ' + diff.total + '</span>' + diffHtml;
 
     status.textContent = 'Comparing ' + rows.length + ' metrics · ' + diff.differing.length + ' differing dimensions · ' +
       (exploreIsLive(a) || exploreIsLive(b) ? 'one or both runs are live screening_only' : 'both runs are committed post-fix scenarios');
@@ -2849,14 +2883,14 @@
     if (!state.core) return;
     var note = $('explore-mode-note');
     if (note) {
-      if (state.live.sessionRuns.length) {
-        note.hidden = false;
-        note.textContent = state.live.sessionRuns.length + ' live session run(s) are included as dashed amber lines and diamonds. ' +
-          'They are screening_only and are excluded from the canonical fleet-corrected ledger.';
-      } else {
-        note.hidden = true;
-        note.textContent = '';
-      }
+      var ladder = state.eligible.filter(function (sc) { return sc.family === FLEET_LADDER_FAMILY; }).length;
+      var canonical = state.eligible.filter(function (sc) { return sc.flags.canonical; }).length;
+      var noteParts = [];
+      if (canonical) noteParts.push(canonical + ' canonical/base fleet-corrected scenario');
+      if (ladder) noteParts.push(ladder + ' harvest sensitivity scenarios with exogenous, free harvest');
+      if (state.live.sessionRuns.length) noteParts.push(state.live.sessionRuns.length + ' live session run(s)');
+      note.hidden = !noteParts.length;
+      note.textContent = noteParts.length ? noteParts.join(' · ') + '. Pareto dominance is mechanical; sensitivity can dominate the base because harvest is free.' : '';
     }
     ensureParetoAxes();
     renderParallelCoordinates();
