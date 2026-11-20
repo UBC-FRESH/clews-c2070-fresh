@@ -38,6 +38,7 @@ __all__ = [
     "ConstraintSet",
     "CostBasis",
     "EnergySpec",
+    "HarvestAllocation",
     "HarvestPath",
     "HarvestSpec",
     "HydroMode",
@@ -91,6 +92,21 @@ class HarvestPath(StrEnum):
     CUSTOM = "custom"
 
 
+class HarvestAllocation(StrEnum):
+    """Provincial harvest allocation used to weight national residue factors.
+
+    ``none`` (and an absent field) preserves the area-share national factor.
+    The ``lp_*`` values select the screening provincial-allocation LP artifacts;
+    ``observed`` weights by 2024 observed provincial harvest.
+    """
+
+    OBSERVED = "observed"
+    LP_100M = "lp_100m"
+    LP_119M = "lp_119m"
+    LP_150M = "lp_150m"
+    NONE = "none"
+
+
 class SupplyCurveMode(StrEnum):
     """How recoverable biomass is offered to the electricity model."""
 
@@ -131,6 +147,7 @@ class HarvestSpec(_StrictModel):
     recovery_fraction: _UnitFraction
     cost_basis: CostBasis
     supply_curve: SupplyCurveMode
+    allocation: HarvestAllocation | None = None
 
 
 class EnergySpec(_StrictModel):

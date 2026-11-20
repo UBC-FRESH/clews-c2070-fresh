@@ -49,7 +49,7 @@ The 157.34 Mm3 figure must not be reported as a national AAC. It is a partial su
 
 ### 2.1 Provincial allocation used in this note
 
-The runner has one national harvest cap and two BC zonal caps. It has no provincial harvest allocation, and the harvest-basis template contains provincial harvest values only for observed 2021–2024 and the 2024 hold; non-BC AAC is a 2024/2025 snapshot. To screen provincial ceilings, this note scales the 2024 observed provincial harvest shares to each national level:
+The runner has one national harvest cap and two BC zonal caps. A screening provincial LP allocation now exists for residue-factor weighting (`harvest.allocation`), but the runner still does not enforce provincial AAC/NFD caps. The harvest-basis template contains provincial harvest values only for observed 2021–2024 and the 2024 hold; non-BC AAC is a 2024/2025 snapshot. To screen provincial ceilings, this note scales the 2024 observed provincial harvest shares to each national level:
 
 ```text
 province_harvest(level) = 2024_province_harvest × level / 118,977,339
@@ -280,7 +280,7 @@ None of this makes a harvest case policy-grade; `planning/policy-test-v1.md` is 
 ## 8. Gaps
 
 - **No national AAC.** The 157.34 Mm3 sum excludes MB, PE, and NU and mixes statutory AAC, approximate AAC, a repo TSA path, and an actual-mean proxy. It cannot support a legal cap or a "Canada AAC" label.
-- **No provincial harvest allocation.** The runner is national; the 2024-share screen in this note is an assumption. A provincial allocation model is prerequisite to a provincial AAC cap.
+- **Provincial allocation is a residue-weighting input, not an enforced cap.** The screening LP allocation can weight national residue factors, but the runner remains national and does not enforce provincial AAC/NFD. A provincial allocation is still prerequisite to a provincial AAC cap.
 - **AAC tenure mismatch.** NB, NS, and QC AAC are Crown-only; FSD harvest is total. NB's private supply is not documented; NS's private AAC (4.03) is documented separately. BC's current reported Crown AAC (58–60) differs from the repo path (45.22 in 2024, 43.37 from 2028).
 - **NFD is not AAC.** The 207.68 Mm3 NFD sum is potential supply; NT NFD is missing. It cannot certify 200M.
 - **Managed landbase is not a THLB.** It is a 2016 tenure-union proxy with no growth, yield, operability, or AAC. PE and NU are missing; BC is an upper bound; NL and NT are low-coverage.

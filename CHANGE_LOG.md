@@ -2,6 +2,35 @@
 
 ## 2026-11-20
 
+- **Integrated the provincial harvest allocation into the residue supply basis
+  and reran the 119/150 Mm³ screening ladder.** Added
+  `workflows/national/harvest/residue_factor_allocation.py`, which weights the
+  province residue factors by allocated log volume:
+  `f = sum_p(h_p * f_p) / sum_p(h_p)`. The new artifact
+  `data/derived/national/harvest_basis/residue_factor_by_allocation/` compares
+  the 100/119/150 Mm³ LP allocations, the observed 2024 mix, and the
+  area-share reference. Weighted gross factors are **0.09881 / 0.09918 /
+  0.10018 ODT/m³ log** (100/119/150) versus the area-share **0.11682**;
+  weighted base recoverable factors are **0.05929 / 0.05951 / 0.06011**
+  versus **0.07009**, and base supply is **109.68 / 130.98 / 166.80 PJ/yr**
+  (the area-share base at 100M is 129.67 PJ/100M log). The runner contract now
+  accepts optional `harvest.allocation`
+  (`observed`/`lp_100m`/`lp_119m`/`lp_150m`/`none`); absent or `none` keeps the
+  existing area-share factor, while LP cases use the weighted factor for the
+  national/SUPBCWT cap and fail closed on missing province factors or
+  non-conserving allocations. Ran 119M and 150M `screening_v0` with the LP
+  allocation (same fleet model, two concurrent solves): objectives **1,447,033.42
+  / 1,444,917.38 M$**, cumulative emissions **424.599186 / 422.927369 Mt**,
+  2050 emissions **0.0 / 0.0**, national BCW 2050 **130.981149 / 166.801093
+  PJ**, PWRBCW 2050 **35.209970 / 44.838970 PJ**. Against the observed 119M
+  (1,445,655.44 M$/424.710127 Mt) the LP case is **+1,377.98 M$/−0.110941 Mt**;
+  against the observed 150M (1,443,635.15 M$/422.690612 Mt) it is
+  **+1,282.23 M$/+0.236757 Mt**. Lightweight run artifacts are committed under
+  `data/derived/national/clews/osecan/allocation_screening_ladder/{119m,150m}/`.
+  The national supply cap still binds from 2028. The allocation is a screening
+  weighting input, not an enforced provincial AAC/THLB/cost constraint and not a
+  forecast. No public OSeCAN repository changes.
+
 - **Added the provincial harvest-allocation screening LP.** Implemented
   `workflows/national/harvest/provincial_allocation.py` (PuLP/CBC) to allocate
   the 100/119/150 Mm³ national ladder across the twelve reporting

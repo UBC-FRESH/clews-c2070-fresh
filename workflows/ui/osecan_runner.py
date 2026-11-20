@@ -30,7 +30,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from workflows.ui.contracts import HarvestPath, HydroMode, Scenario, SupplyCurveMode
+from workflows.national.harvest.residue_factor_allocation import (
+    CASE_BY_SCENARIO_VALUE,
+    ResidueFactorError,
+    allocation_residue_factor,
+)
+from workflows.ui.contracts import (
+    HarvestAllocation,
+    HarvestPath,
+    HydroMode,
+    Scenario,
+    SupplyCurveMode,
+)
 from workflows.ui.feasibility import (
     MAX_NORMAL_HARVEST_M3,
     HarvestFeasibility,
@@ -1056,11 +1067,23 @@ class SupplyCaps:
     tier_caps_pj_by_year: Mapping[str, Mapping[int, float]]
     bc_zonal_caps_pj_by_year: Mapping[str, Mapping[int, float]]
     bc_zonal_costs_usd_per_gj_by_year: Mapping[str, Mapping[int, float]]
+    harvest_allocation: str | None
+    residue_factor_odt_per_m3_log: float
+    residue_factor_total_basis_odt_per_m3: float
+    allocation_checks: Mapping[str, Any]
     checks: Mapping[str, Any]
 
     def summary(self) -> dict[str, Any]:
         return {
             "harvest_path": self.harvest_path,
+            "harvest_allocation": self.harvest_allocation,
+            "residue_factor_odt_per_m3_log": round(
+                self.residue_factor_odt_per_m3_log, 12
+            ),
+            "residue_factor_total_basis_odt_per_m3": round(
+                self.residue_factor_total_basis_odt_per_m3, 12
+            ),
+            "allocation_checks": dict(self.allocation_checks),
             "log_m3_by_year": {str(y): round(v, 6) for y, v in self.log_m3_by_year.items()},
             "national_pj_by_year": {str(y): round(v, 9) for y, v in self.national_pj_by_year.items()},
             "bc_zonal_pj_by_year": {str(y): round(v, 9) for y, v in self.bc_zonal_pj_by_year.items()},
@@ -1176,10 +1199,69 @@ def compute_supply_caps(
     if scenario.harvest.recovery_fraction <= 0:
         raise RunnerError("harvest.recovery_fraction must be positive")
     logs = resolve_harvest_log_m3(scenario, canonical)
+
+    allocation_setting = scenario.harvest.allocation
+    allocation_case = (
+        None
+        if allocation_setting in (None, HarvestAllocation.NONE)
+        else CASE_BY_SCENARIO_VALUE[allocation_setting.value]
+    )
+    allocation_factor = None
+    allocation_checks: dict[str, Any] = {
+        "basis": "area_share" if allocation_case is None else "harvest_allocation",
+        "allocation_case": allocation_case,
+    }
+    if allocation_case is not None:
+        try:
+            allocation_factor = allocation_residue_factor(
+                allocation_case, repo_root=repo_root
+            )
+        except ResidueFactorError as exc:
+            raise RunnerError(
+                f"harvest.allocation={allocation_case}: {exc}"
+            ) from exc
+        allocation_checks.update(
+            {
+                "allocation_total_m3": allocation_factor.total_harvest_m3,
+                "weighted_gross_odt_per_m3_log": allocation_factor.gross_odt_per_m3_log,
+                "weighted_recoverable_odt_per_m3_log_base": (
+                    allocation_factor.odt_per_m3_log_base
+                ),
+                "national_total_pj_base": allocation_factor.national_total_pj_base,
+            }
+        )
+        if allocation_setting in (
+            HarvestAllocation.LP_100M,
+            HarvestAllocation.LP_119M,
+            HarvestAllocation.LP_150M,
+        ):
+            mismatch = sorted(
+                year
+                for year, value in logs.items()
+                if year >= 2025
+                and abs(value - allocation_factor.total_harvest_m3) > 2.0
+            )
+            if mismatch:
+                raise RunnerError(
+                    f"harvest.allocation={allocation_case} totals "
+                    f"{allocation_factor.total_harvest_m3:,.0f} m3/yr but the "
+                    f"scenario harvest path has a different level from 2025 in "
+                    f"{mismatch[:3]}"
+                )
+            allocation_checks["allocation_total_matches_harvest_from_2025"] = True
+
+    factor_per_log = (
+        canonical.tile_factor_odt_per_m3 / canonical.log_share
+        if allocation_factor is None
+        else allocation_factor.gross_odt_per_m3_log
+    )
+    allocation_checks["weighted_gross_odt_per_m3_log"] = factor_per_log
+    allocation_checks["residue_factor_total_basis_odt_per_m3"] = (
+        factor_per_log * canonical.log_share
+    )
     pj: dict[int, float] = {}
     for year, log_m3 in logs.items():
-        total_m3 = log_m3 / canonical.log_share
-        odt = total_m3 * canonical.tile_factor_odt_per_m3
+        odt = log_m3 * factor_per_log
         pj[year] = odt * float(scenario.harvest.recovery_fraction) * canonical.lhv_gj_per_odt / 1_000_000
 
     tier_caps, tier_costs = _read_tier_definitions(
@@ -1253,6 +1335,7 @@ def compute_supply_caps(
             for year in YEARS
         ),
         "tier_cap_sum_pj": round(sum(canonical.tier_caps_pj.values()), 9),
+        "allocation": dict(allocation_checks),
     }
     if not checks["tier_sum_equals_rest_all_years"]:
         raise RunnerError("tier-sum check failed")
@@ -1268,6 +1351,10 @@ def compute_supply_caps(
         tier_caps_pj_by_year=all_tier_caps,
         bc_zonal_caps_pj_by_year=bc_caps,
         bc_zonal_costs_usd_per_gj_by_year=bc_costs,
+        harvest_allocation=allocation_case,
+        residue_factor_odt_per_m3_log=factor_per_log,
+        residue_factor_total_basis_odt_per_m3=factor_per_log * canonical.log_share,
+        allocation_checks=allocation_checks,
         checks=checks,
     )
 

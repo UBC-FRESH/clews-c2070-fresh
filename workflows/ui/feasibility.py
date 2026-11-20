@@ -127,8 +127,9 @@ def assess_harvest_feasibility(
                 "Crown+private ceiling), and the NT proxy (0.01 Mm3)."
             ),
             (
-                "No provincial harvest allocation model exists. The national bound is "
-                "conditional, not a feasible provincial-mix case."
+                "A screening provincial LP allocation exists for residue-factor "
+                "weighting, but the runner does not enforce provincial AAC/NFD caps. "
+                "The national bound is conditional, not a feasible provincial-mix case."
             ),
             *_TENURE_CAVEATS,
             (
