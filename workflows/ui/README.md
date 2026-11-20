@@ -1,9 +1,13 @@
 # CLEWS/C2070 live scenario API
 
 Milestone 1a provides the versioned scenario contract and the FastAPI
-application skeleton for the live scenario runner. It does **not** run OSeCAN.
-The current runner only validates a scenario and writes
-`status: "not_implemented"`; milestone 1b replaces the runner body.
+application skeleton. Milestone 1b adds the real OSeCAN adapter behind the same
+CLI contract. Results are labelled `screening_only`; they are not policy-grade.
+
+The canonical constraint family is `screening_v0`, stored in
+`data/derived/national/clews/osecan/canonical_constraint_set.json`. It has no
+reserve-margin, transmission, curtailment, or build-rate constraints. A future
+`policy_test_v1` is a separate, not-yet-defined set.
 
 ## Install and run
 
@@ -137,28 +141,110 @@ python -m workflows.ui.run_scenario \
 `stdout` and `stderr` (merged) are streamed into `events.jsonl`; the process is
 never solved inside the request process.
 
-## Runner contract for milestone 1b
+## Runner contract (milestone 1b)
 
-`workflows/ui/run_scenario.py` already validates `clews.scenario.v1` and writes
-`{out}/run_summaries.json` atomically. Milestone 1b must preserve:
+`workflows/ui/run_scenario.py` validates `clews.scenario.v1`, builds a
+disposable OSeCAN parameter set, runs `osecan harmonize`, and optionally solves.
+The CLI preserves:
 
-- arguments `--scenario PATH` and `--out DIR`;
+- arguments `--scenario PATH` and `--out DIR`, plus `--dry-run` and
+  `--model-root PATH`;
 - summary keys `schema_version`, `status`, `scenario_id`, `scenario_path`,
   `generated_utc`, `message`;
-- exit code `0` for a completed job and non-zero on operational failure;
+- exit code `0` for a completed job (including a dry run) and non-zero on
+  operational failure;
 - no solved output unless the real OSeCAN solve actually ran.
 
 The server derives the job terminal state from the summary `status` on exit 0
 (`completed` and `not_implemented` are accepted); a non-zero exit is always
 `failed`.
 
+Example dry run and real screening run:
+
+```bash
+.venv/bin/python -m workflows.ui.run_scenario \
+  --scenario workflows/ui/examples/screening_119m.json \
+  --out /tmp/screening_119m_dry --dry-run
+
+.venv/bin/python -m workflows.ui.run_scenario \
+  --scenario workflows/ui/examples/screening_119m.json \
+  --out /tmp/screening_119m_real --model-root /tmp/osecan_emfix
+```
+
+### Model source
+
+The runner never edits its source model. It selects, in order:
+
+1. `--model-root PATH`;
+2. `runtime/osecan_model`;
+3. `/tmp/osecan_emfix`.
+
+The selected copy must contain the zonal/tier SETs, the corrected output-basis
+emission factors, `resources/osemosys_fast_osecan.txt`, and an OSeCAN Python
+environment. If none is usable the runner fails with a clear message and writes
+a `failed` summary; it never fabricates dispatch or objective values.
+
+### Generated parameters
+
+Supply is generated from the scenario harvest path and the adopted RSYC basis:
+
+```text
+total_m3 = log_m3 / 0.762716956451988
+ODT      = total_m3 * 0.08831776452936206
+PJ       = ODT * recovery_fraction * 18.5 / 1e6
+```
+
+The BC zonal caps come from the adopted `SUPBCWB1` / `SUPBCWB2` CSVs. The
+rest-of-Canada cap is `national - BC zonal`; it is split into `SUPBCWT1`-`T4`
+incremental caps and the runner fails closed unless the tier sum equals the
+rest-of-Canada cap in every year. `energy.t3_cap_pj` and `energy.t4_cap_pj`
+limit the two upper tiers. `harvest.path` `observed`, `hold`, `low`, and `high`
+use the committed reference paths; `custom` uses `level_m3_per_year`.
+
+The runner also emits `PWRBIO<z>` caps from the documented 2050 zonal reference,
+`PWRWND<z>` caps and variable costs, `PWRURN<z>` capacity caps, hydro upper/lower
+bounds, `RNWBIO` cost, and the carbon-price schedule.
+
+### Outputs
+
+A successful run writes:
+
+- `{out}/run_summaries.json` — normalized summary and metrics;
+- `{out}/dispatch_by_zone.csv` — long-format dispatch, supply, and other rows;
+- `{out}/manifest.json` — scenario, constraint set, model provenance, and
+  artifact hashes;
+- `{out}/supply_caps.json` — harvest conversion and tier/zonal reconciliation;
+- `{out}/model/` — disposable model copy;
+- `{out}/run/` — parameter set, solver status, result CSVs, and logs.
+
+`--dry-run` writes the summary, manifest, parameter set, and harmonize evidence
+but no dispatch or solver status. Its summary has `dry_run: true`.
+
+### Reproducibility gap
+
+The source model is a disposable copy of public `deltae/C2070` commit
+`40d5b43bb3f8b3f69c16e953144d35eeed5f0f44` with two local changes that are not
+committed upstream:
+
+1. the corrected emission-factor patch in
+   `data/derived/national/clews/osecan/emission_factor_fix/emission_factor_fix.patch`;
+2. the zonal BC and `SUPBCWT1`-`T4` structure installed in the model SETs.
+
+`manifest.json` records the source commit, dirty flag, and a SHA-256 hash of the
+copied reduced tree. This is enough to identify the copy but not to rebuild the
+public model from a clean clone; the model patch/setup remains a reproducibility
+gap until it is published as a deterministic preparation script or branch.
+
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q tests/test_ui_scenario_api.py
+.venv/bin/python -m pytest -q tests/test_ui_scenario_api.py tests/test_ui_osecan_runner.py
 ```
 
 Tests use FastAPI `TestClient`, temporary runtime directories, and a fake
 runner subprocess. They cover contract rejection, atomic create/overwrite,
-duplicate 409, enqueue/status/SSE, read-only 403, restart interruption, and path
-traversal rejection.
+duplicate 409, enqueue/status/SSE, read-only 403, restart interruption, path
+traversal rejection, canonical-set validation, 100/119/150/200 Mm3 cap math,
+tier-sum/no-double-count checks, and a real-model dry run when a disposable
+OSeCAN copy is present. A full 119 Mm3 solve is run manually, not in the fast
+test lane.

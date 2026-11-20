@@ -1,5 +1,31 @@
 # Change Log
 
+## 2026-11-20
+
+- **Implemented the milestone-1b real OSeCAN runner behind the milestone-1a
+  CLI.** Added `workflows/ui/osecan_runner.py` and extended
+  `workflows/ui/run_scenario.py` with `--dry-run` and `--model-root`. The
+  runner selects a disposable model copy (`runtime/osecan_model`, then
+  `/tmp/osecan_emfix`), copies a reduced tree below the run output, applies the
+  scenario parameter files, runs `osecan harmonize` and the GLPK solve, and
+  writes normalized `run_summaries.json`, `dispatch_by_zone.csv`,
+  `supply_caps.json`, and `manifest.json`. It never modifies the source model.
+  A missing/incomplete model copy is an operational failure, not a fabricated
+  result.
+- **Added the canonical `screening_v0` constraint set** at
+  `data/derived/national/clews/osecan/canonical_constraint_set.json`. It records
+  the explicitly omitted reserve-margin, transmission, curtailment, and
+  build-rate constraints; the corrected output-basis emission factors (gas
+  0.1377, coal 0.261 Mt/PJ output, fuel factor x IAR); the RSYC supply constants;
+  and the screening defaults. It distinguishes the future `policy_test_v1` and
+  marks every result `screening_only`, `policy_grade: false`.
+- **Added milestone-1b tests** for canonical-set validation, 100/119/150/200 Mm3
+  cap math, tier-sum/no-double-count checks, reference-path versus custom
+  harvest, fail-closed tier shortfall, and a real-model dry run. The milestone-1a
+  runner stub test became a dry-run contract test. A real 119 Mm3 screening solve
+  completed optimal (objective 1,411,447.21 M$, emissions 0.538720 Mt); it is
+  reported in the run summary as screening-only, not policy-grade.
+
 ## 2026-11-19
 
 - **Built the iteration-0 static data contract for the CLEWS/C2070 web UI.**

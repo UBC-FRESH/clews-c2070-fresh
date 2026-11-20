@@ -444,7 +444,13 @@ def test_path_traversal_is_rejected(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_runner_stub_writes_not_implemented_summary(tmp_path: Path) -> None:
+MODEL_AVAILABLE = (REPO_ROOT / "runtime/osecan_model").is_dir() or Path(
+    "/tmp/osecan_emfix"
+).is_dir()
+
+
+@pytest.mark.skipif(not MODEL_AVAILABLE, reason="disposable OSeCAN model copy is unavailable")
+def test_runner_dry_run_writes_completed_summary(tmp_path: Path) -> None:
     scenario_path = tmp_path / "scenario.json"
     scenario_path.write_text(json.dumps(scenario_payload()), encoding="utf-8")
     output_dir = tmp_path / "output"
@@ -458,6 +464,7 @@ def test_runner_stub_writes_not_implemented_summary(tmp_path: Path) -> None:
             str(scenario_path),
             "--out",
             str(output_dir),
+            "--dry-run",
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -467,7 +474,11 @@ def test_runner_stub_writes_not_implemented_summary(tmp_path: Path) -> None:
 
     assert completed.returncode == 0, completed.stderr
     summary = json.loads((output_dir / "run_summaries.json").read_text("utf-8"))
-    assert summary["status"] == "not_implemented"
+    assert summary["status"] == "completed"
+    assert summary["dry_run"] is True
     assert summary["scenario_id"] == "screening_150m_base"
     assert summary["schema_version"] == "clews.scenario.v1"
-    assert summary["artifacts"] == []
+    assert summary["constraints"]["set_id"] == "screening_v0"
+    assert summary["constraints"]["policy_grade"] is False
+    assert summary["supply"]["checks"]["tier_sum_equals_rest_all_years"] is True
+    assert summary["artifacts"]
