@@ -139,6 +139,7 @@ class Evidence(StrEnum):
     APPRAISAL_ALLOWANCE = "appraisal_allowance"
     PUBLISHED_AVERAGE = "published_average"
     MODEL_DERIVED = "model_derived"
+    MODEL_INPUT = "model_input"
     FALLBACK = "fallback"
 
 
@@ -305,6 +306,7 @@ class ValueBasis:
         if price_point is PricePoint.NA and evidence not in {
             Evidence.FALLBACK,
             Evidence.MODEL_DERIVED,
+            Evidence.MODEL_INPUT,
         }:
             raise ValueError(
                 f"price_point 'na' is not valid for evidence {evidence.value!r}"
@@ -625,6 +627,25 @@ def _parse_row(
             "species",
             "unresolved mixed species 'spp' requires low confidence",
         )
+
+    if value_basis.evidence is Evidence.MODEL_INPUT:
+        if tokens.get("model_input") != "1":
+            fail(
+                "notes",
+                "model_input evidence requires an explicit model_input=1 token",
+            )
+        if tokens.get("not_observed") != "1":
+            fail(
+                "notes",
+                "model_input evidence requires not_observed=1; a model input "
+                "is not an observed transaction",
+            )
+        if confidence is Confidence.HIGH:
+            fail(
+                "confidence",
+                "model_input evidence cannot use high confidence; high is "
+                "reserved for observed payments, sales, or audited actuals",
+            )
 
     if (
         component in STUMPAGE_COMPONENTS

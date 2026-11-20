@@ -108,6 +108,29 @@ def harvest_row(**overrides: str) -> dict[str, str]:
     return row
 
 
+def model_input_row(**overrides: str) -> dict[str, str]:
+    row = base_row(
+        source="prov_qc_meris",
+        jurisdiction="QC",
+        spatial_unit="QC-MERIS-PROV",
+        species="BOJ",
+        product="sawlog",
+        value_cad="202.9370",
+        value_basis="model_input:mill_gate",
+        perspective="forest_sector",
+        component="delivered_log_revenue",
+        sign="1",
+        confidence="medium",
+        licence="QC-MERIS-BOJ-F1-C",
+        notes=(
+            "currency_basis=CAD_nominal; source_table=tbl_Essences_frm_inv_tiges; "
+            "not_observed=1; model_input=1; price_point=mill_gate"
+        ),
+    )
+    row.update(overrides)
+    return row
+
+
 def valid_rows() -> list[dict[str, str]]:
     return [
         base_row(),
@@ -311,4 +334,68 @@ def test_standing_bid_cannot_be_a_delivered_log_price(tmp_path: Path) -> None:
 def test_provisional_source_cannot_claim_high_confidence(tmp_path: Path) -> None:
     path = write_ledger(tmp_path, [base_row(confidence="high")])
     with pytest.raises(LedgerValidationError, match="provisional source"):
+        load_ledger(path)
+
+
+def test_model_input_evidence_parses_with_flags(tmp_path: Path) -> None:
+    ledger = load_ledger(write_ledger(tmp_path, [model_input_row()]))
+
+    assert len(ledger) == 1
+    row = ledger.rows[0]
+    assert row.value_basis == ValueBasis(
+        Evidence.MODEL_INPUT, PricePoint.MILL_GATE
+    )
+    assert row.notes_tokens["model_input"] == "1"
+    assert row.notes_tokens["not_observed"] == "1"
+    assert row.confidence is Confidence.MEDIUM
+
+
+def test_model_input_evidence_requires_not_observed_and_model_input(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(LedgerValidationError, match="model_input=1"):
+        load_ledger(
+            write_ledger(
+                tmp_path,
+                [
+                    model_input_row(
+                        notes=(
+                            "currency_basis=CAD_nominal; "
+                            "source_table=tbl_Essences_frm_inv_tiges; "
+                            "not_observed=1"
+                        )
+                    )
+                ],
+            )
+        )
+    with pytest.raises(LedgerValidationError, match="not_observed=1"):
+        load_ledger(
+            write_ledger(
+                tmp_path,
+                [
+                    model_input_row(
+                        notes=(
+                            "currency_basis=CAD_nominal; "
+                            "source_table=tbl_Essences_frm_inv_tiges; "
+                            "model_input=1"
+                        )
+                    )
+                ],
+            )
+        )
+
+
+def test_model_input_evidence_cannot_claim_high_confidence(
+    tmp_path: Path,
+) -> None:
+    path = write_ledger(
+        tmp_path,
+        [
+            model_input_row(
+                source="qc_meris_model_input",
+                confidence="high",
+            )
+        ],
+    )
+    with pytest.raises(LedgerValidationError, match="model_input evidence"):
         load_ledger(path)

@@ -250,8 +250,43 @@ If the team wants the full parameter export now, the smallest next step is:
 to show the field semantics and the sign/mirror convention; the demo block is
 enough to show the full arithmetic, provided it remains labelled demo.
 
+## 7. Full extraction (2026-11-20)
+
+The full parameter export is now published in
+`data/derived/national/harvest_basis/meris_qc_full/`; see
+`QC_MERIS_DECK_REPORT.md` there for the field-level report. It does **not**
+change the sample’s warning that MERIS is not a register of actual harvest.
+The important correction to the sample review is that the revenue placeholder
+is the base table `tbl_essences_revenus_EssDhp`; the three shipped profile
+tables `_Profil_2/3/4` contain actual species × DBH model values for 12 SEPM
+species (1,824 rows each, two series, 10–160 cm DBH). The three profile tables
+are byte-identical in this release.
+
+The full deck contains:
+
+| Deck | Grain | Rows | Key finding |
+|---|---|---:|---|
+| `meris_price_deck.csv` | species × product × series | 630 (45 × 7 × 2) | 28 hardwood species with a positive current value; `PATE` is the 0.0100 placeholder; the 12 SEPM species are zero here and covered by the DBH curves |
+| `meris_price_deck_wide.csv` | species | 45 | same values in source layout |
+| `meris_revenue_curves.csv` | profile × species × type × DBH | 5,472 (1,824 × 3) | 12 SEPM species; `SCIAGE=PATE` in every row; profiles 2/3/4 identical |
+| `meris_zone_values.csv` | zone × group × product | 18,718 (2,674 × 7) | `Tot=Rdv+Bnf+Rsl+Aut1+Aut2` holds exactly; $2023 |
+| `meris_zone_values_wide.csv` | zone × group | 2,674 | source layout |
+| `meris_royalties.csv` | zone × group | 2,674 | 2025-09-19 administered rates; `RdvVariable=0`; group taxonomy differs from the zone-value table |
+| `meris_costs.csv` | zone | 191 | supply-cost parameters; CAD/m3 except tertiary/other fixed CAD/ha; no date |
+| `meris_silviculture.csv` | treatment | 94 | 40 `DolHa` usable; 19 per 1,000 plants and 1 per 1,000 microsites need density |
+
+The ledger block `forest_cost_revenue_qc_model.csv` has 740 rows: 127
+`delivered_log_revenue` rows (current series, positive values only), 191
+`road`, 191 `overhead`, 191 `harvest` (loading only, partial), and 40
+`silviculture` rows. Every row is `prov_qc_meris`, `forest_sector`,
+`model_input=1`, `not_observed=1`, with `volume_m3=1` as a rate denominator.
+The block is **not a net-value estimate**: actual volume, haul, full harvest,
+stumpage join, and a quality dimension are still missing.
+
 ## References
 
+- `data/derived/national/harvest_basis/meris_qc_full/QC_MERIS_DECK_REPORT.md`
+- `data/derived/national/harvest_basis/meris_qc_full/manifest.json`
 - `data/derived/national/harvest_basis/meris_qc_sample/README.md`
 - `data/derived/national/harvest_basis/meris_qc_sample/provenance.json`
 - `data/derived/national/harvest_basis/meris_qc_sample/field_mapping.csv`

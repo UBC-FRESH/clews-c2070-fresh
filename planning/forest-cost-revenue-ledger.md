@@ -329,6 +329,7 @@ evidence =
   | appraisal_allowance     appraisal-manual cost allowance
   | published_average       published average, not a transaction
   | model_derived           converted or allocated from another basis
+  | model_input             model parameter or input deck, not an observation
   | fallback                documented default for a province with no source
 
 price_point =
@@ -340,7 +341,13 @@ Examples: `observed_sale:standing` for a BCTS winning bid;
 `appraisal_allowance:roadside` for a BC harvest allowance;
 `observed_price:mill_gate` for a delivered log settlement;
 `model_derived:facility_gate` for a residue cost;
+`model_input:mill_gate` for a MERIS species/product or species/DBH revenue
+deck (a model parameter, not a transaction);
 `fallback:na` for a documented non-BC/QC default.
+
+`model_input` rows must carry `not_observed=1` and `model_input=1` in
+`notes`, and cannot use `confidence=high`. The validator enforces this so a
+model parameter cannot be mistaken for an observed payment or sale.
 
 **`confidence`.**
 
@@ -433,7 +440,7 @@ same sale. Sum volume only across distinct sales or units, and only when the
 | `bc_appraisal_manual` | BC Timber Pricing Branch appraisal manual | Activity cost allowances, average market value, return-to-forest, terrain/zone factors | `harvest`, `road`, `haul`, `silviculture`; possibly `delivered_log_revenue` via average market value | `appraisal_allowance:roadside` or `published_average:mill_gate` | Medium/low | All appraised BC Crown volume | Allowance is not actual; average-market-value price point must be established; the formula is residual |
 | `bc_hbs` | BC harvest/stumpage billing (if the source review confirms access) | Actual stumpage billed by scale/grade | `stumpage_base`, `stumpage_bid_premium`, or `stumpage_total` | `observed_payment:standing` | High | Billed Crown volume | Billing year versus harvest year; does not include non-stumpage charges |
 | `bc_log_price_deck` | FEMIC VLM or ministry average (if accessible) | Log prices by species/grade/region | `delivered_log_revenue` | `published_average:mill_gate` or `observed_price:mill_gate` | Medium | Partial | Not a transaction; price point must be known |
-| `qc_meris` | QC BMMB/MFFP MERIS 3.3.0 analysis and simulation tool (public ACCDB; field semantics confirmed 2026-11-20) | 191 tarification zones; administered stumpage (`tbl_redevances_F1234`); supply-cost parameters (`tbl_couts_zones`); treatment rates; demo scenarios. **No observed permit volume or delivered log price.** | `stumpage_base`; `road`, `haul`, `overhead`, `silviculture`; no `delivered_log_revenue` | `administered_rate:standing`; `published_average:*`; `model_derived:*` | Medium/low | Tarification zones, not UAs; no volume coverage | MERIS is not a register of actual harvest. Economic matrix is $2023; current rates are 2025. See `data/derived/national/harvest_basis/meris_qc_sample/` and `planning/meris-qc-extraction.md`. |
+| `qc_meris` | QC BMMB/MFFP MERIS 3.3.0 analysis and simulation tool (public ACCDB; field semantics confirmed 2026-11-20) | 191 tarification zones; administered stumpage (`tbl_redevances_F1234`); supply-cost parameters (`tbl_couts_zones`); treatment rates; species/product and species/DBH model-input revenue decks; demo scenarios. **No observed permit volume or observed delivered log price.** | `stumpage_base`; `delivered_log_revenue` as `model_input` only; `road`, `haul`, `overhead`, `silviculture` | `administered_rate:standing`; `model_input:*`; `published_average:*`; `model_derived:*` | Medium/low | Tarification zones, not UAs; no volume coverage | MERIS is not a register of actual harvest. Economic matrix is $2023; current rates are 2025. The model-input revenue deck is not a transaction price. See `data/derived/national/harvest_basis/meris_qc_full/` and `planning/meris-qc-extraction.md`. |
 | `qc_bmmb_sales` | BMMB auction results | Lot, species/quality, volume, price, sale terms | `stumpage_base`, `stumpage_bid_premium`, or `delivered_log_revenue` | `observed_sale:standing` or `observed_sale:mill_gate` | Medium | Auctioned volume | Standing versus delivered; premium versus total; quality codes |
 | `qc_tarification` | QC administered pricing | Rates by species/quality/region; formula components | `stumpage_base`; `appraisal_allowance` for cost components | `administered_rate:standing` or `appraisal_allowance:standing` | High for the rate; medium for components | All Crown volume | Rate is not a market price; formula components are not actuals |
 | `bc_stage_b` | BC Stage B residue transport and processing | Residue transport and processing cost | `residue_recovery` | `model_derived:facility_gate` | Medium | BC | Transport plus processing only; excludes collection, grinding, stumpage, opportunity cost |
