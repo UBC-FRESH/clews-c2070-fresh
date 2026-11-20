@@ -69,11 +69,12 @@ def test_ui_log_rendering_is_bounded_and_throttled() -> None:
 
 
 def test_ui_fleet_correction_banner_and_counts() -> None:
-    assert "EXPECTED_SCENARIO_COUNT = 51" in APP_JS
-    assert "EXPECTED_FAMILY_COUNT = 17" in APP_JS
+    assert "EXPECTED_SCENARIO_COUNT = 53" in APP_JS
+    assert "EXPECTED_FAMILY_COUNT = 18" in APP_JS
     assert "EXPECTED_ELIGIBLE_COUNT = 1" in APP_JS
     assert "FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet'" in APP_JS
     assert "FLEET_LADDER_FAMILY = 'fleet_screening_ladder'" in APP_JS
+    assert "ALLOCATION_FAMILY = 'allocation_screening'" in APP_JS
     assert "FLEET_BANNER_TEXT = 'pre-fleet model — not comparable'" in APP_JS
     assert "badge--fleet" in APP_JS and "badge--prefleet" in APP_JS
     assert "sc.flags.fleet_corrected &&" in APP_JS
@@ -95,6 +96,19 @@ def test_ui_harvest_ladder_caveat_and_flags() -> None:
     html = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
     assert html.count("200 Mm³ is not admissible") == 3
     assert "harvest-caveat--feasibility" in html
+
+
+def test_ui_allocation_family_guards() -> None:
+    assert "allocation_scenario_ids" in APP_JS
+    assert "allocation_screening" in APP_JS
+    assert "ALLOCATION_CAVEAT" in APP_JS
+    assert "observed → reallocated" in APP_JS
+    assert "allocation-LP" in APP_JS or "allocation LP" in APP_JS
+    html = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
+    assert 'id="allocation-block"' in html
+    assert 'id="allocation-table"' in html
+    assert "THLB intensity caveat" in html
+    assert "6.113 Mm³" in html
 
 
 def test_ui_policy_selector_and_feasibility_badges() -> None:

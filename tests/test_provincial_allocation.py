@@ -148,6 +148,44 @@ def test_managed_intensity_sensitivity() -> None:
     assert all(row.harvest_m3 <= row.upper_bound_m3 + 2.0 for row in moderate.rows)
 
 
+def test_intensity_output_directories_and_summary() -> None:
+    summary = _summary()
+    screen = summary["thlb_intensity_screen"]
+    assert screen["intensity_values_m3_per_ha_yr"] == [1.0, 1.2]
+    deficits = screen["deficits_m3"]
+    assert deficits["150m"]["1.0"] == pytest.approx(6_113_051.149, abs=100.0)
+    assert deficits["150m"]["1.2"] == 0.0
+    assert deficits["119m"] == {"1.0": 0.0, "1.2": 0.0}
+    assert deficits["100m"] == {"1.0": 0.0, "1.2": 0.0}
+
+    strict_dir = OUTPUT_DIR / "intensity_1.0"
+    moderate_dir = OUTPUT_DIR / "intensity_1.2"
+    for directory in (strict_dir, moderate_dir):
+        assert (directory / "provincial_allocation_summary.json").is_file()
+        payload = json.loads(
+            (directory / "provincial_allocation_summary.json").read_text(encoding="utf-8")
+        )
+        assert payload["intensity_m3_per_ha_yr"] in (1.0, 1.2)
+        assert payload["cases"]["150m"]["status"] in {"optimal", "infeasible"}
+    assert (strict_dir / "100m.csv").is_file()
+    assert (strict_dir / "119m.csv").is_file()
+    assert not (strict_dir / "150m.csv").exists()
+    assert (moderate_dir / "100m.csv").is_file()
+    assert (moderate_dir / "119m.csv").is_file()
+    assert (moderate_dir / "150m.csv").is_file()
+
+    for path in (strict_dir / "119m.csv", moderate_dir / "150m.csv"):
+        with path.open(newline="", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle))
+        assert len(rows) == 13
+        for row in rows:
+            assert float(row["harvest_m3"]) <= float(row["upper_bound"]) + 2.0
+            if row["province"] not in {"PE", "NU"}:
+                assert "managed_intensity" in row["basis"]
+        nu = next(row for row in rows if row["province"] == "NU")
+        assert float(nu["harvest_m3"]) == 0.0
+
+
 def test_direct_200m_solve_reports_deficit_without_forcing() -> None:
     basis = load_province_basis()
     result = solve_allocation(basis, DIAGNOSTIC_TOTAL_200M, label="test_200m")

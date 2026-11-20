@@ -2,6 +2,27 @@
 
 ## 2026-11-20
 
+- **Added the THLB/operability intensity sensitivity and exposed the
+  allocation-LP family in the UI.** The provincial allocation LP now writes
+  per-intensity artifacts under
+  `data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/`
+  and `intensity_1.2/` (feasible-case CSVs + summary JSON) and records
+  `thlb_intensity_screen` deficits in the main summary/report. At 150 Mm³ the
+  1.0 m³/ha/yr managed-proxy screen is infeasible by **6.113 Mm³**
+  (143.887 Mm³ effective capacity); 1.2 is feasible (157.090 Mm³ effective
+  capacity). 100 and 119 Mm³ are feasible at both intensities with zero deficit.
+  The proxy is a 2016 tenure union, **not a THLB**, and the screen is not a
+  legal AAC. The UI now exports `allocation_screening_ladder/{119m,150m}` as
+  family `allocation_screening` (`lp_119m`, `lp_150m`) with
+  `allocation=lp_*`, `allocation_role=reallocated`, `fleet_corrected=true`,
+  `screening_only=true`, `policy_grade=false`, `pareto_eligible=false`, and
+  `tradeoff_eligible=false`. Trade-off shows observed 119/150 vs LP 119/150 with
+  observed/reallocated and feasibility badges, the THLB caveat, and provincial
+  reallocation detail; Explore/Compare add the two context rows. Counts are now
+  **53 scenarios / 18 families / 1 Pareto-eligible**. Regenerated
+  `ui/public/data`, added allocation/exporter/UI tests, and captured Chromium
+  screenshots (`ui/qa/allocation-*.png`). No public OSeCAN repository changes.
+
 - **Integrated the provincial harvest allocation into the residue supply basis
   and reran the 119/150 Mm³ screening ladder.** Added
   `workflows/national/harvest/residue_factor_allocation.py`, which weights the

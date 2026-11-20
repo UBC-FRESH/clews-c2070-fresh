@@ -70,7 +70,7 @@
         <div class="family-filter" id="family-filter" role="group" aria-label="Filter by scenario family"></div>
         <div class="rail-divider" aria-hidden="true"></div>
         <ol class="scenario-list" id="scenario-list" aria-label="Scenarios"></ol>
-        <p class="rail-foot">The fleet-corrected 119 Mm³ run is the only Pareto-eligible case. The 150/200 Mm³ ladder rows are sensitivity/diagnostic only; pre-fleet rows remain visible for audit but are not comparable.</p>
+        <p class="rail-foot">The fleet-corrected 119 Mm³ run is the only Pareto-eligible case. The 150/200 Mm³ ladder rows and the 119/150 Mm³ allocation-LP rows are sensitivity/comparison only; pre-fleet rows remain visible for audit but are not comparable.</p>
       </div>
     </aside>
 
@@ -162,11 +162,11 @@
             <p class="kicker">Eligible frontier</p>
             <h2>Objective vs cumulative emissions</h2>
           </div>
-          <p class="panel-deck">Only the canonical fleet-corrected 119 Mm³ scenario is Pareto eligible. The 100/150/200 Mm³ harvest ladder is sensitivity/compare only: harvest is exogenous and unpriced in the energy objective. Pre-fleet, superseded, and diagnostic scenarios remain excluded.</p>
+          <p class="panel-deck">Only the canonical fleet-corrected 119 Mm³ scenario is Pareto eligible. The 100/150/200 Mm³ harvest ladder is sensitivity/compare only: harvest is exogenous and unpriced in the energy objective. The allocation-LP family reallocates 119/150 Mm³ under documented caps but is comparison/context only. Pre-fleet, superseded, and diagnostic scenarios remain excluded.</p>
         </div>
         <div class="harvest-caveat harvest-caveat--feasibility" role="note">
-          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous</strong>
-          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Harvest is exogenous and free, so the ladder cannot define an energy Pareto front.</p>
+          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates the status-quo mix under documented caps, but the 1.0 m³/ha/yr THLB-proxy screen fails by 6.113 Mm³; 1.2 passes. Harvest is exogenous and free, so neither the ladder nor the allocation-LP variants can define an energy Pareto front.</p>
         </div>
         <div id="tradeoff-guard" class="guard-note" hidden></div>
         <div class="chart-frame chart-frame--scatter">
@@ -176,6 +176,24 @@
           <p class="method-note">X: objective, M$ (million USD). Y: cumulative emissions, Mt CO₂. Colour: scenario family. Hover for labels; click a point or select in the rail to load that scenario.</p>
           <p class="mono small" id="tradeoff-count"></p>
         </div>
+
+        <section class="explore-block allocation-block" id="allocation-block" aria-labelledby="allocation-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Comparison only</p>
+              <h3 id="allocation-title">Observed vs LP-reallocated allocation</h3>
+            </div>
+            <p class="explore-hint">Observed rows keep the 2024 provincial shares. LP rows reallocate the same national total under documented provincial caps with the 2024-share L1 objective. Neither row is policy-grade, and the allocation-LP family is excluded from the energy Pareto.</p>
+          </div>
+          <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+            <strong>THLB intensity caveat — managed proxy, not a THLB</strong>
+            <p id="allocation-caveat">The intensity screen uses the 2016 tenure-union managed proxy, not a THLB. 150 Mm³ fails the 1.0 m³/ha/yr screen by 6.113 Mm³ and passes at 1.2; 119 Mm³ passes both.</p>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table data-table--compact" id="allocation-table"></table>
+          </div>
+          <div id="allocation-province"></div>
+        </section>
       </section>
 
       <section class="panel" id="panel-explore" role="tabpanel" aria-labelledby="tab-explore" tabindex="0" hidden>
@@ -184,11 +202,11 @@
             <p class="kicker">Multi-criteria workspace</p>
             <h2>Explore the trade space</h2>
           </div>
-          <p class="panel-deck">The 119 Mm³ canonical/base run and the 100/150/200 Mm³ harvest sensitivity ladder remain visible for comparison. Only the canonical 119 Mm³ case enters the default Pareto front; pre-fleet, superseded, and live runs stay screening-only.</p>
+          <p class="panel-deck">The 119 Mm³ canonical/base run, the 100/150/200 Mm³ harvest sensitivity ladder, and the 119/150 Mm³ allocation-LP comparison rows remain visible. Only the canonical 119 Mm³ case enters the default Pareto front; pre-fleet, superseded, live, and allocation-LP runs stay screening/context only.</p>
         </div>
         <div class="harvest-caveat harvest-caveat--feasibility" role="note">
-          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous</strong>
-          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Harvest is exogenous and free, so the ladder is sensitivity/compare only and is excluded from the default Pareto.</p>
+          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates 150 Mm³ under documented caps but fails the 1.0 m³/ha/yr THLB-proxy screen by 6.113 Mm³ (1.2 passes). Harvest is exogenous and free, so the ladder and the allocation-LP family are sensitivity/compare context, not a Pareto frontier.</p>
         </div>
         <div id="explore-mode-note" class="guard-note" hidden></div>
 
@@ -223,7 +241,7 @@
               <p class="kicker">Nondominated set</p>
               <h3 id="pareto-title">Pareto front</h3>
             </div>
-            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. Only scenarios flagged Pareto eligible are evaluated — currently the canonical 119 Mm³ fleet case. The harvest ladder remains visible as context but is excluded because harvest is exogenous, 150 Mm³ is conditional, and 200 Mm³ fails AAC/NFD.</p>
+            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. Only scenarios flagged Pareto eligible are evaluated — currently the canonical 119 Mm³ fleet case. The harvest ladder and allocation-LP variants remain visible as context but are excluded because harvest is exogenous, 150 Mm³ is conditional, and the allocation-LP family is screening/compare only.</p>
           </div>
           <div class="pareto-controls">
             <label>Projection X <select id="pareto-x"></select></label>
@@ -254,8 +272,8 @@
             <label class="compare-pick">Scenario B <select id="compare-b"></select></label>
           </div>
           <div class="harvest-caveat harvest-caveat--feasibility" role="note">
-            <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous</strong>
-            <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Comparisons are sensitivity context, not a policy frontier.</p>
+            <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
+            <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. Allocation-LP rows compare observed 2024 shares with the LP reallocation; the 1.0 m³/ha/yr THLB-proxy screen fails at 150 Mm³ by 6.113 Mm³. Comparisons are sensitivity/context, not a policy frontier.</p>
           </div>
           <div id="compare-grade" class="compare-grade"></div>
           <div class="table-wrap" id="compare-table-wrap">

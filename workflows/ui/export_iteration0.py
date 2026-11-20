@@ -93,6 +93,25 @@ HARVEST_EXOGENOUS_CAVEAT = (
     "sensitivity ladder, not a policy frontier."
 )
 
+ALLOCATION_THLB_CAVEAT = (
+    "The managed-landbase intensity screen is applied to the 2016 tenure-union "
+    "managed proxy, not a THLB. It has no operability, accessibility, growth, "
+    "yield, or economic content. 150 Mm3 fails the 1.0 m3/ha/yr screen by 6.113 "
+    "Mm3 and passes at 1.2; 119 Mm3 passes both. The LP allocation is a "
+    "comparison/screening result, not a legal AAC, enforced provincial constraint, "
+    "or policy frontier."
+)
+
+ALLOCATION_COMPARISON_NOTE = (
+    "Observed rows keep the 2024 provincial shares; reallocated rows use the "
+    "provincial allocation LP under documented caps and 2024-share L1 objective. "
+    "Values are screening/compare only and are excluded from the energy Pareto."
+)
+
+ALLOCATION_LP_SUMMARY = (
+    "data/derived/national/harvest_basis/provincial_allocation/provincial_allocation_summary.json"
+)
+
 C2070_ZONES = (
     "A1",
     "A2",
@@ -184,6 +203,70 @@ FAMILY_SPECS: tuple[dict[str, Any], ...] = (
         "harvest_exogenous": True,
         "pareto_eligible": False,
         "tradeoff_eligible": False,
+        "supply_curve": "tiered_t1_t4",
+        "hydro": "upper_2021",
+        "carbon_price_default": 200.0,
+        "pwrbio_cap": "5pct_zone_generation",
+        "nuclear_cap_gw": 0.0,
+        "wind_cost_usd_per_gj": 3.0,
+        "wind_cap": "20pct_zonal",
+    },
+    {
+        "family": "allocation_screening",
+        "label": "Provincial allocation screening (LP reallocation)",
+        "dir": "allocation_screening_ladder",
+        "cases": (
+            {
+                "case_id": "lp_119m",
+                "dir": "119m",
+                "harvest": "119m",
+                "label": "119 Mm3 — LP reallocated allocation",
+                "allocation": "lp_119m",
+                "allocation_role": "reallocated",
+                "feasibility_override": {
+                    "status": "pass",
+                    "notes": (
+                        "Provincial allocation LP reallocates the 119 Mm3 national total "
+                        "under documented caps. No documented-cap deficit; the 1.0 and 1.2 "
+                        "m3/ha/yr managed-proxy screens are both feasible. The proxy is not "
+                        "a THLB. Compare only: this variant is not a policy frontier."
+                    ),
+                },
+            },
+            {
+                "case_id": "lp_150m",
+                "dir": "150m",
+                "harvest": "150m",
+                "label": "150 Mm3 — LP reallocated allocation",
+                "allocation": "lp_150m",
+                "allocation_role": "reallocated",
+                "feasibility_override": {
+                    "status": "conditional",
+                    "notes": (
+                        "Provincial allocation LP reallocates the 150 Mm3 national total "
+                        "under documented caps, but the 1.0 m3/ha/yr managed-proxy screen is "
+                        "infeasible by 6.113 Mm3; the 1.2 screen is feasible. The proxy is "
+                        "not a THLB. Conditional screening/compare only, not a policy frontier."
+                    ),
+                },
+            },
+        ),
+        "description_override": (
+            "Provincial allocation LP applied to the fleet-corrected 119/150 Mm3 national "
+            "totals. Observed shares are reallocated under documented provincial caps. "
+            "Harvest remains exogenous and free in the energy objective; these runs are "
+            "comparison/context only and are never Pareto eligible."
+        ),
+        "post_fix": True,
+        "superseded": False,
+        "fleet_corrected": True,
+        "screening_only": True,
+        "policy_grade": False,
+        "canonical": False,
+        "harvest_exogenous": True,
+        "pareto_eligible": False,
+        "tradeoff_eligible": False,
+        "allocation_screening": True,
         "supply_curve": "tiered_t1_t4",
         "hydro": "upper_2021",
         "carbon_price_default": 200.0,
@@ -356,6 +439,10 @@ INPUT_PATHS: dict[str, str] = {
     "managed_landbase_province": "data/derived/national/managed_landbase/managed_landbase_by_province.csv",
     "managed_landbase_ecoprovince": "data/derived/national/managed_landbase/managed_landbase_by_ecoprovince.csv",
     "managed_landbase_manifest": "data/derived/national/managed_landbase/manifest.json",
+    "provincial_allocation_summary": "data/derived/national/harvest_basis/provincial_allocation/provincial_allocation_summary.json",
+    "provincial_allocation_report": "data/derived/national/harvest_basis/provincial_allocation/PROVINCIAL_ALLOCATION_REPORT.md",
+    "provincial_allocation_intensity_1_0": "data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/provincial_allocation_summary.json",
+    "provincial_allocation_intensity_1_2": "data/derived/national/harvest_basis/provincial_allocation/intensity_1.2/provincial_allocation_summary.json",
     "provinces": "data/raw/boundaries/canada_adm1_geoboundaries_simplified.geojson",
     "rsyc_tiles": "data/raw/national/rsyc/RSYC_tiles.gpkg",
     "rsyc_ecostrat": "data/raw/national/rsyc/RSYC_ecostrat.gpkg",
@@ -569,6 +656,9 @@ def discover_runs(artifacts_root: Path) -> list[RunCase]:
                 entry = dict(summaries)
                 entry["harvest_level"] = case["harvest"]
                 entry["label"] = case["label"]
+                for optional in ("allocation", "allocation_role", "feasibility_override"):
+                    if optional in case:
+                        entry[optional] = case[optional]
                 runs.append(
                     RunCase(
                         family=spec["family"],
@@ -768,6 +858,39 @@ def _summary_harvest_m3(entry: dict[str, Any], *, label: str) -> float | None:
     return value
 
 
+def load_thlb_intensity_screen(root: Path) -> dict[str, Any]:
+    """Read the LP intensity-screen metadata (deficits by case and intensity)."""
+    path = root / ALLOCATION_LP_SUMMARY
+    summary = _read_json(path, label="provincial allocation summary")
+    screen = summary.get("thlb_intensity_screen")
+    if not isinstance(screen, dict):
+        raise ExportError(f"{path}: thlb_intensity_screen block is missing")
+    values = screen.get("intensity_values_m3_per_ha_yr")
+    deficits = screen.get("deficits_m3")
+    if not isinstance(values, list) or not isinstance(deficits, dict):
+        raise ExportError(f"{path}: thlb_intensity_screen is incomplete")
+    return screen
+
+
+def thlb_intensity_for(screen: dict[str, Any], level: str) -> dict[str, Any]:
+    """Return intensity status/deficit for one harvest level."""
+    deficits = screen["deficits_m3"].get(level)
+    if not isinstance(deficits, dict):
+        raise ExportError(f"thlb intensity screen has no deficits for {level}")
+    result: dict[str, Any] = {}
+    for value in screen["intensity_values_m3_per_ha_yr"]:
+        key = f"{float(value):.1f}"
+        if key not in deficits:
+            raise ExportError(f"thlb intensity screen has no {key} deficit for {level}")
+        deficit = _finite(deficits[key], label=f"thlb_intensity.{level}.{key}")
+        result[key] = {
+            "intensity_m3_per_ha_yr": float(value),
+            "status": "pass" if deficit <= 0.0 else "fail",
+            "deficit_m3": deficit,
+        }
+    return result
+
+
 def build_dimensions(
     spec: dict[str, Any],
     summaries: dict[str, Any],
@@ -794,6 +917,18 @@ def build_dimensions(
     feasibility = assess_harvest_feasibility(harvest["m3_per_year"])
     harvest["feasibility_status"] = feasibility.status
     harvest["feasibility_notes"] = list(feasibility.notes)
+    override = entry.get("feasibility_override")
+    if override is not None:
+        status = override.get("status")
+        notes = override.get("notes")
+        if status not in ("pass", "conditional", "fail"):
+            raise ExportError(f"{case_id}: invalid feasibility override {status!r}")
+        if isinstance(notes, str) and notes.strip():
+            notes = [notes]
+        if not isinstance(notes, list) or not notes:
+            raise ExportError(f"{case_id}: feasibility override notes are missing")
+        harvest["feasibility_status"] = status
+        harvest["feasibility_notes"] = list(notes)
 
     return {
         "harvest": harvest,
@@ -850,6 +985,16 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
         and feasibility_status == "pass"
     )
     tradeoff_eligible = pareto_eligible
+    allocation = entry.get("allocation")
+    allocation_role = entry.get("allocation_role")
+    thlb_intensity = None
+    if allocation is not None:
+        if not isinstance(allocation, str) or not allocation.startswith("lp_"):
+            raise ExportError(f"{scenario_key}: invalid allocation {allocation!r}")
+        if allocation_role != "reallocated":
+            raise ExportError(f"{scenario_key}: allocation role must be 'reallocated'")
+        screen = load_thlb_intensity_screen(Path(spec["repo_root"]))
+        thlb_intensity = thlb_intensity_for(screen, str(entry["harvest_level"]))
 
     return {
         "scenario_id": scenario_key,
@@ -861,6 +1006,9 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
         "feasibility_notes": list(feasibility["feasibility_notes"]),
         "pareto_eligible": pareto_eligible,
         "harvest_exogenous": harvest_exogenous,
+        "allocation": allocation,
+        "allocation_role": allocation_role,
+        "thlb_intensity": thlb_intensity,
         "source_run": case_id,
         "dispatch_run": dispatch_run_id(entry, case_id),
         "sources": [
@@ -883,9 +1031,81 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
             "feasibility_status": feasibility_status,
             "pareto_eligible": pareto_eligible,
             "tradeoff_eligible": tradeoff_eligible,
+            "allocation_screening": bool(spec.get("allocation_screening")),
             "diagnostic": is_diagnostic or feasibility_status == "fail",
             "post_fix_emissions": bool(spec["post_fix"]),
         },
+    }
+
+
+def _province_allocation_rows(root: Path, level: str) -> list[dict[str, Any]]:
+    path = (
+        root
+        / "data/derived/national/harvest_basis/provincial_allocation"
+        / f"{level}.csv"
+    )
+    rows = _read_csv(path, label=f"provincial allocation {level}")
+    totals = {"119m": 118_977_339.0, "150m": 150_000_000.0}
+    total = totals[level]
+    payload: list[dict[str, Any]] = []
+    for row in rows:
+        if row["province"] == "NU":
+            continue
+        observed_m3 = _finite(float(row["observed_2024_m3"]), label=f"{level}.observed_2024_m3")
+        harvest_m3 = _finite(float(row["harvest_m3"]), label=f"{level}.harvest_m3")
+        upper_bound_m3 = _finite(float(row["upper_bound"]), label=f"{level}.upper_bound")
+        payload.append(
+            {
+                "province": row["province"],
+                "observed_2024_m3": observed_m3,
+                "harvest_m3": harvest_m3,
+                "delta_m3": harvest_m3 - float(row["observed_share"]) * total,
+                "upper_bound_m3": upper_bound_m3,
+                "binding": row["binding"] == "true",
+            }
+        )
+    return payload
+
+
+def build_allocation_comparison(
+    root: Path, scenarios: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Pair observed 119/150 runs with their LP-reallocated allocation variants."""
+    by_id = {scenario["scenario_id"]: scenario for scenario in scenarios}
+    pairs: list[dict[str, Any]] = []
+    for level, observed_id, reallocated_id in (
+        ("119m", "fleet_capacity__screening_119m_fleet", "allocation_screening__lp_119m"),
+        ("150m", "fleet_screening_ladder__screening_150m", "allocation_screening__lp_150m"),
+    ):
+        observed = by_id.get(observed_id)
+        reallocated = by_id.get(reallocated_id)
+        if observed is None or reallocated is None:
+            raise ExportError(
+                f"allocation comparison is missing {observed_id!r} or {reallocated_id!r}"
+            )
+        intensity = reallocated.get("thlb_intensity")
+        if not isinstance(intensity, dict) or not intensity:
+            raise ExportError(f"{reallocated_id}: thlb intensity block is missing")
+        pairs.append(
+            {
+                "harvest_m3": float(reallocated["dimensions"]["harvest_m3_per_year"]),
+                "observed_scenario_id": observed_id,
+                "reallocated_scenario_id": reallocated_id,
+                "observed_status": observed["feasibility_status"],
+                "reallocated_status": reallocated["feasibility_status"],
+                "intensity": intensity,
+                "province_rows": _province_allocation_rows(root, level),
+            }
+        )
+    return {
+        "status": "comparison/context only; excluded from the energy Pareto",
+        "note": ALLOCATION_COMPARISON_NOTE,
+        "thlb_caveat": ALLOCATION_THLB_CAVEAT,
+        "intensity_values_m3_per_ha_yr": sorted(
+            float(value)
+            for value in next(iter(pairs))["intensity"].keys()
+        ),
+        "pairs": pairs,
     }
 
 
@@ -1597,24 +1817,36 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
         and scenario["family"] == "fleet_screening_ladder"
         and not scenario["pareto_eligible"]
     ]
+    allocation_scenarios = [
+        scenario
+        for scenario in scenarios
+        if scenario["family"] == "allocation_screening"
+    ]
     tradeoff = {
         "rule": (
             "publishable fleet-corrected scenario with pareto_eligible=true and "
-            "feasibility_status='pass'; the exogenous harvest ladder is "
-            "sensitivity/compare only and is never Pareto eligible"
+            "feasibility_status='pass'; the exogenous harvest ladder and the "
+            "allocation-LP family are sensitivity/compare only and are never "
+            "Pareto eligible"
         ),
         "canonical_scenario_id": canonical_ids[0],
         "canonical_role": "canonical/base",
         "harvest_exogenous_caveat": HARVEST_EXOGENOUS_CAVEAT,
+        "allocation_caveat": ALLOCATION_THLB_CAVEAT,
         "feasibility_caveat": (
             "200 Mm3 is not admissible under documented AAC/NFD; 150 Mm3 is "
-            "conditional (national bound only; no provincial allocation); harvest "
-            "is exogenous and free. The default energy Pareto contains only the "
-            "canonical 119 Mm3 fleet scenario."
+            "conditional (national bound only; the LP reallocates it but the "
+            "1.0 m3/ha/yr THLB-proxy screen fails by 6.113 Mm3); harvest is "
+            "exogenous and free. The default energy Pareto contains only the "
+            "canonical 119 Mm3 fleet scenario. Allocation-LP variants are "
+            "comparison/context only."
         ),
         "scenario_ids": [scenario["scenario_id"] for scenario in pareto_scenarios],
         "sensitivity_scenario_ids": [
             scenario["scenario_id"] for scenario in sensitivity_scenarios
+        ],
+        "allocation_scenario_ids": [
+            scenario["scenario_id"] for scenario in allocation_scenarios
         ],
         "metrics": [
             {
@@ -1667,6 +1899,33 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
             for scenario in sensitivity_scenarios
         },
     )
+    _record(
+        checks,
+        "allocation_family_count",
+        len(allocation_scenarios) == 2,
+        [scenario["scenario_id"] for scenario in allocation_scenarios],
+    )
+    _record(
+        checks,
+        "allocation_not_pareto",
+        all(
+            not scenario["pareto_eligible"]
+            and not scenario["flags"]["tradeoff_eligible"]
+            and scenario["flags"]["allocation_screening"]
+            for scenario in allocation_scenarios
+        ),
+        [scenario["scenario_id"] for scenario in allocation_scenarios],
+    )
+    allocation_comparison = build_allocation_comparison(root, scenarios)
+    deficit_150_1_0 = next(
+        pair for pair in allocation_comparison["pairs"] if pair["harvest_m3"] == 150_000_000.0
+    )["intensity"]["1.0"]["deficit_m3"]
+    _record(
+        checks,
+        "allocation_150m_intensity_deficit",
+        abs(deficit_150_1_0 - 6_113_051.149) < 100.0,
+        deficit_150_1_0,
+    )
     superseded_ids = {
         scenario["scenario_id"]
         for scenario in scenarios
@@ -1717,12 +1976,14 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
                 "harvest_exogenous": bool(spec.get("harvest_exogenous")),
                 "pareto_eligible": bool(spec.get("pareto_eligible")),
                 "tradeoff_eligible": bool(spec.get("pareto_eligible")),
+                "allocation_screening": bool(spec.get("allocation_screening")),
                 "scenario_count": sum(1 for run in runs if run.family == spec["family"]),
             }
             for spec in FAMILY_SPECS
         ],
         "scenarios": scenarios,
         "tradeoff": tradeoff,
+        "allocation_screening": allocation_comparison,
     }
     _write_json(out_dir / "scenarios.json", scenarios_payload)
 

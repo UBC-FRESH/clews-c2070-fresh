@@ -513,3 +513,43 @@ Machine-readable evidence: `ui/qa/feasibility_qa_results.json`.
 
 `git status --porcelain` contains no `D` entries. No public OSeCAN repository was
 changed.
+
+## Allocation-LP family + THLB intensity caveat — 2026-11-20
+
+**Scope:** export the provincial allocation LP 119/150 Mm³ runs as the
+`allocation_screening` comparison family, add the observed-vs-reallocated table
+and THLB intensity caveat to Trade-off, and add the two context rows to Explore
+and Compare. The energy Pareto remains the single canonical observed 119 Mm³
+fleet case. Counts are **53 scenarios / 18 families / 1 Pareto-eligible**.
+
+**Environment:** Chromium via `/tmp/ui-qa-venv` (Playwright 1.65.2), static
+`python3 -m http.server 8137 --bind 127.0.0.1 -d ui`, viewport 1600×1200,
+`--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist
+--disable-dev-shm-usage`. Machine-readable evidence:
+`ui/qa/allocation_qa_results.json`.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Boot guard | **PASS** — 53 scenarios, 18 families, 1 Pareto eligible; fatal banner hidden. |
+| Family chip | **PASS** — `Allocation LP 2`; rail filter shows exactly 2 allocation rows with **allocation LP** and **observed → reallocated** badges. |
+| Allocation pair table | **PASS** — 4 rows: observed 119 vs LP 119, observed 150 vs LP 150; feasibility, objective, emissions, and 1.0/1.2 intensity cells render. |
+| THLB caveat | **PASS** — exact managed-proxy caveat text present above the table; 150 Mm³ 1.0 deficit reads **6.113 Mm³**, 1.2 feasible. |
+| Provincial detail | **PASS** — two expandable reallocation tables (13 provinces including NU at zero). |
+| LP 150 overview | **PASS** — allocation banner and badges; objective **1,444,917.38 M$**, emissions **422.927 Mt CO₂**; `policy_grade=false`, `pareto_eligible=false`. |
+| Explore | **PASS** — 6 parallel-coordinate lines (1 canonical + 3 ladder + 2 allocation); Pareto count `1 on front · 1 Pareto-eligible evaluated · 5 context excluded`; context guard names ladder, allocation-LP, and live rows. |
+| Compare | **PASS** — observed 150 vs LP 150 shows 1 differing dimension (`Allocation observed 2024 → lp_150m · reallocated`) and metric deltas (+1,282.23 M$, +0.236757 Mt); both the ladder and allocation labels are visible. |
+| Console/page errors | **PASS** — 0 console errors, 0 page errors. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `allocation-tradeoff.png` | Allocation pair table, THLB caveat, feasibility/observed/reallocated badges, provincial detail folds |
+| `allocation-overview.png` | LP 150 Mm³ overview with allocation banner and flags |
+| `allocation-explore.png` | 6 parallel-coordinate context lines and Pareto guard |
+| `allocation-compare.png` | Observed 150 vs LP 150 comparison with allocation dimension delta |
+
+`git status --porcelain` contains no `D` entries. No public OSeCAN repository
+changes.

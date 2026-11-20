@@ -16,19 +16,22 @@
   var MOBILE_RAIL_QUERY = '(max-width: 720px)';
   var TEMPORAL_DEFAULT = 2050;
   var PROVINCE_ALIAS = { QC: 'CA-QB' };
-  var EXPECTED_SCENARIO_COUNT = 51;
-  var EXPECTED_FAMILY_COUNT = 17;
+  var EXPECTED_SCENARIO_COUNT = 53;
+  var EXPECTED_FAMILY_COUNT = 18;
   var EXPECTED_ELIGIBLE_COUNT = 1;
   var FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet';
   var FLEET_LADDER_FAMILY = 'fleet_screening_ladder';
+  var ALLOCATION_FAMILY = 'allocation_screening';
   var FLEET_BANNER_TEXT = 'pre-fleet model — not comparable';
   var HARVEST_CAVEAT = 'Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.';
-  var FEASIBILITY_CAVEAT = '200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is conditional (national bound only; no provincial allocation); harvest is exogenous. The default energy Pareto contains only the canonical 119 Mm³ fleet case.';
+  var FEASIBILITY_CAVEAT = '200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is conditional (national bound only; the provincial allocation LP reallocates it, but the 1.0 m³/ha/yr THLB-proxy screen fails by 6.113 Mm³); harvest is exogenous. The default energy Pareto contains only the canonical 119 Mm³ fleet case. Allocation-LP variants are comparison/context only.';
+  var ALLOCATION_CAVEAT = 'The managed-landbase intensity screen is applied to the 2016 tenure-union managed proxy, not a THLB. It has no operability, accessibility, growth, yield, or economic content. 150 Mm3 fails the 1.0 m3/ha/yr screen by 6.113 Mm3 and passes at 1.2; 119 Mm3 passes both. The LP allocation is a comparison/screening result, not a legal AAC, enforced provincial constraint, or policy frontier.';
   var MAX_NORMAL_HARVEST_M3 = 150000000;
 
   var FAMILY_SHORT = {
     fleet_capacity: 'Fleet capacity',
     fleet_screening_ladder: 'Harvest ladder',
+    allocation_screening: 'Allocation LP',
     emission_factor_fix: 'Emission factor fix',
     pwrbio_cap: 'PWRBIO cap',
     pwrbio_tight: 'PWRBIO tight',
@@ -49,6 +52,7 @@
   var FAMILY_CHART_COLORS = {
     fleet_capacity: '#b23b1c',
     fleet_screening_ladder: '#d98a2b',
+    allocation_screening: '#7b4b75',
     emission_factor_fix: '#b9791f',
     pwrbio_cap: '#4f7d80',
     pwrbio_tight: '#a94f31',
@@ -375,6 +379,7 @@
       requireTrue(typeof sc.flags.harvest_exogenous === 'boolean', 'missing harvest-exogenous flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.tradeoff_eligible === 'boolean', 'missing trade-off eligibility flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.pareto_eligible === 'boolean', 'missing Pareto eligibility flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.allocation_screening === 'boolean', 'missing allocation-screening flag on ' + sc.scenario_id);
       requireTrue(['pass', 'conditional', 'fail'].indexOf(sc.feasibility_status) !== -1, 'missing feasibility status on ' + sc.scenario_id);
       requireTrue(Array.isArray(sc.feasibility_notes) && sc.feasibility_notes.length > 0, 'missing feasibility notes on ' + sc.scenario_id);
       requireTrue(typeof sc.pareto_eligible === 'boolean', 'missing top-level Pareto flag on ' + sc.scenario_id);
@@ -391,6 +396,16 @@
     requireTrue(s.tradeoff && Array.isArray(s.tradeoff.scenario_ids), 'trade-off ledger is missing');
     requireTrue(s.tradeoff.scenario_ids.length === EXPECTED_ELIGIBLE_COUNT, 'expected ' + EXPECTED_ELIGIBLE_COUNT + ' Pareto-eligible scenario(s), found ' + s.tradeoff.scenario_ids.length);
     requireTrue(Array.isArray(s.tradeoff.sensitivity_scenario_ids) && s.tradeoff.sensitivity_scenario_ids.length === 3, 'harvest sensitivity ledger is missing');
+    requireTrue(Array.isArray(s.tradeoff.allocation_scenario_ids) && s.tradeoff.allocation_scenario_ids.length === 2, 'allocation screening ledger is missing');
+    requireTrue(s.tradeoff.allocation_caveat === ALLOCATION_CAVEAT, 'allocation/THLB caveat is missing or changed');
+    requireTrue(s.allocation_screening && Array.isArray(s.allocation_screening.pairs) && s.allocation_screening.pairs.length === 2, 'allocation comparison block is missing');
+    s.allocation_screening.pairs.forEach(function (pair) {
+      requireTrue(pair.harvest_m3 > 0, 'allocation comparison pair has no harvest volume');
+      requireTrue(seen.has(pair.observed_scenario_id), 'allocation comparison references missing observed scenario ' + pair.observed_scenario_id);
+      requireTrue(seen.has(pair.reallocated_scenario_id), 'allocation comparison references missing reallocated scenario ' + pair.reallocated_scenario_id);
+      requireTrue(pair.intensity && pair.intensity['1.0'] && pair.intensity['1.2'], 'allocation comparison intensity screen is incomplete');
+      requireTrue(Array.isArray(pair.province_rows) && pair.province_rows.length === 12, 'allocation comparison province rows are incomplete');
+    });
     requireTrue(s.tradeoff.canonical_scenario_id === FLEET_SCENARIO_ID, 'canonical scenario is not the fleet-corrected run');
     requireTrue(s.tradeoff.harvest_exogenous_caveat === HARVEST_CAVEAT, 'harvest-exogenous caveat is missing or changed');
     requireTrue(s.tradeoff.feasibility_caveat && s.tradeoff.feasibility_caveat.indexOf('200 Mm3') !== -1, 'feasibility caveat is missing');
@@ -486,7 +501,7 @@
 
     var compare = [];
     var compareIds = new Set();
-    (core.scenarios.tradeoff.scenario_ids || []).concat(core.scenarios.tradeoff.sensitivity_scenario_ids || []).forEach(function (id) {
+    (core.scenarios.tradeoff.scenario_ids || []).concat(core.scenarios.tradeoff.sensitivity_scenario_ids || []).concat(core.scenarios.tradeoff.allocation_scenario_ids || []).forEach(function (id) {
       var sc = core.scenarioById.get(id);
       if (!sc) {
         state.warnings.push('Explore ledger references missing scenario ' + id + '.');
@@ -531,6 +546,7 @@
     bindExploreControls();
     bindOsecanControls();
     bindRunControls();
+    bindAllocationControls();
     renderOsecanStatic();
     renderInputsStatic();
     activateTab(validTab(initialTab), { silent: true });
@@ -545,8 +561,9 @@
       (state.live.sessionRuns.length ? ' · ' + state.live.sessionRuns.length + ' live session run(s)' : '');
     $('footer-contract').textContent = 'Data contract ' + core.scenarios.schema_version + ' · ' +
       core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' Pareto eligible (canonical 119 Mm³ only) · ' +
-      (core.scenarios.tradeoff.sensitivity_scenario_ids || []).length + ' harvest sensitivity/compare excluded (150 conditional, 200 fail) · canonical ' +
-      FLEET_SCENARIO_ID + ' · 2026-11-20 fleet run';
+      (core.scenarios.tradeoff.sensitivity_scenario_ids || []).length + ' harvest sensitivity/compare excluded (150 conditional, 200 fail) · ' +
+      (core.scenarios.tradeoff.allocation_scenario_ids || []).length + ' allocation-LP comparison rows (not Pareto) · canonical ' +
+      FLEET_SCENARIO_ID + ' · 2026-11-20 fleet+allocation runs';
   }
 
   function updateHeaderCounts() {
@@ -662,7 +679,9 @@
         ? '<span class="badge badge--fleet">canonical/base</span>'
         : (sc.family === FLEET_LADDER_FAMILY
           ? '<span class="badge badge--diag">sensitivity</span><span class="badge badge--ink">exogenous harvest</span>'
-          : '');
+          : (sc.family === ALLOCATION_FAMILY
+            ? '<span class="badge badge--allocation">allocation LP</span><span class="badge badge--ink">observed → reallocated</span>'
+            : ''));
       html += '<li><button type="button" class="scenario-item' + (selected ? ' is-selected' : '') +
         '" data-scenario-id="' + esc(sc.scenario_id) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
         '<span class="s-label">' + esc(sc.label) + '</span>' +
@@ -740,22 +759,31 @@
     var superseded = sc.flags.superseded_for_emissions;
     var preFleet = sc.flags.superseded_for_fleet;
     var isLadderSensitivity = sc.family === FLEET_LADDER_FAMILY;
-    var feasibilityCaveat = sc.feasibility_status === 'fail'
-      ? 'AAC/NFD fail — historical/diagnostic only; not admissible and not Pareto eligible.'
-      : (sc.feasibility_status === 'conditional'
-        ? 'Conditional — national 150 Mm³ bound only; the status-quo provincial mix fails NB/BC and no allocation model exists.'
-        : 'AAC/NFD pass — national screens only; NB/NS Crown-only tenure caveats apply.');
+    var isAllocationScreening = sc.family === ALLOCATION_FAMILY;
+    var feasibilityCaveat = isAllocationScreening
+      ? (sc.feasibility_status === 'conditional'
+        ? 'Conditional — LP reallocation is feasible under documented caps, but the 1.0 m³/ha/yr managed-proxy screen fails by 6.113 Mm³; 1.2 passes. The proxy is not a THLB.'
+        : 'Pass — LP reallocation is feasible under documented caps and both 1.0 and 1.2 m³/ha/yr managed-proxy screens. The proxy is not a THLB.')
+      : (sc.feasibility_status === 'fail'
+        ? 'AAC/NFD fail — historical/diagnostic only; not admissible and not Pareto eligible.'
+        : (sc.feasibility_status === 'conditional'
+          ? 'Conditional — national 150 Mm³ bound only; the status-quo provincial mix fails NB/BC and the LP reallocation is conditional on the THLB proxy.'
+          : 'AAC/NFD pass — national screens only; NB/NS Crown-only tenure caveats apply.'));
     var statusTitle = sc.flags.canonical
       ? 'Fleet-corrected canonical/base · Pareto eligible'
       : (isLadderSensitivity
         ? (sc.feasibility_status === 'fail' ? 'Harvest diagnostic — AAC/NFD fail' : 'Harvest sensitivity — ' + feasibilityLabel(sc.feasibility_status))
-        : (preFleet ? FLEET_BANNER_TEXT : 'Historical record'));
+        : (isAllocationScreening
+          ? 'Allocation screening — ' + feasibilityLabel(sc.feasibility_status) + ' · not Pareto'
+          : (preFleet ? FLEET_BANNER_TEXT : 'Historical record')));
     var statusCopy = sc.flags.canonical
       ? 'Canonical 119 Mm³ screening base under the CER 2021 capacity fleet. screening_only=true and policy_grade=false; the only default energy-Pareto case, but not a policy or forecast.'
       : (isLadderSensitivity
         ? 'Sensitivity case on the fleet-corrected harvest ladder. Harvest is exogenous and free; no harvest cost, THLB, or AAC constraint is modeled. ' + feasibilityCaveat + ' Compare only — excluded from the default Pareto.'
-        : 'This run predates the CER 2021 capacity-fleet correction. It remains visible for audit but is excluded from the default trade-off/Pareto ledger and is not comparable with fleet-corrected results.' +
-          (superseded ? ' Its emissions factors are also superseded by the emission-factor fix.' : ''));
+        : (isAllocationScreening
+          ? 'LP reallocation of the same national harvest total across provinces under documented caps, with the 2024-share L1 objective. Observed rows keep the 2024 mix; this row is the reallocated allocation. Harvest is exogenous and free in the energy objective. ' + feasibilityCaveat + ' Comparison/context only — never Pareto eligible.'
+          : 'This run predates the CER 2021 capacity-fleet correction. It remains visible for audit but is excluded from the default trade-off/Pareto ledger and is not comparable with fleet-corrected results.' +
+            (superseded ? ' Its emissions factors are also superseded by the emission-factor fix.' : '')));
 
     var fleetBanner = sc.flags.canonical
       ? '<div class="overview-callout fleet-banner fleet-banner--corrected" role="status"><strong>Fleet-corrected · canonical/base · AAC/NFD pass</strong><br>' +
@@ -767,13 +795,18 @@
           (sc.feasibility_status === 'fail' ? 'Diagnostic only · 200 Mm³ not admissible' : 'Sensitivity · ' + esc(feasibilityLabel(sc.feasibility_status))) +
           '</strong><br>' + esc(feasibilityCaveat) + '<br>' + esc(HARVEST_CAVEAT) + ' Objective ' + fmt(m.objective, 2) +
           ' M$, cumulative emissions ' + fmt(m.emissions_total, 3) + ' Mt CO₂. Not Pareto eligible.</div>'
-        : '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' + esc(FLEET_BANNER_TEXT) + '</strong><br>' +
-          'This scenario predates the CER 2021 capacity-fleet correction. It is historical audit evidence only: ' +
-          'excluded from the canonical trade-off/Pareto ledger and not comparable with fleet-corrected results.</div>');
+        : (isAllocationScreening
+          ? '<div class="overview-callout fleet-banner fleet-banner--allocation" role="status"><strong>Allocation screening · observed → reallocated · ' + esc(feasibilityLabel(sc.feasibility_status)) + '</strong><br>' +
+            'Same national harvest total as the observed case, reallocated across provinces under documented caps. ' + esc(ALLOCATION_CAVEAT) +
+            ' Objective ' + fmt(m.objective, 2) + ' M$, cumulative emissions ' + fmt(m.emissions_total, 3) +
+            ' Mt CO₂. Comparison/context only; not Pareto eligible.</div>'
+          : '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' + esc(FLEET_BANNER_TEXT) + '</strong><br>' +
+            'This scenario predates the CER 2021 capacity-fleet correction. It is historical audit evidence only: ' +
+            'excluded from the canonical trade-off/Pareto ledger and not comparable with fleet-corrected results.</div>'));
 
     var feasibilityCallout = '<div class="harvest-caveat harvest-caveat--feasibility" role="note"><strong>' +
       esc('Feasibility · ' + feasibilityLabel(sc.feasibility_status)) + '</strong><p>' + esc(feasibilityCaveat) +
-      ' 200 Mm³ not admissible under documented AAC/NFD; 150 Mm³ conditional; harvest exogenous.</p></div>';
+      ' 200 Mm³ not admissible under documented AAC/NFD; 150 Mm³ conditional; harvest exogenous; allocation-LP variants are comparison only.</p></div>';
 
     var html = linkedContextHtml() + fleetBanner + feasibilityCallout + '<div class="scenario-masthead">' +
       '<div>' +
@@ -790,13 +823,14 @@
           (sc.flags.publishable ? '<span class="badge badge--postfix">publishable</span>' : '<span class="badge badge--superseded">not publishable</span>') +
           (sc.flags.canonical ? '<span class="badge badge--fleet">canonical/base</span>' : '') +
           (isLadderSensitivity ? '<span class="badge badge--diag">sensitivity</span><span class="badge badge--ink">exogenous harvest</span>' : '') +
+          (isAllocationScreening ? '<span class="badge badge--allocation">allocation LP</span><span class="badge badge--ink">observed → reallocated</span>' : '') +
           feasibilityBadge(sc) +
           (sc.feasibility_status === 'fail' ? '<span class="badge badge--diag">diagnostic only</span>' : '') +
           (eligible ? '<span class="badge badge--family">Pareto eligible</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="masthead-side">' +
-        '<div><p class="kicker">Status</p><p class="status-large' + ((superseded || preFleet || isLadderSensitivity) ? ' is-warn' : '') + '">' + statusTitle + '</p></div>' +
+        '<div><p class="kicker">Status</p><p class="status-large' + ((superseded || preFleet || isLadderSensitivity || isAllocationScreening) ? ' is-warn' : '') + '">' + statusTitle + '</p></div>' +
         '<p>' + statusCopy + '</p>' +
         '<p class="mono">solver: ' + esc(sc.flags.solver || '—') + '</p>' +
       '</div>' +
@@ -1768,6 +1802,90 @@
 
   /* ---------------- Trade-off ---------------- */
 
+  function allocationScreenBadge(screen) {
+    if (!screen) return '<span class="badge badge--ink">not screened</span>';
+    if (screen.status === 'pass') {
+      return '<span class="badge badge--feas-pass">feasible · 0 deficit</span>';
+    }
+    return '<span class="badge badge--feas-fail">deficit ' + fmt(-screen.deficit_m3 / 1e6, 3) + ' Mm³</span>';
+  }
+
+  function allocationRoleBadge(role) {
+    return role === 'reallocated'
+      ? '<span class="badge badge--allocation">reallocated</span>'
+      : '<span class="badge badge--ink">observed 2024</span>';
+  }
+
+  function allocationRow(pair, scenario, role) {
+    var isObserved = role === 'observed';
+    var screen10 = isObserved ? null : pair.intensity['1.0'];
+    var screen12 = isObserved ? null : pair.intensity['1.2'];
+    return '<tr' + (scenario && scenario.scenario_id === state.selectedId ? ' class="is-selected"' : '') + '>' +
+      '<td><button class="link-button" type="button" data-allocation-scenario="' + esc(scenario.scenario_id) + '">' +
+        esc(scenario.label) + '</button><span class="unit mono">' + esc(scenario.scenario_id) + '</span></td>' +
+      '<td>' + allocationRoleBadge(role) + '</td>' +
+      '<td>' + fmt(pair.harvest_m3 / 1e6, 0) + ' Mm³</td>' +
+      '<td>' + feasibilityBadge(scenario) + '</td>' +
+      '<td>' + fmt(scenario.metrics.objective, 2) + '</td>' +
+      '<td>' + fmt(scenario.metrics.emissions_total, 3) + '</td>' +
+      '<td>' + allocationScreenBadge(screen10) + '</td>' +
+      '<td>' + allocationScreenBadge(screen12) + '</td></tr>';
+  }
+
+  function allocationProvinceTable(pair) {
+    var rows = pair.province_rows.map(function (row) {
+      var cls = row.delta_m3 > 1.0 ? 'is-pos' : (row.delta_m3 < -1.0 ? 'is-neg' : '');
+      return '<tr><th scope="row">' + esc(row.province) + '</th>' +
+        '<td>' + fmt(row.observed_2024_m3 / 1e6, 3) + '</td>' +
+        '<td>' + fmt(row.harvest_m3 / 1e6, 3) + '</td>' +
+        '<td class="' + cls + '">' + (row.delta_m3 >= 0 ? '+' : '') + fmt(row.delta_m3 / 1e6, 3) + '</td>' +
+        '<td>' + fmt(row.upper_bound_m3 / 1e6, 3) + '</td>' +
+        '<td>' + (row.binding ? '<span class="badge badge--diag">binding</span>' : '') + '</td></tr>';
+    }).join('');
+    return '<table class="data-table data-table--compact"><caption>Mm³/yr. Delta is LP reallocated − observed 2024 share.</caption>' +
+      '<thead><tr><th scope="col">Province</th><th scope="col">Observed</th><th scope="col">LP</th>' +
+      '<th scope="col">Δ</th><th scope="col">Cap</th><th scope="col">Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function renderAllocationComparison() {
+    var block = $('allocation-block');
+    var table = $('allocation-table');
+    var detail = $('allocation-province');
+    var caveat = $('allocation-caveat');
+    if (!block || !table || !detail || !caveat || !state.core) return;
+    var comparison = state.core.scenarios.allocation_screening;
+    if (!comparison) { block.hidden = true; return; }
+    block.hidden = false;
+    caveat.textContent = comparison.thlb_caveat;
+    var body = '';
+    comparison.pairs.forEach(function (pair) {
+      var observed = state.core.scenarioById.get(pair.observed_scenario_id);
+      var reallocated = state.core.scenarioById.get(pair.reallocated_scenario_id);
+      if (!observed || !reallocated) return;
+      body += allocationRow(pair, observed, 'observed');
+      body += allocationRow(pair, reallocated, 'reallocated');
+    });
+    table.innerHTML = '<thead><tr><th scope="col">Case</th><th scope="col">Allocation</th>' +
+      '<th scope="col">Harvest</th><th scope="col">Feasibility</th><th scope="col">Objective (M$)</th>' +
+      '<th scope="col">Cumulative emissions (Mt CO₂)</th><th scope="col">1.0 m³/ha/yr screen</th>' +
+      '<th scope="col">1.2 m³/ha/yr screen</th></tr></thead><tbody>' + body + '</tbody>';
+    detail.innerHTML = comparison.pairs.map(function (pair) {
+      return '<details class="fold-block"><summary>' + fmt(pair.harvest_m3 / 1e6, 0) +
+        ' Mm³ provincial reallocation detail</summary>' + allocationProvinceTable(pair) + '</details>';
+    }).join('');
+  }
+
+  function bindAllocationControls() {
+    var table = $('allocation-table');
+    if (!table || table.getAttribute('data-bound') === 'true') return;
+    table.setAttribute('data-bound', 'true');
+    table.addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-allocation-scenario]');
+      if (!button) return;
+      selectScenario(button.getAttribute('data-allocation-scenario'));
+    });
+  }
+
   function renderTradeoff() {
     if (!state.core) return;
     var chartEl = $('tradeoff-chart');
@@ -1901,8 +2019,10 @@
     var sensitivityIds = state.core.scenarios.tradeoff.sensitivity_scenario_ids || [];
     $('tradeoff-count').textContent = eligible.length + ' Pareto eligible · canonical 119 Mm³ only · ' +
       sensitivityIds.length + ' harvest sensitivity/compare excluded (100 pass, 150 conditional, 200 fail; harvest exogenous) · ' +
+      (state.core.scenarios.tradeoff.allocation_scenario_ids || []).length + ' allocation-LP comparison rows (not Pareto) · ' +
       (state.core.scenarios.scenarios.length - eligible.length) + ' historical/excluded (' + preFleet +
       ' pre-fleet, ' + superseded + ' emissions-superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length;
+    renderAllocationComparison();
   }
 
   /* ---------------- Explore: parallel coordinates, Pareto, compare ---------------- */
@@ -1920,6 +2040,7 @@
     var feasibility = sc.feasibility_status ? ' · ' + feasibilityLabel(sc.feasibility_status) : '';
     if (sc.flags.canonical) return 'fleet-corrected · canonical/base · Pareto eligible';
     if (sc.family === FLEET_LADDER_FAMILY) return 'fleet-corrected · harvest sensitivity' + feasibility;
+    if (sc.family === ALLOCATION_FAMILY) return 'fleet-corrected · allocation screening · reallocated' + feasibility + ' · not Pareto';
     return 'historical · not comparable' + feasibility;
   }
 
@@ -2208,7 +2329,7 @@
     var status = $('pc-status');
     if (status) {
       var text = visibleCount + ' of ' + rows.length + ' visible · ' + state.eligible.length + ' Pareto eligible + ' +
-        (state.compare.length - state.eligible.length) + ' ladder context + ' + state.live.sessionRuns.length + ' live';
+        (state.compare.length - state.eligible.length) + ' context (ladder/allocation) + ' + state.live.sessionRuns.length + ' live';
       if (brushIds.length) text += ' · ' + brushIds.length + ' axis filter' + (brushIds.length === 1 ? '' : 's');
       if (missingOnBrush) text += ' · ' + missingOnBrush + ' hidden with missing filtered metrics';
       if (formError) text = 'Filter not applied: ' + formError + ' · ' + text;
@@ -2307,7 +2428,7 @@
     if (guard) {
       var guardParts = [];
       if (contextRows.length) {
-        guardParts.push(contextRows.length + ' scenario(s) shown as context but excluded from the front because pareto_eligible=false (harvest ladder/live runs).');
+        guardParts.push(contextRows.length + ' scenario(s) shown as context but excluded from the front because pareto_eligible=false (harvest ladder, allocation-LP, and live runs).');
       }
       if (missing.length) {
         guardParts.push('Excluded for missing selected objectives: ' + missing.map(function (item) {
@@ -2456,7 +2577,7 @@
     };
 
     var labelText = frontRows.length + ' on front · ' + complete.length + ' Pareto-eligible evaluated · ' +
-      contextRows.length + ' context excluded (ladder/live not Pareto eligible) · ' +
+      contextRows.length + ' context excluded (ladder, allocation-LP, and live runs are not Pareto eligible) · ' +
       (missing.length ? missing.length + ' excluded for missing metrics' : 'no missing metrics') +
       ' · dominance on min–max normalized values · mechanically computed, not a policy frontier';
     countEl.textContent = labelText;
@@ -2595,6 +2716,7 @@
     }
     return [
       { label: 'Harvest', value: harvest.level ? harvest.level + ' · ' + fmt(harvest.m3_per_year / 1e6, 2) + ' Mm³/yr' : 'not set' },
+      { label: 'Allocation', value: sc.allocation ? sc.allocation + ' · ' + (sc.allocation_role || 'reallocated') : 'observed 2024' },
       { label: 'Harvest volume', value: dims.harvest_m3_per_year === null || dims.harvest_m3_per_year === undefined ? 'not set' : fmt(dims.harvest_m3_per_year / 1e6, 2) + ' Mm³/yr' },
       { label: 'Carbon price', value: dims.carbon_price_usd_per_t === null || dims.carbon_price_usd_per_t === undefined ? 'not set' : '$' + fmt(dims.carbon_price_usd_per_t, 2) + '/t' },
       { label: 'Bio cost', value: dims.bio_cost_usd_per_gj === null || dims.bio_cost_usd_per_gj === undefined ? 'not set' : '$' + fmt(dims.bio_cost_usd_per_gj, 2) + '/GJ' },
@@ -2948,13 +3070,15 @@
     var note = $('explore-mode-note');
     if (note) {
       var sensitivity = (state.core.scenarios.tradeoff.sensitivity_scenario_ids || []).length;
+      var allocation = (state.core.scenarios.tradeoff.allocation_scenario_ids || []).length;
       var canonical = state.eligible.filter(function (sc) { return sc.flags.canonical; }).length;
       var noteParts = [];
       if (canonical) noteParts.push(canonical + ' canonical 119 Mm³ case (Pareto eligible)');
       if (sensitivity) noteParts.push(sensitivity + ' harvest ladder scenarios (compare only: 150 conditional, 200 fail; harvest exogenous)');
+      if (allocation) noteParts.push(allocation + ' allocation-LP comparison rows (reallocated; not Pareto)');
       if (state.live.sessionRuns.length) noteParts.push(state.live.sessionRuns.length + ' live session run(s)');
       note.hidden = !noteParts.length;
-      note.textContent = noteParts.length ? noteParts.join(' · ') + '. Only pareto_eligible=true rows enter the front; ladder and live rows remain context.' : '';
+      note.textContent = noteParts.length ? noteParts.join(' · ') + '. Only pareto_eligible=true rows enter the front; ladder, allocation-LP, and live rows remain context.' : '';
     }
     ensureParetoAxes();
     renderParallelCoordinates();

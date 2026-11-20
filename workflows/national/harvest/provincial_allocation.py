@@ -72,6 +72,13 @@ BC_REPORTED_CROWN_AAC_M3 = 60_000_000.0
 L1_TOLERANCE_M3 = 1.0
 CAP_TOLERANCE_M3 = 1.0
 
+INTENSITY_CAP_LEVELS = ("1.0", "1.2")
+INTENSITY_PROXY_CAVEAT = (
+    "The managed-landbase proxy is a 2016 tenure union, not a THLB. It has no "
+    "operability, accessibility, growth, yield, or economic content; intensity "
+    "caps are sensitivity screens only."
+)
+
 
 class AllocationError(RuntimeError):
     """Raised when the allocation model cannot produce a documented answer."""
@@ -534,6 +541,21 @@ def build_summary(
             }
             for level, by_intensity in intensity_results.items()
         },
+        "thlb_intensity_screen": {
+            "intensity_values_m3_per_ha_yr": [float(value) for value in INTENSITY_CAP_LEVELS],
+            "proxy": INTENSITY_PROXY_CAVEAT,
+            "output_dirs": [
+                f"data/derived/national/harvest_basis/provincial_allocation/intensity_{intensity}"
+                for intensity in INTENSITY_CAP_LEVELS
+            ],
+            "deficits_m3": {
+                level: {
+                    intensity: by_intensity[intensity].deficit_m3
+                    for intensity in INTENSITY_CAP_LEVELS
+                }
+                for level, by_intensity in intensity_results.items()
+            },
+        },
         "sensitivity_bc_crown_60m": _case_payload(bc_sensitivity),
         "caveats": [
             "Upper bounds are a mixed set of statutory AAC, approximate AAC, a repo TSA path, a documented range midpoint, planning volumes, and actual-mean proxies. Their sum is not a national AAC.",
@@ -585,6 +607,47 @@ def write_case_csv(path: Path, result: CaseResult) -> None:
                     "caveat": row.caveat,
                 }
             )
+
+
+def write_intensity_outputs(
+    intensity_results: dict[str, dict[str, CaseResult]],
+) -> tuple[Path, ...]:
+    """Write one CSV per feasible case and a summary per intensity screen."""
+    output_paths: list[Path] = []
+    for intensity in INTENSITY_CAP_LEVELS:
+        by_case = {
+            label: intensity_results[label][intensity]
+            for label in ("100m", "119m", "150m")
+        }
+        intensity_dir = OUTPUT_DIR / f"intensity_{intensity}"
+        intensity_dir.mkdir(parents=True, exist_ok=True)
+
+        for label, result in by_case.items():
+            if not result.is_optimal:
+                continue
+            path = intensity_dir / f"{label}.csv"
+            write_case_csv(path, result)
+            output_paths.append(path)
+
+        capacity_m3 = next(iter(by_case.values())).capacity_m3
+        summary_payload = {
+            "product": "provincial harvest-allocation LP - managed-landbase intensity screen",
+            "status": "screening sensitivity only; the managed proxy is not a THLB",
+            "intensity_m3_per_ha_yr": float(intensity),
+            "capacity_m3": capacity_m3,
+            "national_observed_2024_m3": NATIONAL_OBSERVED_2024_M3,
+            "cases": {label: _case_payload(result) for label, result in by_case.items()},
+            "caveats": [
+                INTENSITY_PROXY_CAVEAT,
+                "Effective caps are min(documented AAC/NFD/proxy, intensity * managed_proxy_ha).",
+                "PE and NU have no managed proxy; their documented caps are unchanged.",
+                "This is a landbase feasibility screen, not an energy-model run, legal AAC, or sustainable-supply estimate.",
+            ],
+        }
+        summary_path = intensity_dir / "provincial_allocation_summary.json"
+        summary_path.write_text(json.dumps(summary_payload, indent=2) + "\n", encoding="utf-8")
+        output_paths.append(summary_path)
+    return tuple(output_paths)
 
 
 def _markdown_table(case: CaseResult) -> str:
@@ -767,7 +830,7 @@ def write_report(
             "",
             "## Managed-landbase intensity sensitivity",
             "",
-            "The tenure-union proxy is not a THLB. The intensity cap is applied as `upper_bound_p = min(upper_bound_p, I * managed_proxy_ha)` and excludes PE/NU, which have no proxy.",
+            "The tenure-union proxy is not a THLB. The intensity cap is applied as `upper_bound_p = min(upper_bound_p, I * managed_proxy_ha)` and excludes PE/NU, which have no proxy. This is a landbase feasibility screen, not an energy solve and not a legal constraint.",
             "",
             "| Case | Intensity (m3/ha/yr) | Status | Capacity (Mm3) | Binding provinces | L1 (Mm3) | Deficit (Mm3) |",
             "|---|---:|---|---:|---|---:|---:|",
@@ -787,7 +850,9 @@ def write_report(
     lines.extend(
         [
             "",
-            f"At 150M the effective caps under a 1.0 m3/ha/yr screen sum to {intensity_150_1_0.capacity_m3 / 1e6:.3f} Mm3/yr, so that screen is infeasible by {intensity_150_1_0.deficit_m3 / 1e6:.3f} Mm3. The 1.2 m3/ha/yr effective caps sum to {intensity_150_1_2.capacity_m3 / 1e6:.3f} Mm3/yr and the case remains feasible. This confirms that the proxy cannot certify a 150M provincial pattern under a 1.0 m3/ha/yr screen; it does not establish a legal constraint.",
+            f"At 150M the effective caps under a 1.0 m3/ha/yr screen sum to {intensity_150_1_0.capacity_m3 / 1e6:.3f} Mm3/yr, so that screen is infeasible by **{intensity_150_1_0.deficit_m3 / 1e6:.3f} Mm3**. The 1.2 m3/ha/yr effective caps sum to {intensity_150_1_2.capacity_m3 / 1e6:.3f} Mm3/yr and the case remains feasible with {intensity_150_1_2.max_relative_increase:.3%} maximum proportional increase over 2024 shares. The 100M and 119M cases are feasible at both intensities; their binding sets are 100M `NB, NS, NL` and 119M `AB, QC, NB, NS, NL, NT` at 1.0.",
+            "",
+            f"This confirms that the proxy cannot certify a 150M provincial pattern under a 1.0 m3/ha/yr screen; it does not establish a legal constraint. Per-intensity outputs are under `intensity_1.0/` and `intensity_1.2/` (CSVs for feasible cases plus `provincial_allocation_summary.json`). The 150M 1.0 case is infeasible and has no CSV.",
             "",
             "## Caveats",
             "",
@@ -810,8 +875,9 @@ def write_report(
             "## Outputs",
             "",
             "- `100m.csv`, `119m.csv`, `150m.csv`: provincial allocations.",
-            "- `provincial_allocation_summary.json`: totals, objectives, binding provinces, sensitivities, 200M deficit.",
+            "- `provincial_allocation_summary.json`: totals, objectives, binding provinces, sensitivities, 200M deficit, THLB intensity deficits.",
             "- `manifest.json`: input/output hashes, solver, statuses, caveats.",
+            "- `intensity_1.0/`, `intensity_1.2/`: feasible-case CSVs and per-intensity summary JSON for the managed-proxy screen.",
             "",
         ]
     )
@@ -877,7 +943,7 @@ def run() -> dict[str, object]:
                 total,
                 label=f"{label}_intensity_{intensity}",
             )
-            for intensity in ("1.0", "1.2")
+            for intensity in INTENSITY_CAP_LEVELS
         }
 
     bc_sensitivity = solve_allocation(
@@ -901,6 +967,8 @@ def run() -> dict[str, object]:
     report_path = OUTPUT_DIR / "PROVINCIAL_ALLOCATION_REPORT.md"
     write_report(report_path, basis, summary, cases, intensity_results, bc_sensitivity)
     output_paths.append(report_path)
+
+    output_paths.extend(write_intensity_outputs(intensity_results))
 
     manifest_path = OUTPUT_DIR / "manifest.json"
     write_manifest(

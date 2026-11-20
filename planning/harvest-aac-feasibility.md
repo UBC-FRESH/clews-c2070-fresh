@@ -293,3 +293,29 @@ None of this makes a harvest case policy-grade; `planning/policy-test-v1.md` is 
 For the UI/runner now: cap the exposed ladder at 150M, reject 200M, keep 119M as the observed reference, and stop treating the harvest ladder as an energy Pareto frontier. For the forest-sector later: build a provincial allocation, a real harvest/residue cost curve, and a forest-sector LP before making any claim about harvest levels above 150M or about the 150M provincial mix.
 
 **Decision requested:** approve the 150M runner cap and the Pareto exclusion as the immediate fix; leave the 150–157.3M band, the harvest cost curve, and the forest-sector LP to later milestones.
+
+## 10. THLB/operability intensity screen (2026-11-20)
+
+The provincial allocation LP now applies a managed-landbase intensity cap
+`h_p <= min(documented AAC/NFD/proxy, I * managed_proxy_ha)` as a sensitivity,
+with `I = 1.0` and `1.2 m3/ha/yr`. The proxy is the 2016 tenure-union
+`managed_proxy_ha`, **not a THLB**; it has no operability, accessibility, growth,
+yield, or economic content. PE and NU have no proxy and keep their documented
+caps.
+
+Results (landbase screen only; no energy solve):
+
+| National total | 1.0 m3/ha/yr | 1.2 m3/ha/yr |
+|---|---|---|
+| 100 Mm3 | feasible; 143.887 Mm3 capacity; 0 deficit | feasible; 157.090 Mm3 capacity; 0 deficit |
+| 119 Mm3 | feasible; 0 deficit | feasible; 0 deficit |
+| 150 Mm3 | **infeasible; 6.113 Mm3 deficit** | feasible; 157.090 Mm3 capacity; 0 deficit |
+
+Artifacts are under
+`data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/` and
+`intensity_1.2/` (CSVs for feasible cases and a per-intensity summary JSON). The
+150 Mm3 / 1.0 case has no allocation CSV because it is infeasible. The UI exports
+the observed-vs-reallocated comparison as `allocation_screening` context only;
+the energy Pareto remains the single canonical observed 119 Mm3 fleet case.
+This screen still does not establish a legal provincial cap, a THLB, a harvest
+cost curve, or a policy frontier.

@@ -63,9 +63,9 @@ def test_normalize_metrics_requires_objective() -> None:
 
 def test_scenario_contract_and_metrics(scenarios: dict) -> None:
     assert scenarios["schema_version"] == exporter.SCHEMA_VERSION
-    assert len(scenarios["scenarios"]) == 51
-    assert len({item["scenario_id"] for item in scenarios["scenarios"]}) == 51
-    assert len(scenarios["families"]) == 17
+    assert len(scenarios["scenarios"]) == 53
+    assert len({item["scenario_id"] for item in scenarios["scenarios"]}) == 53
+    assert len(scenarios["families"]) == 18
     for scenario in scenarios["scenarios"]:
         for field in ("objective", "emissions_total", "emissions_2050"):
             assert scenario["metrics"][field] is not None, scenario["scenario_id"]
@@ -114,6 +114,7 @@ def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
         "feasibility_status": "pass",
         "pareto_eligible": True,
         "tradeoff_eligible": True,
+        "allocation_screening": False,
         "diagnostic": False,
         "post_fix_emissions": True,
     }
@@ -139,6 +140,13 @@ def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
     }
     for scenario in scenarios["scenarios"]:
         if scenario["scenario_id"] == fleet_id or scenario["scenario_id"] in ladder_ids:
+            continue
+        if scenario["family"] == "allocation_screening":
+            assert scenario["flags"]["fleet_corrected"] is True
+            assert scenario["flags"]["publishable"] is True
+            assert scenario["flags"]["canonical"] is False
+            assert scenario["flags"]["tradeoff_eligible"] is False
+            assert scenario["flags"]["pareto_eligible"] is False
             continue
         assert scenario["flags"]["superseded_for_fleet"] is True, scenario["scenario_id"]
         assert scenario["flags"]["fleet_corrected"] is False, scenario["scenario_id"]
@@ -200,6 +208,82 @@ def test_fleet_harvest_ladder_contract(scenarios: dict) -> None:
     assert ladder_family["tradeoff_eligible"] is False
     assert by_id["fleet_capacity__screening_119m_fleet"]["flags"]["canonical"] is True
     assert by_id["fleet_capacity__screening_119m_fleet"]["flags"]["pareto_eligible"] is True
+
+
+def test_allocation_screening_family_contract(scenarios: dict) -> None:
+    by_id = {item["scenario_id"]: item for item in scenarios["scenarios"]}
+    expected = {
+        "allocation_screening__lp_119m": (118_977_339.0, 1_447_033.42, 424.599186, "pass"),
+        "allocation_screening__lp_150m": (150_000_000.0, 1_444_917.38, 422.927369, "conditional"),
+    }
+    for scenario_id, (harvest_m3, objective, emissions, status) in expected.items():
+        scenario = by_id[scenario_id]
+        assert scenario["family"] == "allocation_screening"
+        assert scenario["allocation"] == ("lp_119m" if harvest_m3 < 130_000_000 else "lp_150m")
+        assert scenario["allocation_role"] == "reallocated"
+        assert scenario["dimensions"]["harvest_m3_per_year"] == pytest.approx(harvest_m3)
+        assert scenario["metrics"]["objective"] == pytest.approx(objective)
+        assert scenario["metrics"]["emissions_total"] == pytest.approx(emissions)
+        assert scenario["feasibility_status"] == status
+        assert scenario["pareto_eligible"] is False
+        assert scenario["harvest_exogenous"] is True
+        assert scenario["flags"]["fleet_corrected"] is True
+        assert scenario["flags"]["screening_only"] is True
+        assert scenario["flags"]["policy_grade"] is False
+        assert scenario["flags"]["allocation_screening"] is True
+        assert scenario["flags"]["tradeoff_eligible"] is False
+        assert scenario["flags"]["pareto_eligible"] is False
+
+    lp_119 = by_id["allocation_screening__lp_119m"]
+    assert lp_119["thlb_intensity"]["1.0"]["status"] == "pass"
+    assert lp_119["thlb_intensity"]["1.2"]["status"] == "pass"
+
+    lp_150 = by_id["allocation_screening__lp_150m"]
+    assert lp_150["thlb_intensity"]["1.0"]["status"] == "fail"
+    assert lp_150["thlb_intensity"]["1.0"]["deficit_m3"] == pytest.approx(
+        6_113_051.149, abs=100.0
+    )
+    assert lp_150["thlb_intensity"]["1.2"]["status"] == "pass"
+
+    family = next(
+        item for item in scenarios["families"] if item["family"] == "allocation_screening"
+    )
+    assert family["scenario_count"] == 2
+    assert family["fleet_corrected"] is True
+    assert family["screening_only"] is True
+    assert family["policy_grade"] is False
+    assert family["harvest_exogenous"] is True
+    assert family["pareto_eligible"] is False
+    assert family["allocation_screening"] is True
+
+
+def test_allocation_comparison_pairs(scenarios: dict) -> None:
+    comparison = scenarios["allocation_screening"]
+    assert len(comparison["pairs"]) == 2
+    assert comparison["thlb_caveat"] == exporter.ALLOCATION_THLB_CAVEAT
+    pairs = {pair["harvest_m3"]: pair for pair in comparison["pairs"]}
+    assert set(pairs) == {118_977_339.0, 150_000_000.0}
+    assert pairs[118_977_339.0]["observed_scenario_id"] == (
+        "fleet_capacity__screening_119m_fleet"
+    )
+    assert pairs[150_000_000.0]["observed_scenario_id"] == (
+        "fleet_screening_ladder__screening_150m"
+    )
+    for pair in comparison["pairs"]:
+        assert pair["observed_status"] in {"pass", "conditional"}
+        assert pair["reallocated_status"] in {"pass", "conditional"}
+        assert len(pair["province_rows"]) == 12
+        assert sum(row["harvest_m3"] for row in pair["province_rows"]) == pytest.approx(
+            pair["harvest_m3"], abs=2.0
+        )
+    assert (
+        pairs[150_000_000.0]["intensity"]["1.0"]["deficit_m3"]
+        == pytest.approx(6_113_051.149, abs=100.0)
+    )
+    assert scenarios["tradeoff"]["allocation_scenario_ids"] == [
+        "allocation_screening__lp_119m",
+        "allocation_screening__lp_150m",
+    ]
 
 
 def test_fleet_output_excludes_other_rows(scenarios: dict) -> None:
@@ -342,7 +426,7 @@ def test_spatial_join_and_zone_gaps() -> None:
 def test_manifest_sha256() -> None:
     manifest = json.loads((BUNDLE / "manifest.json").read_text())
     assert manifest["validation"]["ok"] is True
-    assert manifest["scenario_count"] == 51
+    assert manifest["scenario_count"] == 53
     assert manifest["total_bytes"] == sum(item["bytes"] for item in manifest["files"])
     for item in manifest["files"]:
         path = BUNDLE / item["path"]
@@ -362,7 +446,7 @@ def test_inputs_contract() -> None:
     landbase = json.loads((BUNDLE / "inputs/managed_landbase.json").read_text())
     assert landbase["rows"]["by_province"] == 42
     links = json.loads((BUNDLE / "inputs/osecan_links.json").read_text())
-    assert len(links["families"]) == 17
+    assert len(links["families"]) == 18
     fleet_link = next(item for item in links["families"] if item["family"] == "fleet_capacity")
     assert fleet_link["fleet_corrected"] is True
     assert fleet_link["superseded_for_fleet"] is False
@@ -375,4 +459,16 @@ def test_inputs_contract() -> None:
     assert ladder_link["harvest_exogenous"] is True
     assert ladder_link["pareto_eligible"] is False
     assert ladder_link["tradeoff_eligible"] is False
+    allocation_link = next(
+        item for item in links["families"] if item["family"] == "allocation_screening"
+    )
+    assert allocation_link["scenario_count"] == 2
+    assert len(allocation_link["scenario_dirs"]) == 2
+    assert len(allocation_link["files"]) == 6
+    assert allocation_link["fleet_corrected"] is True
+    assert allocation_link["screening_only"] is True
+    assert allocation_link["policy_grade"] is False
+    assert allocation_link["harvest_exogenous"] is True
+    assert allocation_link["pareto_eligible"] is False
+    assert allocation_link["tradeoff_eligible"] is False
     assert links["validation"]["national_cap_reconciliation"]["all_tier_sum_equals_rest"] is True

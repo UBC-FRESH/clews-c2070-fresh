@@ -41,29 +41,32 @@ Plex Mono. No runtime CDN request is required.
   and a dashed total line. A shared 2021–2070 year control (slider, play/pause,
   reset) draws a vertical guide on the chart and drives a dispatch snapshot
   table by technology family for the selected year.
-- **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for the four
-  eligible fleet-corrected scenarios: the 119 Mm³ canonical/base run plus the
-  100/150/200 Mm³ harvest sensitivity ladder; colour by family. Pre-fleet,
-  superseded, and diagnostic rows are explicitly excluded but remain visible in
-  the rail for audit as **pre-fleet model — not comparable**. A prominent caveat
-  states that harvest is exogenous and free, so the ladder is a sensitivity
-  exercise, not a policy frontier.
-- **Explore** — multi-criteria workspace over the four eligible fleet-corrected
-  scenarios (119 Mm³ canonical/base + 100/150/200 Mm³ sensitivity) plus any live
-  session runs. The same exogenous-harvest caveat is pinned above the workspace.
-  Parallel coordinates cover 11 axes (objective, emissions, national BCW, PWRBCW,
-  bio share, harvest, carbon price, recovery, PWRBIO cap, nuclear cap, wind
-  cap/integration). Vertically brush an axis or use the range form; every filter
-  appears as a removable chip, and active filters persist in the URL hash. A
-  three-objective Pareto view defaults to minimize objective, minimize cumulative
-  emissions, and maximize national BCW 2050; dominance is computed mechanically
-  on min–max normalized metrics, the front can be exported as CSV, and missing
-  metrics are excluded with a visible label. Because harvest is free, the 200 Mm³
-  sensitivity case can dominate the canonical base; the UI says so rather than
-  forcing the base onto the front. Scenario A/B comparison shows absolute and
-  relative deltas with units, lists differing dimensions, and offers an optional
-  annual dispatch overlay for one energy ledger at a time. Live session runs are
-  dashed/marked `screening_only` and are never folded into the canonical ledger.
+- **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for the single
+  Pareto-eligible canonical fleet-corrected 119 Mm³ run. The 100/150/200 Mm³
+  harvest ladder and the observed-vs-LP allocation comparison are visible as
+  context but explicitly excluded from the front; colour by family. A separate
+  allocation-screening table shows observed 119/150 Mm³ against the LP
+  reallocated variants, with observed/reallocated and feasibility badges and the
+  THLB intensity caveat. Pre-fleet, superseded, and diagnostic rows are excluded
+  but remain visible in the rail for audit as **pre-fleet model — not
+  comparable**. A prominent caveat states that harvest is exogenous and free, so
+  neither the ladder nor the allocation-LP variants are a policy frontier.
+- **Explore** — multi-criteria workspace over the canonical 119 Mm³ case, the
+  100/150/200 Mm³ harvest ladder, the 119/150 Mm³ allocation-LP comparison rows,
+  plus any live session runs. The same exogenous-harvest and allocation-THLB
+  caveats are pinned above the workspace. Parallel coordinates cover 11 axes
+  (objective, emissions, national BCW, PWRBCW, bio share, harvest, carbon price,
+  recovery, PWRBIO cap, nuclear cap, wind cap/integration). Vertically brush an
+  axis or use the range form; every filter appears as a removable chip, and
+  active filters persist in the URL hash. A three-objective Pareto view defaults
+  to minimize objective, minimize cumulative emissions, and maximize national
+  BCW 2050; dominance is computed mechanically on min–max normalized metrics and
+  is evaluated only on `pareto_eligible=true` rows. The allocation-LP rows are
+  labelled **reallocated · not Pareto**. Scenario A/B comparison shows absolute
+  and relative deltas with units, lists differing dimensions (including the
+  observed vs reallocated allocation), and offers an optional annual dispatch
+  overlay. Live session runs are dashed/marked `screening_only` and are never
+  folded into the canonical ledger.
 - **Map** — MapLibre with 13 provinces, 36 ecoprovinces, 385 RSYC tiles, and a
   `recoverable_pj_base` choropleth. Linked Canada → province → ecoprovince →
   RSYC tile drill-down with breadcrumbs, a selection panel (area, recoverable
@@ -105,7 +108,7 @@ fleet-corrected 119 Mm³ run and the historical pre-fleet scenarios):
 
 | Path | Content |
 |---|---|
-| `scenarios.json` | 51 scenarios, 17 families, 1 Pareto-eligible ID (canonical 119 Mm³) + 3 harvest sensitivity/compare IDs, units, flags, dimensions, metrics, feasibility fields |
+| `scenarios.json` | 53 scenarios, 18 families, 1 Pareto-eligible ID (canonical 119 Mm³) + 3 harvest sensitivity/compare IDs + 2 allocation-LP comparison IDs, units, flags, dimensions, metrics, feasibility fields |
 | `outputs/{scenario_id}.json` | Columnar `technology`, `category`, `zone`, `year`, `value_pj`; units per category |
 | `inputs/harvest_basis.json` | Harvest template summary and 2021–2070 reference paths |
 | `inputs/supply_curve.json` | Four-tier national supply curve, reconciliation, physical basis |
@@ -138,7 +141,22 @@ historical/diagnostic only).
 
 > **200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is
 > conditional; harvest is exogenous. The default energy Pareto contains only the
-> canonical 119 Mm³ fleet case. The ladder is sensitivity/compare only.**
+> canonical 119 Mm³ fleet case. The ladder and allocation-LP family are
+> sensitivity/comparison only.**
+
+The provincial allocation LP runs are exported as family `allocation_screening`
+with `lp_119m` and `lp_150m` (`allocation=lp_*`, `allocation_role=reallocated`,
+`fleet_corrected=true`, `screening_only=true`, `policy_grade=false`,
+`pareto_eligible=false`, `tradeoff_eligible=false`). The observed 119 Mm³
+canonical and 150 Mm³ ladder cases are paired with the reallocated variants in
+`scenarios.json.allocation_screening`; the UI shows observed vs reallocated
+badges, AAC/NFD feasibility, and the managed-proxy intensity screen. The 119 Mm³
+LP case is feasible at both 1.0 and 1.2 m³/ha/yr; the 150 Mm³ LP case is feasible
+at 1.2 but fails the 1.0 screen by **6.113 Mm³**. The proxy is a 2016
+tenure-union managed area, **not a THLB**, and the allocation is not a legal AAC,
+enforced provincial constraint, or policy frontier. Per-intensity LP artifacts
+are under `data/derived/national/harvest_basis/provincial_allocation/intensity_1.0/`
+and `intensity_1.2/` (feasible-case CSVs plus summary JSON).
 
 ### Units and guards
 
@@ -163,13 +181,17 @@ historical/diagnostic only).
   Pareto-eligible scenario and is `screening_only=true`, `policy_grade=false`.
   The three `fleet_screening_ladder__*` runs are labelled **sensitivity** with
   **exogenous harvest** and carry **AAC/NFD pass/conditional/fail** badges; the
-  canonical run is labelled **canonical/base**. Every earlier scenario carries
+  canonical run is labelled **canonical/base**. The two
+  `allocation_screening__lp_*` runs are labelled **allocation LP** and
+  **observed → reallocated**, carry the same feasibility badges plus the THLB
+  intensity screen, and are never Pareto eligible. Every earlier scenario carries
   `superseded_for_fleet=true` and the visible **pre-fleet model — not comparable**
   badge/banner.
 - The default trade-off/Pareto front contains only the canonical 119 Mm³ case.
-  Explore still plots the ladder as context, but dominance is evaluated only on
-  `pareto_eligible=true` rows. The UI shows the feasibility caveat rather than
-  treating the unpriced-harvest ordering as a policy frontier.
+  Explore plots the ladder and allocation-LP rows as context, but dominance is
+  evaluated only on `pareto_eligible=true` rows. The UI shows the feasibility and
+  THLB-proxy caveats rather than treating the unpriced-harvest ordering as a
+  policy frontier.
 - Superseded and diagnostic flags are visible in the rail, masthead, and file
   ledger.
 - Spatial counts and the 11-zone gap count are guarded. No C2070 zone polygon is
