@@ -49,7 +49,7 @@ def _failure_summary(
     scenario_id: str | None = None,
     status: str = "failed",
 ) -> int:
-    summary = {
+    summary: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "status": status,
         "scenario_id": scenario_id,

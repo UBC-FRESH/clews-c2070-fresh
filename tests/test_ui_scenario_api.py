@@ -458,7 +458,7 @@ def test_path_traversal_is_rejected(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Milestone-1a runner stub
+# Milestone-1b runner dry-run integration
 # ---------------------------------------------------------------------------
 
 

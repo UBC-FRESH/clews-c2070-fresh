@@ -835,7 +835,7 @@ def create_app(
 
     ``runner_command`` exists for tests: a fake runner can be substituted while
     keeping the real subprocess, job-file, and SSE paths.  The default command
-    is the milestone-1a stub module.
+    is the milestone-1b ``run_scenario`` module.
     """
 
     resolved_runtime = _resolve_runtime_dir(runtime_dir)
