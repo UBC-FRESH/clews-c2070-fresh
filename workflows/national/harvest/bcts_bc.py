@@ -714,6 +714,13 @@ def _equation_values(
     for variable in variables:
         pattern = re.escape(variable) + r"\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)"
         match = re.search(pattern, normalised)
+        if match is None and variable == "North American and Japanese Housing Starts":
+            # The PDF puts the coefficient between "Housing" and "Starts".
+            pattern = (
+                r"North American and Japanese Housing\s+"
+                r"(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+Starts"
+            )
+            match = re.search(pattern, normalised)
         if match is None:
             continue
         values.append((variable, float(match.group(1)), float(match.group(2))))
@@ -722,6 +729,16 @@ def _equation_values(
             f"parsed only {len(values)} of {len(variables)} MPS coefficients"
         )
     return values
+
+
+def _section(text: str, start: str, end: str) -> str:
+    start_index = text.find(start)
+    if start_index < 0:
+        raise BctsDataError(f"MPS text has no section marker {start!r}")
+    end_index = text.find(end, start_index + len(start))
+    if end_index < 0:
+        raise BctsDataError(f"MPS text has no end marker {end!r} after {start!r}")
+    return text[start_index:end_index]
 
 
 def _dollar_values(
@@ -766,12 +783,32 @@ def parse_mps_updates(
         raise BctsDataError("could not find the MPS auction dataset counts")
 
     equations: list[dict[str, Any]] = []
-    for name, variables in (
-        ("interior_final_ewb_2025", _INTERIOR_EQUATION_VARIABLES),
-        ("coast_loss_factor_cruise_2025", _COAST_LOSS_FACTOR_VARIABLES),
-        ("coast_call_grade_net_factor_cruise_2025", _COAST_CALL_GRADE_VARIABLES),
+    interior_equation_text = _section(
+        interior_text, "3.        EQUATIONS", "4.       SPECIFIED OPERATIONS"
+    )
+    coast_loss_text = _section(
+        coast_text,
+        "3.1 2025 Winning Bid – Loss Factor Cruise",
+        "3.2 2025 Winning Bid – Call Grade Net Factor Cruise",
+    )
+    coast_call_text = _section(
+        coast_text,
+        "3.2 2025 Winning Bid – Call Grade Net Factor Cruise",
+        "4. Specified Operations",
+    )
+    for name, text, variables in (
+        ("interior_final_ewb_2025", interior_equation_text, _INTERIOR_EQUATION_VARIABLES),
+        (
+            "coast_loss_factor_cruise_2025",
+            coast_loss_text,
+            _COAST_LOSS_FACTOR_VARIABLES,
+        ),
+        (
+            "coast_call_grade_net_factor_cruise_2025",
+            coast_call_text,
+            _COAST_CALL_GRADE_VARIABLES,
+        ),
     ):
-        text = interior_text if name.startswith("interior") else coast_text
         for variable, coefficient, t_statistic in _equation_values(text, variables):
             equations.append(
                 {
@@ -807,14 +844,18 @@ def parse_mps_updates(
     )
     values.extend(
         _dollar_values(
-            interior_text,
+            _section(
+                interior_text,
+                "4.       SPECIFIED OPERATIONS",
+                "6.       SUMMARY",
+            ),
             document="interior_mps_update_2025b",
             section="4-5. Specified operations and tenure obligations",
         )
     )
     values.extend(
         _dollar_values(
-            coast_text,
+            _section(coast_text, "4. Specified Operations", "6. SUMMARY"),
             document="coast_mps_update_2025_01",
             section="4-5. Specified operations and tenure obligations",
         )

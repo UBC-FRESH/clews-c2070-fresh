@@ -171,7 +171,8 @@ def main() -> int:
         ],
         "gaps": [
             "The MPS update papers explain the estimated-winning-bid equations; they do not publish sale-level winning bids or a reusable bid deck.",
-            "Some wrapped equation labels were not captured by the line parser; captured coefficients are a subset, not a replacement for the PDF table.",
+            "All published equation coefficients and t-statistics were captured for the three 2025 equations (Interior 26, Coast loss factor 18, Coast call grade 16).",
+            "Unlabeled continuation rows in the specified-operations tables ($3.17/m3, $8.67/m3, $15.30/tree, $0.167/m3 per km) were not attributed because the label sits on a separate line; the PDF remains the authority.",
             "MPS coefficients are model inputs, not observed stumpage rates, delivered log prices, or harvest costs.",
             "The Interior and Coast papers are different vintages (2025-07-01 and 2025-01-01); do not mix them in one year series.",
         ],

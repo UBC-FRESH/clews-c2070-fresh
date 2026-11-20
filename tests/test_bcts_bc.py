@@ -214,6 +214,18 @@ def test_mps_update_extracts_known_counts_and_operations() -> None:
         for item in equations
     )
     assert any(
+        item["equation"] == "coast_loss_factor_cruise_2025"
+        and item["variable"] == "Constant"
+        and item["coefficient"] == pytest.approx(-16.0137)
+        for item in equations
+    )
+    assert any(
+        item["equation"] == "coast_call_grade_net_factor_cruise_2025"
+        and item["variable"] == "Constant"
+        and item["coefficient"] == pytest.approx(-4.1842)
+        for item in equations
+    )
+    assert any(
         item.item == "sales in 2010-2024 auction dataset"
         and item.value_numeric == 3342
         for item in values
