@@ -2,6 +2,24 @@
 
 ## 2026-11-20
 
+- **Staged the BC Timber Sales sale schedule and built a Crown stumpage ledger
+  sample.** Added `workflows/national/harvest/bcts_bc.py`,
+  `scripts/national/build_bcts_bc.py`, and `tests/test_bcts_bc.py`. The BCGW
+  layer `WHSE_FOREST_TENURE.BCTS_SALES_SCHEDULE_SV` returned **162 sale blocks**
+  (99 licences; **1,940,031.229 m3**; status P=140, D=22; FY2026=68,
+  FY2027=94), staged without geometry at
+  `data/derived/national/harvest_basis/bcts_bc/`. Parsed the **2026-11-01**
+  Interior non-appraised tabular PDF into **350 rates** (5 tables x 7 zones x
+  10 columns) and extracted the 2025 Interior/Coast MPS counts, coefficients,
+  and representative specified-operation/tenure-obligation values. The
+  `ledger_sample.csv` has **63 Crown `stumpage_base` rows** from Table 6-1 only
+  (7 zones x 9 species), with `volume_m3=1.0` as an explicit unit-m3 rate
+  weight, not a harvest volume. The layer has **no upset/winning bid/bonus
+  field**, and no delivered log price or harvest/road/haul/silviculture actual
+  was found; those remain gaps and no zero or proxy value was inserted. Source
+  inventory registers `bcts_sales_schedule`, `bc_nonappraised_tabular`, and
+  `bc_mps_update` under OGL-BC. No public OSeCAN changes.
+
 - **Integrated the operable-proxy landbase into the provincial allocation LP
   and forestry UI.** The intensity screen now uses
   `upper_p = min(documented AAC/NFD/planning proxy, I * operable_proxy_ha)` with
