@@ -99,6 +99,8 @@ def test_setup_ingests_2021_capacity(built_model: Path) -> None:
     )
     assert capacity["scenario"] == "Current Measures"
     assert capacity["base_year"] == 2021
+    assert capacity["summary"]["scenario"] == "Current Measures"
+    assert capacity["summary"]["observed_gw"] == "145.02"
     assert checks["residual_years"] == [2021, 2070]
     assert checks["residual_pwr_rows_2021_nonzero"] == 70
     assert checks["residual_2021_gw"] == pytest.approx(145.02, abs=0.01)

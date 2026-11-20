@@ -435,11 +435,11 @@ def _provision_capacity(
     summary_match = re.search(r"^\[clean-capacity\] (.+)$", output, re.MULTILINE)
     if summary_match is None:
         raise SetupError("capacity cleaner did not print its summary line")
-    summary: dict[str, str] = {}
-    for token in summary_match.group(1).split():
-        key, separator, value = token.partition("=")
-        if separator:
-            summary[key] = value
+    summary_text = summary_match.group(1)
+    summary = dict(re.findall(r"(\w+)=(\S+)", summary_text))
+    scenario_match = re.search(r"scenario=(.+?)\s+base_year=", summary_text)
+    if scenario_match is not None:
+        summary["scenario"] = scenario_match.group(1)
     if "observed_gw" not in summary:
         raise SetupError("capacity cleaner summary is missing observed_gw")
 
@@ -453,6 +453,7 @@ def _provision_capacity(
         "scenario": CAPACITY_SCENARIO,
         "base_year": CAPACITY_BASE_YEAR,
         "command": " ".join(command),
+        "command_argv": command,
         "summary": summary,
         "dropped_report": report,
         "log_sha256": _sha256_file(log_path),
@@ -496,7 +497,7 @@ def _build(
         external_data=external_data,
         base=base,
     )
-    commands.append(capacity["command"].split())
+    commands.append(capacity["command_argv"])
 
     harmonize = [
         str(python),
