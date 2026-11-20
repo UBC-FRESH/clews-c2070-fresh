@@ -1,0 +1,74 @@
+{
+  "url": "http://127.0.0.1:8108/",
+  "page_errors": [],
+  "console_errors": [],
+  "http_errors": [],
+  "tabs": {
+    "overview": {
+      "visible": true,
+      "text_len": 2356
+    },
+    "dispatch": {
+      "visible": true,
+      "text_len": 1051,
+      "canvas": 1
+    },
+    "tradeoff": {
+      "visible": true,
+      "text_len": 3576,
+      "canvas": 1
+    },
+    "explore": {
+      "visible": true,
+      "text_len": 13022,
+      "pc_paths": 0
+    },
+    "map": {
+      "visible": true,
+      "text_len": 1226
+    },
+    "zones": {
+      "visible": true,
+      "text_len": 6768,
+      "rows": 14,
+      "heat_rows": 14
+    },
+    "osecan": {
+      "visible": true,
+      "text_len": 7333,
+      "export_limits_enabled": true,
+      "export_costs_enabled": true,
+      "download_name": "SUPBCW_activity_limits_h119m_r060.csv",
+      "download_bytes": 5529,
+      "download_lines": 201
+    },
+    "run": {
+      "visible": true,
+      "text_len": 1950,
+      "run_create_disabled": true,
+      "constraint_options": [
+        {
+          "value": "screening_v0",
+          "disabled": false,
+          "text": "screening_v0 \u2014 screening only"
+        },
+        {
+          "value": "policy_test_v1",
+          "disabled": true,
+          "text": "policy_test_v1 \u2014 unavailable in static mode"
+        }
+      ],
+      "constraint_disabled": true,
+      "queue_disabled": true
+    },
+    "inputs": {
+      "visible": true,
+      "text_len": 3163
+    }
+  },
+  "exports": {},
+  "api_network": [],
+  "static_probe": "rejected:static publication: live API disabled",
+  "server_404": [],
+  "request_count": 28
+}

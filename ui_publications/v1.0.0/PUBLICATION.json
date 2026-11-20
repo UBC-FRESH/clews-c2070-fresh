@@ -1,0 +1,232 @@
+{
+  "schema_version": "clews.ui_publication.v1",
+  "release": {
+    "label": "clews-c2070-fresh-v1",
+    "tag": "v1.0.0",
+    "tag_type": "annotated",
+    "commit": "b69e2588a089b8532bbc74afe77baaf069e83401",
+    "date": "2026-11-20",
+    "source_branch": "feature/osecan-zonal-bc-supply",
+    "data_commit": "e177f357a0a7678f1f53438bf92173196db0f4df",
+    "data_tag": "v1.0.0",
+    "model_source_commit": "40d5b43bb3f8b3f69c16e953144d35eeed5f0f44",
+    "acceptance_record": "docs/release-acceptance.md",
+    "model_card": "docs/model-card.md"
+  },
+  "publication": {
+    "path": "ui_publications/v1.0.0",
+    "type": "static_demo",
+    "static_only": true,
+    "backend": "none",
+    "live_solver": false,
+    "official_c2070": false,
+    "energy_policy_advice": false,
+    "entrypoint": "index.html",
+    "publication_guard": "publication-mode.js",
+    "generated_utc": "2026-11-20T17:27:59Z"
+  },
+  "counts": {
+    "scenarios": 53,
+    "families": 18,
+    "pareto_eligible": 1,
+    "dispatch_outputs": 53,
+    "data_manifest_files": 63,
+    "data_directory_files": 64,
+    "payload_manifest_files": 86
+  },
+  "canonical_119m": {
+    "scenario_id": "fleet_capacity__screening_119m_fleet",
+    "source_run": "screening_119m",
+    "constraint_set": "screening_v0",
+    "solver_status": "optimal",
+    "objective_musd": 1445655.44,
+    "emissions_total_mt": 424.710127,
+    "emissions_2050_mt": 0.0,
+    "national_bcw_2050_pj": 152.922679,
+    "pwrbcw_2050_pj": 41.108217,
+    "bio_share_2050": 0.049992,
+    "harvest_m3_per_year": 118977339.0,
+    "flags": {
+      "screening_only": true,
+      "policy_grade": false,
+      "canonical": true,
+      "fleet_corrected": true,
+      "pareto_eligible": true,
+      "harvest_exogenous": true
+    }
+  },
+  "policy_test_v1": {
+    "scenario_id": "policy_119m",
+    "constraint_set": "policy_test_v1",
+    "status": "draft",
+    "policy_grade": false,
+    "solver_status": "optimal",
+    "objective_musd": 1458305.16,
+    "emissions_total_mt": 1024.824,
+    "emissions_2050_mt": 0.490203,
+    "release_artifact": false,
+    "available_in_static_mode": false,
+    "note": "Draft interface test only. Different constraint family from the canonical row; the difference is not a policy effect."
+  },
+  "data_bundle": {
+    "manifest_path": "public/data/manifest.json",
+    "manifest_sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102",
+    "manifest_bytes": 31855,
+    "files": 63,
+    "bytes": 8732120,
+    "bundle_sha256": "064c1e82af2f3e4eb02fa824a99f8002b80e7941223b325894c91238805b4738",
+    "algorithm": "sha256 of sorted \"<sha256>  <path>\" lines over data-manifest files",
+    "hash_mismatches": 0,
+    "missing_files": 0
+  },
+  "manifest": {
+    "path": "manifest.json",
+    "bytes": 18723,
+    "sha256": "ede1abdbb7243aef06b4ddd2f3bea68cccdb1ee92d54d20b90fb219366fe44e1",
+    "files": 86,
+    "total_bytes": 11371493,
+    "excluded": [
+      "PUBLICATION.json",
+      "manifest.json"
+    ]
+  },
+  "static_mode": {
+    "badge": "Static mode \u00b7 no backend",
+    "role_badge": "Role \u00b7 static \u00b7 no role",
+    "body_data_role": "static",
+    "api_requests_blocked": true,
+    "api_network_requests_observed": 0,
+    "policy_test_v1_option": "disabled",
+    "exports_available": true,
+    "create_disabled": true,
+    "queue_disabled": true
+  },
+  "validation": {
+    "http": {
+      "server": "python3 -m http.server --bind 127.0.0.1",
+      "requested_urls": 87,
+      "http_200": 87,
+      "failures": [],
+      "http_404": 0,
+      "data_files_verified": 63,
+      "data_files_expected": 63,
+      "manifest_hash_mismatches": 0,
+      "bytes_served": 11379731,
+      "result": "pass",
+      "payload_urls": 86,
+      "payload_files_verified": 86
+    },
+    "chromium": {
+      "engine": "Chromium (Playwright 1.65.2, headless)",
+      "viewport": "1600x1200",
+      "page_errors": 0,
+      "console_errors": 0,
+      "http_errors": 0,
+      "api_network_requests": 0,
+      "static_probe": "rejected:static publication: live API disabled",
+      "scenario_count": 53,
+      "tabs_rendered": [
+        "overview",
+        "dispatch",
+        "tradeoff",
+        "explore",
+        "map",
+        "zones",
+        "osecan",
+        "run",
+        "inputs"
+      ],
+      "zones_rows": 14,
+      "zones_heatmap_rows": 14,
+      "export_limits": {
+        "filename": "SUPBCW_activity_limits_h119m_r060.csv",
+        "bytes": 5529,
+        "lines": 201
+      },
+      "run_create_disabled": true,
+      "run_queue_disabled": true,
+      "policy_option_disabled": true,
+      "result": "pass"
+    },
+    "screenshot": {
+      "path": "ui/qa/publication-v1.png",
+      "bytes": 835304,
+      "sha256": "537bb4a422296f62f0b5aba312d0cdf69d9bde279c6c2ddaa061800462cb2bea"
+    },
+    "qa_results": {
+      "path": "ui/qa/publication_v1_qa_results.json",
+      "bytes": 1620,
+      "sha256": "88f829236cfa06a09a0d8584f1235fb6fecb4b984cbc3b564d9468f1831231fa"
+    }
+  },
+  "artifacts": {
+    "index": {
+      "path": "index.html",
+      "bytes": 42000,
+      "sha256": "c7d3bae435d5fa31643d969ff3bd45541c66732b38b2d322a067e70304ef12c1"
+    },
+    "app": {
+      "path": "app.js",
+      "bytes": 297226,
+      "sha256": "668c963b8ed92ff3d55f99a4ef0162b365b6d4cc3f7852d0e853c6cc719cc635"
+    },
+    "api": {
+      "path": "api.js",
+      "bytes": 6347,
+      "sha256": "9f8483ad22ae8d5694331c3345795ab5765cd5ddf88945f868397ae45c52592e"
+    },
+    "styles": {
+      "path": "styles.css",
+      "bytes": 87018,
+      "sha256": "0434ddf53c5e660f3e48c5afc67b17d518f5ef63c043d9fc12fb8242481dde4f"
+    },
+    "publication_mode": {
+      "path": "publication-mode.js",
+      "bytes": 1134,
+      "sha256": "f85758576cdf6573cbbd740e958f6479e697bf1c35892352b2650c810eb5f4b4"
+    },
+    "publication_md": {
+      "path": "PUBLICATION.md",
+      "bytes": 9512,
+      "sha256": "ab15830d31e9dcd87c536601cce79a055813332849370b053cca20125b26ca06"
+    },
+    "readme": {
+      "path": "README.md",
+      "bytes": 2471,
+      "sha256": "23303e8364b0eb637223935d39e92e4e308726830716b5fa515cf97c5c9a693f"
+    },
+    "data_manifest": {
+      "path": "public/data/manifest.json",
+      "bytes": 31855,
+      "sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102"
+    }
+  },
+  "licences": {
+    "echarts": "Apache-2.0 (5.5.1)",
+    "maplibre": "BSD-3-Clause (4.7.1)",
+    "fonts": "SIL Open Font License 1.1 (Fraunces, IBM Plex Sans/Mono)",
+    "project_code": "No top-level LICENSE file in this checkout; no new licence granted by this publication.",
+    "data": "Derived/aggregated UI bundle; upstream source terms and attribution apply (OGL-Canada, OGL-British Columbia, CC BY 4.0, GPL-3.0-or-later for RSYC code/catalogue where applicable)."
+  },
+  "disclaimers": [
+    "Static demonstration only; no live solver, backend, queue, or session storage.",
+    "Not C2070 official; FRESH-side provisional screening only.",
+    "Not energy-policy advice, investment advice, a legal AAC/THLB determination, or a supply forecast.",
+    "policy_test_v1 is a draft interface test with policy_grade=false; its difference from the canonical row is not a policy effect.",
+    "The FRESH forestry/biomass module owns this UI; Taco Niet and the OSeCAN energy team own energy-policy design and OSeCAN structure."
+  ],
+  "caveats": [
+    "Data snapshot is a v1.0.0 UI data contract, not a remote DataLad/git-annex retrieval.",
+    "Harvest is exogenous and free in the energy objective; the ladder is not a policy frontier.",
+    "The operable merchantable-forest proxy is a screening landbase, not a legal THLB.",
+    "200 Mm3 is inadmissible under the documented AAC/NFD screen; 150 Mm3 is conditional.",
+    "Only B1/B2 have authoritative C2070 zone anchors; 11 zones are explicit gaps with no invented polygons.",
+    "No host deployment, Cloudflare Tunnel, Access policy, authentication, or public URL is included."
+  ],
+  "remaining_open": [
+    "Host deployment and process supervision.",
+    "Cloudflare Tunnel and edge/Access policy.",
+    "Live publication decision and public URL.",
+    "No live solver is published in this static bundle."
+  ]
+}
