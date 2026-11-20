@@ -53,6 +53,7 @@ def _failure_summary(
         "schema_version": SCHEMA_VERSION,
         "status": status,
         "scenario_id": scenario_id,
+        "scenario_label": None,
         "scenario_path": str(scenario_path),
         "generated_utc": _utc_now(),
         "message": message,

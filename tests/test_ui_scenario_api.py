@@ -122,6 +122,7 @@ def make_client(
     allow_runs: bool = True,
     read_only: bool = False,
     heartbeat_seconds: float = 0.02,
+    max_concurrent_runs: int = 2,
 ) -> TestClient:
     app = create_app(
         runtime,
@@ -130,6 +131,7 @@ def make_client(
         runner_command=runner,
         heartbeat_seconds=heartbeat_seconds,
         poll_seconds=0.01,
+        max_concurrent_runs=max_concurrent_runs,
     )
     return TestClient(app)
 
@@ -209,6 +211,21 @@ def test_contract_accepts_valid_payload_and_sorts_schedule() -> None:
         lambda p: p["provenance"].update({"created_utc": "2026-11-20T00:00:00"}),
         lambda p: p["provenance"].update({"model_commit": "   "}),
         lambda p: p.update({"label": "   "}),
+        lambda p: p["harvest"].update({"level_m3_per_year": True}),
+        lambda p: p["energy"].update({"nuclear_cap_gw": True}),
+        lambda p: p["energy"].update({"pwr_bio_cap_fraction": False}),
+        lambda p: p["energy"]["carbon_price_schedule"][0].update({"year": True}),
+        lambda p: p["energy"]["carbon_price_schedule"][0].update(
+            {"price_usd_per_tco2e": True}
+        ),
+        lambda p: p["energy"].update(
+            {
+                "carbon_price_schedule": [
+                    {"year": 2021 + (index % 50), "price_usd_per_tco2e": 1.0}
+                    for index in range(51)
+                ]
+            }
+        ),
     ],
 )
 def test_contract_rejects_invalid_payload(mutate) -> None:
@@ -486,3 +503,339 @@ def test_runner_dry_run_writes_completed_summary(tmp_path: Path) -> None:
     assert summary["constraints"]["policy_grade"] is False
     assert summary["supply"]["checks"]["tier_sum_equals_rest_all_years"] is True
     assert summary["artifacts"]
+
+
+# ---------------------------------------------------------------------------
+# Hardening regressions: startup, snapshots, shutdown, summaries, concurrency
+# ---------------------------------------------------------------------------
+
+SNAPSHOT_RUNNER = """\
+import argparse
+import json
+import time
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+
+time.sleep(0.25)
+scenario = json.loads(Path(args.scenario).read_text(encoding="utf-8"))
+out = Path(args.out)
+out.mkdir(parents=True, exist_ok=True)
+(out / "seen.json").write_text(json.dumps(scenario), encoding="utf-8")
+(out / "run_summaries.json").write_text(
+    json.dumps({"status": "completed", "message": "snapshot runner completed"}),
+    encoding="utf-8",
+)
+"""
+
+NO_SUMMARY_RUNNER = """\
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+parser.parse_args()
+print("runner exited without a summary", flush=True)
+"""
+
+CORRUPT_SUMMARY_RUNNER = """\
+import argparse
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+out = Path(args.out)
+out.mkdir(parents=True, exist_ok=True)
+(out / "run_summaries.json").write_text("[]", encoding="utf-8")
+"""
+
+FAILED_SUMMARY_RUNNER = """\
+import argparse
+import json
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+out = Path(args.out)
+out.mkdir(parents=True, exist_ok=True)
+(out / "run_summaries.json").write_text(
+    json.dumps({"status": "failed", "message": "solver reported boom"}),
+    encoding="utf-8",
+)
+"""
+
+SHUTDOWN_RUNNER = """\
+import os
+import time
+
+print(os.getpid(), flush=True)
+time.sleep(30)
+"""
+
+ENV_RUNNER = """\
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+payload = {
+    "status": "completed",
+    "unbuffered": os.environ.get("PYTHONUNBUFFERED"),
+    "pythonpath_has_repo": str(Path.cwd()) in os.environ.get("PYTHONPATH", ""),
+    "stdin_text": sys.stdin.read(),
+}
+out = Path(args.out)
+out.mkdir(parents=True, exist_ok=True)
+(out / "run_summaries.json").write_text(json.dumps(payload), encoding="utf-8")
+"""
+
+
+def test_read_only_startup_and_shutdown_write_nothing(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    with make_client(runtime, read_only=True) as client:
+        assert client.get("/api/health").status_code == 200
+        assert client.get("/api/scenarios").json() == {"scenarios": []}
+        assert client.get("/api/runs").json() == {"runs": []}
+        assert not runtime.exists()
+    assert not runtime.exists()
+
+
+def test_enqueue_uses_immutable_scenario_snapshot(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SNAPSHOT_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        original = create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": original["scenario_id"]}
+        )
+        assert response.status_code == 202, response.text
+        run_id = response.json()["run_id"]
+
+        replacement = scenario_payload()
+        replacement["label"] = "mutated after enqueue"
+        overwritten = client.post(
+            "/api/scenarios",
+            params={"overwrite": "true"},
+            json=replacement,
+        )
+        assert overwritten.status_code == 200
+
+        job = wait_for_terminal(client, run_id)
+        assert job["status"] == "completed"
+        snapshot = Path(job["scenario_path"])
+        assert snapshot == runtime / "runs" / run_id / "scenario.json"
+        assert json.loads(snapshot.read_text("utf-8"))["label"] == original["label"]
+        seen = json.loads((Path(job["output_dir"]) / "seen.json").read_text("utf-8"))
+        assert seen["label"] == original["label"]
+
+
+@pytest.mark.parametrize(
+    ("source", "expected_message"),
+    [
+        (NO_SUMMARY_RUNNER, "no valid run_summaries.json"),
+        (CORRUPT_SUMMARY_RUNNER, "no valid run_summaries.json"),
+        (FAILED_SUMMARY_RUNNER, "solver reported boom"),
+    ],
+)
+def test_exit_zero_requires_a_valid_summary(
+    tmp_path: Path, source: str, expected_message: str
+) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, source)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert response.status_code == 202
+        job = wait_for_terminal(client, response.json()["run_id"])
+        assert job["status"] == "failed"
+        assert expected_message in job["message"]
+
+        events, _ = RunStore(runtime / "runs").read_events(job["run_id"], 0)
+        assert events[-1]["event"] == "failed"
+        assert job["event_count"] == events[-1]["seq"]
+
+
+def test_max_concurrent_runs_keeps_excess_jobs_queued(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SLOW_RUNNER)
+    with make_client(runtime, runner=runner, max_concurrent_runs=1) as client:
+        create_scenario(client)
+        first = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        second = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert first.status_code == second.status_code == 202
+        first_id = first.json()["run_id"]
+        second_id = second.json()["run_id"]
+        assert second.json()["status"] == "queued"
+
+        assert wait_for_terminal(client, first_id)["status"] == "completed"
+        assert wait_for_terminal(client, second_id)["status"] == "completed"
+
+
+def test_shutdown_kills_process_group_and_marks_interrupted(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SHUTDOWN_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert response.status_code == 202
+        run_id = response.json()["run_id"]
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            job = client.get(f"/api/runs/{run_id}").json()
+            if job["status"] == "running" and job.get("pid"):
+                break
+            time.sleep(0.02)
+        else:
+            raise AssertionError("runner did not start")
+        pid = int(job["pid"])
+        assert os.getpgid(pid) == pid
+
+    store = RunStore(runtime / "runs")
+    job = store.read(run_id)
+    assert job["status"] == "interrupted"
+    events, _ = store.read_events(run_id, 0)
+    assert events[-1]["event"] == "interrupted"
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.02)
+    else:
+        raise AssertionError(f"runner process {pid} survived shutdown")
+
+
+def test_events_skip_corrupt_lines_and_reject_non_object_jobs(tmp_path: Path) -> None:
+    runs_dir = tmp_path / "runtime" / "runs"
+    store = RunStore(runs_dir)
+    run_id = store.new_run_id()
+    store.create(
+        run_id=run_id,
+        scenario_id="screening_150m_base",
+        scenario_path=tmp_path / "scenario.json",
+        output_dir=runs_dir / run_id / "output",
+        command=(sys.executable, "-c", "pass"),
+    )
+    events_path = runs_dir / run_id / "events.jsonl"
+    payload = (
+        b"\n"
+        b"not json\n"
+        b"[]\n"
+        b'{"seq": 1, "ts": "2026-11-20T00:00:00+00:00", "event": "started", '
+        b'"level": "info", "message": "ok"}\n'
+    )
+    events_path.write_bytes(payload)
+
+    events, offset = store.read_events(run_id, 0)
+    assert [event["event"] for event in events] == ["started"]
+    assert offset == len(payload)
+
+    (runs_dir / run_id / "job.json").write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match="not a JSON object"):
+        store.read(run_id)
+    assert store.list_jobs() == []
+
+
+def test_corrupt_job_does_not_break_startup_repair(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runs_dir = runtime / "runs"
+    store = RunStore(runs_dir)
+    run_id = store.new_run_id()
+    store.create(
+        run_id=run_id,
+        scenario_id="screening_150m_base",
+        scenario_path=runtime / "scenarios" / "screening_150m_base.json",
+        output_dir=runs_dir / run_id / "output",
+        command=(sys.executable, "-c", "pass"),
+    )
+    store.update(run_id, status="running", pid=12345)
+    broken = runs_dir / "broken-run"
+    broken.mkdir(parents=True)
+    (broken / "job.json").write_text("[]", encoding="utf-8")
+
+    with make_client(runtime, runner=(sys.executable, "-c", "pass")) as client:
+        assert client.get(f"/api/runs/{run_id}").json()["status"] == "interrupted"
+        listing = client.get("/api/runs").json()["runs"]
+        assert [item["run_id"] for item in listing] == [run_id]
+
+
+def test_sse_last_event_id_resumes_after_sequence(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, FAKE_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        wait_for_terminal(client, run_id)
+
+        with client.stream(
+            "GET", f"/api/runs/{run_id}/events", headers={"Last-Event-ID": "1"}
+        ) as events:
+            body = "".join(events.iter_text())
+        assert "event: started" not in body
+        assert "event: completed" in body
+
+
+def test_runner_environment_and_stdin(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, ENV_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        job = wait_for_terminal(client, response.json()["run_id"])
+        assert job["status"] == "completed"
+        summary = json.loads(
+            (Path(job["output_dir"]) / "run_summaries.json").read_text("utf-8")
+        )
+        assert summary["unbuffered"] == "1"
+        assert summary["pythonpath_has_repo"] is True
+        assert summary["stdin_text"] == ""
+
+
+def test_shutdown_marks_queued_jobs_interrupted(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SLOW_RUNNER)
+    with make_client(runtime, runner=runner, max_concurrent_runs=1) as client:
+        create_scenario(client)
+        first = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        second = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert second.json()["status"] == "queued"
+        first_id = first.json()["run_id"]
+        second_id = second.json()["run_id"]
+
+    store = RunStore(runtime / "runs")
+    assert store.read(first_id)["status"] == "interrupted"
+    queued_job = store.read(second_id)
+    assert queued_job["status"] == "interrupted"
+    events, _ = store.read_events(second_id, 0)
+    assert events[-1]["event"] == "interrupted"
+    assert "before the run started" in queued_job["message"]

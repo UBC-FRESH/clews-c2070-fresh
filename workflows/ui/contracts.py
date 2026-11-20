@@ -20,6 +20,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     FiniteFloat,
@@ -56,9 +57,20 @@ _LABEL_MAX_LENGTH = 200
 _DESCRIPTION_MAX_LENGTH = 4000
 _COMMIT_MAX_LENGTH = 128
 
-_PositiveFloat = Annotated[FiniteFloat, Field(gt=0)]
-_NonNegativeFloat = Annotated[FiniteFloat, Field(ge=0)]
-_UnitFraction = Annotated[FiniteFloat, Field(gt=0, le=1)]
+def _reject_boolean_number(value: Any) -> Any:
+    """Reject ``true``/``false`` where the contract requires a number."""
+
+    if isinstance(value, bool):
+        raise ValueError(  # noqa: TRY004 - pydantic converts this to a field error
+            "boolean values are not valid numbers in a scenario"
+        )
+    return value
+
+
+_FiniteFloat = Annotated[FiniteFloat, BeforeValidator(_reject_boolean_number)]
+_PositiveFloat = Annotated[_FiniteFloat, Field(gt=0)]
+_NonNegativeFloat = Annotated[_FiniteFloat, Field(ge=0)]
+_UnitFraction = Annotated[_FiniteFloat, Field(gt=0, le=1)]
 
 
 class _StrictModel(BaseModel):
@@ -105,7 +117,7 @@ class CostBasis(StrEnum):
 class CarbonPricePoint(_StrictModel):
     """One step of a piecewise-constant national carbon price schedule."""
 
-    year: int = Field(ge=YEAR_MIN, le=YEAR_MAX)
+    year: int = Field(strict=True, ge=YEAR_MIN, le=YEAR_MAX)
     price_usd_per_tco2e: _NonNegativeFloat
 
 
@@ -122,12 +134,14 @@ class HarvestSpec(_StrictModel):
 class EnergySpec(_StrictModel):
     """Electric-system levers exposed by the live scenario runner."""
 
-    carbon_price_schedule: Annotated[tuple[CarbonPricePoint, ...], Field(min_length=1)]
+    carbon_price_schedule: Annotated[
+        tuple[CarbonPricePoint, ...], Field(min_length=1, max_length=50)
+    ]
     hydro_mode: HydroMode
-    pwr_bio_cap_fraction: Annotated[FiniteFloat, Field(ge=0, le=1)]
+    pwr_bio_cap_fraction: Annotated[_FiniteFloat, Field(ge=0, le=1)]
     nuclear_cap_gw: _NonNegativeFloat
     wind_cost_usd_per_gj: _NonNegativeFloat
-    wind_cap_fraction: Annotated[FiniteFloat, Field(ge=0, le=1)]
+    wind_cap_fraction: Annotated[_FiniteFloat, Field(ge=0, le=1)]
     t3_cap_pj: _NonNegativeFloat
     t4_cap_pj: _NonNegativeFloat
     generic_bio_cost_usd_per_gj: _NonNegativeFloat
