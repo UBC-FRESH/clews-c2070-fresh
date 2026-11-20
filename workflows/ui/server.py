@@ -1543,8 +1543,8 @@ def create_app(
                     "callers or replace Cloudflare Access."
                 ),
                 (
-                    "Per-user runtime isolation is a v1.2 deliverable and is not "
-                    "implemented by this server."
+                    "Per-instance process and runtime isolation is deployment-level "
+                    "v1.2 work; this server remains single-tenant within one runtime."
                 ),
             ],
         }

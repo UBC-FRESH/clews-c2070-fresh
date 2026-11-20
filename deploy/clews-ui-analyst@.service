@@ -1,0 +1,74 @@
+# CLEWS/C2070 forestry UI - per-instance analyst template (v1.2).
+#
+# Usage:
+#   sudo install -m 0644 deploy/clews-ui-analyst@.service /etc/systemd/system/
+#   sudo install -d -m 0755 /etc/clews-ui
+#   sudo install -m 0600 deploy/instance-env.example /etc/clews-ui/<instance>.env
+#   edit PORT and ROLE in /etc/clews-ui/<instance>.env
+#   sudo systemctl enable --now clews-ui-analyst@<instance>.service
+#
+# Each instance needs its own unprivileged account and runtime:
+#   sudo useradd --system --user-group --no-create-home \
+#     --home-dir /var/lib/clews-ui/<instance> --shell /usr/sbin/nologin \
+#     clews-ui-<instance>
+#
+# The unit carries no credentials. EnvironmentFile is root-owned 0600 and
+# supplies only PORT and ROLE (plus optional CLEWS_UI_MAX_CONCURRENT_RUNS).
+# StateDirectory and RuntimeDirectory are created per instance with 0700.
+# Cloudflare Tunnel/Access remains the identity boundary; this unit does not
+# authenticate callers and the server remains single-tenant within one runtime.
+
+[Unit]
+Description=CLEWS-C2070 forestry UI (analyst instance %i)
+Documentation=file:/opt/clews/clews-c2070-fresh/deploy/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=clews-ui-%i
+Group=clews-ui-%i
+WorkingDirectory=/opt/clews/clews-c2070-fresh
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=CLEWS_UI_BASE_DIR=/var/lib/clews-ui
+EnvironmentFile=/etc/clews-ui/%i.env
+ExecStart=/opt/clews/clews-c2070-fresh/deploy/run_instance.sh %i ${PORT} ${ROLE}
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+RuntimeDirectory=clews-ui-%i
+RuntimeDirectoryMode=0700
+StateDirectory=clews-ui/%i
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/clews-ui/%i
+ReadOnlyPaths=/opt/clews/clews-c2070-fresh
+
+# Resource limits are deployment placeholders. Size them to the host, the
+# instance's team, and CLEWS_UI_MAX_CONCURRENT_RUNS.
+MemoryMax=16G
+CPUQuota=400%
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

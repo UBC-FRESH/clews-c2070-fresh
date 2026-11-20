@@ -66,8 +66,10 @@ Read-only roles reject `--allow-runs` at startup. Unknown roles fail at startup.
 For `model_builder`, "energy linkage read-only" means the OSeCAN model tree,
 constraint sets, and publication flow are not mutated through this server;
 scenario energy fields remain screening inputs that a writable scenario author
-may set, and they are not energy-policy controls. Per-user runtime isolation is
-a v1.2 deliverable and is not implemented here.
+may set, and they are not energy-policy controls. Per-instance process/runtime
+isolation is deployment-level v1.2 work (`deploy/run_instance.sh` and
+`deploy/clews-ui-analyst@.service`); this server remains single-tenant within
+one runtime and has no in-app accounts.
 
 ## Scenario contract: `clews.scenario.v1`
 

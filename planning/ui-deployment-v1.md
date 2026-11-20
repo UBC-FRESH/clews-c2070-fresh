@@ -5,7 +5,7 @@
 | Document | `planning/ui-deployment-v1.md` |
 | Date | 2026-11-20 |
 | Track | Track 3 — UI deployment |
-| Status | Planning plus track 3a scaffolding: deploy templates and a non-authenticating role flag. No service is deployed or started. |
+| Status | Planning plus track 3a/3b scaffolding: deploy templates, per-instance launcher, and a non-authenticating role flag. No service is deployed or started. |
 | Scope | `ui/` static explorer and `workflows/ui/` FastAPI runner |
 | Audience | FRESH maintainers, platform operators, Taco Niet's energy-policy team, reviewers |
 | Decision | systemd host + Cloudflare Tunnel/Access; two instances; no in-app auth |
@@ -26,7 +26,19 @@ invented C2070 geometry.
 systemd unit templates, a Cloudflare Tunnel ingress example, and the operator
 runbook. The server accepts `--role` / `CLEWS_UI_ROLE` to select a deployment
 action envelope. This is not authentication: Access remains the identity
-boundary, and per-user runtime isolation remains a v1.2 deliverable.
+boundary, and per-user runtime isolation was the remaining v1.2 deliverable
+addressed by track 3b below.
+
+**Track 3b implementation note (2026-11-20).** Per-instance deployment assets
+now exist: `deploy/run_instance.sh` creates a `0700` runtime, validates the
+instance name/port/role, refuses a busy port or existing instance, and starts
+one loopback server; `deploy/clews-ui-analyst@.service` runs one instance per
+`%i` with a per-instance service account, `EnvironmentFile`, `0700`
+`RuntimeDirectory`/`StateDirectory`, and no secrets. These are deploy-level
+process/filesystem controls; the server remains single-tenant within one
+runtime and has no in-app accounts or authorization. A local two-instance smoke
+test passed with distinct temporary runtimes and ports; no host service was
+installed or started. Host/edge acceptance remains open.
 
 ## 1. Current architecture and constraints
 
@@ -136,21 +148,31 @@ hide data: it does not filter reads, and the SPA hydrates whatever runs it finds
 
 ### 3.3 Per-user runtime directories and job isolation
 
-The current server is single-tenant and has no multi-user isolation. There is
+The current server is single-tenant within one runtime and has no in-app
+multi-user isolation. There is
 no owner field on scenarios or jobs; any caller admitted to a writable instance
-can list, overwrite, cancel, or retry every scenario and run.
+can list, overwrite, cancel, or retry every scenario and run in that runtime.
 `POST /api/scenarios?overwrite=true` can replace another user's scenario, and
 cancel/retry accept any run ID. A shared writable instance is suitable only for
 a small trusted group in v1.1.
 
 For v1.2, isolate at the process and filesystem layer rather than inventing
-in-app accounts:
+in-app accounts. `deploy/run_instance.sh` and
+`deploy/clews-ui-analyst@.service` implement this shape:
 
 - one process per analyst or team, with its own
-  `CLEWS_UI_RUNTIME_DIR=/var/lib/clews-ui/users/<id>` and port;
+  `CLEWS_UI_RUNTIME_DIR=/var/lib/clews-ui/<instance>` and port;
 - one hostname and Access policy per instance, or a validated identity shim;
-- `0700` runtime directories and a service user per instance;
+- `0700` runtime directories and a per-instance Unix service account
+  (`clews-ui-<instance>` in the template); the launcher refuses a runtime not
+  owned by the current user and takes a per-runtime lock;
+- one managed port in `8100-8199` per instance, recorded in the host ledger;
 - never share a runtime: the queue and locks are process-local.
+
+The launcher is fail-closed on unsafe instance names, ports outside
+`1024-65535`, a busy loopback port, an existing server process for the same
+port/runtime, and unsupported roles. It grants `--allow-runs` only to
+`analyst`; `model_builder`, `public`, and `energy_modeller` do not get it.
 
 Each process has its own queue and concurrency cap; there is no per-user quota
 or per-job cgroup. Size `--max-concurrent-runs` and set `MemoryMax=`/`CPUQuota=`.
@@ -283,7 +305,13 @@ live analyst runtime with the curated public release.
 |---|---|---|
 | v1 local | Loopback only, one analyst, `runtime/ui`, `--allow-runs` | A1–A6, A10, A13 pass; docs and caveats complete |
 | v1.1 authenticated | systemd + Tunnel + Access; public read-only and analyst writable, separate runtimes | A7–A9, A12 pass; restore drill complete |
-| v1.2 multi-user | One instance/runtime per analyst or team; per-instance limits; publication workflow | A11 pass; isolation review complete |
+| v1.2 multi-user | One instance/runtime per analyst or team; per-instance limits; publication workflow | A11 pass; isolation review complete; `run_instance.sh`/template smoke-tested on the host |
+
+The local v1.2 deploy smoke (two temporary runtimes/ports, distinct `0700`
+directories, analyst `allow_runs=true`, public `read_only=true`, public POST
+403) is implementation evidence, not host acceptance. A11 still requires a
+host test with per-instance service accounts and one Access policy per
+instance; that has not been run here.
 
 - **A1. Bind:** `ss -ltnp` shows `127.0.0.1` only; the host has no inbound
   80/443 rule; the tunnel is the only ingress.

@@ -26,5 +26,14 @@ ingress:
       connectTimeout: 30s
       noHappyEyeballs: true
 
+  # v1.2 per-analyst/team instance. Add one hostname and one origin port per
+  # instance, and map each hostname to its own Access policy in the dashboard.
+  # Do not share a wildcard Access policy across teams.
+  # - hostname: forestry-REPLACE_WITH_INSTANCE.REPLACE_WITH_DOMAIN
+  #   service: http://127.0.0.1:8100
+  #   originRequest:
+  #     connectTimeout: 30s
+  #     noHappyEyeballs: true
+
   # No catch-all public route: unmatched hostnames return 404 at the edge.
   - service: http_status:404

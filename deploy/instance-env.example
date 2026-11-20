@@ -1,0 +1,10 @@
+# Per-instance environment file for clews-ui-analyst@<instance>.service.
+# Install as /etc/clews-ui/<instance>.env, root-owned, mode 0600.
+# This file contains deployment settings only; never put credentials here.
+
+PORT=8014
+ROLE=analyst
+
+# Optional analyst solver cap. The shipped default is 2. Keep this aligned
+# with MemoryMax/CPUQuota in the service unit.
+# CLEWS_UI_MAX_CONCURRENT_RUNS=2

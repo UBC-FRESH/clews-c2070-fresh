@@ -2,6 +2,21 @@
 
 ## 2026-11-20
 
+- **Added per-instance deployment isolation and committed the v1 release/handoff
+  docs.** `deploy/run_instance.sh` launches one loopback server per analyst or
+  team with a validated instance name, managed port, `0700` runtime, per-runtime
+  lock, existing-process/port checks, and role rules (`--allow-runs` only for
+  `analyst`). `deploy/clews-ui-analyst@.service` runs `%i` as
+  `clews-ui-%i`, reads `PORT`/`ROLE` from `/etc/clews-ui/%i.env`, creates `0700`
+  `RuntimeDirectory`/`StateDirectory`, and keeps secrets out of the unit. The
+  runbook now documents ports, per-instance service accounts, Cloudflare Access
+  mapping, publication, backup/retention, and v1.2 A11 acceptance. Added
+  `docs/release-v1.md` and `docs/model-card.md`. A local two-instance smoke
+  passed with distinct temporary runtimes/ports (`0700`), analyst
+  `allow_runs=true`, public `read_only=true`/POST 403, and no solver or host
+  service. The server remains single-tenant within one runtime; in-app accounts
+  and authorization are still not provided. No public OSeCAN change.
+
 - **Added deployment templates and non-authenticating role guards for the
   forestry UI.** `deploy/` now holds loopback-only systemd units for a public
   read-only instance (`127.0.0.1:8013`, role `public`) and an analyst writable
@@ -14,8 +29,8 @@
   fail closed, and `--read-only` now reports effective `allow_runs=false`.
   Added `/api/version` and `/api/roles`; `/api/health` reports the active role
   and effective flags. Roles select actions and do not authenticate callers;
-  per-user runtime isolation remains a v1.2 deliverable. No service was
-  deployed or started, and no public OSeCAN change was made.
+  per-user runtime isolation remained a v1.2 deliverable at that stage. No
+  service was deployed or started, and no public OSeCAN change was made.
 
 - **Integrated the full QC MERIS model-input deck and the Forest-Sector LP v1
   synthesis.** Replaced the 17-row QC sample in the cost/revenue merge with
