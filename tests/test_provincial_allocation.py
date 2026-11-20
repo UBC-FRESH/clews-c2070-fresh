@@ -193,6 +193,9 @@ def test_national_operable_envelope_diagnostic() -> None:
     )
     assert summary["national_envelope"]["1.2"]["deficits_m3"]["150m"] == 0.0
     assert summary["operable_proxy"]["missing_provinces"] == ["NU", "PE"]
+    status = summary["status_by_case"]["150m"]
+    assert status["1.0"] == {"provincial_lp": "infeasible", "national_envelope": "infeasible"}
+    assert status["1.2"] == {"provincial_lp": "infeasible", "national_envelope": "feasible"}
     assert summary["managed_proxy_comparison"]["deficits_m3"]["1.0"]["150m"] == pytest.approx(
         6_113_051.149, abs=100.0
     )

@@ -752,6 +752,20 @@ def build_summary(
                 }
                 for level, by_intensity in intensity_results.items()
             },
+            "status_by_case": {
+                level: {
+                    intensity: {
+                        "provincial_lp": by_intensity[intensity].status,
+                        "national_envelope": (
+                            "feasible"
+                            if national_envelope[intensity]["deficits_m3"][level] <= 0.0
+                            else "infeasible"
+                        ),
+                    }
+                    for intensity in INTENSITY_CAP_LEVELS
+                }
+                for level, by_intensity in intensity_results.items()
+            },
             "national_envelope": national_envelope,
             "national_envelope_note": (
                 "The national envelope is I * national operable area and ignores "
@@ -857,6 +871,17 @@ def write_intensity_outputs(
             "cases": {label: _case_payload(result) for label, result in by_case.items()},
             "national_envelope_deficits_m3": {
                 label: max(0.0, result.national_total_m3 - national_envelope_capacity_m3)
+                for label, result in by_case.items()
+            },
+            "status_by_case": {
+                label: {
+                    "provincial_lp": result.status,
+                    "national_envelope": (
+                        "feasible"
+                        if result.national_total_m3 <= national_envelope_capacity_m3
+                        else "infeasible"
+                    ),
+                }
                 for label, result in by_case.items()
             },
             "province_caps": [
