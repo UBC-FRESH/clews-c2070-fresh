@@ -2,6 +2,19 @@
 
 ## 2026-11-20
 
+- **Added milestone-1f session persistence, cancel/retry, and long-run UX.**
+  Added `POST /api/runs/{id}/cancel` (queued removal or process-group SIGTERM →
+  SIGKILL, `cancelled` terminal event, no monitor overwrite) and
+  `POST /api/runs/{id}/retry` (validated immutable `scenario.json` snapshot,
+  new run ID, 409 while active or snapshot missing). `GET /api/runs` now
+  hydrates scenario levers, metrics, output availability, and cancel/retry
+  flags. The Run UI rehydrates completed/active/terminal runs after reload,
+  deduplicates session-rail entries, reconnects SSE/polling for queued/running
+  jobs, exposes Cancel/Retry, shows cancelled states, computes elapsed time from
+  server timestamps, and throttles a 250-line log tail. Added backend tests for
+  queued/running/terminal cancel, snapshot retry, and no status overwrite, plus
+  Chromium QA (`ui/qa/cancel.png`, `retry.png`, `reload-hydrated.png`). No data
+  files or public OSeCAN surfaces were changed.
 - **Added milestone-1e linked spatial/temporal exploration to the UI.** Map
   drill-down now links Canada → province → ecoprovince → RSYC tile with
   breadcrumbs, a selection panel (area, recoverable PJ, tile cells, explicit

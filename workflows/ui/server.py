@@ -58,7 +58,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_UI_DIR = REPO_ROOT / "ui"
 DEFAULT_RUNTIME_DIR = REPO_ROOT / "runtime" / "ui"
 RUN_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,95}$")
-TERMINAL_STATUSES = frozenset({"completed", "failed", "interrupted", "not_implemented"})
+TERMINAL_STATUSES = frozenset(
+    {"completed", "failed", "interrupted", "not_implemented", "cancelled"}
+)
 ACTIVE_STATUSES = frozenset({"queued", "running"})
 RUNNER_TERMINAL_STATUSES = frozenset({"completed", "failed", "not_implemented"})
 READ_ONLY_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -84,6 +86,7 @@ TERMINAL_EVENT_LEVELS = {
     "completed": "info",
     "not_implemented": "info",
     "interrupted": "warning",
+    "cancelled": "warning",
     "failed": "error",
 }
 _TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
@@ -731,6 +734,41 @@ class RunSupervisor:
                 pass
             raise RunnerStartError(message) from exc
 
+    def cancel(self, run_id: str) -> dict[str, Any]:
+        """Cancel a queued or running job without letting the monitor overwrite it.
+
+        A queued job is removed from the pending queue while holding the
+        dispatch lock, so it can never start between the check and the
+        cancellation.  A running job is marked terminal *before* the process
+        group is signalled; the monitor's ``finish`` call then observes a
+        terminal job and leaves the ``cancelled`` status intact.
+        """
+
+        with self._dispatch_lock:
+            with self._lock:
+                was_pending = run_id in self._pending
+                if was_pending:
+                    self._pending.remove(run_id)
+                active = self._active.get(run_id)
+            job = self._store.read(run_id)
+            if job.get("status") in TERMINAL_STATUSES:
+                return job
+            if job.get("status") == "queued" or active is None:
+                return self._store.finish(
+                    run_id,
+                    status="cancelled",
+                    message="run cancelled before start",
+                )
+            # Mark terminal before signalling so the monitor cannot publish a
+            # late ``completed`` status for a cancelled run.
+            self._store.finish(
+                run_id,
+                status="cancelled",
+                message="run cancelled by user",
+            )
+        _terminate_process_group(active.process)
+        return self._store.read(run_id)
+
     def _run_finished(self, run_id: str) -> None:
         with self._lock:
             self._active.pop(run_id, None)
@@ -1005,6 +1043,44 @@ def _final_status(exit_code: int, summary: dict[str, Any] | None) -> tuple[str, 
     return str(runner_status), _summary_message(summary, str(runner_status))
 
 
+def _scenario_summary(scenario: Scenario) -> dict[str, Any]:
+    """Return the immutable levers needed to rehydrate a session run."""
+
+    prices = {
+        point.year: point.price_usd_per_tco2e
+        for point in scenario.energy.carbon_price_schedule
+    }
+    return {
+        "label": scenario.label,
+        "harvest_level_m3_per_year": scenario.harvest.level_m3_per_year,
+        "harvest_path": scenario.harvest.path,
+        "recovery_fraction": scenario.harvest.recovery_fraction,
+        "cost_basis": scenario.harvest.cost_basis,
+        "carbon_price_usd_per_tco2e_2026": prices.get(2026),
+        "hydro_mode": scenario.energy.hydro_mode,
+        "pwr_bio_cap_fraction": scenario.energy.pwr_bio_cap_fraction,
+        "nuclear_cap_gw": scenario.energy.nuclear_cap_gw,
+        "wind_cost_usd_per_gj": scenario.energy.wind_cost_usd_per_gj,
+        "wind_cap_fraction": scenario.energy.wind_cap_fraction,
+        "t3_cap_pj": scenario.energy.t3_cap_pj,
+        "t4_cap_pj": scenario.energy.t4_cap_pj,
+    }
+
+
+def _summary_metrics(summary: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not summary:
+        return None
+    supply = summary.get("supply")
+    supply_summary = supply if isinstance(supply, dict) else {}
+    return {
+        "objective": summary.get("objective_musd"),
+        "emissions_total": summary.get("emissions_total_mt"),
+        "emissions_2050": summary.get("emissions_2050_mt"),
+        "national_bcw_2050": supply_summary.get("national_total_pj_2050"),
+        "solver_status": summary.get("solver_status"),
+    }
+
+
 def create_app(
     runtime_dir: Path | str | None = None,
     *,
@@ -1116,6 +1192,93 @@ def create_app(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
             ) from exc
 
+    def hydrate_job(job: dict[str, Any]) -> dict[str, Any]:
+        """Enrich a stored job with hydration, metrics, and action flags."""
+
+        item = dict(job)
+        status = job.get("status")
+        item["can_cancel"] = status in ACTIVE_STATUSES
+        item["can_retry"] = False
+        item["output_available"] = False
+        item["scenario"] = None
+        item["metrics"] = None
+        run_id = job.get("run_id")
+        if not isinstance(run_id, str):
+            return item
+        try:
+            run_dir = run_store.run_dir(run_id).resolve()
+        except (OSError, ValueError):
+            return item
+        snapshot = run_dir / "scenario.json"
+        if snapshot.is_file():
+            try:
+                item["scenario"] = _scenario_summary(load_scenario(snapshot))
+                item["can_retry"] = status in TERMINAL_STATUSES
+            except (OSError, ValueError):
+                item["scenario"] = None
+        raw_output_dir = job.get("output_dir")
+        if not isinstance(raw_output_dir, str):
+            return item
+        try:
+            output_dir = Path(raw_output_dir).expanduser().resolve()
+            output_dir.relative_to(run_dir)
+        except (OSError, ValueError):
+            return item
+        summary = _read_runner_summary(output_dir / "run_summaries.json")
+        item["metrics"] = _summary_metrics(summary)
+        if status == "completed" and summary is not None:
+            item["output_available"] = (
+                output_dir / "dispatch_by_zone.csv"
+            ).is_file()
+        return item
+
+    def enqueue_scenario(
+        scenario: Scenario, *, retried_from: str | None = None
+    ) -> dict[str, Any]:
+        scenario_id = scenario.scenario_id
+        run_id = run_store.new_run_id()
+        run_directory = run_store.run_dir(run_id)
+        output_dir = run_directory / "output"
+        snapshot_path = run_directory / "scenario.json"
+        command = (
+            *resolved_runner,
+            "--scenario",
+            str(snapshot_path),
+            "--out",
+            str(output_dir),
+        )
+        job = run_store.create(
+            run_id=run_id,
+            scenario_id=scenario_id,
+            scenario_path=snapshot_path,
+            output_dir=output_dir,
+            command=command,
+        )
+        try:
+            atomic_write_json(snapshot_path, scenario.model_dump(mode="json"))
+        except OSError as exc:
+            message = f"could not snapshot scenario: {exc}"
+            run_store.finish(run_id, status="failed", message=message)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message
+            ) from exc
+        if retried_from is not None:
+            run_store.update(run_id, retried_from=retried_from)
+
+        try:
+            supervisor.submit(job)
+        except RunnerStartError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+            ) from exc
+        current = run_store.read(run_id)
+        if current.get("status") == "failed" and current.get("started_utc") is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(current.get("message")),
+            )
+        return hydrate_job(current)
+
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         return {
@@ -1203,7 +1366,7 @@ def create_app(
 
     @app.get("/api/runs")
     def list_runs() -> dict[str, Any]:
-        return {"runs": run_store.list_jobs()}
+        return {"runs": [hydrate_job(job) for job in run_store.list_jobs()]}
 
     @app.get("/api/runs/{raw_run_id}")
     def get_run(raw_run_id: str) -> dict[str, Any]:
@@ -1356,46 +1519,107 @@ def create_app(
                 detail=f"stored scenario {scenario_id} is invalid: {exc}",
             ) from exc
 
-        run_id = run_store.new_run_id()
-        run_directory = run_store.run_dir(run_id)
-        output_dir = run_directory / "output"
-        snapshot_path = run_directory / "scenario.json"
-        command = (
-            *resolved_runner,
-            "--scenario",
-            str(snapshot_path),
-            "--out",
-            str(output_dir),
-        )
-        job = run_store.create(
-            run_id=run_id,
-            scenario_id=scenario_id,
-            scenario_path=snapshot_path,
-            output_dir=output_dir,
-            command=command,
-        )
-        try:
-            atomic_write_json(snapshot_path, scenario.model_dump(mode="json"))
-        except OSError as exc:
-            message = f"could not snapshot scenario: {exc}"
-            run_store.finish(run_id, status="failed", message=message)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message
-            ) from exc
+        return enqueue_scenario(scenario)
 
-        try:
-            supervisor.submit(job)
-        except RunnerStartError as exc:
+    @app.post("/api/runs/{raw_run_id}/cancel")
+    def cancel_run(raw_run_id: str) -> dict[str, Any]:
+        if not settings.allow_runs:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
-            ) from exc
-        current = run_store.read(run_id)
-        if current.get("status") == "failed" and current.get("started_utc") is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=str(current.get("message")),
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="run cancellation is disabled; start the server with --allow-runs",
             )
-        return current
+        run_id = require_run_id(raw_run_id)
+        job = read_run_or_404(run_id)
+        job_status = job.get("status")
+        if job_status in TERMINAL_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} is already {job_status}",
+            )
+        if job_status not in ACTIVE_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} is {job_status}; only active runs can be cancelled",
+            )
+        try:
+            cancelled = supervisor.cancel(run_id)
+        except (FileNotFoundError, OSError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+            ) from exc
+        if cancelled.get("status") not in TERMINAL_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} completed before cancellation took effect",
+            )
+        return hydrate_job(cancelled)
+
+    @app.post(
+        "/api/runs/{raw_run_id}/retry", status_code=status.HTTP_202_ACCEPTED
+    )
+    def retry_run(raw_run_id: str) -> dict[str, Any]:
+        if not settings.allow_runs:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="run retry is disabled; start the server with --allow-runs",
+            )
+        run_id = require_run_id(raw_run_id)
+        job = read_run_or_404(run_id)
+        job_status = job.get("status")
+        if job_status in ACTIVE_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} is still {job_status}; wait for it to finish",
+            )
+        if job_status not in TERMINAL_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} is {job_status}; only terminal runs can be retried",
+            )
+        run_dir = run_store.run_dir(run_id).resolve()
+        snapshot_path = run_dir / "scenario.json"
+        if not snapshot_path.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} has no immutable scenario snapshot to retry",
+            )
+        raw_snapshot = job.get("scenario_path")
+        if not isinstance(raw_snapshot, str):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} has no scenario snapshot path",
+            )
+        try:
+            recorded = Path(raw_snapshot).expanduser().resolve()
+            recorded.relative_to(run_dir)
+        except (OSError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} snapshot path is invalid",
+            ) from exc
+        if recorded != snapshot_path:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} snapshot path is not the run snapshot",
+            )
+        try:
+            scenario = load_scenario(snapshot_path)
+        except FileNotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} has no immutable scenario snapshot to retry",
+            ) from exc
+        except (OSError, ValueError, ValidationError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"run {run_id} snapshot is invalid: {exc}",
+            ) from exc
+        if scenario.scenario_id != job.get("scenario_id"):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"run {run_id} snapshot does not match the recorded scenario",
+            )
+        return enqueue_scenario(scenario, retried_from=run_id)
 
     @app.get("/api/runs/{raw_run_id}/events")
     def stream_run_events(

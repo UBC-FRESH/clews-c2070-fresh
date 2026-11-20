@@ -1437,10 +1437,14 @@ details.family-row > summary:hover { background: var(--card-warm); }
 .run-state-badge.is-running { border-color: rgba(242, 180, 92, 0.6); color: var(--amber-bright); }
 .run-state-badge.is-completed { border-color: rgba(147, 168, 148, 0.65); color: #dce9d5; }
 .run-state-badge.is-failed { border-color: rgba(217, 120, 90, 0.7); color: #f0c6b6; }
+.run-state-badge.is-cancelled { border-color: rgba(184, 165, 126, 0.7); color: #e6d9ba; }
 .run-meta { margin-top: 14px; border-top: 1px solid rgba(243, 234, 215, 0.16); }
 .run-meta > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(243, 234, 215, 0.1); }
 .run-meta dt { color: rgba(243, 234, 215, 0.5); font-size: 0.66rem; }
 .run-meta dd { max-width: 65%; overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.63rem; text-align: right; color: rgba(243, 234, 215, 0.88); }
+.run-status-note { margin-top: 10px; color: rgba(243, 234, 215, 0.58); font-size: 0.67rem; line-height: 1.45; }
+.run-status-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.run-status-actions .button { padding: 7px 11px; font-size: 0.63rem; }
 .run-policy-flag {
   margin-top: 14px;
   padding: 9px 11px;
@@ -1480,6 +1484,7 @@ details.family-row > summary:hover { background: var(--card-warm); }
   box-shadow: var(--shadow-card);
 }
 .run-output-card.is-failed { border-top-color: var(--rust); }
+.run-output-card.is-cancelled { border-top-color: var(--amber); }
 .run-output-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
 .run-output-head h3 { font-family: var(--display); font-size: 1.45rem; font-weight: 560; }
 .run-output-head .mono { color: var(--muted); font-size: 0.6rem; }
@@ -1487,6 +1492,36 @@ details.family-row > summary:hover { background: var(--card-warm); }
 .run-output-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .run-output-message { margin-top: 8px; color: var(--ink-soft); font-size: 0.77rem; line-height: 1.5; }
 .run-output-flag { margin-top: 12px; padding: 9px 11px; border: 1px solid rgba(169, 79, 49, 0.32); background: rgba(169, 79, 49, 0.06); color: var(--rust-dark); font-family: var(--mono); font-size: 0.63rem; line-height: 1.5; }
+
+.run-history { margin-top: 22px; }
+.run-history-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 20px; }
+.run-history-head h3 { font-family: var(--display); font-size: 1.5rem; font-weight: 560; }
+.run-history-head .mono { color: var(--muted); font-size: 0.6rem; }
+.run-history-note { max-width: 78ch; margin-top: 6px; color: var(--muted); font-size: 0.72rem; line-height: 1.5; }
+.run-history-list { display: grid; gap: 8px; margin-top: 12px; }
+.run-history-empty { padding: 14px; border: 1px dashed rgba(184, 165, 126, 0.5); color: var(--muted); font-size: 0.74rem; }
+.run-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--sage);
+  background: var(--card);
+}
+.run-history-row.is-queued, .run-history-row.is-running { border-left-color: var(--amber); }
+.run-history-row.is-failed, .run-history-row.is-interrupted, .run-history-row.is-not_implemented { border-left-color: var(--rust); }
+.run-history-row.is-cancelled { border-left-color: var(--muted); }
+.run-history-main { min-width: 0; }
+.run-history-main strong { display: block; overflow-wrap: anywhere; font-size: 0.8rem; }
+.run-history-main .mono { display: block; margin-top: 2px; color: var(--muted); font-size: 0.58rem; overflow-wrap: anywhere; }
+.run-history-meta { display: flex; align-items: center; gap: 10px; }
+.run-history-status { padding: 2px 6px; border: 1px solid rgba(184, 165, 126, 0.55); font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+.run-history-row.is-running .run-history-status, .run-history-row.is-queued .run-history-status { border-color: rgba(169, 79, 49, 0.5); color: var(--rust-dark); }
+.run-history-row.is-completed .run-history-status { color: var(--pine-700); }
+.run-history-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.run-history-actions .button { padding: 6px 10px; font-size: 0.6rem; }
 
 /* ---------- Inputs ---------- */
 
@@ -1865,6 +1900,8 @@ details.family-row > summary:hover { background: var(--card-warm); }
   .run-form-grid { grid-template-columns: 1fr; }
   .field--wide { grid-column: span 1; }
   .run-log { max-height: 260px; }
+  .run-history-row { grid-template-columns: 1fr; align-items: start; }
+  .run-history-meta { justify-content: space-between; }
   .tab-meta { display: none; }
   .scenario-masthead { padding: 20px; }
   .result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

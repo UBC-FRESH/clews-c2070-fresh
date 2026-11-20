@@ -126,5 +126,55 @@
       "url": "http://127.0.0.1:8012/api/health",
       "status": 404
     }
-  ]
+  ],
+  "milestone_1f": {
+    "cancel": {
+      "run_id": "20261120t031336z-d2f6fb2a",
+      "state_before": "running",
+      "state_after": "cancelled",
+      "output_card": "No result \u2014 cancelled20261120t031336z-d2f6fb2arun cancelled by userNo fake results.Nothing was added to the scenario rail, trade-off, or dispatch. The process group was stopped; retry the immutable snapshot to run it again.Retry this run",
+      "history_rows": 1,
+      "retry_button": 1,
+      "session_rail_live": 0
+    },
+    "retry": {
+      "source_run_id": "20261120t031336z-d2f6fb2a",
+      "retry_run_id": "20261120t031336z-88b4f59b",
+      "state": "completed",
+      "history_rows": 2,
+      "history_statuses": [
+        "completed",
+        "cancelled"
+      ],
+      "session_rail_live": 1,
+      "output_text": "Completed \u00b7 screening-only outputoutput/dispatch_by_zone.csvmilestone-1f QA runner completedObjective123.50M$Cumulative emissions0.500Mt CO\u2082National BCW 205030.00PJ fuelPWRBCW 20500.00PJ electricityscreening_only \u00b7 policy_grade=falseAdded to the session rail and trade-off. This is not a publishable ",
+      "distinct_after": true
+    },
+    "reload": {
+      "history_count": "2 runs",
+      "history_statuses": [
+        "completed",
+        "cancelled"
+      ],
+      "session_rail_live": 1,
+      "live_rail_ids": [
+        "1f cancel long20261120t031336z-88b4f59bSession livescreening onlyoptimal"
+      ],
+      "unique_live_rail_ids": 1,
+      "retry_run_present": true,
+      "cancelled_run_present": true,
+      "hydrated_session_label": "1f cancel long20261120t031336z-88b4f59bSession livescreening onlyoptimal"
+    },
+    "mobile": {
+      "innerWidth": 390,
+      "scrollWidth": 390,
+      "historyRows": 2,
+      "cancelVisible": true
+    },
+    "runtime": {
+      "console_errors": [],
+      "page_errors": [],
+      "pass": true
+    }
+  }
 }

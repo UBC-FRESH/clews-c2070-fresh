@@ -40,3 +40,29 @@ def test_api_health_schema_and_sequence_dedupe_are_guarded() -> None:
     assert "typeof health.schema_version !== 'string'" in API_JS
     assert "payload.seq <= lastSequence" in API_JS
     assert "options.onOpen" in API_JS
+
+
+def test_api_exposes_run_hydration_cancel_retry_and_cancelled_sse() -> None:
+    assert "async function listRuns()" in API_JS
+    assert "async function cancelRun(runId)" in API_JS
+    assert "async function retryRun(runId)" in API_JS
+    assert "'cancelled'" in API_JS
+    assert "listRuns: listRuns" in API_JS
+    assert "cancelRun: cancelRun" in API_JS
+    assert "retryRun: retryRun" in API_JS
+
+
+def test_ui_hydrates_runs_and_offers_cancel_retry() -> None:
+    assert "async function hydrateRuns()" in APP_JS
+    assert "client.listRuns()" in APP_JS
+    assert "async function cancelRunById(runId)" in APP_JS
+    assert "async function retryRunById(runId)" in APP_JS
+    assert "runHistory" in APP_JS
+    assert "state.live.sessionRuns = state.live.sessionRuns.filter(function (item) { return item.runId !== job.run_id; });" in APP_JS
+    assert "'cancelled'" in APP_JS
+
+
+def test_ui_log_rendering_is_bounded_and_throttled() -> None:
+    assert "state.live.logLines.length > 250" in APP_JS
+    assert "state.live.logRenderTimer = window.setTimeout" in APP_JS
+    assert "progress" not in APP_JS.lower() or "no progress percentage is estimated" in APP_JS

@@ -326,3 +326,55 @@ mobile overflow, runtime summary). All six runtime groups report pass.
 
 No data submodule, manifest, output, or public OSeCAN surface was modified.
 `git status --porcelain` contains no `D` entries.
+
+## Milestone-1f session persistence, cancel/retry pass (2026-11-20)
+
+**Scope:** persisted run hydration on reload, queued/running cancel, retry from
+the immutable `runs/{id}/scenario.json` snapshot, `cancelled` SSE/terminal
+status, run history with actions, elapsed timer, and throttled/bounded log
+tails. No fake progress percentage was added.
+
+**Environment:** Chromium via `/tmp/ui-qa-venv` (Playwright 1.65.2), live server
+`workflows.ui.server --port 8025 --runtime-dir /tmp/ui-1f-qa/runtime --allow-runs
+--runner-command ".../qa_runner.py"`, viewport 1440×1200 plus a 390×844 mobile
+check. The QA runner is a fake local script that sleeps 3 s for labels
+containing `long`; it is not a real OSeCAN solve.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Running cancel | **PASS** — queued run reached `running`, then **Cancel run** returned the job as `cancelled`; the process group stopped, the event log ended with `cancelled · run cancelled by user`, and **0** completed events were appended. |
+| Cancelled state | **PASS** — badge `CANCELLED`, explicit “No result — cancelled”, “process group was stopped”, and a **Retry this run** action. No session-rail result was added. |
+| Retry | **PASS** — retry created a distinct run ID from the immutable snapshot; it reached `completed`, rendered the output card (`123.50 M$`, `0.500 Mt CO₂`, `30.00 PJ`), and added exactly **1** session-rail entry. History showed `completed` + `cancelled`. |
+| Reload hydration | **PASS** — after `page.reload()`, history rehydrated **2 runs** (completed + cancelled), the completed retry output was fetched again, and the session rail had exactly **1** live entry (unique IDs = 1; no duplicate). |
+| Elapsed/log UX | **PASS** — elapsed timer runs from server `started_utc`/`created_utc`; queued/running copy states there is no progress estimate; log tail is capped at 250 lines and rendered via a 180 ms throttle. |
+| Mobile 390×844 | **PASS** — `innerWidth = scrollWidth = 390`; Run history rows stack and remain readable. |
+| Errors | **PASS** — 0 console errors, 0 page errors. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `cancel.png` | Running run cancelled: cancelled badge, terminal log, “No result — cancelled”, Retry action, cancelled history row |
+| `retry.png` | Retried run completed from the snapshot: output card, completed + cancelled history rows, one live session rail entry |
+| `reload-hydrated.png` | After reload: 2-run history and exactly 1 deduplicated hydrated session-rail result |
+
+Machine-readable evidence is under `milestone_1f` in
+`ui/qa/run_qa_results.json`.
+
+### Files changed
+
+- `workflows/ui/server.py`: `cancelled` terminal status/event, supervisor
+  cancel with queued removal and pre-SIGTERM terminal write, cancel/retry
+  endpoints, immutable-snapshot retry, hydrated `GET /api/runs` payloads.
+- `ui/api.js`: `listRuns()`, `cancelRun()`, `retryRun()`, `cancelled` SSE event.
+- `ui/app.js`: reload hydration, deduplicated session runs, run history,
+  cancel/retry actions, cancelled state, server-time elapsed timer, throttled
+  bounded log rendering; fixed no-hash startup parsing.
+- `ui/index.html`, `ui/styles.css`: run status note/actions and run history.
+- `tests/test_ui_scenario_api.py`, `tests/test_ui_app_guards.py`: queued/running/
+  terminal cancel, retry, no status overwrite, hydration, and UI guard tests.
+
+No data submodule, manifest, output, or public OSeCAN surface was modified.
+`git status --porcelain` contains no `D` entries.

@@ -6,7 +6,7 @@
   'use strict';
 
   var BASE = '';
-  var EVENT_TYPES = ['started', 'log', 'completed', 'failed', 'interrupted', 'not_implemented'];
+  var EVENT_TYPES = ['started', 'log', 'completed', 'failed', 'interrupted', 'not_implemented', 'cancelled'];
   var PROBE_TIMEOUT_MS = 1800;
 
   function ApiError(message, status, detail) {
@@ -105,8 +105,30 @@
     });
   }
 
+  async function listRuns() {
+    var payload = await request('/api/runs');
+    if (!payload || !Array.isArray(payload.runs)) {
+      throw new ApiError('runs payload has no runs array', 0, 'runs payload has no runs array');
+    }
+    return payload;
+  }
+
   async function getRun(runId) {
     return request('/api/runs/' + encodeURIComponent(runId));
+  }
+
+  async function cancelRun(runId) {
+    return request('/api/runs/' + encodeURIComponent(runId) + '/cancel', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' }
+    });
+  }
+
+  async function retryRun(runId) {
+    return request('/api/runs/' + encodeURIComponent(runId) + '/retry', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' }
+    });
   }
 
   async function getRunOutput(runId) {
@@ -160,7 +182,10 @@
     getConstraints: getConstraints,
     createScenario: createScenario,
     queueRun: queueRun,
+    listRuns: listRuns,
     getRun: getRun,
+    cancelRun: cancelRun,
+    retryRun: retryRun,
     getRunOutput: getRunOutput,
     subscribe: subscribe
   };

@@ -199,7 +199,11 @@
       finalizingRunId: null,
       logLines: [],
       logCount: 0,
+      logRenderTimer: null,
       sessionRuns: [],
+      runHistory: [],
+      cancelBusy: false,
+      retryBusy: false,
       busy: false
     }
   };
@@ -943,7 +947,7 @@
 
   function parseHash() {
     var raw = window.location.hash.replace(/^#/, '');
-    if (!raw) return {};
+    if (!raw) return { tab: null, id: null, params: {} };
     var query = '';
     var split = raw.indexOf('?');
     if (split !== -1) {
@@ -3915,6 +3919,11 @@
     if (queue) queue.disabled = state.live.busy || mode !== 'live' || !state.live.createdScenario || activeRun;
     var osecanQueue = $('osecan-queue');
     if (osecanQueue) osecanQueue.disabled = state.live.busy || mode !== 'live' || activeRun;
+    var cancel = $('run-cancel');
+    if (cancel) {
+      cancel.hidden = !activeRun;
+      cancel.disabled = !activeRun || state.live.busy || state.live.cancelBusy;
+    }
   }
 
   function setModeBadge(mode, detail) {
@@ -4226,6 +4235,8 @@
       $('run-meta-scenario').textContent = created.scenario_id;
       $('run-meta-run').textContent = run.run_id;
       setRunState(run.status || 'queued', run.status || 'queued');
+      upsertRunJob(run);
+      renderRunHistory();
       startElapsed();
       setFormStatus('Queued ' + run.run_id + '; connecting to the event stream…', false);
       announce('Queued live run ' + run.run_id + '.');
@@ -4265,16 +4276,270 @@
     else out.textContent = Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
   }
 
+  function parseRunTime(value) {
+    var ms = Date.parse(value || '');
+    return Number.isFinite(ms) ? ms : 0;
+  }
+
+  function runLabel(job) {
+    if (job && job.scenario && job.scenario.label) return job.scenario.label;
+    return (job && job.scenario_id) || 'unknown scenario';
+  }
+
+  function runFormFromJob(job) {
+    var sc = job && job.scenario;
+    if (!sc || !sc.label) return null;
+    var level = Number(sc.harvest_level_m3_per_year);
+    var choice = sc.harvest_path === 'custom' ? 'custom' : String(Math.round(level / 1e6));
+    return {
+      label: sc.label,
+      harvestChoice: choice,
+      level: Number.isFinite(level) ? level : null,
+      path: sc.harvest_path,
+      recovery: sc.recovery_fraction,
+      carbon: sc.carbon_price_usd_per_tco2e_2026,
+      hydro: sc.hydro_mode,
+      pwrbio: sc.pwr_bio_cap_fraction,
+      nuclear: sc.nuclear_cap_gw,
+      windCost: sc.wind_cost_usd_per_gj,
+      windCap: sc.wind_cap_fraction,
+      t3: sc.t3_cap_pj,
+      t4: sc.t4_cap_pj
+    };
+  }
+
+  function runElapsedText(job) {
+    var start = parseRunTime(job && (job.started_utc || job.created_utc));
+    if (!start) return '—';
+    var end = parseRunTime(job && job.finished_utc) || Date.now();
+    var seconds = Math.max(0, Math.round((end - start) / 1000));
+    if (seconds < 60) return seconds + ' s';
+    return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+  }
+
+  function upsertRunJob(job) {
+    if (!job || !job.run_id) return;
+    state.live.runHistory = state.live.runHistory.filter(function (item) {
+      return item.run_id !== job.run_id;
+    });
+    state.live.runHistory.unshift(job);
+    if (state.live.runHistory.length > 80) state.live.runHistory.length = 80;
+  }
+
+  function renderRunHistory() {
+    var list = $('run-history-list');
+    var count = $('run-history-count');
+    if (!list) return;
+    var jobs = state.live.runHistory || [];
+    if (count) count.textContent = jobs.length + ' run' + (jobs.length === 1 ? '' : 's');
+    if (!jobs.length) {
+      list.innerHTML = '<p class="run-history-empty">No live runs loaded yet.</p>';
+      return;
+    }
+    var canMutate = state.live.mode === 'live';
+    list.innerHTML = jobs.map(function (job) {
+      var status = job.status || 'unknown';
+      var active = status === 'queued' || status === 'running';
+      var actions = '';
+      if (active && canMutate) {
+        actions += '<button class="button button--quiet run-row-action" type="button" data-run-action="cancel" data-run-id="' + esc(job.run_id) + '">Cancel</button>';
+      } else if (canMutate && isTerminalStatus(status)) {
+        actions += '<button class="button button--quiet run-row-action" type="button" data-run-action="retry" data-run-id="' + esc(job.run_id) + '">Retry</button>';
+      }
+      if (status === 'completed' && job.output_available) {
+        actions += '<button class="button button--quiet run-row-action" type="button" data-run-action="open" data-run-id="' + esc(job.run_id) + '">Open result</button>';
+      }
+      return '<div class="run-history-row is-' + esc(status) + '">' +
+        '<div class="run-history-main"><strong>' + esc(runLabel(job)) + '</strong>' +
+          '<span class="mono">' + esc(job.run_id) + '</span></div>' +
+        '<div class="run-history-meta"><span class="run-history-status">' + esc(status) + '</span>' +
+          '<span class="mono">' + esc(runElapsedText(job)) + '</span></div>' +
+        '<div class="run-history-actions">' + actions + '</div></div>';
+    }).join('');
+  }
+
+  function updateRunStatusNote(status) {
+    var note = $('run-status-note');
+    if (!note) return;
+    var copy = {
+      queued: 'Queued — waiting for a runner slot. Elapsed time includes queue wait; no progress percentage is estimated.',
+      running: 'Running — status comes from SSE, with polling fallback. Duration is unbounded; elapsed time is exact.',
+      completed: 'Completed — normalized output fetched and added to the session rail once.',
+      cancelled: 'Cancelled — the runner was stopped and no result was added.',
+      failed: 'Failed — no result was added. Retry the immutable snapshot from the history below.',
+      interrupted: 'Interrupted — the server or worker stopped before completion. Retry the immutable snapshot.',
+      not_implemented: 'Not implemented — this runner cannot produce a result yet.'
+    };
+    note.textContent = copy[status] || 'No progress estimate is shown; elapsed time is the only clock.';
+  }
+
   function setRunState(status, label) {
     var text = $('run-state');
     var badge = $('run-state-badge');
     if (text) text.textContent = label || status || 'idle';
     if (!badge) return;
     badge.textContent = status || 'idle';
-    badge.classList.remove('is-running', 'is-completed', 'is-failed');
+    badge.classList.remove('is-running', 'is-completed', 'is-failed', 'is-cancelled');
     if (status === 'queued' || status === 'running') badge.classList.add('is-running');
     if (status === 'completed') badge.classList.add('is-completed');
+    if (status === 'cancelled') badge.classList.add('is-cancelled');
     if (status === 'failed' || status === 'interrupted' || status === 'not_implemented') badge.classList.add('is-failed');
+    updateRunStatusNote(status);
+  }
+
+  function attachActiveRun(job, options) {
+    var opts = options || {};
+    if (!job || !job.run_id) return;
+    clearPollTimer();
+    if (state.live.logRenderTimer) {
+      window.clearTimeout(state.live.logRenderTimer);
+      state.live.logRenderTimer = null;
+    }
+    state.live.activeRun = job;
+    state.live.currentJob = job;
+    state.live.finalizingRunId = null;
+    state.live.runStartedAt = parseRunTime(job.started_utc || job.created_utc) || Date.now();
+    state.live.logLines = [];
+    state.live.logCount = 0;
+    if (!opts.keepOutput) {
+      renderRunOutputIdle();
+      $('run-policy-flag').hidden = false;
+    }
+    if ($('run-meta-scenario')) $('run-meta-scenario').textContent = job.scenario_id || '—';
+    if ($('run-meta-run')) $('run-meta-run').textContent = job.run_id;
+    setRunState(job.status || 'queued', job.status || 'queued');
+    upsertRunJob(job);
+    renderRunHistory();
+    startElapsed();
+    renderRunLog();
+    updateFormDisabled();
+    subscribeToRun(job.run_id);
+  }
+
+  async function hydrateRuns() {
+    var client = liveApi();
+    if (!client) return;
+    var payload = await client.listRuns();
+    var jobs = Array.isArray(payload.runs) ? payload.runs.slice(0, 80) : [];
+    state.live.runHistory = jobs;
+    renderRunHistory();
+
+    var completed = jobs.filter(function (job) {
+      return job.status === 'completed' && job.output_available;
+    }).slice().reverse();
+    var fetched = {};
+    for (var i = 0; i < completed.length; i += 1) {
+      var job = completed[i];
+      try {
+        var output = await client.getRunOutput(job.run_id);
+        fetched[job.run_id] = output;
+        addSessionRun(job, output, runFormFromJob(job));
+      } catch (error) {
+        /* A completed run without readable output stays in history with Retry. */
+      }
+    }
+
+    if (state.live.activeRun) return;
+    var active = jobs.filter(function (item) {
+      return item.status === 'queued' || item.status === 'running';
+    })[0];
+    if (active) {
+      attachActiveRun(active, { keepOutput: true });
+      setFormStatus('Reattached to ' + active.status + ' run ' + active.run_id + '.', false);
+      announce('Reattached to live run ' + active.run_id + '.');
+      return;
+    }
+    var latest = jobs[0];
+    if (!latest) return;
+    state.live.currentJob = latest;
+    $('run-meta-scenario').textContent = latest.scenario_id || '—';
+    $('run-meta-run').textContent = latest.run_id;
+    $('run-meta-elapsed').textContent = runElapsedText(latest);
+    setRunState(latest.status, latest.status);
+    if (latest.status === 'completed' && fetched[latest.run_id]) {
+      renderRunOutput(latest, fetched[latest.run_id]);
+    } else if (isTerminalStatus(latest.status)) {
+      renderRunOutputError(latest, latest.message || ('Run ended with status ' + latest.status + '.'));
+    }
+    updateFormDisabled();
+  }
+
+  async function refreshRunHistory() {
+    var client = liveApi();
+    if (!client) return;
+    try {
+      var payload = await client.listRuns();
+      if (payload && Array.isArray(payload.runs)) {
+        state.live.runHistory = payload.runs.slice(0, 80);
+        renderRunHistory();
+      }
+    } catch (error) {
+      /* History is advisory; SSE/polling remains authoritative for the active run. */
+    }
+  }
+
+  async function cancelRunById(runId) {
+    var client = liveApi();
+    if (!client || !runId || state.live.cancelBusy) return;
+    state.live.cancelBusy = true;
+    updateFormDisabled();
+    setFormStatus('Cancelling ' + runId + '…', false);
+    try {
+      var job = await client.cancelRun(runId);
+      upsertRunJob(job);
+      if (activeRunMatches(runId)) {
+        if (state.live.eventSource) {
+          state.live.eventSource.close();
+          state.live.eventSource = null;
+        }
+        clearPollTimer();
+        stopElapsed();
+        state.live.currentJob = job;
+        setRunState(job.status, job.status);
+        $('run-meta-elapsed').textContent = runElapsedText(job);
+        renderRunOutputError(job, 'Run cancelled by user. The process group was stopped and no result was added.');
+        state.live.activeRun = null;
+        state.live.finalizingRunId = null;
+      }
+      renderRunHistory();
+      updateFormDisabled();
+      setFormStatus(job.status === 'cancelled' ? 'Cancelled ' + runId + '. No result was added.' : 'Run is already ' + job.status + '.', false);
+      announce('Live run ' + runId + ' ' + job.status + '.');
+      refreshRunHistory();
+    } catch (error) {
+      setFormError('Cancel failed: ' + error.message);
+      setFormStatus('Cancel failed: ' + error.message, true);
+      refreshRunHistory();
+    } finally {
+      state.live.cancelBusy = false;
+      updateFormDisabled();
+    }
+  }
+
+  async function retryRunById(runId) {
+    var client = liveApi();
+    if (!client || !runId || state.live.retryBusy) return;
+    if (state.live.activeRun) {
+      setFormError('Wait for the active run to finish or cancel it before retrying.');
+      return;
+    }
+    state.live.retryBusy = true;
+    setFormError('');
+    setFormStatus('Retrying ' + runId + ' from its immutable scenario snapshot…', false);
+    try {
+      var job = await client.retryRun(runId);
+      state.live.activeForm = runFormFromJob(job) || state.live.lastForm;
+      attachActiveRun(job);
+      setFormStatus('Retry queued as ' + job.run_id + '; connecting to the event stream…', false);
+      announce('Retry queued for ' + runLabel(job) + '.');
+    } catch (error) {
+      setFormError('Retry failed: ' + error.message);
+      setFormStatus('Retry failed: ' + error.message, true);
+      refreshRunHistory();
+    } finally {
+      state.live.retryBusy = false;
+      updateFormDisabled();
+    }
   }
 
   function formatLogTime(ts) {
@@ -4292,7 +4557,12 @@
     });
     if (state.live.logLines.length > 250) state.live.logLines.shift();
     state.live.logCount += 1;
-    renderRunLog();
+    if (!state.live.logRenderTimer) {
+      state.live.logRenderTimer = window.setTimeout(function () {
+        state.live.logRenderTimer = null;
+        renderRunLog();
+      }, 180);
+    }
   }
 
   function renderRunLog() {
@@ -4312,7 +4582,7 @@
   }
 
   function isTerminalStatus(status) {
-    return ['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(status) !== -1;
+    return ['completed', 'failed', 'interrupted', 'not_implemented', 'cancelled'].indexOf(status) !== -1;
   }
 
   function activeRunMatches(runId) {
@@ -4334,6 +4604,12 @@
         if (!activeRunMatches(runId)) return;
         appendRunLog(event.level, event.event, event.message, event.ts);
         if (event.event === 'started') {
+          if (state.live.activeRun) {
+            state.live.activeRun.status = 'running';
+            state.live.activeRun.started_utc = state.live.activeRun.started_utc || event.ts;
+            upsertRunJob(state.live.activeRun);
+            renderRunHistory();
+          }
           setRunState('running', 'running');
           setFormStatus('Runner started. Streaming logs…', false);
           updateFormDisabled();
@@ -4365,7 +4641,8 @@
     if (!activeRunMatches(runId)) return;
     if (state.live.pollTimer) return;
     state.live.pollFailures = 0;
-    setRunState('running', 'running');
+    var current = state.live.activeRun;
+    setRunState((current && current.status) || 'running', (current && current.status) || 'running');
     state.live.pollTimer = window.setInterval(async function () {
       if (!activeRunMatches(runId)) {
         clearPollTimer();
@@ -4376,6 +4653,13 @@
         if (!activeRunMatches(runId)) {
           clearPollTimer();
           return;
+        }
+        if (state.live.activeRun && job.status !== state.live.activeRun.status && !isTerminalStatus(job.status)) {
+          state.live.activeRun.status = job.status;
+          state.live.currentJob = job;
+          upsertRunJob(job);
+          renderRunHistory();
+          setRunState(job.status, job.status);
         }
         if (isTerminalStatus(job.status)) {
           clearPollTimer();
@@ -4462,11 +4746,18 @@
         renderRunOutputError(job, 'Run completed but normalized output is unavailable: ' + error.message);
         setFormStatus('Completed, but output unavailable: ' + error.message, true);
       }
+    } else if (job.status === 'cancelled') {
+      renderRunOutputError(job, job.message || 'Run cancelled by user.');
+      setFormStatus('Cancelled ' + job.run_id + '. No result was added.', false);
+      announce('Live run ' + job.run_id + ' cancelled.');
     } else {
       renderRunOutputError(job, job.message || ('Run ended with status ' + job.status + '.'));
       setFormStatus('Run ' + job.status + ': ' + (job.message || 'no message'), true);
       announce('Live run ' + job.run_id + ' ' + job.status + '. No result was added.');
     }
+    upsertRunJob(job);
+    renderRunHistory();
+    refreshRunHistory();
     if (activeRunMatches(runId)) {
       state.live.activeRun = null;
       state.live.finalizingRunId = null;
@@ -4489,9 +4780,9 @@
     return output;
   }
 
-  function addSessionRun(job, output) {
+  function addSessionRun(job, output, formOverride) {
     var checked = validateLiveOutput(output);
-    var form = state.live.activeForm || state.live.lastForm || {};
+    var form = formOverride || state.live.activeForm || state.live.lastForm || {};
     var summary = output.summary || {};
     var metrics = output.metrics || {};
     var railId = 'live:' + job.run_id;
@@ -4513,13 +4804,14 @@
       dimensions: {
         harvest: { level: form.harvestChoice === 'custom' ? 'custom' : form.harvestChoice + 'm', m3_per_year: form.level, basis: form.path },
         carbon_price_usd_per_t: form.carbon,
-        bio_cost_usd_per_gj: state.live.defaults.generic_bio_cost_usd_per_gj,
+        bio_cost_usd_per_gj: (state.live.defaults || {}).generic_bio_cost_usd_per_gj,
         recovery_fraction: form.recovery,
         supply_curve: 'tiered',
         hydro_mode: form.hydro,
         pwrbio_cap: { fraction: form.pwrbio },
         nuclear_cap_gw: form.nuclear,
         wind: { cap: fmtPct(form.windCap, 0), integration_limit: null, cost_usd_per_gj: form.windCost },
+        hydrated: Boolean(formOverride),
         zero_tiers: zeroTiers
       },
       metrics: {
@@ -4590,12 +4882,19 @@
   function renderRunOutputError(job, message) {
     var container = $('run-output-summary');
     if (!container) return;
+    var canRetry = job && job.run_id && isTerminalStatus(job.status);
     container.hidden = false;
-    container.innerHTML = '<div class="run-output-card is-failed">' +
+    container.innerHTML = '<div class="run-output-card ' + (job.status === 'cancelled' ? 'is-cancelled' : 'is-failed') + '">' +
       '<div class="run-output-head"><h3>No result — ' + esc(job.status) + '</h3><span class="mono">' + esc(job.run_id) + '</span></div>' +
       '<p class="run-output-message">' + esc(message || 'The run did not complete.') + '</p>' +
-      '<div class="run-output-flag"><strong>No fake results.</strong><br>Nothing was added to the scenario rail, trade-off, or dispatch. Inspect the event log and runner summary for diagnosis.</div>' +
+      '<div class="run-output-flag"><strong>No fake results.</strong><br>Nothing was added to the scenario rail, trade-off, or dispatch.' +
+        (job.status === 'cancelled' ? ' The process group was stopped; retry the immutable snapshot to run it again.' : ' Inspect the event log and runner summary for diagnosis.') + '</div>' +
+      (canRetry ? '<div class="run-output-actions"><button class="button button--quiet" id="run-retry-failed" type="button">Retry this run</button></div>' : '') +
     '</div>';
+    var retry = $('run-retry-failed');
+    if (retry) {
+      retry.addEventListener('click', function () { retryRunById(job.run_id); });
+    }
   }
 
   function renderRunOutputIdle() {
@@ -4659,6 +4958,11 @@
       applyRunDefaults(FALLBACK_DEFAULTS);
     }
     renderRunMode();
+    try {
+      await hydrateRuns();
+    } catch (error) {
+      setFormStatus('Live API ready; run history could not be hydrated: ' + error.message, true);
+    }
   }
 
   function invalidateCreatedScenario() {
@@ -4681,6 +4985,28 @@
     });
     $('run-harvest').addEventListener('change', syncHarvestCustom);
     $('run-queue').addEventListener('click', queueCreatedScenario);
+    var cancel = $('run-cancel');
+    if (cancel) {
+      cancel.addEventListener('click', function () {
+        if (state.live.activeRun) cancelRunById(state.live.activeRun.run_id);
+      });
+    }
+    var history = $('run-history-list');
+    if (history) {
+      history.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-run-action]');
+        if (!button) return;
+        var action = button.getAttribute('data-run-action');
+        var runId = button.getAttribute('data-run-id');
+        if (action === 'cancel') cancelRunById(runId);
+        if (action === 'retry') retryRunById(runId);
+        if (action === 'open') {
+          selectScenario('live:' + runId);
+          activateTab('dispatch');
+        }
+      });
+    }
+    renderRunHistory();
   }
 
   function fileTable(files) {

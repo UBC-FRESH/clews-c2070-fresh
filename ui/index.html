@@ -484,6 +484,10 @@
               <div><dt>Run</dt><dd id="run-meta-run">—</dd></div>
               <div><dt>Elapsed</dt><dd id="run-meta-elapsed">—</dd></div>
             </dl>
+            <p class="run-status-note" id="run-status-note">No progress estimate is shown; elapsed time is the only clock.</p>
+            <div class="run-status-actions" id="run-status-actions">
+              <button class="button button--quiet run-cancel" id="run-cancel" type="button" hidden>Cancel run</button>
+            </div>
             <div class="run-policy-flag" id="run-policy-flag" hidden>
               <strong>screening_only · policy_grade=false</strong>
               <p>No reserve margin, transmission, curtailment, or build-rate constraints. Never policy or forecast.</p>
@@ -497,6 +501,20 @@
         </div>
 
         <div class="run-output" id="run-output-summary" hidden></div>
+
+        <section class="run-history" aria-labelledby="run-history-title">
+          <div class="run-history-head">
+            <div>
+              <p class="kicker">Persisted on the server</p>
+              <h3 id="run-history-title">Run history</h3>
+            </div>
+            <span class="mono" id="run-history-count">0 runs</span>
+          </div>
+          <p class="run-history-note">Completed runs are re-added to the session rail after reload. Queued and running jobs reconnect to SSE; failed, cancelled, and interrupted jobs offer Retry.</p>
+          <div class="run-history-list" id="run-history-list">
+            <p class="run-history-empty">No live runs loaded yet.</p>
+          </div>
+        </section>
       </section>
 
       <section class="panel" id="panel-inputs" role="tabpanel" aria-labelledby="tab-inputs" tabindex="0" hidden>

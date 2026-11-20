@@ -1232,6 +1232,194 @@ def test_cli_runner_command_rejects_empty_and_bad_quotes(
         )
 
 
+BLOCKING_RUNNER = """\
+import argparse
+import json
+import signal
+import sys
+import time
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+out = Path(args.out)
+out.mkdir(parents=True, exist_ok=True)
+
+def handle_term(signum, frame):
+    (out / "run_summaries.json").write_text(
+        json.dumps({"status": "completed", "message": "late completion after cancel"}),
+        encoding="utf-8",
+    )
+    print("late completion written", flush=True)
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_term)
+print("blocking runner ready", flush=True)
+while True:
+    time.sleep(0.05)
+"""
+
+
+def wait_for_status(
+    client: TestClient, run_id: str, status: str, timeout_seconds: float = 5.0
+) -> dict:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        job = client.get(f"/api/runs/{run_id}").json()
+        if job["status"] == status:
+            return job
+        time.sleep(0.02)
+    raise AssertionError(f"run {run_id} did not reach {status}")
+
+
+def test_cancel_queued_run_never_starts(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SLOW_RUNNER)
+    with make_client(runtime, runner=runner, max_concurrent_runs=1) as client:
+        create_scenario(client)
+        first = client.post("/api/runs", json={"scenario_id": "screening_150m_base"})
+        second = client.post("/api/runs", json={"scenario_id": "screening_150m_base"})
+        first_id = first.json()["run_id"]
+        second_id = second.json()["run_id"]
+        assert second.json()["status"] == "queued"
+
+        cancelled = client.post(f"/api/runs/{second_id}/cancel")
+        assert cancelled.status_code == 200, cancelled.text
+        assert cancelled.json()["status"] == "cancelled"
+        assert wait_for_terminal(client, first_id)["status"] == "completed"
+        time.sleep(0.2)
+        assert client.get(f"/api/runs/{second_id}").json()["status"] == "cancelled"
+        events, _ = RunStore(runtime / "runs").read_events(second_id, 0)
+        assert events[-1]["event"] == "cancelled"
+
+
+def test_cancel_running_run_kills_group_and_appends_terminal_event(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, BLOCKING_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        job = wait_for_status(client, run_id, "running")
+        pid = int(job["pid"])
+
+        cancelled = client.post(f"/api/runs/{run_id}/cancel")
+        assert cancelled.status_code == 200, cancelled.text
+        job = cancelled.json()
+        assert job["status"] == "cancelled"
+        assert job["finished_utc"]
+        events, _ = RunStore(runtime / "runs").read_events(run_id, 0)
+        assert events[-1]["event"] == "cancelled"
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.02)
+        else:
+            raise AssertionError(f"cancelled runner {pid} survived")
+
+        # The monitor must not overwrite the cancelled status with the late
+        # completed summary written from the SIGTERM handler.
+        time.sleep(0.4)
+        final = client.get(f"/api/runs/{run_id}").json()
+        assert final["status"] == "cancelled"
+        events, _ = RunStore(runtime / "runs").read_events(run_id, 0)
+        assert not any(event["event"] == "completed" for event in events)
+
+
+def test_cancel_terminal_run_is_409(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, FAKE_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        assert wait_for_terminal(client, run_id)["status"] == "completed"
+        cancelled = client.post(f"/api/runs/{run_id}/cancel")
+        assert cancelled.status_code == 409, cancelled.text
+        assert "completed" in cancelled.json()["detail"]
+
+
+def test_retry_uses_immutable_snapshot_and_enqueues_new_run(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SNAPSHOT_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        created = create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": created["scenario_id"]}
+        )
+        original_id = response.json()["run_id"]
+        assert wait_for_terminal(client, original_id)["status"] == "completed"
+
+        retried = client.post(f"/api/runs/{original_id}/retry")
+        assert retried.status_code == 202, retried.text
+        retry_job = retried.json()
+        assert retry_job["run_id"] != original_id
+        assert retry_job["scenario_id"] == created["scenario_id"]
+        assert retry_job["retried_from"] == original_id
+        assert Path(retry_job["scenario_path"]).is_file()
+
+        final = wait_for_terminal(client, retry_job["run_id"])
+        assert final["status"] == "completed"
+        seen = json.loads(
+            (Path(final["output_dir"]) / "seen.json").read_text(encoding="utf-8")
+        )
+        assert seen["label"] == created["label"]
+
+        listing = client.get("/api/runs").json()["runs"]
+        by_id = {item["run_id"]: item for item in listing}
+        assert by_id[original_id]["can_retry"] is True
+        assert by_id[original_id]["scenario"]["label"] == created["label"]
+
+
+def test_retry_active_or_missing_snapshot_is_409(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, BLOCKING_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        wait_for_status(client, run_id, "running")
+        assert client.post(f"/api/runs/{run_id}/retry").status_code == 409
+        cancelled = client.post(f"/api/runs/{run_id}/cancel")
+        assert cancelled.status_code == 200, cancelled.text
+        Path(cancelled.json()["scenario_path"]).unlink()
+        missing = client.post(f"/api/runs/{run_id}/retry")
+        assert missing.status_code == 409, missing.text
+
+
+def test_list_runs_hydrates_metrics_and_output_availability(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, OUTPUT_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        created = create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": created["scenario_id"]}
+        )
+        run_id = response.json()["run_id"]
+        assert wait_for_terminal(client, run_id)["status"] == "completed"
+        item = client.get("/api/runs").json()["runs"][0]
+        assert item["status"] == "completed"
+        assert item["output_available"] is True
+        assert item["can_cancel"] is False
+        assert item["can_retry"] is True
+        assert item["metrics"]["objective"] == 123.5
+        assert item["scenario"]["label"] == created["label"]
+        assert item["scenario"]["harvest_level_m3_per_year"] == 150_000_000.0
+
+
 def test_sse_drains_terminal_burst_larger_than_two_chunks(tmp_path: Path) -> None:
     runtime = tmp_path / "runtime"
     runs_dir = runtime / "runs"
