@@ -2,6 +2,21 @@
 
 ## 2026-11-20
 
+- **Built the national merchantable/operable screening proxy from SCANFI v2
+  and the managed-landbase proxy.** Added
+  `scripts/national/build_operable_proxy.py`, which makes one national 30 m
+  pass over SCANFI land cover, height, biomass, and crown closure, aggregates
+  to 990 m blocks, and applies the existing managed-proxy share inside each
+  province-ecoprovince. The default screen (height >= 5 m, biomass >= 20 Mg/ha,
+  closure >= 10%) retains **332.60 of 422.48 Mha** treed area; the operable
+  proxy is **144.69 Mha** (87.0% of the 166.28 Mha managed proxy; 0.39x NFI
+  forest land). Sensitivity cases are 383.38 Mha (low) and 267.94 Mha (high).
+  Outputs are under
+  `data/derived/national/managed_landbase/operable_proxy/`, with a parent
+  report copy at `docs/operable-proxy-report.md`. The product is a screening
+  proxy, **not** a legal THLB, and applies no slope, road-access, age, or
+  economic constraint. No public OSeCAN changes.
+
 - **Added the THLB/operability intensity sensitivity and exposed the
   allocation-LP family in the UI.** The provincial allocation LP now writes
   per-intensity artifacts under
