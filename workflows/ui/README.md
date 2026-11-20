@@ -44,6 +44,31 @@ CLEWS_UI_READ_ONLY=1 .venv/bin/python -m workflows.ui.server --port 8013
 `CLEWS_UI_RUNTIME_DIR` overrides the default `runtime/ui/` writable root. Runtime
 state is local and is not committed (the repository ignores `runtime/`).
 
+### Deployment roles
+
+`--role {public,analyst,model_builder,energy_modeller}` (or
+`CLEWS_UI_ROLE`) selects a deployment mode. Roles do not authenticate callers:
+there is still no login, session, user table, or token validation. In deployed
+environments, Cloudflare Access remains the identity boundary.
+
+| Role | Effective behavior |
+|---|---|
+| `public` | Forced read-only; no runs, scenario edits, or mutations |
+| `analyst` | Current behavior; scenarios and runs require a writable instance plus `--allow-runs` |
+| `model_builder` | Analyst-level scenario/run API; OSeCAN/energy linkage stays read-only through the API and model rebuild/publication remains host-operator work |
+| `energy_modeller` | Forced read-only OSeCAN linkage view; no forestry scenario edits or runs |
+
+Read-only roles reject `--allow-runs` at startup. Unknown roles fail at startup.
+`--read-only` is valid on any role and also disables runs. `/api/health`,
+`/api/version`, and `/api/roles` report the active role and effective
+`read_only` / `allow_runs` values.
+
+For `model_builder`, "energy linkage read-only" means the OSeCAN model tree,
+constraint sets, and publication flow are not mutated through this server;
+scenario energy fields remain screening inputs that a writable scenario author
+may set, and they are not energy-policy controls. Per-user runtime isolation is
+a v1.2 deliverable and is not implemented here.
+
 ## Scenario contract: `clews.scenario.v1`
 
 `workflows/ui/contracts.py` is the source of truth. Every nested model rejects
@@ -118,7 +143,9 @@ Example:
 
 | Method | Path | Behaviour |
 |---|---|---|
-| `GET` | `/api/health` | status, schema version, read-only and allow-runs flags |
+| `GET` | `/api/health` | status, role, schema version, and effective read-only/allow-runs flags |
+| `GET` | `/api/version` | app/API/schema versions and active role |
+| `GET` | `/api/roles` | current role capabilities and the role catalog; descriptive only |
 | `GET` | `/api/constraints` | both `screening_v0` and draft `policy_test_v1` with `status`, `policy_grade`, availability, notes, and shared UI `defaults` |
 | `GET` | `/api/scenarios` | `{"scenarios": [...]}` |
 | `GET` | `/api/scenarios/{id}` | one scenario; 404 if missing, 400 for an unsafe ID |

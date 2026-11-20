@@ -2,6 +2,21 @@
 
 ## 2026-11-20
 
+- **Added deployment templates and non-authenticating role guards for the
+  forestry UI.** `deploy/` now holds loopback-only systemd units for a public
+  read-only instance (`127.0.0.1:8013`, role `public`) and an analyst writable
+  instance (`127.0.0.1:8014`, role `analyst`, `--allow-runs`, two concurrent
+  runs), plus a Cloudflare Tunnel ingress example and an operator runbook for
+  Access, publication, backup, retention, DataLad/S3, and the no-in-app-auth
+  boundary. The server accepts `--role` / `CLEWS_UI_ROLE` with `public`,
+  `analyst`, `model_builder`, and `energy_modeller`; `public` and
+  `energy_modeller` force read-only and reject `--allow-runs`, unknown roles
+  fail closed, and `--read-only` now reports effective `allow_runs=false`.
+  Added `/api/version` and `/api/roles`; `/api/health` reports the active role
+  and effective flags. Roles select actions and do not authenticate callers;
+  per-user runtime isolation remains a v1.2 deliverable. No service was
+  deployed or started, and no public OSeCAN change was made.
+
 - **Integrated the full QC MERIS model-input deck and the Forest-Sector LP v1
   synthesis.** Replaced the 17-row QC sample in the cost/revenue merge with
   `meris_qc_full/forest_cost_revenue_qc_model.csv`; the sample is excluded

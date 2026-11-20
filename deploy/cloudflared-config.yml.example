@@ -1,0 +1,30 @@
+# Cloudflare Tunnel ingress example for the CLEWS/C2070 forestry UI.
+#
+# Copy to /etc/cloudflared/config.yml on the host and replace every
+# REPLACE_WITH_* placeholder. The tunnel UUID and credentials file are local
+# deployment state, not repository content. Never commit the credentials JSON.
+#
+# Cloudflare Access is configured in the Cloudflare dashboard for each
+# hostname: the public host may be anonymous behind WAF/rate limits (or an OTP
+# allowlist), while the analyst host is restricted to the analyst Access group.
+# This file contains ingress routing only; it is not an Access policy.
+
+tunnel: REPLACE_WITH_TUNNEL_UUID
+credentials-file: /etc/cloudflared/REPLACE_WITH_TUNNEL_UUID.json
+no-autoupdate: true
+
+ingress:
+  - hostname: forestry-public.REPLACE_WITH_DOMAIN
+    service: http://127.0.0.1:8013
+    originRequest:
+      connectTimeout: 30s
+      noHappyEyeballs: true
+
+  - hostname: forestry-analyst.REPLACE_WITH_DOMAIN
+    service: http://127.0.0.1:8014
+    originRequest:
+      connectTimeout: 30s
+      noHappyEyeballs: true
+
+  # No catch-all public route: unmatched hostnames return 404 at the edge.
+  - service: http_status:404

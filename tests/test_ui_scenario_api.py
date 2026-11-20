@@ -118,6 +118,7 @@ def write_fake_runner(tmp_path: Path, source: str) -> tuple[str, ...]:
 def make_client(
     runtime: Path,
     *,
+    role: str | None = None,
     runner: tuple[str, ...] | None = None,
     allow_runs: bool = True,
     read_only: bool = False,
@@ -126,6 +127,7 @@ def make_client(
 ) -> TestClient:
     app = create_app(
         runtime,
+        role=role,
         allow_runs=allow_runs,
         read_only=read_only,
         runner_command=runner,
@@ -347,6 +349,179 @@ def test_malformed_read_only_flag_fails_closed(tmp_path: Path, monkeypatch) -> N
     monkeypatch.setenv("CLEWS_UI_READ_ONLY", "sometimes")
     with pytest.raises(RuntimeError, match="CLEWS_UI_READ_ONLY"):
         create_app(tmp_path / "runtime")
+
+
+def test_public_role_forces_read_only_and_rejects_allow_runs(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    with make_client(
+        runtime, role="public", allow_runs=False, read_only=False
+    ) as client:
+        health = client.get("/api/health").json()
+        assert health["role"] == "public"
+        assert health["read_only"] is True
+        assert health["allow_runs"] is False
+
+        scenario_response = client.post("/api/scenarios", json=scenario_payload())
+        assert scenario_response.status_code == 403
+        assert "public" in scenario_response.json()["detail"]
+        run_response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert run_response.status_code == 403
+        assert not runtime.exists()
+
+    with pytest.raises(ValueError, match="public.*--allow-runs"):
+        create_app(tmp_path / "conflict", role="public", allow_runs=True)
+
+
+def test_energy_modeller_is_read_only_linkage_view(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    with make_client(
+        runtime, role="energy_modeller", allow_runs=False, read_only=False
+    ) as client:
+        health = client.get("/api/health").json()
+        assert health["role"] == "energy_modeller"
+        assert health["read_only"] is True
+        assert health["allow_runs"] is False
+
+        assert client.get("/api/constraints").status_code == 200
+        assert client.get("/api/scenarios").json() == {"scenarios": []}
+        created = client.post("/api/scenarios", json=scenario_payload())
+        assert created.status_code == 403
+        assert (
+            client.post(
+                "/api/scenarios",
+                params={"overwrite": "true"},
+                json=scenario_payload(),
+            ).status_code
+            == 403
+        )
+        assert (
+            client.post(
+                "/api/runs", json={"scenario_id": "screening_150m_base"}
+            ).status_code
+            == 403
+        )
+
+        current = client.get("/api/roles").json()["current"]
+        assert current["role"] == "energy_modeller"
+        assert current["read_only"] is True
+        assert current["allow_runs"] is False
+        assert current["can_edit_scenarios"] is False
+        assert current["can_run_scenarios"] is False
+        assert current["energy_linkage_read_only"] is True
+
+    with pytest.raises(ValueError, match="energy_modeller.*--allow-runs"):
+        create_app(tmp_path / "conflict", role="energy_modeller", allow_runs=True)
+
+
+def test_model_builder_allows_scenarios_and_runs_but_linkage_is_read_only(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, FAKE_RUNNER)
+    with make_client(runtime, role="model_builder", runner=runner) as client:
+        assert client.get("/api/health").json()["role"] == "model_builder"
+
+        created = create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": created["scenario_id"]}
+        )
+        assert response.status_code == 202, response.text
+        final = wait_for_terminal(client, response.json()["run_id"])
+        assert final["status"] == "completed"
+
+        current = client.get("/api/roles").json()["current"]
+        assert current["role"] == "model_builder"
+        assert current["read_only"] is False
+        assert current["allow_runs"] is True
+        assert current["can_edit_scenarios"] is True
+        assert current["energy_linkage_read_only"] is True
+
+
+def test_version_roles_and_health_are_consistent(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    with make_client(runtime, role="analyst", allow_runs=True) as client:
+        health = client.get("/api/health").json()
+        version = client.get("/api/version").json()
+        roles = client.get("/api/roles").json()
+
+        assert health["role"] == "analyst"
+        assert health["read_only"] is False
+        assert health["allow_runs"] is True
+
+        assert version["name"] == "clews-ui"
+        assert version["api_version"] == "v1"
+        assert version["schema_version"] == "clews.scenario.v1"
+        assert version["role"] == "analyst"
+
+        current = roles["current"]
+        assert current["role"] == health["role"]
+        assert current["read_only"] is health["read_only"]
+        assert current["allow_runs"] is health["allow_runs"]
+        assert [item["role"] for item in roles["roles"]] == [
+            "public",
+            "analyst",
+            "model_builder",
+            "energy_modeller",
+        ]
+        assert any("v1.2" in note for note in roles["notes"])
+        assert any("authenticate" in note for note in roles["notes"])
+
+
+def test_role_environment_flag_and_unknown_roles_fail_closed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("CLEWS_UI_ROLE", "public")
+    app = create_app(
+        tmp_path / "env-runtime",
+        allow_runs=False,
+        read_only=False,
+        runner_command=(sys.executable, "-c", "pass"),
+    )
+    with TestClient(app) as client:
+        health = client.get("/api/health").json()
+        assert health["role"] == "public"
+        assert health["read_only"] is True
+        assert health["allow_runs"] is False
+
+    monkeypatch.setenv("CLEWS_UI_ROLE", "root")
+    with pytest.raises(ValueError, match="CLEWS_UI_ROLE"):
+        create_app(tmp_path / "bad-env")
+
+    monkeypatch.delenv("CLEWS_UI_ROLE")
+    with pytest.raises(ValueError, match="--role"):
+        create_app(tmp_path / "bad-arg", role="root")
+
+
+def test_cli_defaults_to_loopback_and_rejects_bad_role_combinations(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import workflows.ui.server as server_module
+
+    defaults = server_module.build_parser().parse_args([])
+    assert defaults.host == "127.0.0.1"
+    assert defaults.port == 8013
+    assert defaults.role is None
+
+    def fail_uvicorn(*args, **kwargs) -> None:
+        raise AssertionError("uvicorn.run should not be reached")
+
+    monkeypatch.setattr(server_module.uvicorn, "run", fail_uvicorn)
+    with pytest.raises(SystemExit):
+        server_module.main(["--role", "root", "--runtime-dir", str(tmp_path)])
+    with pytest.raises(SystemExit, match="public.*--allow-runs"):
+        server_module.main(
+            [
+                "--role",
+                "public",
+                "--allow-runs",
+                "--runtime-dir",
+                str(tmp_path),
+            ]
+        )
 
 
 # ---------------------------------------------------------------------------

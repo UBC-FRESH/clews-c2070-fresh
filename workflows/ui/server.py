@@ -11,7 +11,8 @@ Run locally::
 
 The default bind is loopback.  Set ``CLEWS_UI_READ_ONLY=1`` (or pass
 ``--read-only``) to reject every mutating HTTP method.  Read-only startup does
-not create directories or repair job records.
+not create directories or repair job records.  ``--role`` (or
+``CLEWS_UI_ROLE``) selects a deployment mode; it does not authenticate callers.
 """
 
 from __future__ import annotations
@@ -56,6 +57,12 @@ from workflows.ui.storage import atomic_write_json, read_json
 
 __all__ = ["AppSettings", "RunStore", "RunSupervisor", "create_app", "main"]
 
+APP_NAME = "clews-ui"
+APP_VERSION = "0.1.0"
+API_VERSION = "v1"
+ROLE_NAMES = ("public", "analyst", "model_builder", "energy_modeller")
+DEFAULT_ROLE = "analyst"
+ROLES_SCHEMA_VERSION = "clews.ui.roles.v1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_UI_DIR = REPO_ROOT / "ui"
 DEFAULT_RUNTIME_DIR = REPO_ROOT / "runtime" / "ui"
@@ -115,6 +122,142 @@ def _env_flag(name: str) -> bool | None:
     )
 
 
+@dataclass(frozen=True)
+class RoleDefinition:
+    """Deployment role and the action envelope it can permit.
+
+    Roles select server behavior.  They do not identify or authenticate a
+    caller; Cloudflare Access remains the identity boundary at deployment.
+    """
+
+    name: str
+    summary: str
+    forces_read_only: bool
+    permits_allow_runs: bool
+    allows_scenario_edits: bool
+    energy_linkage_read_only: bool
+
+
+ROLE_DEFINITIONS: dict[str, RoleDefinition] = {
+    "public": RoleDefinition(
+        name="public",
+        summary=(
+            "Curated read-only surface. No scenario edits, runs, or mutations."
+        ),
+        forces_read_only=True,
+        permits_allow_runs=False,
+        allows_scenario_edits=False,
+        energy_linkage_read_only=True,
+    ),
+    "analyst": RoleDefinition(
+        name="analyst",
+        summary=(
+            "Trusted working surface. Scenarios and runs are allowed when the "
+            "instance is writable and started with --allow-runs."
+        ),
+        forces_read_only=False,
+        permits_allow_runs=True,
+        allows_scenario_edits=True,
+        energy_linkage_read_only=False,
+    ),
+    "model_builder": RoleDefinition(
+        name="model_builder",
+        summary=(
+            "Analyst-level scenario and run API plus model-build review. "
+            "OSeCAN/energy linkage is read-only through the API; model "
+            "rebuilds and publication remain host-operator work."
+        ),
+        forces_read_only=False,
+        permits_allow_runs=True,
+        allows_scenario_edits=True,
+        energy_linkage_read_only=True,
+    ),
+    "energy_modeller": RoleDefinition(
+        name="energy_modeller",
+        summary=(
+            "Read-only OSeCAN linkage view. No forestry scenario edits, runs, "
+            "or mutations."
+        ),
+        forces_read_only=True,
+        permits_allow_runs=False,
+        allows_scenario_edits=False,
+        energy_linkage_read_only=True,
+    ),
+}
+
+
+def _parse_role(raw_role: str, source: str) -> str:
+    role = raw_role.strip().lower()
+    if role not in ROLE_DEFINITIONS:
+        valid = ", ".join(ROLE_NAMES)
+        raise ValueError(f"{source} must be one of: {valid}; got {raw_role!r}")
+    return role
+
+
+def _resolve_role(requested_role: str | None) -> str:
+    """Resolve CLI > environment > default without accepting unknown roles."""
+
+    if requested_role is not None:
+        return _parse_role(requested_role, "--role")
+    from_env = os.environ.get("CLEWS_UI_ROLE")
+    if from_env is not None:
+        return _parse_role(from_env, "CLEWS_UI_ROLE")
+    return DEFAULT_ROLE
+
+
+def _resolve_effective_access(
+    role: str, *, allow_runs: bool, read_only: bool
+) -> tuple[bool, bool]:
+    """Return effective ``(read_only, allow_runs)`` for ``role``.
+
+    A read-only role cannot be combined with ``--allow-runs``; the request is
+    contradictory and fails at startup.  ``--read-only`` on a writable role is
+    valid and makes ``allow_runs`` ineffective, so the health surface reports
+    the effective value rather than the requested flag.
+    """
+
+    definition = ROLE_DEFINITIONS[role]
+    if allow_runs and not definition.permits_allow_runs:
+        raise ValueError(
+            f"role {role!r} is read-only and cannot be combined with --allow-runs"
+        )
+    effective_read_only = bool(read_only) or definition.forces_read_only
+    effective_allow_runs = bool(allow_runs) and not effective_read_only
+    return effective_read_only, effective_allow_runs
+
+
+def _role_catalog() -> list[dict[str, Any]]:
+    return [
+        {
+            "role": definition.name,
+            "summary": definition.summary,
+            "forced_read_only": definition.forces_read_only,
+            "supports_allow_runs": definition.permits_allow_runs,
+            "allows_scenario_edits": definition.allows_scenario_edits,
+            "energy_linkage_read_only": definition.energy_linkage_read_only,
+        }
+        for definition in ROLE_DEFINITIONS.values()
+    ]
+
+
+def _current_role_payload(settings: AppSettings) -> dict[str, Any]:
+    definition = ROLE_DEFINITIONS[settings.role]
+    return {
+        "role": settings.role,
+        "read_only": settings.read_only,
+        "allow_runs": settings.allow_runs,
+        "can_edit_scenarios": (
+            definition.allows_scenario_edits and not settings.read_only
+        ),
+        "can_run_scenarios": settings.allow_runs,
+        "can_cancel_runs": settings.allow_runs,
+        "can_retry_runs": settings.allow_runs,
+        "energy_linkage_read_only": (
+            definition.energy_linkage_read_only or settings.read_only
+        ),
+    }
+
+
 def _validate_run_id(value: str) -> str:
     if not RUN_ID_PATTERN.fullmatch(value):
         raise ValueError("run_id must match ^[a-z0-9][a-z0-9-]{0,95}$")
@@ -163,6 +306,7 @@ class AppSettings(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     runtime_dir: Path
+    role: str
     allow_runs: bool
     read_only: bool
     heartbeat_seconds: float = Field(gt=0)
@@ -1158,6 +1302,7 @@ def _summary_metrics(summary: dict[str, Any] | None) -> dict[str, Any] | None:
 def create_app(
     runtime_dir: Path | str | None = None,
     *,
+    role: str | None = None,
     allow_runs: bool = False,
     read_only: bool | None = None,
     runner_command: Sequence[str] | None = None,
@@ -1174,9 +1319,15 @@ def create_app(
     """
 
     resolved_runtime = _resolve_runtime_dir(runtime_dir)
-    resolved_read_only = _env_flag("CLEWS_UI_READ_ONLY")
+    resolved_role = _resolve_role(role)
+    requested_read_only = _env_flag("CLEWS_UI_READ_ONLY")
     if read_only is not None:
-        resolved_read_only = read_only
+        requested_read_only = read_only
+    resolved_read_only, resolved_allow_runs = _resolve_effective_access(
+        resolved_role,
+        allow_runs=allow_runs,
+        read_only=bool(requested_read_only),
+    )
     resolved_runner = tuple(
         runner_command
         if runner_command is not None
@@ -1187,8 +1338,9 @@ def create_app(
 
     settings = AppSettings(
         runtime_dir=resolved_runtime,
-        allow_runs=allow_runs,
-        read_only=bool(resolved_read_only),
+        role=resolved_role,
+        allow_runs=resolved_allow_runs,
+        read_only=resolved_read_only,
         heartbeat_seconds=heartbeat_seconds,
         poll_seconds=poll_seconds,
         max_concurrent_runs=max_concurrent_runs,
@@ -1218,7 +1370,7 @@ def create_app(
 
     app = FastAPI(
         title="CLEWS/C2070 live scenario runner",
-        version="0.1.0",
+        version=APP_VERSION,
         description=(
             "Validated clews.scenario.v1 scenarios, durable run jobs, and SSE "
             "status. Solves happen only in runner subprocesses."
@@ -1233,14 +1385,19 @@ def create_app(
     @app.middleware("http")
     async def read_only_guard(request, call_next):  # type: ignore[no-untyped-def]
         if settings.read_only and request.method not in READ_ONLY_METHODS:
+            if ROLE_DEFINITIONS[settings.role].forces_read_only:
+                detail = (
+                    f"server is read-only for role {settings.role!r}; "
+                    "mutating requests are disabled"
+                )
+            else:
+                detail = (
+                    "server is read-only; set CLEWS_UI_READ_ONLY=0 and "
+                    "restart without --read-only to mutate state"
+                )
             return JSONResponse(
                 status_code=status.HTTP_403_FORBIDDEN,
-                content={
-                    "detail": (
-                        "server is read-only; set CLEWS_UI_READ_ONLY=0 and "
-                        "restart without --read-only to mutate state"
-                    )
-                },
+                content={"detail": detail},
             )
         return await call_next(request)
 
@@ -1357,10 +1514,39 @@ def create_app(
     def health() -> dict[str, Any]:
         return {
             "status": "ok",
+            "role": settings.role,
             "schema_version": SCHEMA_VERSION,
             "read_only": settings.read_only,
             "allow_runs": settings.allow_runs,
             "max_concurrent_runs": settings.max_concurrent_runs,
+        }
+
+    @app.get("/api/version")
+    def version() -> dict[str, Any]:
+        return {
+            "name": APP_NAME,
+            "version": APP_VERSION,
+            "api_version": API_VERSION,
+            "schema_version": SCHEMA_VERSION,
+            "role": settings.role,
+        }
+
+    @app.get("/api/roles")
+    def roles() -> dict[str, Any]:
+        return {
+            "schema_version": ROLES_SCHEMA_VERSION,
+            "current": _current_role_payload(settings),
+            "roles": _role_catalog(),
+            "notes": [
+                (
+                    "Roles select deployment behavior; they do not authenticate "
+                    "callers or replace Cloudflare Access."
+                ),
+                (
+                    "Per-user runtime isolation is a v1.2 deliverable and is not "
+                    "implemented by this server."
+                ),
+            ],
         }
 
     @app.get("/api/constraints")
@@ -1885,6 +2071,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="writable runtime root (default: runtime/ui)",
     )
     parser.add_argument(
+        "--role",
+        choices=ROLE_NAMES,
+        default=None,
+        help=(
+            "deployment role: read-only public/energy_modeller, or writable "
+            "analyst/model_builder (also CLEWS_UI_ROLE; roles do not "
+            "authenticate callers)"
+        ),
+    )
+    parser.add_argument(
         "--allow-runs",
         action="store_true",
         help="permit POST /api/runs to spawn runner subprocesses",
@@ -1929,13 +2125,17 @@ def main(argv: Sequence[str] | None = None) -> None:
             raise SystemExit(f"--runner-command is not valid shell syntax: {exc}") from exc
         if not runner_command:
             raise SystemExit("--runner-command must not be empty")
-    application = create_app(
-        runtime_dir=args.runtime_dir,
-        allow_runs=args.allow_runs,
-        read_only=args.read_only,
-        max_concurrent_runs=args.max_concurrent_runs,
-        runner_command=runner_command,
-    )
+    try:
+        application = create_app(
+            runtime_dir=args.runtime_dir,
+            role=args.role,
+            allow_runs=args.allow_runs,
+            read_only=args.read_only,
+            max_concurrent_runs=args.max_concurrent_runs,
+            runner_command=runner_command,
+        )
+    except (RuntimeError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
     uvicorn.run(
         application,
         host=args.host,

@@ -1,0 +1,56 @@
+# CLEWS/C2070 forestry UI - public read-only instance.
+# Template: replace /opt/clews/clews-c2070-fresh with the release path and
+# review user, runtime path, and resource limits before installing. Do not put
+# credentials or tokens in this unit; see deploy/README.md.
+
+[Unit]
+Description=CLEWS-C2070 forestry UI (public, read-only)
+Documentation=file:/opt/clews/clews-c2070-fresh/deploy/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=clews-ui
+Group=clews-ui
+WorkingDirectory=/opt/clews/clews-c2070-fresh
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=CLEWS_UI_ROLE=public
+Environment=CLEWS_UI_READ_ONLY=1
+Environment=CLEWS_UI_RUNTIME_DIR=/var/lib/clews-ui/public
+# Optional non-secret overrides. If credentials are ever required, keep the
+# file root-owned 0600 and outside the repository.
+EnvironmentFile=-/etc/clews-ui/public.env
+ExecStart=/opt/clews/clews-c2070-fresh/.venv/bin/python -m workflows.ui.server --role public --host 127.0.0.1 --port 8013 --read-only --runtime-dir /var/lib/clews-ui/public
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+ReadOnlyPaths=/opt/clews/clews-c2070-fresh /var/lib/clews-ui/public
+
+# Resource limits are deployment placeholders. The public instance serves
+# reads and never solves; size to the host.
+MemoryMax=1G
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target
