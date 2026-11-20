@@ -2,6 +2,23 @@
 
 ## 2026-11-20
 
+- **Added the provincial harvest-allocation screening LP.** Implemented
+  `workflows/national/harvest/provincial_allocation.py` (PuLP/CBC) to allocate
+  the 100/119/150 Mm³ national ladder across the twelve reporting
+  jurisdictions, with NU held at zero. Caps use documented AAC where available, with explicit
+  proxies for MB (7.39–7.99 range midpoint 7.69), PE (0.46 planning volume),
+  NT (36,376 actual-mean proxy), and NU (not assessed, held at zero). The
+  primary objective minimizes L1 deviation from the 2024 observed provincial
+  shares; a lexicographic second stage minimizes the maximum proportional
+  increase, and a managed-landbase intensity cap is a 1.0/1.2 m³/ha/yr
+  sensitivity, not a legal constraint. All three ladder cases solve; 200M is
+  infeasible by 30.477 Mm³ against the model ceiling (15.400 Mm³ against the
+  most generous documented ceiling). At 150M, BC (−3.790), NB (−5.542), and NT
+  (−0.010) are reduced; AB, QC, and NL fill their ceilings and the rest is
+  distributed proportionally. Added tests and the report/manifest under
+  `data/derived/national/harvest_basis/provincial_allocation/`. No public
+  OSeCAN repository changes.
+
 - **Implemented the 150 Mm³ harvest feasibility gate and exposed
   `policy_test_v1` in the UI.** The runner now resolves the actual harvest path
   and rejects >150,000,000 m³/yr before copying the model, with a clear

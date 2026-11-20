@@ -4,7 +4,7 @@
 |---|---|
 | Document | `planning/harvest-aac-feasibility.md` |
 | Date | 2026-11-20 |
-| Status | Feasibility screen implemented 2026-11-20: runner gate at 150,000,000 m3/yr, `--allow-infeasible` diagnostic override, feasibility labels, and Pareto exclusion for the exogenous ladder. Provincial allocation and the harvest cost curve remain later milestones. |
+| Status | Feasibility screen implemented 2026-11-20: runner gate at 150,000,000 m3/yr, `--allow-infeasible` diagnostic override, feasibility labels, and Pareto exclusion for the exogenous ladder. Provincial harvest-allocation LP implemented 2026-11-20 as a screening milestone: least-deviation allocation under documented ceilings is feasible at 100/119/150 Mm3/yr and infeasible at 200 Mm3/yr by 30.48 Mm3. THLB, the harvest cost curve, and the endogenous forest-sector LP remain later milestones. |
 | Scope | 100 / 119 / 150 / 200 Mm3/yr national harvest ladder |
 | Trigger | The fleet-corrected ladder shows 119 Mm3 dominated by 150 / 200 Mm3; harvest is exogenous and unpriced in the energy objective |
 | Recommendation | Cap the exposed ladder at 150M; reject 200M; treat harvest as exogenous and exclude the ladder from the energy Pareto; defer the cost curve and forest-sector LP |
@@ -230,7 +230,7 @@ None of this makes a harvest case policy-grade; `planning/policy-test-v1.md` is 
 
 ### 6.2 Later milestones
 
-1. **Provincial harvest allocation and AAC cap.** Build a documented provincial allocation rule (historical shares, tenure, or a forest-sector LP) and enforce provincial AAC/NFD. This is required before any 150M case can be called feasible under the status-quo mix, and before any 150–157.3M band is exposed.
+1. **Provincial harvest allocation and AAC cap.** Build a documented provincial allocation rule (historical shares, tenure, or a forest-sector LP) and enforce provincial AAC/NFD. This is required before any 150M case can be called feasible under the status-quo mix, and before any 150–157.3M band is exposed. **Screening LP implemented 2026-11-20** (`data/derived/national/harvest_basis/provincial_allocation/`): the least-deviation allocation is feasible at 100/119/150 Mm3/yr and infeasible at 200 Mm3/yr, but it remains non-legal and is not a substitute for THLB, cost, or tenure resolution.
 2. **Marginal harvest/residue cost curve.** Acquire stumpage, harvest/collection, road/transport, and silviculture data; build cost-volume steps by FMU/stand; separate log cost from residue-recovery cost. Gate on `calibrated_cost_surfaces`.
 3. **Forest-sector LP (option d).** Couple harvest, assortments, residues, facilities, and energy with provincial AAC/NFD and cost curves. Only then can harvest be an endogenous forest-sector decision.
 4. **Managed THLB/operability.** Replace the tenure-union proxy with a real THLB and operability filter before making sustainable-supply claims.
