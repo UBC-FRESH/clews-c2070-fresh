@@ -11,6 +11,24 @@
   for (var y = YEAR_FIRST; y <= YEAR_LAST; y += 1) YEARS.push(y);
 
   var C2070_ZONES = ['A1', 'A2', 'B1', 'B2', 'L1', 'M1', 'N1', 'O1', 'O2', 'Q1', 'Q2', 'S1', 'T1'];
+  // Zone names and province mapping mirror data/derived/national/clews/osecan/zone_crosswalk.csv.
+  // Only B1/B2 have authoritative point anchors; the other 11 are explicit gaps.
+  var ZONE_META = {
+    A1: { name: 'Calgary–Edmonton corridor', provinces: 'Alberta (AB)' },
+    A2: { name: 'North (oil sands)', provinces: 'Alberta (AB)' },
+    B1: { name: 'South Coast / Lower Mainland', provinces: 'British Columbia (BC)' },
+    B2: { name: 'Interior & North', provinces: 'British Columbia (BC)' },
+    L1: { name: 'Newfoundland & Labrador', provinces: 'Newfoundland and Labrador (NL)' },
+    M1: { name: 'Manitoba', provinces: 'Manitoba (MB)' },
+    N1: { name: 'North (territories)', provinces: 'Yukon (YT); Northwest Territories (NT); Nunavut (NU)' },
+    O1: { name: 'Southern Ontario', provinces: 'Ontario (ON)' },
+    O2: { name: 'Northern Ontario', provinces: 'Ontario (ON)' },
+    Q1: { name: 'Southern Quebec', provinces: 'Quebec (QC)' },
+    Q2: { name: 'Northern Quebec (hydro)', provinces: 'Quebec (QC)' },
+    S1: { name: 'Saskatchewan', provinces: 'Saskatchewan (SK)' },
+    T1: { name: 'Atlantic', provinces: 'New Brunswick (NB); Nova Scotia (NS); Prince Edward Island (PE)' }
+  };
+  var ZONE_SOURCE = 'zone_crosswalk.csv · OSeCAN model_structure.py @ 40d5b43';
   var CANADA_BOUNDS = [[-141, 41], [-52, 84]];
   var CANADA_FIT_OPTIONS = { padding: 34 };
   var MOBILE_RAIL_QUERY = '(max-width: 720px)';
@@ -27,6 +45,12 @@
   var FEASIBILITY_CAVEAT = '200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is conditional (national bound only; the provincial allocation LP reallocates it, but the 1.0 m³/ha/yr operable-proxy screen fails by 16.296 Mm³ and the 1.2 screen is still short by 4.492 Mm³; the national operable envelope alone clears at 1.2); harvest is exogenous. The default energy Pareto contains only the canonical 119 Mm³ fleet case. Allocation-LP variants are comparison/context only.';
   var ALLOCATION_CAVEAT = 'The operable-proxy intensity screen uses SCANFI merchantable area intersected with a share-based 2016 tenure proxy, not a THLB. It has no slope, road access, age/disturbance, growth, yield, or economic content. 150 Mm3 is conditional: the 1.0 m3/ha/yr per-province screen is infeasible by 16.296 Mm3, and the 1.2 screen is still short by 4.492 Mm3 because BC, ON, YT, and NT documented caps bind below 1.2 x operable area. The national operable envelope alone would clear 150 Mm3 at 1.2. 119 Mm3 passes both. The LP allocation is a comparison/screening result, not a legal AAC, enforced provincial constraint, or policy frontier.';
   var MAX_NORMAL_HARVEST_M3 = 150000000;
+  var ROLE_LABELS = {
+    public: 'public · read-only',
+    analyst: 'analyst',
+    model_builder: 'model builder',
+    energy_modeller: 'energy modeller · read-only'
+  };
 
   var FAMILY_SHORT = {
     fleet_capacity: 'Fleet capacity',
@@ -160,6 +184,13 @@
       to: YEAR_LAST,
       token: 0,
       chart: null,
+      processed: null
+    },
+    zones: {
+      energy: 'electricity',
+      metric: 'total',
+      year: null,
+      token: 0,
       processed: null
     },
     tradeoffChart: null,
@@ -484,6 +515,8 @@
 
   function buildCoreState(core) {
     validateCore(core);
+    requireTrue(core.zoneNodes && core.zoneNodes.zone_count === 13 && core.zoneNodes.anchor_count === 2 && core.zoneNodes.gap_count === 11, 'zone-node contract mismatch');
+    requireTrue(Array.isArray(core.zoneNodes.zones) && core.zoneNodes.zones.length === 13, 'zone-node rows are incomplete');
     state.core = core;
     core.scenarioById = new Map();
     core.scenarios.scenarios.forEach(function (sc) { core.scenarioById.set(sc.scenario_id, sc); });
@@ -541,10 +574,12 @@
 
     renderHeader(core);
     renderFamilies();
+    renderZoneGapChips();
     selectScenario(initialId, { silent: true });
     bindRailToggle();
     bindTabs();
     bindDispatchControls();
+    bindZonesControls();
     bindTemporalControls();
     bindHashRouting();
     bindExploreControls();
@@ -713,6 +748,7 @@
     if (state.tab === 'dispatch') renderDispatch();
     if (state.tab === 'tradeoff') renderTradeoff();
     if (state.tab === 'explore') renderExplore({ refreshOverlay: false });
+    if (state.tab === 'zones') renderZones();
     updateHash();
   }
 
@@ -978,7 +1014,7 @@
   }
 
   function validTab(tab) {
-    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
+    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'zones', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
   }
 
   function activateTab(tab, options) {
@@ -1000,6 +1036,7 @@
     if (state.tab === 'tradeoff') renderTradeoff();
     if (state.tab === 'explore') renderExplore();
     if (state.tab === 'map') { initMap(); renderBreadcrumb(); renderSelectionPanel(); }
+    if (state.tab === 'zones') renderZones();
     if (state.tab === 'overview' && state.core) renderOverview();
     if (state.tab === 'osecan') renderOsecan();
     if (state.tab === 'run') renderRunMode();
@@ -1802,6 +1839,421 @@
   function outputSourcePath(id) {
     var output = state.outputs.get(id);
     return output && output.source ? output.source : 'outputs/' + id + '.json';
+  }
+
+  /* ---------------- Zones: 13-zone table and year x zone heatmap ---------------- */
+
+  function zoneNode(zoneId) {
+    var nodes = state.core && state.core.zoneNodes;
+    if (!nodes || !Array.isArray(nodes.zones)) return null;
+    for (var i = 0; i < nodes.zones.length; i += 1) {
+      if (nodes.zones[i].zone_id === zoneId) return nodes.zones[i];
+    }
+    return null;
+  }
+
+  function renderZoneGapChips() {
+    var container = $('zone-gap-chips');
+    if (!container || !state.core || !state.core.zoneNodes) return;
+    container.innerHTML = state.core.zoneNodes.zones.filter(function (zone) { return zone.gap; }).map(function (zone) {
+      return '<span class="zone-chip" title="' + esc(zone.gap_reason || 'Explicit gap') + '">' + esc(zone.zone_id) + '</span>';
+    }).join('');
+  }
+
+  function zoneMetricOptions(energy) {
+    return energy === 'fuel'
+      ? [
+        { id: 'total', label: 'Total fuel supply' },
+        { id: 'bcw', label: 'BCW fuel supply' }
+      ]
+      : [
+        { id: 'total', label: 'Total electricity dispatch' },
+        { id: 'pwrbcw', label: 'PWRBCW biomass electricity' }
+      ];
+  }
+
+  function zoneMetricLabel(energy, metric) {
+    var options = zoneMetricOptions(energy);
+    for (var i = 0; i < options.length; i += 1) {
+      if (options[i].id === metric) return options[i].label;
+    }
+    return options[0].label;
+  }
+
+  function processZones(output, energy, metric) {
+    var selection = categorySelection(output, energy);
+    if (!selection) selection = categorySelection(output, energy === 'electricity' ? 'fuel' : 'electricity');
+    if (!selection) return null;
+    var electricity = categorySelection(output, 'electricity');
+    var fuel = categorySelection(output, 'fuel');
+    var electricityCategories = new Set(electricity ? electricity.categories : []);
+    var fuelCategories = new Set(fuel ? fuel.categories : []);
+    if (!electricityCategories.size && !fuelCategories.size) return null;
+    var yearsSet = new Set();
+    var byZone = new Map();
+    for (var i = 0; i < output.row_count; i += 1) {
+      var category = output.category[i];
+      var isElectricity = electricityCategories.has(category);
+      var isFuel = fuelCategories.has(category);
+      if (!isElectricity && !isFuel) continue;
+      var zone = output.zone[i];
+      if (!zone) continue;
+      var year = Number(output.year[i]);
+      if (!Number.isFinite(year)) continue;
+      var value = Number(output.value_pj[i]);
+      if (!Number.isFinite(value)) continue;
+      yearsSet.add(year);
+      if (!byZone.has(zone)) byZone.set(zone, new Map());
+      var years = byZone.get(zone);
+      if (!years.has(year)) {
+        years.set(year, { dispatch: null, supply: null, bcw: null, pwrbcw: null, rows: 0 });
+      }
+      var cell = years.get(year);
+      cell.rows += 1;
+      var technology = String(output.technology[i] || '');
+      if (isElectricity) {
+        cell.dispatch = (cell.dispatch === null ? 0 : cell.dispatch) + value;
+        if (/^PWRBCW/.test(technology)) cell.pwrbcw = (cell.pwrbcw === null ? 0 : cell.pwrbcw) + value;
+      }
+      if (isFuel) {
+        cell.supply = (cell.supply === null ? 0 : cell.supply) + value;
+        if (/^SUPBCW/.test(technology)) cell.bcw = (cell.bcw === null ? 0 : cell.bcw) + value;
+      }
+    }
+    if (!yearsSet.size) return null;
+    var years = Array.from(yearsSet).sort(function (a, b) { return a - b; });
+    return {
+      byZone: byZone,
+      years: years,
+      latest: years[years.length - 1],
+      selection: selection,
+      energy: energy,
+      metric: metric,
+      unit: selection.unit
+    };
+  }
+
+  function zoneCellValue(processed, zone, year) {
+    var years = processed.byZone.get(zone);
+    if (!years || !years.has(year)) return { present: false, value: null };
+    var cell = years.get(year);
+    var value = processed.metric === 'bcw' ? cell.bcw : (processed.metric === 'pwrbcw' ? cell.pwrbcw : (processed.energy === 'fuel' ? cell.supply : cell.dispatch));
+    if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+      return { present: false, value: null };
+    }
+    return { present: true, value: Number(value) };
+  }
+
+  function zoneTableValue(processed, zone, year, field) {
+    var years = processed.byZone.get(zone);
+    if (!years || !years.has(year)) return null;
+    var cell = years.get(year);
+    var value = cell[field];
+    return value === null || value === undefined || !Number.isFinite(Number(value)) ? null : Number(value);
+  }
+
+  function zoneStatus(zone) {
+    if (zone === 'CAN') {
+      return '<span class="badge badge--family">national aggregate · never summed</span>';
+    }
+    var node = zoneNode(zone);
+    if (node && node.anchor) {
+      return '<span class="badge badge--fleet" title="Authoritative point anchor only; no polygon">anchor · ' + esc(zone) + '</span>';
+    }
+    var reason = node && node.gap_reason ? node.gap_reason : 'No authoritative zone anchor; do not invent geometry.';
+    return '<span class="badge badge--superseded" title="' + esc(reason) + '">gap · no geometry</span>';
+  }
+
+  function zoneNumber(value) {
+    return value === null || value === undefined ? '<span class="zone-missing" title="No row for this zone/year; not zero">n/r</span>' : fmt(value, 2);
+  }
+
+  function populateZoneControls(processed) {
+    var energy = state.zones.energy;
+    var metricSelect = $('zones-metric');
+    var yearSelect = $('zones-year');
+    if (!metricSelect || !yearSelect) return;
+    if (processed) {
+      var options = zoneMetricOptions(energy);
+      var validMetric = options.some(function (option) { return option.id === state.zones.metric; });
+      if (!validMetric) state.zones.metric = 'total';
+      metricSelect.innerHTML = options.map(function (option) {
+        return '<option value="' + esc(option.id) + '">' + esc(option.label) + '</option>';
+      }).join('');
+      metricSelect.value = state.zones.metric;
+
+      if (state.zones.year === null || processed.years.indexOf(Number(state.zones.year)) === -1) {
+        state.zones.year = processed.latest;
+      }
+      yearSelect.innerHTML = processed.years.slice().reverse().map(function (year) {
+        return '<option value="' + year + '">' + year + (year === processed.latest ? ' · latest' : '') + '</option>';
+      }).join('');
+      yearSelect.value = String(state.zones.year);
+      yearSelect.disabled = false;
+    } else {
+      metricSelect.innerHTML = zoneMetricOptions(energy).map(function (option) {
+        return '<option value="' + esc(option.id) + '">' + esc(option.label) + '</option>';
+      }).join('');
+      yearSelect.innerHTML = '<option>—</option>';
+      yearSelect.disabled = true;
+    }
+  }
+
+  function renderZonesTable(processed) {
+    var table = $('zones-table');
+    if (!table) return;
+    var year = Number(state.zones.year);
+    var metric = processed.metric;
+    var sc = state.core.scenarioById.get(state.selectedId);
+    var rows = C2070_ZONES.map(function (zone) {
+      var meta = ZONE_META[zone];
+      var dispatch = zoneTableValue(processed, zone, year, 'dispatch');
+      var supply = zoneTableValue(processed, zone, year, 'supply');
+      var bcw = zoneTableValue(processed, zone, year, 'bcw');
+      var pwrbcw = zoneTableValue(processed, zone, year, 'pwrbcw');
+      var dispatchCell = zoneNumber(dispatch);
+      var supplyCell = zoneNumber(supply);
+      return '<tr data-zone-row="' + esc(zone) + '">' +
+        '<td><button class="zone-link" type="button" data-zone-dispatch="' + esc(zone) + '" title="Filter Dispatch to zone ' + esc(zone) + '">' + esc(zone) + '</button></td>' +
+        '<td>' + esc(meta.name) + '</td>' +
+        '<td class="zone-provinces">' + esc(meta.provinces) + '</td>' +
+        '<td class="num">' + dispatchCell + '</td>' +
+        '<td class="num">' + supplyCell + '</td>' +
+        '<td class="num">' + zoneNumber(bcw) + '</td>' +
+        '<td class="num">' + zoneNumber(pwrbcw) + '</td>' +
+        '<td>' + zoneStatus(zone) + '</td></tr>';
+    }).join('');
+
+    var hasCan = processed.byZone.has('CAN');
+    var canDispatch = zoneTableValue(processed, 'CAN', year, 'dispatch');
+    var canSupply = zoneTableValue(processed, 'CAN', year, 'supply');
+    var canBcw = zoneTableValue(processed, 'CAN', year, 'bcw');
+    var canPwrbcw = zoneTableValue(processed, 'CAN', year, 'pwrbcw');
+    var canRow = '<tr class="zone-row--national" data-zone-row="CAN">' +
+      '<td><button class="zone-link" type="button" data-zone-dispatch="CAN" title="Show the national CAN aggregate in Dispatch">CAN</button></td>' +
+      '<td>Canada national aggregate</td>' +
+      '<td class="zone-provinces">Canada</td>' +
+      '<td class="num">' + (hasCan ? zoneNumber(canDispatch) : '<span class="zone-missing" title="CAN dispatch rows are not present in this output; not zero">not reported</span>') + '</td>' +
+      '<td class="num">' + (hasCan ? zoneNumber(canSupply) : '<span class="zone-missing" title="CAN fuel rows are not present; not zero">not reported</span>') + '</td>' +
+      '<td class="num">' + (hasCan ? zoneNumber(canBcw) : 'n/r') + '</td>' +
+      '<td class="num">' + (hasCan ? zoneNumber(canPwrbcw) : 'n/r') + '</td>' +
+      '<td>' + zoneStatus('CAN') + '</td></tr>';
+
+    table.innerHTML = '<caption>' + esc(sc ? sc.label : state.selectedId) + ' · ' + (sc && sc.liveRun ? 'live session run' : 'static/committed output') +
+      ' · ' + year + ' · ' + esc(processed.selection.label) + ' · ' + esc(processed.unit) +
+      '. The CAN row is separate and never added to zone rows.</caption>' +
+      '<thead><tr><th scope="col">Zone</th><th scope="col">Name</th><th scope="col">Provinces / regions</th>' +
+      '<th scope="col" class="num">Electricity dispatch<br><span class="zone-unit">PJ elec</span></th>' +
+      '<th scope="col" class="num">Fuel supply<br><span class="zone-unit">PJ fuel</span></th>' +
+      '<th scope="col" class="num">BCW supply<br><span class="zone-unit">PJ fuel</span></th>' +
+      '<th scope="col" class="num">PWRBCW<br><span class="zone-unit">PJ elec</span></th>' +
+      '<th scope="col">Geometry status</th></tr></thead>' +
+      '<tbody class="zone-tbody">' + rows + '</tbody>' +
+      '<tbody class="zone-tbody zone-tbody--national">' + canRow + '</tbody>';
+
+    var missing = C2070_ZONES.filter(function (zone) {
+      return !processed.byZone.has(zone) || !processed.byZone.get(zone).has(year);
+    }).length;
+    var summary = $('zones-summary');
+    if (summary) {
+      summary.innerHTML = '<div><span class="zone-summary-kicker">Zone rows</span><strong>13 + CAN</strong></div>' +
+        '<div><span class="zone-summary-kicker">Anchors</span><strong>B1 · B2</strong></div>' +
+        '<div><span class="zone-summary-kicker">Explicit gaps</span><strong>11</strong></div>' +
+        '<div><span class="zone-summary-kicker">Missing this year</span><strong>' + missing + ' zone' + (missing === 1 ? '' : 's') + '</strong></div>';
+    }
+    var note = $('zones-source-note');
+    if (note) {
+      note.textContent = 'Year ' + year + ' · metric column ' + zoneMetricLabel(processed.energy, metric) +
+        ' · source ' + outputSourcePath(state.selectedId) + ' · units ' + processed.unit +
+        '. Electricity and fuel are never summed. n/r means no row for that zone/year, not zero. Zone names/provinces: ' + ZONE_SOURCE +
+        '. Only B1/B2 have point anchors; 11 zones are explicit gaps with no polygon. ' +
+        'Click a zone ID to filter Dispatch; Overview remains national because no zone-level overview ledger exists.';
+    }
+  }
+
+  function zoneHeatColor(t) {
+    var stops = [[247, 239, 221], [242, 180, 92], [169, 79, 49]];
+    var clamped = Math.max(0, Math.min(1, t));
+    var scaled = clamped * (stops.length - 1);
+    var index = Math.min(stops.length - 2, Math.floor(scaled));
+    var fraction = scaled - index;
+    var a = stops[index];
+    var b = stops[index + 1];
+    return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * fraction) + ',' +
+      Math.round(a[1] + (b[1] - a[1]) * fraction) + ',' +
+      Math.round(a[2] + (b[2] - a[2]) * fraction) + ')';
+  }
+
+  function renderZonesHeatmap(processed) {
+    var table = $('zones-heatmap');
+    if (!table) return;
+    var metric = processed.metric;
+    var values = [];
+    processed.byZone.forEach(function (years) {
+      years.forEach(function (cell) {
+        var value = metric === 'bcw' ? cell.bcw : (metric === 'pwrbcw' ? cell.pwrbcw : (processed.energy === 'fuel' ? cell.supply : cell.dispatch));
+        if (value !== null && value !== undefined && Number.isFinite(Number(value))) values.push(Number(value));
+      });
+    });
+    var min = values.length ? Math.min.apply(null, values) : 0;
+    var max = values.length ? Math.max.apply(null, values) : 0;
+    var span = max - min;
+    var metricLabel = zoneMetricLabel(processed.energy, metric);
+    var unit = processed.unit;
+    var zoneRows = C2070_ZONES.concat(['CAN']);
+    var header = processed.years.map(function (year) {
+      return '<th scope="col" class="zone-heat-year">' + year + '</th>';
+    }).join('');
+    var body = zoneRows.map(function (zone) {
+      var meta = zone === 'CAN' ? { name: 'National aggregate (separate)', provinces: 'Canada' } : ZONE_META[zone];
+      var cells = processed.years.map(function (year) {
+        var result = zoneCellValue(processed, zone, year);
+        if (!result.present) {
+          return '<td class="zone-heat-cell is-missing" title="' + esc(zoneHeatLabel(zone, year, metricLabel, null, unit)) +
+            '" aria-label="' + esc(zoneHeatLabel(zone, year, metricLabel, null, unit)) + '">·</td>';
+        }
+        var t = span > 0 ? (result.value - min) / span : 0.55;
+        var color = zoneHeatColor(0.12 + t * 0.88);
+        var textColor = t > 0.62 ? '#fffdf7' : '#17251d';
+        return '<td class="zone-heat-cell" style="background:' + color + ';color:' + textColor + '" title="' +
+          esc(zoneHeatLabel(zone, year, metricLabel, result.value, unit)) + '" aria-label="' +
+          esc(zoneHeatLabel(zone, year, metricLabel, result.value, unit)) + '">' + esc(fmt(result.value, result.value < 10 ? 1 : 0)) + '</td>';
+      }).join('');
+      return '<tr class="' + (zone === 'CAN' ? 'zone-row--national' : '') + '">' +
+        '<th scope="row" class="zone-heat-zone">' + esc(zone) + '</th>' +
+        '<td class="zone-heat-name">' + esc(meta.name) + '</td>' + cells + '</tr>';
+    }).join('');
+    table.innerHTML = '<caption>' + esc(metricLabel) + ' · ' + esc(unit) + ' · 2021—2070. CAN is a separate national row; it is never summed with zones. Empty cells (·) mean no row, not zero.</caption>' +
+      '<thead><tr><th scope="col" class="zone-heat-zone">Zone</th><th scope="col" class="zone-heat-name">Name</th>' + header + '</tr></thead>' +
+      '<tbody>' + body + '</tbody>';
+    var legend = $('zones-heatmap-legend');
+    if (legend) {
+      if (!values.length) {
+        legend.innerHTML = '<span class="zone-missing">No ' + esc(metricLabel) + ' rows in this output.</span>';
+      } else {
+        var stepCount = 5;
+        var swatches = [];
+        for (var i = 0; i < stepCount; i += 1) {
+          var t = i / (stepCount - 1);
+          swatches.push('<i style="background:' + zoneHeatColor(0.12 + t * 0.88) + '"></i>');
+        }
+        legend.innerHTML = '<span class="mono">' + fmt(min, 2) + '</span><span class="zone-heat-scale" aria-hidden="true">' +
+          swatches.join('') + '</span><span class="mono">' + fmt(max, 2) + ' ' + esc(unit) + '</span>' +
+          '<span class="zone-missing-key"><i></i>no row · not zero</span>';
+      }
+    }
+  }
+
+  function zoneHeatLabel(zone, year, metricLabel, value, unit) {
+    var zoneName = zone === 'CAN' ? 'Canada national aggregate' : ZONE_META[zone].name;
+    return zone + ' ' + zoneName + ' · ' + year + ' · ' + metricLabel + ' · ' +
+      (value === null ? 'no row; not zero' : fmt(value, 2) + ' ' + unit);
+  }
+
+  async function renderZones() {
+    if (!state.core || !state.selectedId) return;
+    var token = Math.max(state.zones.token, 0) + 1;
+    state.zones.token = token;
+    var loading = $('zones-loading');
+    var empty = $('zones-empty');
+    var content = $('zones-content');
+    if (loading) loading.hidden = false;
+    if (empty) empty.hidden = true;
+    if (content) content.hidden = true;
+    var output;
+    try {
+      output = await getOutput(state.selectedId);
+    } catch (error) {
+      if (token !== state.zones.token) return;
+      if (loading) loading.hidden = true;
+      if (empty) {
+        empty.hidden = false;
+        empty.innerHTML = '<div><strong>Zone ledger unavailable for this scenario.</strong><br>' + esc(error.message) + '</div>';
+      }
+      return;
+    }
+    if (token !== state.zones.token) return;
+    var processed;
+    try {
+      processed = processZones(output, state.zones.energy, state.zones.metric);
+    } catch (error) {
+      processed = null;
+      if (empty) {
+        empty.hidden = false;
+        empty.innerHTML = '<div><strong>Zone guard tripped.</strong><br>' + esc(error.message) + '</div>';
+      }
+    }
+    if (loading) loading.hidden = true;
+    if (!processed) {
+      if (empty) {
+        empty.hidden = false;
+        if (!empty.innerHTML) {
+          empty.innerHTML = '<div><strong>No ' + esc(state.zones.energy) + ' ledger in this scenario.</strong><br>' +
+            'Switch ledger or select another scenario. Electricity and fuel are never summed.</div>';
+        }
+      }
+      populateZoneControls(null);
+      return;
+    }
+    state.zones.processed = processed;
+    if (content) content.hidden = false;
+    populateZoneControls(processed);
+    renderZonesTable(processed);
+    renderZonesHeatmap(processed);
+  }
+
+  function filterDispatchFromZone(zone) {
+    state.dispatch.energy = state.zones.energy;
+    qsa('input[name="energy-ledger"]').forEach(function (radio) {
+      radio.checked = radio.value === state.zones.energy;
+    });
+    if (zone === 'CAN') {
+      state.dispatch.zone = 'ALL';
+      state.spatial.mappedZone = null;
+    } else {
+      state.dispatch.zone = zone;
+      state.spatial.mappedZone = zone;
+    }
+    announce('Dispatch filtered to ' + (zone === 'CAN' ? 'the national CAN aggregate' : 'zone ' + zone) + '.');
+    activateTab('dispatch');
+    renderDispatch();
+  }
+
+  function bindZonesControls() {
+    qsa('input[name="zone-energy"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        if (!radio.checked) return;
+        state.zones.energy = radio.value;
+        state.zones.metric = 'total';
+        state.zones.year = null;
+        renderZones();
+      });
+    });
+    var metric = $('zones-metric');
+    if (metric) {
+      metric.addEventListener('change', function () {
+        state.zones.metric = metric.value;
+        if (state.zones.processed) {
+          renderZonesTable(state.zones.processed);
+          renderZonesHeatmap(state.zones.processed);
+        }
+      });
+    }
+    var year = $('zones-year');
+    if (year) {
+      year.addEventListener('change', function () {
+        state.zones.year = Number(year.value);
+        if (state.zones.processed) renderZonesTable(state.zones.processed);
+      });
+    }
+    var table = $('zones-table');
+    if (table) {
+      table.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-zone-dispatch]');
+        if (!button) return;
+        filterDispatchFromZone(button.getAttribute('data-zone-dispatch'));
+      });
+    }
   }
 
   /* ---------------- Trade-off ---------------- */
@@ -4281,19 +4733,23 @@
 
   function updateFormDisabled() {
     var mode = state.live.mode;
-    var disabled = state.live.busy || mode === 'checking' || mode === 'static' || mode === 'readonly' || mode === 'degraded';
+    var profile = roleProfile();
+    var disabled = state.live.busy || mode === 'checking' || mode === 'static' || mode === 'readonly' || mode === 'degraded' || profile.forestryLocked;
     qsa('#run-form input, #run-form select').forEach(function (input) { input.disabled = disabled; });
     var activeRun = Boolean(state.live.activeRun);
     var create = $('run-create');
     var queue = $('run-queue');
     if (create) create.disabled = disabled || activeRun;
-    if (queue) queue.disabled = state.live.busy || mode !== 'live' || !state.live.createdScenario || activeRun;
+    if (queue) queue.disabled = state.live.busy || mode !== 'live' || !state.live.createdScenario || activeRun || profile.forestryLocked;
     var osecanQueue = $('osecan-queue');
-    if (osecanQueue) osecanQueue.disabled = state.live.busy || mode !== 'live' || activeRun;
+    if (osecanQueue) {
+      osecanQueue.disabled = state.live.busy || mode !== 'live' || activeRun;
+      if (profile.forestryLocked || profile.energyReadOnly) osecanQueue.disabled = true;
+    }
     var cancel = $('run-cancel');
     if (cancel) {
       cancel.hidden = !activeRun;
-      cancel.disabled = !activeRun || state.live.busy || state.live.cancelBusy;
+      cancel.disabled = !activeRun || state.live.busy || state.live.cancelBusy || profile.forestryLocked;
     }
   }
 
@@ -4339,8 +4795,11 @@
       setModeBadge('no-runs', 'The live API is up without --allow-runs.');
     } else if (mode === 'readonly') {
       banner.classList.add('is-readonly');
-      title.textContent = 'Live API is read-only.';
-      text.textContent = 'Create and queue are disabled. The committed static views and OSeCAN exports remain available.';
+      var role = roleProfile();
+      title.textContent = role.forestryLocked ? 'Read-only role — create and queue are disabled.' : 'Live API is read-only.';
+      text.textContent = role.forestryLocked
+        ? 'Deployment role: ' + role.label + '. Run creation, queueing, and forestry edits are disabled. The committed static views and OSeCAN exports remain available.'
+        : 'Create and queue are disabled. The committed static views and OSeCAN exports remain available.';
       setModeBadge('readonly', 'The server is running with --read-only.');
     } else if (mode === 'degraded') {
       title.textContent = 'Live API connected, but screening defaults failed to load.';
@@ -4536,6 +4995,10 @@
       setFormError('Wait for the active run to finish before creating another scenario.');
       return null;
     }
+    if (roleProfile().forestryLocked) {
+      setFormError('This deployment role is read-only for forestry actions; creating a scenario is disabled.');
+      return null;
+    }
     var client = liveApi();
     if (!client) {
       setFormError('Live API client is unavailable.');
@@ -4582,6 +5045,10 @@
   async function queueCreatedScenario() {
     var client = liveApi();
     var created = state.live.createdScenario;
+    if (roleProfile().forestryLocked) {
+      setFormError('This deployment role is read-only for forestry actions; queueing is disabled.');
+      return;
+    }
     if (!client || !created || state.live.activeRun) return;
     if (state.live.mode !== 'live') {
       setFormError('Queue is disabled; the server was not started with --allow-runs.');
@@ -5302,6 +5769,10 @@
   }
 
   async function queueOsecanScenario() {
+    if (roleProfile().energyReadOnly) {
+      setFormStatus('The OSeCAN/energy linkage is read-only for this role; queueing is disabled.', true);
+      return;
+    }
     if (state.live.mode !== 'live' || state.live.activeRun) return;
     var model = state.osecan.lastModel || (state.core ? computeOsecan() : null);
     if (!model) return;
@@ -5325,11 +5796,97 @@
     await createScenarioFromForm(true);
   }
 
+  function roleProfile() {
+    var health = state.live.health;
+    var mode = state.live.mode;
+    if (!health || mode === 'static') {
+      return {
+        id: null,
+        label: mode === 'static' ? 'static · no role' : 'checking…',
+        staticMode: true,
+        known: true,
+        forestryLocked: false,
+        energyReadOnly: false,
+        canRun: false
+      };
+    }
+    var role = String(health.role || '').toLowerCase();
+    var known = Object.prototype.hasOwnProperty.call(ROLE_LABELS, role);
+    var locked = !known || health.read_only === true || role === 'public' || role === 'energy_modeller';
+    var energyReadOnly = locked || role !== 'analyst';
+    return {
+      id: role || null,
+      label: known ? ROLE_LABELS[role] : 'unrecognised role · locked',
+      staticMode: false,
+      known: known,
+      forestryLocked: locked,
+      energyReadOnly: energyReadOnly,
+      canRun: Boolean(health.allow_runs) && !locked
+    };
+  }
+
+  function updateRoleUI() {
+    var profile = roleProfile();
+    var badge = $('role-badge');
+    var badgeText = $('role-badge-text');
+    var notice = $('role-notice');
+    if (badge && badgeText) {
+      badge.hidden = false;
+      badge.classList.remove('is-checking', 'is-public', 'is-analyst', 'is-model-builder', 'is-energy');
+      var badgeClass = profile.staticMode ? 'is-analyst' : (profile.id === 'model_builder' ? 'is-model-builder' : (profile.id === 'analyst' ? 'is-analyst' : (profile.id === 'energy_modeller' ? 'is-energy' : 'is-public')));
+      badge.classList.add(badgeClass);
+      badgeText.textContent = 'Role · ' + profile.label;
+      badge.title = profile.staticMode
+        ? 'No live API role. Static mode behavior is unchanged.'
+        : 'Deployment role from /api/health. Roles select UI/action envelopes; they do not authenticate users.';
+    }
+    if (notice) {
+      var message = '';
+      if (!profile.staticMode) {
+        if (!profile.known) {
+          message = 'Unrecognised deployment role. The UI fails closed: run creation, queueing, and edits are disabled.';
+        } else if (profile.id === 'public') {
+          message = 'Read-only role: public. Run creation, queueing, and forestry edits are disabled. Zone, dispatch, map, and OSeCAN export surfaces remain available.';
+        } else if (profile.id === 'energy_modeller') {
+          message = 'Read-only role: energy modeller. Forestry edits, run creation, and queueing are disabled; the OSeCAN/energy linkage is inspection-only.';
+        } else if (profile.id === 'model_builder') {
+          message = 'Model builder: forestry scenario actions are enabled. The OSeCAN/energy linkage remains read-only; model rebuilds and publication stay host-operator work.';
+        } else if (profile.id === 'analyst' && state.live.health.read_only) {
+          message = 'Analyst role on a read-only server. Run creation, queueing, and edits are disabled.';
+        }
+      }
+      notice.hidden = !message;
+      notice.textContent = message;
+      notice.classList.toggle('is-warning', Boolean(message));
+    }
+    document.body.setAttribute('data-role', profile.staticMode ? 'static' : (profile.id || 'unknown'));
+    var runTab = $('tab-run');
+    if (runTab) {
+      runTab.classList.toggle('is-role-locked', profile.forestryLocked);
+      runTab.setAttribute('data-role-locked', profile.forestryLocked ? 'true' : 'false');
+      runTab.title = profile.forestryLocked ? 'Read-only role: run controls are disabled' : '';
+    }
+    qsa('#osecan-harvest, #osecan-recovery, #osecan-cost').forEach(function (control) {
+      control.disabled = profile.energyReadOnly && !profile.staticMode;
+    });
+    var osecanQueue = $('osecan-queue');
+    if (osecanQueue) {
+      osecanQueue.disabled = profile.staticMode
+        ? state.live.mode !== 'live'
+        : (profile.energyReadOnly || !profile.canRun || state.live.busy || Boolean(state.live.activeRun));
+      osecanQueue.title = profile.energyReadOnly && !profile.staticMode
+        ? 'Energy linkage is read-only for this role.'
+        : (profile.canRun ? '' : 'Run queueing is not available for this role or server mode.');
+    }
+    updateFormDisabled();
+  }
+
   async function initLiveMode() {
     var client = liveApi();
     if (!client) {
       state.live.mode = 'static';
       applyRunDefaults(FALLBACK_DEFAULTS);
+      updateRoleUI();
       renderRunMode();
       return;
     }
@@ -5338,6 +5895,7 @@
       state.live.mode = 'static';
       state.live.health = null;
       applyRunDefaults(FALLBACK_DEFAULTS);
+      updateRoleUI();
       renderRunMode();
       return;
     }
@@ -5355,6 +5913,7 @@
       state.live.defaults = FALLBACK_DEFAULTS;
       applyRunDefaults(FALLBACK_DEFAULTS);
     }
+    updateRoleUI();
     renderRunMode();
     try {
       await hydrateRuns();
@@ -5609,7 +6168,8 @@
         loadJSON('inputs/harvest_basis.json'),
         loadJSON('inputs/supply_curve.json'),
         loadJSON('inputs/managed_landbase.json'),
-        loadJSON('inputs/operable_proxy.json')
+        loadJSON('inputs/operable_proxy.json'),
+        loadJSON('spatial/zone_nodes.json')
       ]);
       buildCoreState({
         manifest: bundle[0],
@@ -5618,7 +6178,8 @@
         harvest: bundle[3],
         supply: bundle[4],
         landbase: bundle[5],
-        operable: bundle[6]
+        operable: bundle[6],
+        zoneNodes: bundle[7]
       });
       await initLiveMode();
       if (state.warnings.length) {

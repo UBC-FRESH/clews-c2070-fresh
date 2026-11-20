@@ -586,3 +586,58 @@ with the operable merchantable-forest proxy. Viewport 1600×1200, Chromium via
 
 `git status --porcelain` contains no `D` entries. No public OSeCAN repository
 changes.
+
+---
+
+## Zones table/heatmap + deployment-role UI (2026-11-20)
+
+**Scope:** the v1 13-zone reporting fallback and role-aware UI read from
+`/api/health`. No C2070 polygons, centroids, or interpolated zone geometry were
+added. Electricity and fuel remain separate ledgers; the `CAN` national row is
+never summed with zone rows.
+
+**Environment:** Chromium via `/tmp/ui-qa-venv` (Playwright 1.65.2), static
+`python3 -m http.server 8012 --bind 127.0.0.1 -d ui`, and live FastAPI instances
+on 8031 (`--role public`), 8032 (`--role energy_modeller`), and 8033
+(`--role model_builder --allow-runs`). Viewports 1440×1200 and 390×844.
+Machine-readable evidence: `ui/qa/qa_results.json` (`zones_role` block).
+
+### Results
+
+| Check | Result |
+|---|---|
+| Zone table | **PASS** — 13 canonical rows in A1 A2 B1 B2 L1 M1 N1 O1 O2 Q1 Q2 S1 T1 order plus a visually separated `CAN` row; zone, name, provinces, electricity dispatch, fuel supply, BCW supply, PWRBCW, and anchor/gap status. Latest output year is 2070. |
+| Zone metadata | **PASS** — names and province/region mapping mirror `zone_crosswalk.csv`; B1/B2 are the only anchors; all 11 gaps render as `gap · no geometry` badges and explicit chips. |
+| Heatmap | **PASS** — 50-year × 14-row grid (13 zones + CAN), 700 cells, one selected ledger/metric at a time; missing cells are hatched dots and explain `no row · not zero`. Electricity CAN has no rows and stays explicitly missing rather than zero. |
+| Zone click | **PASS** — clicking B1 switches to Dispatch with zone filter `B1` and the source note reads `Zone B1 only`. CAN click maps to the national `ALL` aggregate. |
+| Ledger guard | **PASS** — the table never adds electricity to fuel; the heatmap is explicitly one ledger at a time and the CAN row is separate. |
+| Static vs live | **PASS** — captions label `static/committed output` or `live session run`; source path is shown; missing zone/year handling is identical in both modes. |
+| Role public | **PASS** — badge `public · read-only`; visible read-only notice; Run form, Create, Queue, and OSeCAN lever/queue controls disabled. |
+| Role energy_modeller | **PASS** — badge `energy modeller · read-only`; same mutation controls disabled and OSeCAN linkage inspection-only. |
+| Role model_builder | **PASS** — badge `model builder`; forestry Run form enabled; OSeCAN/energy linkage levers and queue disabled. |
+| Static mode unchanged | **PASS** — Run form and OSeCAN queue remain disabled by the existing static-mode logic; static exports and calculator stay available. |
+| Regression | **PASS** — Explore, Pareto, Compare, Map (2/13 anchors, 11 gaps), shared time/playback, and Run static fallback still work. |
+| Mobile 390×844 | **PASS** — 9 tabs fit; `scrollWidth = innerWidth = 390`; zone table and heatmap scroll horizontally without page overflow. |
+| Accessibility | **PASS** — heatmap uses a semantic table with caption, row/column headers, and per-cell `aria-label`/`title`; zone buttons are keyboard reachable; role notice is a live status region. |
+| Errors | **PASS** — 0 page errors and 0 failed requests; live role pages have 0 console errors. Static mode has only the expected `/api/health` 404 probe, as before. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `zones-table.png` | Zone table, separate CAN row, anchors/gaps, summary, heatmap and gap chips |
+| `zones-heatmap.png` | Year × zone heatmap with CAN separation, legend, and missing-cell key |
+| `role-public.png` | Public read-only badge/notice and disabled Run/Create/Queue controls |
+
+### Files changed
+
+- `ui/index.html`: Zones tab/panel; role badge and read-only notice.
+- `ui/app.js`: zone metadata/table/heatmap processing and rendering, zone→Dispatch
+  filter, zone-node contract load, role profile from `/api/health`, role guards
+  for Run/Create/Queue and OSeCAN linkage controls.
+- `ui/styles.css`: role badge/notice, zone table/heatmap styling, sticky axes,
+  mobile rules.
+- `ui/qa/qa_results.json`, `ui/qa/QA_REPORT.md`, and the three screenshots.
+
+No data submodule, model output, or public OSeCAN repository was changed.
+`git status --porcelain` contains no `D` entries.

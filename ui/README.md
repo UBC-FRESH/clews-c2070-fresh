@@ -75,6 +75,13 @@ Plex Mono. No runtime CDN request is required.
   mapping say so explicitly; dispatch stays national rather than inventing a
   crosswalk. The 11 C2070 zones without authoritative polygons are shown as
   gaps, never as invented geometry.
+- **Zones** — 13-zone reporting fallback from `output/dispatch_by_zone.csv`:
+  zone, name, provinces/regions, latest-year electricity dispatch, fuel supply,
+  BCW supply, PWRBCW, and anchor/gap status, plus a separate `CAN` national row
+  that is never summed with zones. A year × zone heatmap covers 2021–2070 for
+  one selected ledger/metric; missing zone-years are explicit `n/r` cells, not
+  zeros. Clicking a zone ID filters Dispatch. B1/B2 are point anchors only; the
+  other 11 zones remain explicit gaps and no polygon is drawn.
 - **OSeCAN Links** — source-file/check ledger plus a screening lever calculator
   (harvest 100/119/150 Mm³; recovery 0.35/0.60/0.75; cost basis), national
   PJ and BC/rest split, tier-sum validation, and client-side CSV exports. When
@@ -88,6 +95,11 @@ Plex Mono. No runtime CDN request is required.
   **policy_grade=false**. Completed runs enter a **Session runs** rail group and
   comparison/Explore context, never the canonical Pareto ledger. Failed runs add
   no result. `policy_test_v1` is unavailable in static mode.
+  The header role badge comes from `/api/health`: `public` and
+  `energy_modeller` disable Run/Create/Queue and forestry edits and show a
+  read-only notice; `model_builder` keeps forestry actions but treats the
+  OSeCAN/energy linkage as read-only; `analyst` follows the server's writable /
+  `--allow-runs` flags. Static mode behavior is unchanged.
 - **Inputs** — harvest reference paths, supply-curve tiers, and the
   managed-landbase proxy with caveats.
 
@@ -118,6 +130,11 @@ fleet-corrected 119 Mm³ run and the historical pre-fleet scenarios):
 | `spatial/ecoprovinces.geojson` | 36 ecoprovince polygons |
 | `spatial/rsyc_tiles.geojson` | 385 RSYC tiles with `recoverable_pj_base` |
 | `spatial/zone_nodes.json` | 13 C2070 zones; B1/B2 anchors; 11 explicit gaps |
+
+Zone names and province/region mapping in the Zones view mirror
+`data/derived/national/clews/osecan/zone_crosswalk.csv`; the crosswalk is not
+copied into the public bundle. Only B1/B2 have point anchors, and the view
+records 11 gaps without fabricating polygons or centroids.
 
 The canonical fleet-corrected base artifact is
 `data/derived/national/clews/osecan/fleet_capacity_119m/` (summary, dispatch,

@@ -38,6 +38,7 @@
       <div class="header-aside">
         <p class="provisional-banner"><span class="pulse-dot" aria-hidden="true"></span>FRESH-side provisional — not C2070 official</p>
         <p class="mode-badge is-checking" id="mode-badge"><span class="mode-dot" aria-hidden="true"></span><span id="mode-badge-text">Checking live API…</span></p>
+        <p class="role-badge is-checking" id="role-badge" hidden><span class="role-dot" aria-hidden="true"></span><span id="role-badge-text">Role · checking</span></p>
         <dl class="header-stats">
           <div><dt>Scenarios</dt><dd id="header-scenario-count">—</dd></div>
           <div><dt>Pareto eligible</dt><dd id="header-eligible-count">—</dd></div>
@@ -50,6 +51,7 @@
   </header>
 
   <div id="fatal-banner" class="fatal-banner" role="alert" hidden></div>
+  <div id="role-notice" class="role-notice" role="status" hidden></div>
 
   <div class="app-shell">
     <aside class="rail" id="scenario-navigator" aria-label="Scenario navigator">
@@ -82,6 +84,7 @@
           <button class="tab" id="tab-tradeoff" role="tab" aria-selected="false" aria-controls="panel-tradeoff" data-tab="tradeoff" tabindex="-1" type="button">Trade-off</button>
           <button class="tab" id="tab-explore" role="tab" aria-selected="false" aria-controls="panel-explore" data-tab="explore" tabindex="-1" type="button">Explore</button>
           <button class="tab" id="tab-map" role="tab" aria-selected="false" aria-controls="panel-map" data-tab="map" tabindex="-1" type="button">Map</button>
+          <button class="tab" id="tab-zones" role="tab" aria-selected="false" aria-controls="panel-zones" data-tab="zones" tabindex="-1" type="button">Zones</button>
           <button class="tab" id="tab-osecan" role="tab" aria-selected="false" aria-controls="panel-osecan" data-tab="osecan" tabindex="-1" type="button">OSeCAN Links</button>
           <button class="tab" id="tab-run" role="tab" aria-selected="false" aria-controls="panel-run" data-tab="run" tabindex="-1" type="button">Run</button>
           <button class="tab" id="tab-inputs" role="tab" aria-selected="false" aria-controls="panel-inputs" data-tab="inputs" tabindex="-1" type="button">Inputs</button>
@@ -342,6 +345,57 @@
             <dl class="mini-stats" id="map-stats"></dl>
             <p class="method-note">Choropleth classes are quantiles of <span class="mono">recoverable_pj_base</span> across 385 RSYC tiles. Click a tile for its record.</p>
           </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-zones" role="tabpanel" aria-labelledby="tab-zones" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">13 zones · no invented polygons</p>
+            <h2>Zone table &amp; year heatmap</h2>
+          </div>
+          <p class="panel-deck">The v1 fallback for C2070 zone reporting: one row per zone, a separate national <span class="mono">CAN</span> row, and a year × zone heatmap for one selected ledger. Electricity and fuel are never summed. Only B1/B2 have authoritative point anchors; the other 11 zones are explicit gaps.</p>
+        </div>
+
+        <div class="control-deck" role="group" aria-label="Zone table and heatmap controls">
+          <fieldset class="segmented">
+            <legend>Heatmap ledger</legend>
+            <label><input type="radio" name="zone-energy" value="electricity" checked><span>Electricity</span></label>
+            <label><input type="radio" name="zone-energy" value="fuel"><span>Fuel</span></label>
+          </fieldset>
+          <label class="select-field">Heatmap metric
+            <select id="zones-metric"></select>
+          </label>
+          <label class="select-field">Table year
+            <select id="zones-year"></select>
+          </label>
+        </div>
+
+        <div id="zones-summary" class="zone-summary" aria-live="polite"></div>
+        <div id="zones-loading" class="chart-loading">Loading zone rows…</div>
+        <div id="zones-empty" class="empty-state" hidden></div>
+        <div id="zones-content" hidden>
+          <div class="table-wrap zone-table-wrap">
+            <table class="data-table zone-table" id="zones-table"></table>
+          </div>
+          <p class="method-note" id="zones-source-note"></p>
+
+          <section class="zone-heatmap-block" aria-labelledby="zones-heatmap-title">
+            <div class="section-heading">
+              <h3 id="zones-heatmap-title">Year × zone heatmap</h3>
+              <p id="zones-heatmap-legend" class="zone-heat-legend"></p>
+            </div>
+            <div class="table-wrap zone-heatmap-wrap">
+              <table class="zone-heatmap" id="zones-heatmap"></table>
+            </div>
+            <p class="method-note">One colour scale per selected metric and ledger. The <span class="mono">CAN</span> row is a national aggregate and is never added to zone rows. A dot (·) means no row for that zone/year; it is not zero and nothing is imputed.</p>
+          </section>
+
+          <div class="spatial-gap-note zone-gap-note">
+            <strong>11 C2070 zones lack polygons</strong>
+            <p>No authoritative geometry exists in the repository. The table is a reporting fallback, not a boundary. B1/B2 anchors are point nodes only; the remaining zones are gaps:</p>
+            <div class="chip-row" id="zone-gap-chips"></div>
+          </div>
         </div>
       </section>
 

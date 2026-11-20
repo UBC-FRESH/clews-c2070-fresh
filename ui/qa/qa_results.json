@@ -1034,5 +1034,149 @@
         "pass": true
       }
     }
+  },
+  "zones_role": {
+    "date": "2026-11-20",
+    "static_base": "http://127.0.0.1:8012/",
+    "zones": {
+      "rows": [
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "L1",
+        "M1",
+        "N1",
+        "O1",
+        "O2",
+        "Q1",
+        "Q2",
+        "S1",
+        "T1",
+        "CAN"
+      ],
+      "zone_rows": 13,
+      "can_separate": true,
+      "headers": [
+        "Zone",
+        "Name",
+        "Provinces / regions",
+        "Electricity dispatch (PJ elec)",
+        "Fuel supply (PJ fuel)",
+        "BCW supply (PJ fuel)",
+        "PWRBCW (PJ elec)",
+        "Geometry status"
+      ],
+      "latest_year": 2070,
+      "anchors": [
+        "B1",
+        "B2"
+      ],
+      "gap_count": 11,
+      "heatmap_rows": 14,
+      "heatmap_years": 50,
+      "heatmap_cells": 700,
+      "heatmap_electricity_can_missing_cells": 50,
+      "gap_chips": [
+        "A1",
+        "A2",
+        "L1",
+        "M1",
+        "N1",
+        "O1",
+        "O2",
+        "Q1",
+        "Q2",
+        "S1",
+        "T1"
+      ],
+      "zone_click": {
+        "clicked": "B1",
+        "tab": "dispatch",
+        "dispatch_zone": "B1",
+        "source_note": "Zone B1 only"
+      },
+      "can_border_top": "3px",
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "heatmap_horizontal_scroll": true
+      }
+    },
+    "roles": {
+      "public": {
+        "health_role": "public",
+        "read_only": true,
+        "allow_runs": false,
+        "badge": "Role \u00b7 public \u00b7 read-only",
+        "notice_visible": true,
+        "form_disabled": true,
+        "create_disabled": true,
+        "queue_disabled": true,
+        "osecan_levers_disabled": [
+          true,
+          true,
+          true
+        ],
+        "osecan_queue_disabled": true
+      },
+      "energy_modeller": {
+        "health_role": "energy_modeller",
+        "read_only": true,
+        "allow_runs": false,
+        "badge": "Role \u00b7 energy modeller \u00b7 read-only",
+        "notice_visible": true,
+        "form_disabled": true,
+        "create_disabled": true,
+        "queue_disabled": true,
+        "osecan_levers_disabled": [
+          true,
+          true,
+          true
+        ],
+        "osecan_queue_disabled": true
+      },
+      "model_builder": {
+        "health_role": "model_builder",
+        "read_only": false,
+        "allow_runs": true,
+        "badge": "Role \u00b7 model builder",
+        "notice_visible": true,
+        "form_disabled": false,
+        "create_disabled": false,
+        "queue_disabled": true,
+        "queue_reason": "no created scenario yet",
+        "osecan_levers_disabled": [
+          true,
+          true,
+          true
+        ],
+        "osecan_queue_disabled": true
+      }
+    },
+    "regression": {
+      "explore": "active",
+      "compare_rows": 7,
+      "map_canvas": 1,
+      "map_zone_anchors": "2 / 13",
+      "map_zone_gaps": 11,
+      "time_2060": "readout 2060 and hash y=2060",
+      "run_static_form_disabled": true,
+      "mobile_overflow": false,
+      "mobile_tabs_visible": 9
+    },
+    "errors": {
+      "page_errors": 0,
+      "failed_requests": 0,
+      "live_console_errors": 0,
+      "static_console": "1 expected /api/health 404 probe only"
+    },
+    "screenshots": [
+      "zones-table.png",
+      "zones-heatmap.png",
+      "role-public.png"
+    ],
+    "status": "PASS"
   }
 }
