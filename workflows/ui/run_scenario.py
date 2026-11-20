@@ -70,6 +70,7 @@ def run_scenario(
     *,
     model_root: Path | None = None,
     dry_run: bool = False,
+    allow_infeasible: bool = False,
 ) -> int:
     """Validate the scenario, build parameters, and optionally solve OSeCAN."""
 
@@ -88,6 +89,7 @@ def run_scenario(
             output_dir,
             model_root=model_root,
             dry_run=dry_run,
+            allow_infeasible=allow_infeasible,
         )
     except RunnerError as exc:
         return _failure_summary(
@@ -140,6 +142,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="generate and harmonize parameters without solving",
     )
     parser.add_argument(
+        "--allow-infeasible",
+        action="store_true",
+        help=(
+            "explicit diagnostic override for national harvest above 150,000,000 "
+            "m3/yr (for example the historical 200 Mm3 stress case). Such a run is "
+            "labelled fail/diagnostic and is not Pareto eligible."
+        ),
+    )
+    parser.add_argument(
         "--model-root",
         type=Path,
         default=None,
@@ -158,6 +169,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.out,
         model_root=args.model_root,
         dry_run=args.dry_run,
+        allow_infeasible=args.allow_infeasible,
     )
 
 

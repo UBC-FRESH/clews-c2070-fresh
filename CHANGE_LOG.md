@@ -2,6 +2,27 @@
 
 ## 2026-11-20
 
+- **Implemented the 150 Mm³ harvest feasibility gate and exposed
+  `policy_test_v1` in the UI.** The runner now resolves the actual harvest path
+  and rejects >150,000,000 m³/yr before copying the model, with a clear
+  `feasibility` error; `--allow-infeasible` is the only diagnostic override and
+  such runs are labelled `feasibility_status=fail`, `diagnostic=true`, and
+  `pareto_eligible=false`. Added the documented partial AAC sum (157,343,387
+  m³), NFD potential supply (207,680,142 m³), 150M conditional and 200M fail
+  labels, and tenure/provincial caveats. Scenario summaries, manifests,
+  `supply_caps.json`, and the static export now carry `feasibility_status`,
+  `feasibility_notes`, `pareto_eligible`, and `harvest_exogenous`. The exporter
+  keeps the 100/150/200 ladder as sensitivity/compare context with
+  `pareto_eligible=false`; only `fleet_capacity__screening_119m_fleet` enters the
+  default energy Pareto. UI rail/overview/Trade-off/Explore/Compare show
+  AAC/NFD pass/conditional/fail badges and the caveat. `/api/constraints` now
+  returns both `screening_v0` and `policy_test_v1` (draft,
+  `policy_grade=false`); the contract accepts both IDs and rejects unknown IDs;
+  the Run form sends `constraints.set_id` and shows the draft badge, with
+  `policy_test_v1` disabled in static mode. Added contract/runner/exporter/UI
+  tests, regenerated `ui/public/data` (51 scenarios / 17 families / 1 Pareto
+  eligible), and recorded Chromium QA (`ui/qa/feasibility-gate.png`,
+  `ui/qa/policy-selector.png`). No public OSeCAN repository changes.
 - **Exported the fleet-corrected harvest ladder to the UI with an explicit
   exogenous-harvest caveat.** Added family `fleet_screening_ladder` with the
   100/150/200 Mm³ cases (the 119 Mm³ case remains the single canonical/base

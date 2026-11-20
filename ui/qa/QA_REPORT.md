@@ -3,9 +3,10 @@
 > **Historical note (2026-11-20):** the sections below record the pre-fleet
 > bundle (47 scenarios, 26 trade-off eligible) and the intermediate
 > one-canonical fleet pass. The current bundle is 51 scenarios / 17 families /
-> 4 trade-off eligible (1 canonical/base + 3 harvest sensitivity); see the
-> **Fleet-correction canonicalization** and **Harvest ladder export** sections
-> at the end of this file.
+> 1 Pareto-eligible scenario (canonical 119 Mm³) plus 3 harvest sensitivity/
+> compare rows; see the **Fleet-correction canonicalization**, **Harvest ladder
+> export**, and **Harvest feasibility gate + policy selector** sections at the
+> end of this file.
 
 **Date:** 2026-11-19 (post-fix rerun)
 **Scope:** real Chromium rendering and interaction QA of `ui/` served over HTTP,
@@ -469,3 +470,46 @@ intentional static-mode `/api/health` probe.
 
 `git status --porcelain` contains no `D` entries. No data submodule or public
 OSeCAN repository changes were made by the UI export.
+
+## Harvest feasibility gate + policy selector — 2026-11-20
+
+**Scope:** the 150 Mm³ national harvest gate, severity labels, Pareto
+eligibility, and the `policy_test_v1` run-form selector. The static bundle was
+regenerated at 51 scenarios / 17 families / **1 Pareto-eligible scenario**;
+the ladder remains visible as sensitivity/compare context only. Chromium QA used
+the static bundle and a live FastAPI server with the existing fake runner.
+Machine-readable evidence: `ui/qa/feasibility_qa_results.json`.
+
+### Environment
+
+| Item | Value |
+|---|---|
+| Chromium | Playwright 1.65.2 bundled, `--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist --disable-dev-shm-usage` |
+| Static server | `python3 -m http.server 8133 --bind 127.0.0.1 -d ui` |
+| Live server | `.venv/bin/python -m workflows.ui.server --port 8134 --runtime-dir /tmp/ui-feas-qa/runtime --allow-runs --runner-command ".../.venv/bin/python /tmp/ui-run-qa/fake_runner.py"` |
+| Viewport | 1440×1200 |
+
+### Results
+
+| Check | Result |
+|---|---|
+| Boot / counts | **PASS** — 51 scenarios, 17 families, `Pareto eligible = 1`; no fatal banner. |
+| Rail feasibility badges | **PASS** — canonical 119 `AAC/NFD pass`; ladder 100 `AAC/NFD pass`, 150 `AAC conditional`, 200 `AAC/NFD fail` + `diagnostic`. |
+| Trade-off default | **PASS** — only the canonical 119 Mm³ point is eligible; count reads `1 Pareto eligible · canonical 119 Mm³ only · 3 harvest sensitivity/compare excluded`. The gate caveat reads “200 Mm³ not admissible under documented AAC/NFD; 150 Mm³ conditional; harvest exogenous.” |
+| Explore default | **PASS** — 4 rows visible (1 Pareto eligible + 3 ladder context); Pareto count `1 on front · 1 Pareto-eligible evaluated · 3 context excluded`; 150/200 cannot enter the front. |
+| Static policy fallback | **PASS** — `policy_test_v1 — unavailable in static mode` option is disabled; the selector is disabled with the static-mode badge. |
+| Live `/api/constraints` | **PASS** — returns both `screening_v0` (default) and `policy_test_v1` (`status=draft`, `policy_grade=false`, `available=true`). |
+| Policy selector | **PASS** — option text `policy_test_v1 — draft · policy_grade=false`; badge shows draft/Stage-1 reserve/build caps; the run-form policy flag is visible. |
+| Selector payload | **PASS** — Chromium created `policy-selector-qa-150-mwoluyqu`; stored JSON has `constraints.set_id=policy_test_v1` and `harvest.level_m3_per_year=150000000`. |
+| Fake-runner path | **PASS** — queued run completed with fake objective 123.5 M$; the session path is not claimed as a policy-grade or Pareto result. |
+| Console/page errors | **PASS** — live page 0 console/page errors; static page only the intentional `/api/health` 404 used to select static mode. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `feasibility-gate.png` | Trade-off gate caveat, 1 Pareto-eligible canonical, rail 100 pass / 150 conditional / 200 fail badges |
+| `policy-selector.png` | Live Run form with `policy_test_v1` selected, draft badge, 150 conditional harvest option |
+
+`git status --porcelain` contains no `D` entries. No public OSeCAN repository was
+changed.

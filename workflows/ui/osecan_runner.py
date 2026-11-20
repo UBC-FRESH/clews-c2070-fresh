@@ -31,6 +31,11 @@ from pathlib import Path
 from typing import Any
 
 from workflows.ui.contracts import HarvestPath, HydroMode, Scenario, SupplyCurveMode
+from workflows.ui.feasibility import (
+    MAX_NORMAL_HARVEST_M3,
+    HarvestFeasibility,
+    assess_harvest_feasibility,
+)
 from workflows.ui.model_tree import MODEL_COPY_ENTRIES, tree_sha256
 from workflows.ui.storage import atomic_write_json
 
@@ -47,6 +52,7 @@ __all__ = [
     "build_policy_parameter_set",
     "compute_supply_caps",
     "copy_model_source",
+    "evaluate_harvest_feasibility",
     "load_canonical_set",
     "load_constraint_set",
     "load_policy_set",
@@ -1124,6 +1130,35 @@ def _tier_allocation(
             "or use a smaller harvest level."
         )
     return {"T1": t1, "T2": t2, "T3": t3, "T4": t4}
+
+
+def evaluate_harvest_feasibility(
+    scenario: Scenario,
+    canonical: CanonicalConstraintSet,
+    *,
+    allow_infeasible: bool = False,
+) -> HarvestFeasibility:
+    """Resolve the actual scenario harvest path and apply the national gate.
+
+    The gate runs before the disposable model copy.  A normal run fails closed
+    above 150 Mm3/yr; ``allow_infeasible`` is an explicit diagnostic override
+    and never makes the case Pareto eligible.
+    """
+
+    logs = resolve_harvest_log_m3(scenario, canonical)
+    resolved_max = max(logs.values())
+    feasibility = assess_harvest_feasibility(resolved_max)
+    if feasibility.status == "fail" and not allow_infeasible:
+        raise RunnerError(
+            "feasibility: national harvest "
+            f"{resolved_max:,.0f} m3/yr exceeds the documented "
+            f"{MAX_NORMAL_HARVEST_M3:,.0f} m3/yr normal-run bound. "
+            "200 Mm3 is not admissible under documented AAC/NFD; 150 Mm3 is "
+            "conditional (national bound only; no provincial allocation). "
+            "Re-run with --allow-infeasible only for a labelled historical "
+            "diagnostic; such a run is not Pareto eligible."
+        )
+    return feasibility
 
 
 def compute_supply_caps(
@@ -2302,6 +2337,7 @@ def build_manifest(
     scenario: Scenario,
     canonical: CanonicalConstraintSet,
     constraint_set: CanonicalConstraintSet | PolicyConstraintSet,
+    feasibility: HarvestFeasibility,
     source: ModelSource,
     model_copy: Path,
     output_dir: Path,
@@ -2318,8 +2354,14 @@ def build_manifest(
         "status": constraint_set.status,
         "screening_only": constraint_set.screening_only,
         "policy_grade": constraint_set.policy_grade,
+        "feasibility_status": feasibility.status,
+        "feasibility_notes": list(feasibility.notes),
+        "pareto_eligible": feasibility.pareto_eligible,
+        "diagnostic": feasibility.diagnostic,
+        "harvest_exogenous": True,
         "scenario": scenario.model_dump(mode="json"),
         "constraint_set": constraint_set.summary(),
+        "harvest_feasibility": feasibility.summary(),
         "model": {
             **source.summary(),
             "copy_root": str(model_copy),
@@ -2342,6 +2384,7 @@ def run_scenario(
     *,
     model_root: Path | None = None,
     dry_run: bool = False,
+    allow_infeasible: bool = False,
     repo_root: Path = REPO_ROOT,
 ) -> dict[str, Any]:
     """Build, validate, and optionally solve one scenario.
@@ -2351,13 +2394,14 @@ def run_scenario(
         output_dir: Writable run output directory.
         model_root: Optional model source override.
         dry_run: Build and harmonize parameters but do not solve.
+        allow_infeasible: Explicit diagnostic override for harvest > 150 Mm3/yr.
         repo_root: Repository root holding reference data.
 
     Returns:
         Normalized run summary.
 
     Raises:
-        RunnerError: On any operational or validation failure.
+        RunnerError: On any operational, validation, or feasibility failure.
     """
 
     canonical = load_canonical_set(repo_root / "data/derived/national/clews/osecan/canonical_constraint_set.json")
@@ -2365,6 +2409,11 @@ def run_scenario(
         scenario.constraints.set_id,
         repo_root=repo_root,
         policy_path=repo_root / "data/derived/national/clews/osecan/policy_test_v1.json",
+    )
+    feasibility = evaluate_harvest_feasibility(
+        scenario,
+        canonical,
+        allow_infeasible=allow_infeasible,
     )
     source = resolve_model_source(model_root)
     output_dir = output_dir.resolve()
@@ -2408,6 +2457,11 @@ def run_scenario(
         {
             "schema_version": "clews.supply_caps.v1",
             "constraint_set": constraint_set.summary(),
+            "feasibility_status": feasibility.status,
+            "feasibility_notes": list(feasibility.notes),
+            "pareto_eligible": feasibility.pareto_eligible,
+            "diagnostic": feasibility.diagnostic,
+            "harvest_exogenous": True,
             "supply": supply.summary(),
             "generation": generation,
         },
@@ -2458,6 +2512,7 @@ def run_scenario(
         scenario=scenario,
         canonical=canonical,
         constraint_set=constraint_set,
+        feasibility=feasibility,
         source=source,
         model_copy=model_copy,
         output_dir=output_dir,
@@ -2491,7 +2546,13 @@ def run_scenario(
         "constraint_status": constraint_set.status,
         "screening_only": constraint_set.screening_only,
         "policy_grade": constraint_set.policy_grade,
+        "feasibility_status": feasibility.status,
+        "feasibility_notes": list(feasibility.notes),
+        "pareto_eligible": feasibility.pareto_eligible,
+        "diagnostic": feasibility.diagnostic,
+        "harvest_exogenous": True,
         "constraints": constraint_set.summary(),
+        "harvest_feasibility": feasibility.summary(),
         "model": {
             "source_root": str(source.root),
             "source_commit": source.commit,

@@ -18,12 +18,19 @@ import hashlib
 import json
 import math
 import re
+import sys
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+_IMPORT_ROOT = Path(__file__).resolve().parents[2]
+if str(_IMPORT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_IMPORT_ROOT))
+
+from workflows.ui.feasibility import assess_harvest_feasibility
 
 SCHEMA_VERSION = "iteration0/1"
 YEAR_FIRST = 2021
@@ -128,6 +135,7 @@ FAMILY_SPECS: tuple[dict[str, Any], ...] = (
         "policy_grade": False,
         "canonical": True,
         "harvest_exogenous": True,
+        "pareto_eligible": True,
         "tradeoff_eligible": True,
         "harvest": "119m",
         "supply_curve": "tiered_t1_t4",
@@ -174,7 +182,8 @@ FAMILY_SPECS: tuple[dict[str, Any], ...] = (
         "policy_grade": False,
         "canonical": False,
         "harvest_exogenous": True,
-        "tradeoff_eligible": True,
+        "pareto_eligible": False,
+        "tradeoff_eligible": False,
         "supply_curve": "tiered_t1_t4",
         "hydro": "upper_2021",
         "carbon_price_default": 200.0,
@@ -782,6 +791,10 @@ def build_dimensions(
             )
         harvest["m3_per_year"] = summary_harvest
 
+    feasibility = assess_harvest_feasibility(harvest["m3_per_year"])
+    harvest["feasibility_status"] = feasibility.status
+    harvest["feasibility_notes"] = list(feasibility.notes)
+
     return {
         "harvest": harvest,
         "harvest_m3_per_year": harvest["m3_per_year"],
@@ -829,7 +842,14 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
         and not superseded_for_fleet
     )
     harvest_exogenous = bool(spec.get("harvest_exogenous"))
-    tradeoff_eligible = bool(spec.get("tradeoff_eligible")) and publishable
+    feasibility = dimensions["harvest"]
+    feasibility_status = feasibility["feasibility_status"]
+    pareto_eligible = (
+        bool(spec.get("pareto_eligible"))
+        and publishable
+        and feasibility_status == "pass"
+    )
+    tradeoff_eligible = pareto_eligible
 
     return {
         "scenario_id": scenario_key,
@@ -837,6 +857,10 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
         "family_label": spec["label"],
         "label": label,
         "description": spec.get("description_override") or entry.get("description"),
+        "feasibility_status": feasibility_status,
+        "feasibility_notes": list(feasibility["feasibility_notes"]),
+        "pareto_eligible": pareto_eligible,
+        "harvest_exogenous": harvest_exogenous,
         "source_run": case_id,
         "dispatch_run": dispatch_run_id(entry, case_id),
         "sources": [
@@ -856,8 +880,10 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
             "screening_only": bool(spec.get("screening_only")),
             "policy_grade": bool(spec.get("policy_grade")),
             "harvest_exogenous": harvest_exogenous,
+            "feasibility_status": feasibility_status,
+            "pareto_eligible": pareto_eligible,
             "tradeoff_eligible": tradeoff_eligible,
-            "diagnostic": is_diagnostic,
+            "diagnostic": is_diagnostic or feasibility_status == "fail",
             "post_fix_emissions": bool(spec["post_fix"]),
         },
     }
@@ -1229,7 +1255,8 @@ def build_osecan_links(root: Path, artifacts_root: Path) -> dict[str, Any]:
                 "screening_only": bool(spec.get("screening_only")),
                 "policy_grade": bool(spec.get("policy_grade")),
                 "harvest_exogenous": bool(spec.get("harvest_exogenous")),
-                "tradeoff_eligible": bool(spec.get("tradeoff_eligible")),
+                "pareto_eligible": bool(spec.get("pareto_eligible")),
+                "tradeoff_eligible": bool(spec.get("pareto_eligible")),
                 "files": files,
             }
         )
@@ -1560,18 +1587,34 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
     ]
     _record(checks, "single_canonical_scenario", len(canonical_ids) == 1, canonical_ids)
 
+    pareto_scenarios = [
+        scenario for scenario in scenarios if scenario["pareto_eligible"]
+    ]
+    sensitivity_scenarios = [
+        scenario
+        for scenario in scenarios
+        if scenario["flags"]["publishable"]
+        and scenario["family"] == "fleet_screening_ladder"
+        and not scenario["pareto_eligible"]
+    ]
     tradeoff = {
         "rule": (
-            "publishable fleet-corrected scenario with tradeoff_eligible=true, not "
-            "superseded for emissions or for the CER 2021 fleet"
+            "publishable fleet-corrected scenario with pareto_eligible=true and "
+            "feasibility_status='pass'; the exogenous harvest ladder is "
+            "sensitivity/compare only and is never Pareto eligible"
         ),
         "canonical_scenario_id": canonical_ids[0],
         "canonical_role": "canonical/base",
         "harvest_exogenous_caveat": HARVEST_EXOGENOUS_CAVEAT,
-        "scenario_ids": [
-            scenario["scenario_id"]
-            for scenario in scenarios
-            if scenario["flags"]["tradeoff_eligible"]
+        "feasibility_caveat": (
+            "200 Mm3 is not admissible under documented AAC/NFD; 150 Mm3 is "
+            "conditional (national bound only; no provincial allocation); harvest "
+            "is exogenous and free. The default energy Pareto contains only the "
+            "canonical 119 Mm3 fleet scenario."
+        ),
+        "scenario_ids": [scenario["scenario_id"] for scenario in pareto_scenarios],
+        "sensitivity_scenario_ids": [
+            scenario["scenario_id"] for scenario in sensitivity_scenarios
         ],
         "metrics": [
             {
@@ -1579,17 +1622,50 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
                 "family": scenario["family"],
                 "harvest_exogenous": scenario["flags"]["harvest_exogenous"],
                 "canonical": scenario["flags"]["canonical"],
+                "feasibility_status": scenario["feasibility_status"],
+                "pareto_eligible": scenario["pareto_eligible"],
                 **scenario["metrics"],
             }
-            for scenario in scenarios
-            if scenario["flags"]["tradeoff_eligible"]
+            for scenario in pareto_scenarios
         ],
     }
     _record(
         checks,
         "tradeoff_eligibility_count",
-        len(tradeoff["scenario_ids"]) == 4,
+        len(tradeoff["scenario_ids"]) == 1,
         tradeoff["scenario_ids"],
+    )
+    _record(
+        checks,
+        "pareto_only_canonical",
+        [scenario["scenario_id"] for scenario in pareto_scenarios] == canonical_ids,
+        [scenario["scenario_id"] for scenario in pareto_scenarios],
+    )
+    _record(
+        checks,
+        "ladder_not_pareto",
+        all(not scenario["pareto_eligible"] for scenario in sensitivity_scenarios)
+        and all(
+            scenario["flags"]["harvest_exogenous"] for scenario in sensitivity_scenarios
+        ),
+        [scenario["scenario_id"] for scenario in sensitivity_scenarios],
+    )
+    _record(
+        checks,
+        "ladder_feasibility_labels",
+        {
+            scenario["dimensions"]["harvest_m3_per_year"]: scenario["feasibility_status"]
+            for scenario in sensitivity_scenarios
+        }
+        == {
+            100_000_000: "pass",
+            150_000_000: "conditional",
+            200_000_000: "fail",
+        },
+        {
+            scenario["dimensions"]["harvest_m3_per_year"]: scenario["feasibility_status"]
+            for scenario in sensitivity_scenarios
+        },
     )
     superseded_ids = {
         scenario["scenario_id"]
@@ -1639,7 +1715,8 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
                 "policy_grade": bool(spec.get("policy_grade")),
                 "canonical": bool(spec.get("canonical")),
                 "harvest_exogenous": bool(spec.get("harvest_exogenous")),
-                "tradeoff_eligible": bool(spec.get("tradeoff_eligible")),
+                "pareto_eligible": bool(spec.get("pareto_eligible")),
+                "tradeoff_eligible": bool(spec.get("pareto_eligible")),
                 "scenario_count": sum(1 for run in runs if run.family == spec["family"]),
             }
             for spec in FAMILY_SPECS

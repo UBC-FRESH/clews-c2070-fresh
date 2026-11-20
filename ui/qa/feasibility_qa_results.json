@@ -1,0 +1,68 @@
+{
+  "static": {
+    "header": "Contract generated 2026-11-20 06:27 UTC \u00b7 51 outputs \u00b7 7.97 MiB",
+    "eligible_count": "1",
+    "rail_badges": {
+      "fleet_capacity__screening_119m_fleet": "FLEET CAPACITY\nFLEET-CORRECTED\nCANONICAL/BASE\nAAC/NFD PASS\nPOST-FIX",
+      "fleet_screening_ladder__screening_100m": "HARVEST LADDER\nFLEET-CORRECTED\nSENSITIVITY\nEXOGENOUS HARVEST\nAAC/NFD PASS\nPOST-FIX",
+      "fleet_screening_ladder__screening_150m": "HARVEST LADDER\nFLEET-CORRECTED\nSENSITIVITY\nEXOGENOUS HARVEST\nAAC CONDITIONAL\nPOST-FIX",
+      "fleet_screening_ladder__screening_200m": "HARVEST LADDER\nFLEET-CORRECTED\nSENSITIVITY\nEXOGENOUS HARVEST\nAAC/NFD FAIL\nPOST-FIX\nDIAGNOSTIC"
+    },
+    "tradeoff_caveat": "200 MM\u00b3 NOT ADMISSIBLE \u00b7 150 MM\u00b3 CONDITIONAL \u00b7 HARVEST EXOGENOUS\n\n200 Mm\u00b3 is not admissible under the documented AAC/NFD screen; 150 Mm\u00b3 is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Harvest is exogenous and free, so the ladder cannot define an energy Pareto front.",
+    "tradeoff_count": "1 Pareto eligible \u00b7 canonical 119 Mm\u00b3 only \u00b7 3 harvest sensitivity/compare excluded (100 pass, 150 conditional, 200 fail; harvest exogenous) \u00b7 50 historical/excluded (47 pre-fleet, 21 emissions-superseded, 9 diagnostic) \u00b7 expected ledger 1",
+    "tradepoint_count": 1,
+    "explore_note": "1 canonical 119 Mm\u00b3 case (Pareto eligible) \u00b7 3 harvest ladder scenarios (compare only: 150 conditional, 200 fail; harvest exogenous). Only pareto_eligible=true rows enter the front; ladder and live rows remain context.",
+    "pareto_count": "1 on front \u00b7 1 Pareto-eligible evaluated \u00b7 3 context excluded (ladder/live not Pareto eligible) \u00b7 no missing metrics \u00b7 dominance on min\u2013max normalized values \u00b7 mechanically computed, not a policy frontier",
+    "pareto_guard": "3 scenario(s) shown as context but excluded from the front because pareto_eligible=false (harvest ladder/live runs).",
+    "pc_status": "4 of 4 visible \u00b7 1 Pareto eligible + 3 ladder context + 0 live",
+    "console_errors": [
+      "console error: Failed to load resource: the server responded with a status of 404 (File not found)"
+    ]
+  },
+  "live": {
+    "constraint_options": [
+      {
+        "value": "screening_v0",
+        "disabled": false,
+        "text": "screening_v0 \u2014 screening only"
+      },
+      {
+        "value": "policy_test_v1",
+        "disabled": false,
+        "text": "policy_test_v1 \u2014 draft \u00b7 policy_grade=false"
+      }
+    ],
+    "policy_badge": "draft \u00b7 policy_grade=false \u00b7 Stage 1 reserve/build caps",
+    "policy_flag": "\n              policy_test_v1 \u00b7 draft \u00b7 policy_grade=false\n              Stage-1 draft: national peak-proxy reserve margin, capacity credits, build rates, and explicit caps. Not policy-grade; no transmission, timeslices, curtailment, or unit commitment.\n            ",
+    "create_status": "Created policy-selector-qa-150-mwoluyqu. Queue it to start the runner.",
+    "console_errors": [],
+    "created_constraints": {
+      "set_id": "policy_test_v1"
+    },
+    "created_harvest": 150000000.0,
+    "fake_run": {
+      "run_id": "20261120t063559z-62c62221",
+      "status": "completed",
+      "objective_musd": 123.5,
+      "note": "fake runner; policy selector payload verified before queue"
+    }
+  },
+  "console": [],
+  "static_run_selector": {
+    "mode": "STATIC MODE \u00b7 NO BACKEND",
+    "disabled": true,
+    "options": [
+      {
+        "value": "screening_v0",
+        "disabled": false,
+        "text": "screening_v0 \u2014 screening only"
+      },
+      {
+        "value": "policy_test_v1",
+        "disabled": true,
+        "text": "policy_test_v1 \u2014 unavailable in static mode"
+      }
+    ],
+    "badge": "screening_only \u00b7 policy_grade=false"
+  }
+}

@@ -29,6 +29,7 @@ from pydantic import (
 )
 
 __all__ = [
+    "ALLOWED_CONSTRAINT_SET_IDS",
     "SCENARIO_ID_PATTERN",
     "SCHEMA_VERSION",
     "YEAR_MAX",
@@ -49,6 +50,7 @@ __all__ = [
 ]
 
 SCHEMA_VERSION = "clews.scenario.v1"
+ALLOWED_CONSTRAINT_SET_IDS = frozenset({"screening_v0", "policy_test_v1"})
 YEAR_MIN = 2021
 YEAR_MAX = 2070
 SCENARIO_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -166,13 +168,23 @@ class EnergySpec(_StrictModel):
 
 
 class ConstraintSet(_StrictModel):
-    """Named constraint family, for example ``screening_v0``."""
+    """Named constraint family accepted by the live runner."""
 
     set_id: str = Field(
         min_length=1,
         max_length=_ID_MAX_LENGTH,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
     )
+
+    @field_validator("set_id")
+    @classmethod
+    def _require_supported_set(cls, value: str) -> str:
+        if value not in ALLOWED_CONSTRAINT_SET_IDS:
+            supported = ", ".join(sorted(ALLOWED_CONSTRAINT_SET_IDS))
+            raise ValueError(
+                f"unsupported constraint set {value!r}; supported sets: {supported}"
+            )
+        return value
 
 
 class Provenance(_StrictModel):

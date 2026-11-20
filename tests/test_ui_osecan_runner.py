@@ -167,6 +167,9 @@ def test_dry_run_generates_harmonized_params(tmp_path: Path) -> None:
     summary = json.loads((output_dir / "run_summaries.json").read_text("utf-8"))
     assert summary["status"] == "completed"
     assert summary["harmonize"]["exit_code"] == 0
+    assert summary["feasibility_status"] == "pass"
+    assert summary["pareto_eligible"] is False
+    assert summary["harvest_exogenous"] is True
     assert summary["supply"]["checks"]["tier_sum_equals_rest_all_years"] is True
     assert (output_dir / "run/params/TotalTechnologyAnnualActivityUpperLimit.csv").is_file()
     assert (output_dir / "manifest.json").is_file()

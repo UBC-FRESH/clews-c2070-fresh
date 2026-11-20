@@ -15,6 +15,9 @@ runtime/
 # Local handoff/reference material copied into a fresh clone.
 tmp/
 
+# Earlier local solve outputs; run artifacts are regenerated, not committed.
+/runs/
+
 # Local credential files must never be tracked.
 *.env
 *.env.*

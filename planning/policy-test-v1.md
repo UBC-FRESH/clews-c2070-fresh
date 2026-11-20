@@ -1,9 +1,11 @@
 # policy_test_v1 — constraint-set design (planning only)
 
-**Status:** design note, not implemented, no solve run. `policy_test_v1` is a
-separate constraint family from `screening_v0`. Nothing in this document
-changes model behaviour, and no result from this set may be labelled
-`policy_grade=true` until the data gates in §5 pass.
+**Status:** Stage-1 design implemented 2026-11-20 (draft loader, UDC reserve
+margin, capacity credits, build rates, explicit caps, `/api/constraints`
+selector, run-form selector). No policy-grade solve is claimed.
+`policy_test_v1` is a separate constraint family from `screening_v0`; no result
+from this set may be labelled `policy_grade=true` until the data gates in §5
+pass.
 
 **Scope:** OSeCAN FAST / C2070 electricity core, 2021–2070, single OSeMOSYS
 `REGION=CAN`, 13 zone-coded nodes.

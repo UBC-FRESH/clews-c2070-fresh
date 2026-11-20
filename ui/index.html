@@ -40,7 +40,7 @@
         <p class="mode-badge is-checking" id="mode-badge"><span class="mode-dot" aria-hidden="true"></span><span id="mode-badge-text">Checking live API…</span></p>
         <dl class="header-stats">
           <div><dt>Scenarios</dt><dd id="header-scenario-count">—</dd></div>
-          <div><dt>Trade-off eligible</dt><dd id="header-eligible-count">—</dd></div>
+          <div><dt>Pareto eligible</dt><dd id="header-eligible-count">—</dd></div>
           <div><dt>Fleet run</dt><dd class="mono">2026-11-20</dd></div>
           <div><dt>Horizon</dt><dd class="mono">2021—2070</dd></div>
         </dl>
@@ -70,7 +70,7 @@
         <div class="family-filter" id="family-filter" role="group" aria-label="Filter by scenario family"></div>
         <div class="rail-divider" aria-hidden="true"></div>
         <ol class="scenario-list" id="scenario-list" aria-label="Scenarios"></ol>
-        <p class="rail-foot">The fleet-corrected 119 Mm³ run is canonical. Pre-fleet rows remain visible for audit but are not comparable.</p>
+        <p class="rail-foot">The fleet-corrected 119 Mm³ run is the only Pareto-eligible case. The 150/200 Mm³ ladder rows are sensitivity/diagnostic only; pre-fleet rows remain visible for audit but are not comparable.</p>
       </div>
     </aside>
 
@@ -162,11 +162,11 @@
             <p class="kicker">Eligible frontier</p>
             <h2>Objective vs cumulative emissions</h2>
           </div>
-          <p class="panel-deck">Four fleet-corrected scenarios are eligible: the 119 Mm³ canonical/base run plus the 100/150/200 Mm³ harvest sensitivity ladder. Pre-fleet, superseded, and diagnostic scenarios remain excluded even when their IDs appear elsewhere.</p>
+          <p class="panel-deck">Only the canonical fleet-corrected 119 Mm³ scenario is Pareto eligible. The 100/150/200 Mm³ harvest ladder is sensitivity/compare only: harvest is exogenous and unpriced in the energy objective. Pre-fleet, superseded, and diagnostic scenarios remain excluded.</p>
         </div>
-        <div class="harvest-caveat" role="note">
-          <strong>Harvest is exogenous and free in this model</strong>
-          <p>Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.</p>
+        <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous</strong>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Harvest is exogenous and free, so the ladder cannot define an energy Pareto front.</p>
         </div>
         <div id="tradeoff-guard" class="guard-note" hidden></div>
         <div class="chart-frame chart-frame--scatter">
@@ -184,11 +184,11 @@
             <p class="kicker">Multi-criteria workspace</p>
             <h2>Explore the trade space</h2>
           </div>
-          <p class="panel-deck">The 119 Mm³ canonical/base run, the 100/150/200 Mm³ harvest sensitivity ladder, and live session runs. Every filter is visible as a removable chip and survives in the URL hash; pre-fleet and live runs stay screening-only.</p>
+          <p class="panel-deck">The 119 Mm³ canonical/base run and the 100/150/200 Mm³ harvest sensitivity ladder remain visible for comparison. Only the canonical 119 Mm³ case enters the default Pareto front; pre-fleet, superseded, and live runs stay screening-only.</p>
         </div>
-        <div class="harvest-caveat" role="note">
-          <strong>Harvest is exogenous and free in this model</strong>
-          <p>Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.</p>
+        <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous</strong>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Harvest is exogenous and free, so the ladder is sensitivity/compare only and is excluded from the default Pareto.</p>
         </div>
         <div id="explore-mode-note" class="guard-note" hidden></div>
 
@@ -223,7 +223,7 @@
               <p class="kicker">Nondominated set</p>
               <h3 id="pareto-title">Pareto front</h3>
             </div>
-            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. The front is computed mechanically; because harvest is free, the 200 Mm³ sensitivity case can dominate the canonical 119 Mm³ base. Points outside the front remain as context. This is not a policy frontier.</p>
+            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. Only scenarios flagged Pareto eligible are evaluated — currently the canonical 119 Mm³ fleet case. The harvest ladder remains visible as context but is excluded because harvest is exogenous, 150 Mm³ is conditional, and 200 Mm³ fails AAC/NFD.</p>
           </div>
           <div class="pareto-controls">
             <label>Projection X <select id="pareto-x"></select></label>
@@ -252,6 +252,10 @@
           <div class="compare-controls">
             <label class="compare-pick">Scenario A <select id="compare-a"></select></label>
             <label class="compare-pick">Scenario B <select id="compare-b"></select></label>
+          </div>
+          <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+            <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous</strong>
+            <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only and the status-quo provincial mix fails NB/BC, with no allocation model. Comparisons are sensitivity context, not a policy frontier.</p>
           </div>
           <div id="compare-grade" class="compare-grade"></div>
           <div class="table-wrap" id="compare-table-wrap">
@@ -397,7 +401,7 @@
             <p class="kicker">Live screening runner</p>
             <h2>Create, queue, watch</h2>
           </div>
-          <p class="panel-deck">Create a <span class="mono">clews.scenario.v1</span> snapshot, queue it on the FastAPI runner, and follow the SSE log. Every live result is <strong>screening_only</strong> and <strong>policy_grade=false</strong>.</p>
+          <p class="panel-deck">Create a <span class="mono">clews.scenario.v1</span> snapshot, queue it on the FastAPI runner, and follow the SSE log. <span class="mono">screening_v0</span> is <strong>screening_only</strong>; <span class="mono">policy_test_v1</span> is a <strong>draft</strong>; both are <strong>policy_grade=false</strong> and neither is Pareto eligible.</p>
         </div>
         <div class="run-mode-banner" id="run-mode-banner" role="status">
           <span class="run-mode-mark" aria-hidden="true">…</span>
@@ -408,18 +412,24 @@
           <form class="run-form" id="run-form" novalidate>
             <div class="run-form-head">
               <h3>Scenario inputs</h3>
-              <p>Defaults come from <span class="mono">screening_v0</span>. The scenario is snapshotted when queued, so later edits cannot change the run.</p>
+              <p>Lever defaults come from <span class="mono">screening_v0</span>; the constraint selector chooses <span class="mono">screening_v0</span> or draft <span class="mono">policy_test_v1</span>. The scenario is snapshotted when queued, so later edits cannot change the run.</p>
             </div>
             <div class="run-form-grid">
               <label class="field field--wide">Scenario label
                 <input id="run-label" name="label" type="text" maxlength="200" placeholder="e.g. 150 Mm³ · high recovery · $200 carbon" required>
               </label>
+              <label class="field field--wide">Constraint set
+                <select id="run-constraint-set" name="constraint_set">
+                  <option value="screening_v0">screening_v0 — screening only</option>
+                  <option value="policy_test_v1" disabled>policy_test_v1 — unavailable in static mode</option>
+                </select>
+                <span class="field-hint" id="run-constraint-badge">screening_only · policy_grade=false</span>
+              </label>
               <label class="field">Harvest (Mm³/yr)
                 <select id="run-harvest" name="harvest">
                   <option value="100">100 — scenario low</option>
                   <option value="119">119 — observed 2024 base</option>
-                  <option value="150">150 — scenario high</option>
-                  <option value="200">200 — supply-curve basis</option>
+                  <option value="150">150 — scenario high (conditional)</option>
                   <option value="custom">Custom…</option>
                 </select>
               </label>
@@ -470,7 +480,7 @@
                 <input id="run-t4" name="t4" type="number" min="0" step="0.001" inputmode="decimal">
               </label>
             </div>
-            <p class="run-form-note">Supply curve is <span class="mono">tiered</span>. Carbon uses the 2021 baseline of $95/t plus the 2026 step entered here. PWRBIO and wind caps are fractions of the zonal 2050 reference.</p>
+            <p class="run-form-note">Supply curve is <span class="mono">tiered</span>. Carbon uses the 2021 baseline of $95/t plus the 2026 step entered here. PWRBIO and wind caps are fractions of the zonal 2050 reference. Harvest above 150 Mm³/yr is rejected by the runner; 150 Mm³ is conditional, not a feasible provincial-mix claim.</p>
             <div class="run-actions">
               <button class="button" id="run-create" type="submit">Create scenario</button>
               <button class="button button--quiet" id="run-queue" type="button" disabled>Queue run</button>
@@ -497,8 +507,8 @@
               <button class="button button--quiet run-cancel" id="run-cancel" type="button" hidden>Cancel run</button>
             </div>
             <div class="run-policy-flag" id="run-policy-flag" hidden>
-              <strong>screening_only · policy_grade=false</strong>
-              <p>No reserve margin, transmission, curtailment, or build-rate constraints. Never policy or forecast.</p>
+              <strong id="run-policy-flag-title">screening_only · policy_grade=false</strong>
+              <p id="run-policy-flag-text">No reserve margin, transmission, curtailment, or build-rate constraints. Never policy or forecast.</p>
             </div>
             <div class="run-log-head">
               <h3>Event log</h3>

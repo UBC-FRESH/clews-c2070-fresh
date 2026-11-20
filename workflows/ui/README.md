@@ -7,10 +7,13 @@ defaults and normalized output endpoints, and keeps the static UI usable when no
 server responds. Results are labelled `screening_only`; they are not
 policy-grade.
 
-The canonical constraint family is `screening_v0`, stored in
+The default canonical constraint family is `screening_v0`, stored in
 `data/derived/national/clews/osecan/canonical_constraint_set.json`. It has no
-reserve-margin, transmission, curtailment, or build-rate constraints. A future
-`policy_test_v1` is a separate, not-yet-defined set.
+reserve-margin, transmission, curtailment, or build-rate constraints. The
+Stage-1 draft `policy_test_v1` is a separate set in
+`data/derived/national/clews/osecan/policy_test_v1.json` with a national
+peak-proxy reserve margin, capacity credits, build rates, and explicit caps;
+`status=draft`, `policy_grade=false`, and it is not policy-grade.
 
 ## Install and run
 
@@ -65,7 +68,7 @@ unknown fields; parsed scenarios are immutable.
 | `energy.wind_cap_fraction` | `[0, 1]` |
 | `energy.t3_cap_pj`, `energy.t4_cap_pj` | ≥ 0 PJ |
 | `energy.generic_bio_cost_usd_per_gj` | ≥ 0 |
-| `constraints.set_id` | non-empty constraint family, e.g. `screening_v0` |
+| `constraints.set_id` | `screening_v0` or `policy_test_v1`; unknown IDs are rejected |
 | `provenance.base_data_commit` | non-empty string |
 | `provenance.model_commit` | non-empty string |
 | `provenance.created_utc` | ISO-8601 timestamp with timezone; normalized to UTC |
@@ -116,7 +119,7 @@ Example:
 | Method | Path | Behaviour |
 |---|---|---|
 | `GET` | `/api/health` | status, schema version, read-only and allow-runs flags |
-| `GET` | `/api/constraints` | canonical constraint sets with `status`, `policy_grade`, `notes`, and UI `defaults`; at least `screening_v0` |
+| `GET` | `/api/constraints` | both `screening_v0` and draft `policy_test_v1` with `status`, `policy_grade`, availability, notes, and shared UI `defaults` |
 | `GET` | `/api/scenarios` | `{"scenarios": [...]}` |
 | `GET` | `/api/scenarios/{id}` | one scenario; 404 if missing, 400 for an unsafe ID |
 | `POST` | `/api/scenarios` | validate and atomically write `runtime/ui/scenarios/{id}.json`; 201 create, 200 overwrite, 409 duplicate unless `?overwrite=true`, 422 contract error |
@@ -317,7 +320,8 @@ gap until it is published as a deterministic preparation script or branch.
 Tests use FastAPI `TestClient`, temporary runtime directories, and a fake
 runner subprocess. They cover contract rejection, atomic create/overwrite,
 duplicate 409, enqueue/status/SSE, read-only 403, restart interruption, path
-traversal rejection, constraints/`screening_v0` defaults, normalized output
+traversal rejection, constraints/`screening_v0` + `policy_test_v1` defaults,
+harvest feasibility gate, normalized output
 (including 409 active and 404 absent cases), the CLI `--runner-command` override
 preserving the scenario snapshot, canonical-set validation, 100/119/150/200 Mm3
 cap math, tier-sum/no-double-count checks, and a real-model dry run when a

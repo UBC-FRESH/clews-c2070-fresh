@@ -71,7 +71,7 @@ def test_ui_log_rendering_is_bounded_and_throttled() -> None:
 def test_ui_fleet_correction_banner_and_counts() -> None:
     assert "EXPECTED_SCENARIO_COUNT = 51" in APP_JS
     assert "EXPECTED_FAMILY_COUNT = 17" in APP_JS
-    assert "EXPECTED_ELIGIBLE_COUNT = 4" in APP_JS
+    assert "EXPECTED_ELIGIBLE_COUNT = 1" in APP_JS
     assert "FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet'" in APP_JS
     assert "FLEET_LADDER_FAMILY = 'fleet_screening_ladder'" in APP_JS
     assert "FLEET_BANNER_TEXT = 'pre-fleet model — not comparable'" in APP_JS
@@ -86,10 +86,26 @@ def test_ui_harvest_ladder_caveat_and_flags() -> None:
         "because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, "
         "not a policy frontier." in APP_JS
     )
-    assert "sc.flags.tradeoff_eligible &&" in APP_JS
+    assert "sc.flags.pareto_eligible" in APP_JS
     assert "sc.flags.harvest_exogenous" in APP_JS
     assert "harvest_exogenous_caveat === HARVEST_CAVEAT" in APP_JS
+    assert "200 Mm³ is not admissible under the documented AAC/NFD screen" in APP_JS
+    assert "FEASIBILITY_CAVEAT" in APP_JS
     assert "sensitivity ladder, not a policy frontier" in APP_JS
     html = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
-    assert html.count("This is a sensitivity ladder, not a policy frontier.") == 2
-    assert "harvest-caveat" in html
+    assert html.count("200 Mm³ is not admissible") == 3
+    assert "harvest-caveat--feasibility" in html
+
+
+def test_ui_policy_selector_and_feasibility_badges() -> None:
+    html = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
+    assert 'id="run-constraint-set"' in html
+    assert 'value="policy_test_v1"' in html
+    assert "unavailable in static mode" in html
+    assert 'id="run-constraint-badge"' in html
+    assert "badge--feas-pass" in APP_JS
+    assert "badge--feas-conditional" in APP_JS
+    assert "badge--feas-fail" in APP_JS
+    assert "constraintSetById" in APP_JS
+    assert "constraints: { set_id: selectedSet }" in APP_JS
+    assert "max_normal_harvest_m3" in APP_JS or "MAX_NORMAL_HARVEST_M3" in APP_JS

@@ -18,11 +18,13 @@
   var PROVINCE_ALIAS = { QC: 'CA-QB' };
   var EXPECTED_SCENARIO_COUNT = 51;
   var EXPECTED_FAMILY_COUNT = 17;
-  var EXPECTED_ELIGIBLE_COUNT = 4;
+  var EXPECTED_ELIGIBLE_COUNT = 1;
   var FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet';
   var FLEET_LADDER_FAMILY = 'fleet_screening_ladder';
   var FLEET_BANNER_TEXT = 'pre-fleet model — not comparable';
   var HARVEST_CAVEAT = 'Harvest is exogenous and free in this model; higher harvest lowers cost and emissions because no harvest cost/THLB/AAC constraint is modeled. This is a sensitivity ladder, not a policy frontier.';
+  var FEASIBILITY_CAVEAT = '200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is conditional (national bound only; no provincial allocation); harvest is exogenous. The default energy Pareto contains only the canonical 119 Mm³ fleet case.';
+  var MAX_NORMAL_HARVEST_M3 = 150000000;
 
   var FAMILY_SHORT = {
     fleet_capacity: 'Fleet capacity',
@@ -145,6 +147,8 @@
     tab: 'overview',
     eligible: [],
     eligibleIds: new Set(),
+    compare: [],
+    compareIds: new Set(),
     dispatch: {
       energy: 'electricity',
       zone: 'ALL',
@@ -370,6 +374,12 @@
       requireTrue(typeof sc.flags.policy_grade === 'boolean', 'missing policy-grade flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.harvest_exogenous === 'boolean', 'missing harvest-exogenous flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.tradeoff_eligible === 'boolean', 'missing trade-off eligibility flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.pareto_eligible === 'boolean', 'missing Pareto eligibility flag on ' + sc.scenario_id);
+      requireTrue(['pass', 'conditional', 'fail'].indexOf(sc.feasibility_status) !== -1, 'missing feasibility status on ' + sc.scenario_id);
+      requireTrue(Array.isArray(sc.feasibility_notes) && sc.feasibility_notes.length > 0, 'missing feasibility notes on ' + sc.scenario_id);
+      requireTrue(typeof sc.pareto_eligible === 'boolean', 'missing top-level Pareto flag on ' + sc.scenario_id);
+      requireTrue(sc.flags.feasibility_status === sc.feasibility_status, 'feasibility flag mismatch on ' + sc.scenario_id);
+      requireTrue(sc.flags.pareto_eligible === sc.pareto_eligible, 'Pareto flag mismatch on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.post_fix_emissions === 'boolean', 'missing post-fix flag on ' + sc.scenario_id);
       requireTrue(Array.isArray(sc.sources) && sc.sources.length > 0, 'missing sources on ' + sc.scenario_id);
     });
@@ -379,9 +389,11 @@
     });
 
     requireTrue(s.tradeoff && Array.isArray(s.tradeoff.scenario_ids), 'trade-off ledger is missing');
-    requireTrue(s.tradeoff.scenario_ids.length === EXPECTED_ELIGIBLE_COUNT, 'expected ' + EXPECTED_ELIGIBLE_COUNT + ' trade-off scenario(s), found ' + s.tradeoff.scenario_ids.length);
+    requireTrue(s.tradeoff.scenario_ids.length === EXPECTED_ELIGIBLE_COUNT, 'expected ' + EXPECTED_ELIGIBLE_COUNT + ' Pareto-eligible scenario(s), found ' + s.tradeoff.scenario_ids.length);
+    requireTrue(Array.isArray(s.tradeoff.sensitivity_scenario_ids) && s.tradeoff.sensitivity_scenario_ids.length === 3, 'harvest sensitivity ledger is missing');
     requireTrue(s.tradeoff.canonical_scenario_id === FLEET_SCENARIO_ID, 'canonical scenario is not the fleet-corrected run');
     requireTrue(s.tradeoff.harvest_exogenous_caveat === HARVEST_CAVEAT, 'harvest-exogenous caveat is missing or changed');
+    requireTrue(s.tradeoff.feasibility_caveat && s.tradeoff.feasibility_caveat.indexOf('200 Mm3') !== -1, 'feasibility caveat is missing');
     var canonicalCount = s.scenarios.filter(function (sc) { return sc.flags.canonical === true; }).length;
     requireTrue(canonicalCount === 1, 'expected exactly one canonical scenario, found ' + canonicalCount);
     s.tradeoff.scenario_ids.forEach(function (id) {
@@ -472,13 +484,29 @@
     state.eligible = eligible;
     state.eligibleIds = eligibleIds;
 
+    var compare = [];
+    var compareIds = new Set();
+    (core.scenarios.tradeoff.scenario_ids || []).concat(core.scenarios.tradeoff.sensitivity_scenario_ids || []).forEach(function (id) {
+      var sc = core.scenarioById.get(id);
+      if (!sc) {
+        state.warnings.push('Explore ledger references missing scenario ' + id + '.');
+        return;
+      }
+      if (!compareIds.has(id)) {
+        compare.push(sc);
+        compareIds.add(id);
+      }
+    });
+    state.compare = compare;
+    state.compareIds = compareIds;
+
     if (eligible.length !== EXPECTED_ELIGIBLE_COUNT) {
-      state.warnings.push('Trade-off guard: flag-derived eligible set is ' + eligible.length + ', expected ' + EXPECTED_ELIGIBLE_COUNT + '.');
+      state.warnings.push('Pareto guard: flag-derived eligible set is ' + eligible.length + ', expected ' + EXPECTED_ELIGIBLE_COUNT + '.');
     }
     core.scenarios.tradeoff.scenario_ids.forEach(function (id) {
       var sc = core.scenarioById.get(id);
       if (!sc || !eligibleIds.has(id)) {
-        state.warnings.push('Trade-off guard excluded ' + id + ' because its flags are not fleet-corrected canonical.');
+        state.warnings.push('Pareto guard excluded ' + id + ' because its flags are not canonical and Pareto eligible.');
       }
     });
 
@@ -516,7 +544,9 @@
       ' · ' + core.manifest.output_count + ' outputs · ' + fmtBytes(core.manifest.total_bytes) +
       (state.live.sessionRuns.length ? ' · ' + state.live.sessionRuns.length + ' live session run(s)' : '');
     $('footer-contract').textContent = 'Data contract ' + core.scenarios.schema_version + ' · ' +
-      core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' trade-off eligible (1 canonical base + 3 harvest sensitivity) · canonical ' + FLEET_SCENARIO_ID + ' · 2026-11-20 fleet run';
+      core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' Pareto eligible (canonical 119 Mm³ only) · ' +
+      (core.scenarios.tradeoff.sensitivity_scenario_ids || []).length + ' harvest sensitivity/compare excluded (150 conditional, 200 fail) · canonical ' +
+      FLEET_SCENARIO_ID + ' · 2026-11-20 fleet run';
   }
 
   function updateHeaderCounts() {
@@ -566,6 +596,19 @@
     $('rail-toggle-count').textContent = text;
   }
 
+  function feasibilityClass(status) {
+    return status === 'pass' ? 'badge--feas-pass' : (status === 'conditional' ? 'badge--feas-conditional' : 'badge--feas-fail');
+  }
+
+  function feasibilityLabel(status) {
+    return status === 'pass' ? 'AAC/NFD pass' : (status === 'conditional' ? 'AAC conditional' : 'AAC/NFD fail');
+  }
+
+  function feasibilityBadge(sc) {
+    if (!sc || !sc.feasibility_status) return '';
+    return '<span class="badge ' + feasibilityClass(sc.feasibility_status) + '">' + esc(feasibilityLabel(sc.feasibility_status)) + '</span>';
+  }
+
   function renderScenarioList() {
     var core = state.core;
     if (!core) return;
@@ -588,15 +631,16 @@
 
     var html = '';
     if (sessionRows.length) {
-      html += '<li class="rail-group-label" role="presentation"><span>Session runs</span><span class="mono">live · screening only</span></li>';
+      html += '<li class="rail-group-label" role="presentation"><span>Session runs</span><span class="mono">live · session only</span></li>';
       sessionRows.forEach(function (sc) {
         var selected = sc.scenario_id === state.selectedId;
+        var setLabel = sc.constraint_set_id === 'policy_test_v1' ? 'policy draft' : 'screening only';
         html += '<li><button type="button" class="scenario-item scenario-item--live' + (selected ? ' is-selected' : '') +
           '" data-scenario-id="' + esc(sc.scenario_id) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
           '<span class="s-label">' + esc(sc.label) + '</span>' +
           '<span class="s-id">' + esc(sc.runId) + '</span>' +
           '<span class="s-badges"><span class="badge badge--family">Session live</span>' +
-          '<span class="badge badge--diag">screening only</span>' +
+          '<span class="badge badge--diag">' + esc(setLabel) + '</span>' + feasibilityBadge(sc) +
           '<span class="badge badge--solve">' + esc(sc.flags.solver || 'completed') + '</span></span></button></li>';
       });
     }
@@ -624,7 +668,7 @@
         '<span class="s-label">' + esc(sc.label) + '</span>' +
         '<span class="s-id">' + esc(sc.scenario_id) + '</span>' +
         '<span class="s-badges"><span class="badge badge--family">' + esc(shortFamily(sc.family)) + '</span>' +
-        fleetBadge + roleBadge + statusBadge + diagnosticBadge + solverBadge + '</span></button></li>';
+        fleetBadge + roleBadge + feasibilityBadge(sc) + statusBadge + diagnosticBadge + solverBadge + '</span></button></li>';
     });
     list.innerHTML = html;
     list.scrollTop = scrollTop;
@@ -656,12 +700,14 @@
       return;
     }
     if (sc.liveRun) {
-      $('tab-scenario-meta').innerHTML = '<strong>' + esc(sc.label) + '</strong> · live session run · screening only';
+      $('tab-scenario-meta').innerHTML = '<strong>' + esc(sc.label) + '</strong> · live session run · ' +
+        esc(sc.constraint_set_id === 'policy_test_v1' ? 'policy draft · policy_grade=false' : 'screening only') +
+        ' · ' + esc(feasibilityLabel(sc.feasibility_status));
       return;
     }
     $('tab-scenario-meta').innerHTML = '<strong>' + esc(sc.label) + '</strong> · ' + esc(shortFamily(sc.family)) +
       (sc.flags.fleet_corrected
-        ? ' · fleet-corrected · screening only'
+        ? ' · fleet-corrected · screening only · ' + esc(feasibilityLabel(sc.feasibility_status))
         : (sc.flags.superseded_for_emissions ? ' · superseded · pre-fleet' : ' · pre-fleet model — not comparable'));
   }
 
@@ -694,32 +740,42 @@
     var superseded = sc.flags.superseded_for_emissions;
     var preFleet = sc.flags.superseded_for_fleet;
     var isLadderSensitivity = sc.family === FLEET_LADDER_FAMILY;
+    var feasibilityCaveat = sc.feasibility_status === 'fail'
+      ? 'AAC/NFD fail — historical/diagnostic only; not admissible and not Pareto eligible.'
+      : (sc.feasibility_status === 'conditional'
+        ? 'Conditional — national 150 Mm³ bound only; the status-quo provincial mix fails NB/BC and no allocation model exists.'
+        : 'AAC/NFD pass — national screens only; NB/NS Crown-only tenure caveats apply.');
     var statusTitle = sc.flags.canonical
-      ? 'Fleet-corrected canonical/base'
+      ? 'Fleet-corrected canonical/base · Pareto eligible'
       : (isLadderSensitivity
-        ? 'Harvest sensitivity — exogenous'
+        ? (sc.feasibility_status === 'fail' ? 'Harvest diagnostic — AAC/NFD fail' : 'Harvest sensitivity — ' + feasibilityLabel(sc.feasibility_status))
         : (preFleet ? FLEET_BANNER_TEXT : 'Historical record'));
     var statusCopy = sc.flags.canonical
-      ? 'Canonical 119 Mm³ screening base under the CER 2021 capacity fleet. screening_only=true and policy_grade=false; not a policy or forecast.'
+      ? 'Canonical 119 Mm³ screening base under the CER 2021 capacity fleet. screening_only=true and policy_grade=false; the only default energy-Pareto case, but not a policy or forecast.'
       : (isLadderSensitivity
-        ? 'Sensitivity case on the fleet-corrected harvest ladder. Harvest is exogenous and free; no harvest cost, THLB, or AAC constraint is modeled. Not a policy frontier.'
+        ? 'Sensitivity case on the fleet-corrected harvest ladder. Harvest is exogenous and free; no harvest cost, THLB, or AAC constraint is modeled. ' + feasibilityCaveat + ' Compare only — excluded from the default Pareto.'
         : 'This run predates the CER 2021 capacity-fleet correction. It remains visible for audit but is excluded from the default trade-off/Pareto ledger and is not comparable with fleet-corrected results.' +
           (superseded ? ' Its emissions factors are also superseded by the emission-factor fix.' : ''));
 
     var fleetBanner = sc.flags.canonical
-      ? '<div class="overview-callout fleet-banner fleet-banner--corrected" role="status"><strong>Fleet-corrected · canonical/base</strong><br>' +
+      ? '<div class="overview-callout fleet-banner fleet-banner--corrected" role="status"><strong>Fleet-corrected · canonical/base · AAC/NFD pass</strong><br>' +
         'CER 2021 capacity fleet applied. This is the 119 Mm³ canonical screening base: objective ' + fmt(m.objective, 2) +
         ' M$, cumulative emissions ' + fmt(m.emissions_total, 3) + ' Mt CO₂, 2050 emissions ' + fmt(m.emissions_2050, 3) +
         ' Mt CO₂. Screening only — not policy-grade.</div>'
       : (isLadderSensitivity
-        ? '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>Sensitivity · harvest is exogenous and free</strong><br>' +
-          esc(HARVEST_CAVEAT) + ' Objective ' + fmt(m.objective, 2) + ' M$, cumulative emissions ' +
-          fmt(m.emissions_total, 3) + ' Mt CO₂.</div>'
+        ? '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' +
+          (sc.feasibility_status === 'fail' ? 'Diagnostic only · 200 Mm³ not admissible' : 'Sensitivity · ' + esc(feasibilityLabel(sc.feasibility_status))) +
+          '</strong><br>' + esc(feasibilityCaveat) + '<br>' + esc(HARVEST_CAVEAT) + ' Objective ' + fmt(m.objective, 2) +
+          ' M$, cumulative emissions ' + fmt(m.emissions_total, 3) + ' Mt CO₂. Not Pareto eligible.</div>'
         : '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' + esc(FLEET_BANNER_TEXT) + '</strong><br>' +
           'This scenario predates the CER 2021 capacity-fleet correction. It is historical audit evidence only: ' +
           'excluded from the canonical trade-off/Pareto ledger and not comparable with fleet-corrected results.</div>');
 
-    var html = linkedContextHtml() + fleetBanner + '<div class="scenario-masthead">' +
+    var feasibilityCallout = '<div class="harvest-caveat harvest-caveat--feasibility" role="note"><strong>' +
+      esc('Feasibility · ' + feasibilityLabel(sc.feasibility_status)) + '</strong><p>' + esc(feasibilityCaveat) +
+      ' 200 Mm³ not admissible under documented AAC/NFD; 150 Mm³ conditional; harvest exogenous.</p></div>';
+
+    var html = linkedContextHtml() + fleetBanner + feasibilityCallout + '<div class="scenario-masthead">' +
       '<div>' +
         '<p class="kicker masthead-family">' + esc(sc.family_label) + '</p>' +
         '<h2>' + esc(sc.label) + '</h2>' +
@@ -734,8 +790,9 @@
           (sc.flags.publishable ? '<span class="badge badge--postfix">publishable</span>' : '<span class="badge badge--superseded">not publishable</span>') +
           (sc.flags.canonical ? '<span class="badge badge--fleet">canonical/base</span>' : '') +
           (isLadderSensitivity ? '<span class="badge badge--diag">sensitivity</span><span class="badge badge--ink">exogenous harvest</span>' : '') +
-          (sc.flags.diagnostic ? '<span class="badge badge--diag">diagnostic</span>' : '') +
-          (eligible ? '<span class="badge badge--family">trade-off eligible</span>' : '') +
+          feasibilityBadge(sc) +
+          (sc.feasibility_status === 'fail' ? '<span class="badge badge--diag">diagnostic only</span>' : '') +
+          (eligible ? '<span class="badge badge--family">Pareto eligible</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="masthead-side">' +
@@ -796,20 +853,26 @@
         '<p class="scenario-desc">' + esc(sc.description) + '</p>' +
         '<span class="masthead-id">' + esc(sc.contract_scenario_id) + ' · run ' + esc(sc.runId) + '</span>' +
         '<div class="masthead-flags">' +
-          '<span class="badge badge--diag">screening_only</span>' +
+          '<span class="badge badge--diag">' + esc(sc.constraint_set_id === 'policy_test_v1' ? 'policy_test_v1 · draft' : 'screening_only') + '</span>' +
           '<span class="badge badge--superseded">policy_grade=false</span>' +
+          feasibilityBadge(sc) +
           '<span class="badge badge--ink">not publishable</span>' +
           '<span class="badge badge--family">live session</span>' +
         '</div>' +
       '</div>' +
       '<div class="masthead-side">' +
-        '<div><p class="kicker">Status</p><p class="status-large">Screening-only run</p></div>' +
-        '<p>Generated by the FastAPI runner in this session. No reserve margin, transmission, curtailment, or build-rate constraints; never policy or forecast.</p>' +
+        '<div><p class="kicker">Status</p><p class="status-large">' +
+          esc(sc.constraint_set_id === 'policy_test_v1' ? 'Draft policy-test run' : 'Screening-only run') + '</p></div>' +
+        '<p>' + esc(sc.constraint_set_id === 'policy_test_v1'
+          ? 'Generated by the FastAPI runner in this session using the Stage-1 draft policy set. Reserve margin and build caps apply; no transmission, timeslices, curtailment, or unit commitment. Not policy-grade.'
+          : 'Generated by the FastAPI runner in this session. No reserve margin, transmission, curtailment, or build-rate constraints; never policy or forecast.') + '</p>' +
         '<p class="mono">solver: ' + esc(m.solver_status || '—') + '</p>' +
       '</div>' +
     '</div>' +
-    '<div class="overview-callout"><strong>Screening only — not policy grade</strong><br>' +
-      'This run uses constraint set <span class="mono">screening_v0</span>. It is visible in the session rail, overview, dispatch, and trade-off, but it is excluded from the canonical fleet-corrected ledger.</div>' +
+    '<div class="overview-callout"><strong>' +
+      esc(sc.constraint_set_id === 'policy_test_v1' ? 'Draft policy test — not policy grade' : 'Screening only — not policy grade') +
+      '</strong><br>This run uses constraint set <span class="mono">' + esc(sc.constraint_set_id || 'screening_v0') +
+      '</span>. It is visible in the session rail, overview, dispatch, and comparison, but it is not Pareto eligible and is excluded from the canonical ledger.</div>' +
     '<div class="metric-grid">' +
       metricCard('Objective', fmt(m.objective, 2), 'M$ (million USD)', 'solver objective · live run', true) +
       metricCard('Cumulative emissions', fmt(m.emissions_total, 3), 'Mt CO₂', 'sum over 2021—2070', false) +
@@ -1719,7 +1782,7 @@
     var guard = $('tradeoff-guard');
     if (missing.length || eligible.length !== expected.length) {
       guard.hidden = false;
-      guard.textContent = 'Guard: the ' + expected.length + '-ID trade-off ledger and the flag-derived eligible set disagree. ' +
+      guard.textContent = 'Guard: the ' + expected.length + '-ID Pareto ledger and the flag-derived eligible set disagree. ' +
         'Excluded by flags: ' + (missing.length ? missing.join(', ') : 'none') + '. Flag-derived count: ' + eligible.length + '.';
     } else {
       guard.hidden = true;
@@ -1765,42 +1828,6 @@
         })
       };
     });
-
-    var livePoints = state.live.sessionRuns.filter(function (sc) {
-      return num(sc.metrics.objective) !== null && num(sc.metrics.emissions_total) !== null;
-    }).map(function (sc) {
-      var selected = sc.scenario_id === state.selectedId;
-      return {
-        value: [Number(sc.metrics.objective), Number(sc.metrics.emissions_total)],
-        name: sc.label,
-        symbol: 'diamond',
-        symbolSize: selected ? 19 : 14,
-        itemStyle: selected
-          ? { color: '#a94f31', borderColor: '#d98a2b', borderWidth: 3, shadowBlur: 14, shadowColor: 'rgba(217,138,43,0.55)' }
-          : { color: '#a94f31', borderColor: '#fbf6e9', borderWidth: 1 },
-        meta: {
-          id: sc.scenario_id,
-          family: 'Session live run — screening only',
-          label: sc.label,
-          objective: sc.metrics.objective,
-          emissions: sc.metrics.emissions_total,
-          national: sc.metrics.national_bcw_2050,
-          share: sc.metrics.bio_share_2050,
-          live: true
-        }
-      };
-    });
-    if (livePoints.length) {
-      series.push({
-        name: 'Session live runs (screening)',
-        type: 'scatter',
-        symbol: 'diamond',
-        symbolSize: 14,
-        itemStyle: { color: '#a94f31', borderColor: '#fbf6e9', borderWidth: 1 },
-        emphasis: { scale: 1.6, itemStyle: { borderColor: '#17251d', borderWidth: 2 } },
-        data: livePoints
-      });
-    }
 
     if (!state.tradeoffChart) {
       state.tradeoffChart = window.echarts.init(chartEl, null, { renderer: 'canvas' });
@@ -1871,18 +1898,17 @@
     var superseded = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_emissions; }).length;
     var preFleet = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_fleet; }).length;
     var diagnostic = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.diagnostic; }).length;
-    var sensitivity = eligible.filter(function (sc) { return sc.family === FLEET_LADDER_FAMILY; }).length;
-    var canonical = eligible.length - sensitivity;
-    $('tradeoff-count').textContent = eligible.length + ' eligible · ' + canonical + ' canonical/base + ' + sensitivity +
-      ' harvest sensitivity · ' + (state.core.scenarios.scenarios.length - eligible.length) + ' historical/excluded (' + preFleet +
-      ' pre-fleet, ' + superseded + ' emissions-superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length +
-      (state.live.sessionRuns.length ? ' · +' + state.live.sessionRuns.length + ' live session run(s), screening only' : '');
+    var sensitivityIds = state.core.scenarios.tradeoff.sensitivity_scenario_ids || [];
+    $('tradeoff-count').textContent = eligible.length + ' Pareto eligible · canonical 119 Mm³ only · ' +
+      sensitivityIds.length + ' harvest sensitivity/compare excluded (100 pass, 150 conditional, 200 fail; harvest exogenous) · ' +
+      (state.core.scenarios.scenarios.length - eligible.length) + ' historical/excluded (' + preFleet +
+      ' pre-fleet, ' + superseded + ' emissions-superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length;
   }
 
   /* ---------------- Explore: parallel coordinates, Pareto, compare ---------------- */
 
   function exploreRows() {
-    return state.eligible.concat(state.live.sessionRuns);
+    return state.compare.concat(state.live.sessionRuns);
   }
 
   function exploreIsLive(sc) {
@@ -1891,9 +1917,10 @@
 
   function exploreGrade(sc) {
     if (exploreIsLive(sc)) return 'live · screening_only';
-    if (sc.flags.canonical) return 'fleet-corrected · canonical/base';
-    if (sc.family === FLEET_LADDER_FAMILY) return 'fleet-corrected · harvest sensitivity';
-    return 'historical · not comparable';
+    var feasibility = sc.feasibility_status ? ' · ' + feasibilityLabel(sc.feasibility_status) : '';
+    if (sc.flags.canonical) return 'fleet-corrected · canonical/base · Pareto eligible';
+    if (sc.family === FLEET_LADDER_FAMILY) return 'fleet-corrected · harvest sensitivity' + feasibility;
+    return 'historical · not comparable' + feasibility;
   }
 
   function explorePassesBrushes(sc) {
@@ -1944,7 +1971,7 @@
   }
 
   function pcLineTitle(sc) {
-    var bits = [sc.label, sc.scenario_id, exploreGrade(sc)];
+    var bits = [sc.label, sc.scenario_id, exploreGrade(sc), sc.pareto_eligible ? 'Pareto eligible' : 'not Pareto eligible'];
     ['objective', 'emissions_total', 'national_bcw_2050', 'bio_share_2050'].forEach(function (id) {
       var axis = PC_AXIS_BY_ID[id];
       var value = axis.get(sc);
@@ -2024,6 +2051,8 @@
       var classes = ['pc-line'];
       if (!passes) classes.push('pc-line--filtered');
       if (exploreIsLive(sc)) classes.push('pc-line--live');
+      if (!sc.pareto_eligible) classes.push('pc-line--context');
+      if (sc.feasibility_status === 'fail') classes.push('pc-line--infeasible');
       if (sc.scenario_id === state.selectedId) classes.push('pc-line--selected');
       var color = exploreIsLive(sc) ? '#e8a63c' : familyColor(sc.family);
       svg.push('<path class="' + classes.join(' ') + '" d="' + path.trim() + '" stroke="' + color + '" data-scenario-id="' + esc(sc.scenario_id) + '"><title>' + esc(pcLineTitle(sc)) + '</title></path>');
@@ -2146,7 +2175,8 @@
       if (rows.some(exploreIsLive)) {
         html += '<span class="pc-legend-item"><span class="pc-legend-swatch is-live" style="color:#e8a63c"></span>Live session · screening_only</span>';
       }
-      html += '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:var(--paper);opacity:.5"></span>fleet-corrected · canonical</span>';
+      html += '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:var(--paper);opacity:.5"></span>canonical 119 · Pareto eligible</span>';
+      html += '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:#a94f31"></span>ladder · compare only (150 conditional / 200 fail)</span>';
       legend.innerHTML = html;
     }
 
@@ -2177,7 +2207,8 @@
 
     var status = $('pc-status');
     if (status) {
-      var text = visibleCount + ' of ' + rows.length + ' visible · ' + state.eligible.length + ' static eligible + ' + state.live.sessionRuns.length + ' live';
+      var text = visibleCount + ' of ' + rows.length + ' visible · ' + state.eligible.length + ' Pareto eligible + ' +
+        (state.compare.length - state.eligible.length) + ' ladder context + ' + state.live.sessionRuns.length + ' live';
       if (brushIds.length) text += ' · ' + brushIds.length + ' axis filter' + (brushIds.length === 1 ? '' : 's');
       if (missingOnBrush) text += ' · ' + missingOnBrush + ' hidden with missing filtered metrics';
       if (formError) text = 'Filter not applied: ' + formError + ' · ' + text;
@@ -2226,9 +2257,11 @@
     var pareto = state.explore.pareto;
     var metrics = [PARETO_BY_ID[pareto.x], PARETO_BY_ID[pareto.y], PARETO_BY_ID[pareto.z]];
     var rows = exploreRows();
+    var candidates = rows.filter(function (sc) { return sc.pareto_eligible === true; });
+    var contextRows = rows.filter(function (sc) { return sc.pareto_eligible !== true; });
     var complete = [];
     var missing = [];
-    rows.forEach(function (sc) {
+    candidates.forEach(function (sc) {
       var values = metrics.map(function (metric) { return metric.get(sc); });
       var absent = metrics.filter(function (metric, index) { return values[index] === null; });
       if (absent.length) missing.push({ sc: sc, fields: absent.map(function (metric) { return metric.label; }) });
@@ -2272,15 +2305,17 @@
     var frontIds = new Set(frontRows.map(function (row) { return row.sc.scenario_id; }));
 
     if (guard) {
-      if (missing.length) {
-        guard.hidden = false;
-        guard.textContent = 'Excluded from the front for missing selected objectives: ' + missing.map(function (item) {
-          return item.sc.label + ' (' + item.fields.join(', ') + ')';
-        }).join('; ') + '. Missing metrics are never imputed.';
-      } else {
-        guard.hidden = true;
-        guard.textContent = '';
+      var guardParts = [];
+      if (contextRows.length) {
+        guardParts.push(contextRows.length + ' scenario(s) shown as context but excluded from the front because pareto_eligible=false (harvest ladder/live runs).');
       }
+      if (missing.length) {
+        guardParts.push('Excluded for missing selected objectives: ' + missing.map(function (item) {
+          return item.sc.label + ' (' + item.fields.join(', ') + ')';
+        }).join('; ') + '. Missing metrics are never imputed.');
+      }
+      guard.hidden = !guardParts.length;
+      guard.textContent = guardParts.join(' ');
     }
 
     if (!window.echarts) {
@@ -2328,6 +2363,28 @@
 
     var dominated = complete.filter(function (row) { return !row.front; }).map(function (row) { return point(row, false); });
     var front = frontRows.map(function (row) { return point(row, true); });
+    var contextPoints = contextRows.map(function (sc) {
+      var values = metrics.map(function (metric) { return metric.get(sc); });
+      if (values.some(function (value) { return value === null; })) return null;
+      return {
+        value: [values[xi], values[yi]],
+        name: sc.label,
+        symbol: 'emptyCircle',
+        symbolSize: 11,
+        itemStyle: { color: 'rgba(157,139,108,0.45)', borderColor: '#9d8b6c', borderWidth: 1 },
+        meta: {
+          id: sc.scenario_id,
+          label: sc.label,
+          family: shortFamily(sc.family),
+          grade: exploreGrade(sc),
+          front: false,
+          context: true,
+          metrics: metrics.map(function (metric, index) {
+            return { label: metric.label, unit: metric.unit, text: metric.format(values[index]) };
+          })
+        }
+      };
+    }).filter(Boolean);
     var unitNote = function (metric) { return metric.unit + ' · ' + (metric.higher ? 'maximize' : 'minimize'); };
 
     state.paretoChart.setOption({
@@ -2358,7 +2415,7 @@
             meta.metrics.map(function (item) {
               return '<div class="chart-tip-kv"><span>' + esc(item.label + ' (' + item.unit + ')') + '</span><b>' + esc(item.text) + '</b></div>';
             }).join('') +
-            '<div class="chart-tip-kv"><span>Pareto status</span><b>' + (meta.front ? 'on front' : 'dominated') + '</b></div></div>';
+            '<div class="chart-tip-kv"><span>Pareto status</span><b>' + (meta.context ? 'not Pareto eligible' : (meta.front ? 'on front' : 'dominated')) + '</b></div></div>';
         }
       },
       xAxis: {
@@ -2384,6 +2441,7 @@
         axisLine: { show: false }
       },
       series: [
+        { name: 'Context · not Pareto eligible', type: 'scatter', data: contextPoints, emphasis: { scale: 1.3 } },
         { name: 'Dominated', type: 'scatter', data: dominated, emphasis: { scale: 1.5 } },
         { name: 'Pareto front', type: 'scatter', data: front, z: 3, emphasis: { scale: 1.4 } }
       ]
@@ -2397,15 +2455,17 @@
       })
     };
 
-    var labelText = frontRows.length + ' on front · ' + complete.length + ' eligible evaluated · ' +
+    var labelText = frontRows.length + ' on front · ' + complete.length + ' Pareto-eligible evaluated · ' +
+      contextRows.length + ' context excluded (ladder/live not Pareto eligible) · ' +
       (missing.length ? missing.length + ' excluded for missing metrics' : 'no missing metrics') +
       ' · dominance on min–max normalized values · mechanically computed, not a policy frontier';
     countEl.textContent = labelText;
 
     if (selected) {
       var onFront = frontIds.has(selected.scenario_id);
+      var paretoLabel = selected.pareto_eligible ? (onFront ? 'on front' : 'not on front') : 'not Pareto eligible';
       selectedEl.innerHTML = 'Selected <strong>' + esc(selected.label) + '</strong> ' +
-        '<span class="badge ' + (onFront ? 'badge--front' : 'badge--plain') + '">' + (onFront ? 'on front' : 'not on front') + '</span> ' +
+        '<span class="badge ' + (onFront ? 'badge--front' : 'badge--plain') + '">' + esc(paretoLabel) + '</span> ' +
         '<span class="badge badge--plain">' + esc(exploreGrade(selected)) + '</span>';
     } else {
       selectedEl.textContent = 'Select a point to load its scenario.';
@@ -2446,8 +2506,8 @@
 
   function ensureCompareSelection() {
     var ids = new Set(compareRows().map(function (sc) { return sc.scenario_id; }));
-    var preferredA = 'emission_factor_fix__efix_stress_119m';
-    var preferredB = 'pwrbio_cap__pwrbio_cap10_windint3_tier200';
+    var preferredA = FLEET_SCENARIO_ID;
+    var preferredB = 'fleet_screening_ladder__screening_150m';
     if (!state.explore.compare.a || !ids.has(state.explore.compare.a)) {
       state.explore.compare.a = ids.has(preferredA) ? preferredA : (state.selectedId || null);
     }
@@ -2576,6 +2636,10 @@
     grade.innerHTML =
       '<span class="badge">A · ' + esc(shortFamily(a.family)) + ' · ' + esc(exploreGrade(a)) + '</span>' +
       '<span class="badge">B · ' + esc(shortFamily(b.family)) + ' · ' + esc(exploreGrade(b)) + '</span>' +
+      (a.feasibility_status ? '<span class="badge ' + feasibilityClass(a.feasibility_status) + '">A · ' + esc(feasibilityLabel(a.feasibility_status)) + '</span>' : '') +
+      (b.feasibility_status ? '<span class="badge ' + feasibilityClass(b.feasibility_status) + '">B · ' + esc(feasibilityLabel(b.feasibility_status)) + '</span>' : '') +
+      (a.harvest_exogenous || a.flags.harvest_exogenous ? '<span class="badge badge--ink">A · harvest exogenous</span>' : '') +
+      (b.harvest_exogenous || b.flags.harvest_exogenous ? '<span class="badge badge--ink">B · harvest exogenous</span>' : '') +
       (a.scenario_id === b.scenario_id ? '<span class="badge badge--live">A and B are the same scenario</span>' : '') +
       (exploreIsLive(a) || exploreIsLive(b) ? '<span class="badge badge--live">screening_only · not policy grade</span>' : '');
 
@@ -2883,14 +2947,14 @@
     if (!state.core) return;
     var note = $('explore-mode-note');
     if (note) {
-      var ladder = state.eligible.filter(function (sc) { return sc.family === FLEET_LADDER_FAMILY; }).length;
+      var sensitivity = (state.core.scenarios.tradeoff.sensitivity_scenario_ids || []).length;
       var canonical = state.eligible.filter(function (sc) { return sc.flags.canonical; }).length;
       var noteParts = [];
-      if (canonical) noteParts.push(canonical + ' canonical/base fleet-corrected scenario');
-      if (ladder) noteParts.push(ladder + ' harvest sensitivity scenarios with exogenous, free harvest');
+      if (canonical) noteParts.push(canonical + ' canonical 119 Mm³ case (Pareto eligible)');
+      if (sensitivity) noteParts.push(sensitivity + ' harvest ladder scenarios (compare only: 150 conditional, 200 fail; harvest exogenous)');
       if (state.live.sessionRuns.length) noteParts.push(state.live.sessionRuns.length + ' live session run(s)');
       note.hidden = !noteParts.length;
-      note.textContent = noteParts.length ? noteParts.join(' · ') + '. Pareto dominance is mechanical; sensitivity can dominate the base because harvest is free.' : '';
+      note.textContent = noteParts.length ? noteParts.join(' · ') + '. Only pareto_eligible=true rows enter the front; ladder and live rows remain context.' : '';
     }
     ensureParetoAxes();
     renderParallelCoordinates();
@@ -3737,8 +3801,7 @@
     harvest.innerHTML = [
       ['100', '100 Mm³ (scenario low)'],
       ['119', '119 Mm³ (observed 2024, base)'],
-      ['150', '150 Mm³ (scenario high)'],
-      ['200', '200 Mm³ (supply-curve basis)']
+      ['150', '150 Mm³ (scenario high, conditional)']
     ].map(function (row) { return '<option value="' + row[0] + '">' + row[1] + '</option>'; }).join('');
     harvest.value = String(state.osecan.harvest);
 
@@ -3944,6 +4007,78 @@
 
   function liveApi() { return window.ForestLedgerApi || null; }
 
+  function constraintSets() {
+    return state.live.constraints && Array.isArray(state.live.constraints.sets)
+      ? state.live.constraints.sets
+      : [];
+  }
+
+  function constraintSetById(id) {
+    var sets = constraintSets();
+    for (var i = 0; i < sets.length; i += 1) {
+      if (sets[i] && sets[i].set_id === id) return sets[i];
+    }
+    if (id === 'screening_v0') return { set_id: 'screening_v0', status: 'screening_only', policy_grade: false, available: true, defaults: FALLBACK_DEFAULTS };
+    if (id === 'policy_test_v1') return { set_id: 'policy_test_v1', status: 'draft', policy_grade: false, available: false };
+    return null;
+  }
+
+  function renderConstraintSelector() {
+    var select = $('run-constraint-set');
+    if (!select) return;
+    var sets = constraintSets();
+    var live = state.live.mode === 'live' || state.live.mode === 'no-runs' || state.live.mode === 'readonly';
+    var options = [];
+    if (sets.length) {
+      sets.forEach(function (set) {
+        var available = set.available !== false;
+        var suffix = set.set_id === 'policy_test_v1'
+          ? (available ? ' — draft · policy_grade=false' : ' — unavailable')
+          : ' — screening only';
+        options.push('<option value="' + esc(set.set_id) + '"' +
+          (available && (set.set_id === 'screening_v0' || live) ? '' : ' disabled') + '>' +
+          esc(set.set_id + suffix) + '</option>');
+      });
+    } else {
+      options.push('<option value="screening_v0">screening_v0 — screening only</option>');
+      options.push('<option value="policy_test_v1" disabled>policy_test_v1 — unavailable in ' + esc(state.live.mode === 'static' ? 'static mode' : 'this mode') + '</option>');
+    }
+    select.innerHTML = options.join('');
+    var current = select.value;
+    if (!current || !constraintSetById(current)) {
+      var preferred = (state.live.constraints && state.live.constraints.default_set_id) || 'screening_v0';
+      select.value = constraintSetById(preferred) ? preferred : (sets[0] ? sets[0].set_id : 'screening_v0');
+    }
+    renderConstraintBadge();
+  }
+
+  function renderConstraintBadge() {
+    var badge = $('run-constraint-badge');
+    var flagTitle = $('run-policy-flag-title');
+    var flagText = $('run-policy-flag-text');
+    var select = $('run-constraint-set');
+    if (!badge || !select) return;
+    var set = constraintSetById(select.value);
+    if (!set) {
+      badge.textContent = 'constraint set unavailable';
+      return;
+    }
+    if (select.value === 'policy_test_v1') {
+      var available = set.available !== false;
+      badge.textContent = available
+        ? 'draft · policy_grade=false · Stage 1 reserve/build caps'
+        : 'policy_test_v1 unavailable — screening only';
+      if (flagTitle) flagTitle.textContent = available ? 'policy_test_v1 · draft · policy_grade=false' : 'policy_test_v1 unavailable';
+      if (flagText) flagText.textContent = available
+        ? 'Stage-1 draft: national peak-proxy reserve margin, capacity credits, build rates, and explicit caps. Not policy-grade; no transmission, timeslices, curtailment, or unit commitment.'
+        : 'The policy constraint set could not be loaded. Select screening_v0 or restart the live server with the policy file available.';
+    } else {
+      badge.textContent = 'screening_only · policy_grade=false';
+      if (flagTitle) flagTitle.textContent = 'screening_only · policy_grade=false';
+      if (flagText) flagText.textContent = 'No reserve margin, transmission, curtailment, or build-rate constraints. Never policy or forecast.';
+    }
+  }
+
   function syncHarvestCustom() {
     var select = $('run-harvest');
     var customField = $('run-harvest-custom-field');
@@ -3976,6 +4111,7 @@
     if ($('run-wind-cap')) $('run-wind-cap').value = String(d.wind_cap_fraction == null ? 0.2 : d.wind_cap_fraction);
     if ($('run-t3')) $('run-t3').value = String(d.t3_cap_pj == null ? 39.873714 : d.t3_cap_pj);
     if ($('run-t4')) $('run-t4').value = String(d.t4_cap_pj == null ? 64.265464 : d.t4_cap_pj);
+    renderConstraintSelector();
     syncHarvestCustom();
     updateFormDisabled();
   }
@@ -4030,8 +4166,8 @@
     banner.classList.remove('is-live', 'is-readonly');
     if (mode === 'live') {
       banner.classList.add('is-live');
-      title.textContent = 'Live runner ready — screening only.';
-      text.textContent = 'Create a scenario, queue it, and watch SSE status. Every completed run is added to the session rail with screening_only and policy_grade=false.';
+      title.textContent = 'Live runner ready — screening or draft policy.';
+      text.textContent = 'Create a scenario, queue it, and watch SSE status. screening_v0 is screening_only; policy_test_v1 is a draft and policy_grade=false. Neither is Pareto eligible in the canonical ledger.';
       setModeBadge('live', 'POST /api/scenarios and /api/runs are available.');
     } else if (mode === 'no-runs') {
       banner.classList.add('is-live');
@@ -4049,20 +4185,21 @@
       setModeBadge('degraded', 'GET /api/constraints failed validation.');
     } else if (mode === 'static') {
       title.textContent = 'Static mode — no backend reachable.';
-      text.textContent = 'Showing the committed iteration-0 scenarios and outputs. Start the FastAPI server with --allow-runs to create and queue live screening scenarios.';
+      text.textContent = 'Showing the committed iteration-0 scenarios and outputs. policy_test_v1 is unavailable in static mode; start the FastAPI server with --allow-runs to use the live constraint-set selector.';
       setModeBadge('static', 'GET /api/health failed; using precomputed data only.');
     } else {
       title.textContent = 'Checking live API…';
       text.textContent = 'Static views remain available if no backend responds.';
       setModeBadge('checking');
     }
+    renderConstraintSelector();
     updateFormDisabled();
 
     var osecanBanner = $('osecan-run-banner');
     var osecanNote = $('osecan-live-note');
     var osecanCopy = {
       live: {
-        banner: '<span class="needs-run-mark">i</span><strong>Live runner available — screening only.</strong> “Queue this scenario” creates a live scenario from the calculator levers; every result is policy_grade=false.',
+        banner: '<span class="needs-run-mark">i</span><strong>Live runner available — screening or draft policy.</strong> “Queue this scenario” creates a live scenario from the calculator levers; screening and policy_test_v1 results are policy_grade=false.',
         note: 'Queue this scenario is available.',
         status: 'Defaults loaded from screening_v0. No run yet.'
       },
@@ -4143,6 +4280,14 @@
     var choice = $('run-harvest').value;
     var level = choice === 'custom' ? fieldNumber('run-harvest-custom', 'Custom harvest') : Number(d.harvest_levels_m3_per_year[choice]);
     if (!Number.isFinite(level) || level <= 0) throw new Error('Harvest must be a positive m³/year value.');
+    if (level > MAX_NORMAL_HARVEST_M3) {
+      throw new Error('Harvest above 150,000,000 m³/yr is not admissible under documented AAC/NFD; use the CLI --allow-infeasible diagnostic path for the historical 200 Mm³ case.');
+    }
+    var constraintSet = $('run-constraint-set').value;
+    var selectedSet = constraintSetById(constraintSet);
+    if (!selectedSet || selectedSet.available === false) {
+      throw new Error('Constraint set ' + constraintSet + ' is unavailable; select screening_v0.');
+    }
     var path = choice === 'custom' ? 'custom' : (d.harvest_path_by_level[choice] || 'custom');
     var recovery = fieldNumber('run-recovery', 'Recovery fraction');
     if (recovery <= 0 || recovery > 1) throw new Error('Recovery fraction must be greater than 0 and at most 1.');
@@ -4166,6 +4311,7 @@
       harvestChoice: choice,
       level: level,
       path: path,
+      constraintSet: constraintSet,
       recovery: recovery,
       cost: $('run-cost').value,
       carbon: carbon,
@@ -4182,14 +4328,13 @@
   function buildScenarioPayload() {
     var form = readRunForm();
     var d = state.live.defaults || FALLBACK_DEFAULTS;
-    var canonical = state.live.constraints && state.live.constraints.default_set_id
-      ? state.live.constraints.default_set_id
-      : 'screening_v0';
+    var selectedSet = form.constraintSet || 'screening_v0';
     var provenance = (state.live.constraints && state.live.constraints.provenance) || {};
     var payload = {
       scenario_id: slugify(form.label),
       label: form.label,
-      description: 'Created in the Forest Ledger Run panel from screening_v0 defaults. Live screening only; not policy grade.',
+      description: 'Created in the Forest Ledger Run panel with constraint set ' + selectedSet + '. ' +
+        (selectedSet === 'policy_test_v1' ? 'Stage-1 draft policy test; not policy-grade.' : 'Live screening only; not policy grade.'),
       schema_version: 'clews.scenario.v1',
       harvest: {
         level_m3_per_year: form.level,
@@ -4212,7 +4357,7 @@
         t4_cap_pj: form.t4,
         generic_bio_cost_usd_per_gj: Number(d.generic_bio_cost_usd_per_gj == null ? 3 : d.generic_bio_cost_usd_per_gj)
       },
-      constraints: { set_id: canonical },
+      constraints: { set_id: selectedSet },
       provenance: {
         base_data_commit: provenance.base_data_commit || 'session-live-ui',
         model_commit: provenance.model_commit || LIVE_MODEL_COMMIT,
@@ -4811,7 +4956,7 @@
         if (!activeRunMatches(runId)) return;
         addSessionRun(job, output);
         renderRunOutput(job, output);
-        setFormStatus('Completed ' + job.run_id + '. Added to the session rail and trade-off.', false);
+        setFormStatus('Completed ' + job.run_id + '. Added to the session rail and comparison only (not Pareto eligible).', false);
         announce('Live run ' + job.run_id + ' completed. Screening-only result added to the session rail.');
       } catch (error) {
         if (!activeRunMatches(runId)) return;
@@ -4859,6 +5004,9 @@
     var metrics = output.metrics || {};
     var railId = 'live:' + job.run_id;
     var label = summary.scenario_label || form.label || output.scenario_id || job.scenario_id;
+    var setSummary = summary.constraints || {};
+    var feasibilityStatus = summary.feasibility_status || (Number(form.level) > MAX_NORMAL_HARVEST_M3 ? 'fail' : (Number(form.level) > 118977339 ? 'conditional' : 'pass'));
+    var feasibilityNotes = summary.feasibility_notes || [(setSummary.set_id === 'policy_test_v1' ? 'Policy-test draft; not policy-grade. ' : '') + 'Harvest feasibility is screened at the runner boundary.'];
     var zeroTiers = [];
     if (Number(form.t3) === 0) zeroTiers.push('T3');
     if (Number(form.t4) === 0) zeroTiers.push('T4');
@@ -4870,7 +5018,14 @@
       family: SESSION_FAMILY,
       family_label: 'Session live runs',
       label: label,
-      description: 'Live screening-only run from this browser session. Constraint set screening_v0; not policy grade.',
+      description: 'Live session run. Constraint set ' + (setSummary.set_id || form.constraintSet || 'screening_v0') +
+        (setSummary.set_id === 'policy_test_v1' ? ' (draft, policy_grade=false)' : ' (screening_only)') +
+        '; harvest feasibility=' + feasibilityStatus + '.',
+      feasibility_status: feasibilityStatus,
+      feasibility_notes: feasibilityNotes,
+      pareto_eligible: false,
+      harvest_exogenous: true,
+      constraint_set_id: setSummary.set_id || form.constraintSet || 'screening_v0',
       source_run: job.run_id,
       sources: [output.source || ('run ' + job.run_id + '/output/dispatch_by_zone.csv')],
       dimensions: {
@@ -4903,8 +5058,11 @@
         superseded_for_emissions: false,
         diagnostic: false,
         post_fix_emissions: false,
-        screening_only: true,
+        screening_only: (setSummary.set_id || form.constraintSet) !== 'policy_test_v1',
         policy_grade: false,
+        harvest_exogenous: true,
+        feasibility_status: feasibilityStatus,
+        pareto_eligible: false,
         live: true
       }
     };
@@ -4924,10 +5082,13 @@
     var container = $('run-output-summary');
     if (!container) return;
     var metrics = output.metrics || {};
+    var summary = output.summary || {};
+    var setSummary = summary.constraints || {};
+    var isPolicy = setSummary.set_id === 'policy_test_v1';
     var railId = 'live:' + job.run_id;
     container.hidden = false;
     container.innerHTML = '<div class="run-output-card">' +
-      '<div class="run-output-head"><h3>Completed · screening-only output</h3><span class="mono">' + esc(output.source || '') + '</span></div>' +
+      '<div class="run-output-head"><h3>Completed · ' + esc(isPolicy ? 'policy draft output' : 'screening-only output') + '</h3><span class="mono">' + esc(output.source || '') + '</span></div>' +
       '<p class="run-output-message">' + esc((output.summary && output.summary.message) || 'Run completed.') + '</p>' +
       '<div class="result-grid">' +
         '<div class="result"><span>Objective</span><strong>' + fmt(metrics.objective, 2) + '</strong><small>M$</small></div>' +
@@ -4935,7 +5096,8 @@
         '<div class="result"><span>National BCW 2050</span><strong>' + fmt(metrics.national_bcw_2050, 2) + '</strong><small>PJ fuel</small></div>' +
         '<div class="result"><span>PWRBCW 2050</span><strong>' + fmt(metrics.pwrbcw_2050, 2) + '</strong><small>PJ electricity</small></div>' +
       '</div>' +
-      '<div class="run-output-flag"><strong>screening_only · policy_grade=false</strong><br>Added to the session rail and trade-off. This is not a publishable or policy-grade C2070 result.</div>' +
+      '<div class="run-output-flag"><strong>' + esc(isPolicy ? 'policy_test_v1 · draft · policy_grade=false' : 'screening_only · policy_grade=false') +
+      '</strong><br>Added to the session rail and comparison only. This is not a publishable or policy-grade C2070 result and is not Pareto eligible.</div>' +
       '<div class="run-output-actions">' +
         '<button class="button" id="run-open-dispatch" type="button">Open dispatch</button>' +
         '<button class="button button--quiet" id="run-open-overview" type="button">Open overview</button>' +
@@ -5019,9 +5181,10 @@
     state.live.health = probe.health;
     try {
       var constraints = await client.getConstraints();
-      var set = constraints.sets[0];
+      var defaultId = constraints.default_set_id || (constraints.sets[0] && constraints.sets[0].set_id);
+      var set = (constraints.sets || []).filter(function (item) { return item.set_id === defaultId; })[0] || constraints.sets[0];
       state.live.constraints = constraints;
-      state.live.defaults = set.defaults || FALLBACK_DEFAULTS;
+      state.live.defaults = (set && set.defaults) || FALLBACK_DEFAULTS;
       state.live.mode = probe.health.read_only ? 'readonly' : (probe.health.allow_runs ? 'live' : 'no-runs');
       applyRunDefaults(state.live.defaults);
     } catch (error) {
@@ -5056,6 +5219,13 @@
       input.addEventListener('change', invalidateCreatedScenario);
     });
     $('run-harvest').addEventListener('change', syncHarvestCustom);
+    var constraintSelect = $('run-constraint-set');
+    if (constraintSelect) {
+      constraintSelect.addEventListener('change', function () {
+        renderConstraintBadge();
+        invalidateCreatedScenario();
+      });
+    }
     $('run-queue').addEventListener('click', queueCreatedScenario);
     var cancel = $('run-cancel');
     if (cancel) {

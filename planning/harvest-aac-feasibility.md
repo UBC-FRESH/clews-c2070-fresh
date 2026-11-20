@@ -4,7 +4,7 @@
 |---|---|
 | Document | `planning/harvest-aac-feasibility.md` |
 | Date | 2026-11-20 |
-| Status | Read-only feasibility screen and planning recommendation; no model, runner, UI, or data change |
+| Status | Feasibility screen implemented 2026-11-20: runner gate at 150,000,000 m3/yr, `--allow-infeasible` diagnostic override, feasibility labels, and Pareto exclusion for the exogenous ladder. Provincial allocation and the harvest cost curve remain later milestones. |
 | Scope | 100 / 119 / 150 / 200 Mm3/yr national harvest ladder |
 | Trigger | The fleet-corrected ladder shows 119 Mm3 dominated by 150 / 200 Mm3; harvest is exogenous and unpriced in the energy objective |
 | Recommendation | Cap the exposed ladder at 150M; reject 200M; treat harvest as exogenous and exclude the ladder from the energy Pareto; defer the cost curve and forest-sector LP |

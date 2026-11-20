@@ -208,6 +208,7 @@ def test_contract_accepts_valid_payload_and_sorts_schedule() -> None:
         lambda p: p.update({"scenario_id": "../etc/passwd"}),
         lambda p: p.update({"schema_version": "clews.scenario.v2"}),
         lambda p: p["constraints"].update({"set_id": ""}),
+        lambda p: p["constraints"].update({"set_id": "invented_set"}),
         lambda p: p["provenance"].update({"created_utc": "2026-11-20T00:00:00"}),
         lambda p: p["provenance"].update({"model_commit": "   "}),
         lambda p: p.update({"label": "   "}),
@@ -233,6 +234,19 @@ def test_contract_rejects_invalid_payload(mutate) -> None:
     mutate(payload)
 
     with pytest.raises(ValidationError):
+        Scenario.model_validate(payload)
+
+
+def test_contract_accepts_both_constraint_sets() -> None:
+    for set_id in ("screening_v0", "policy_test_v1"):
+        payload = copy.deepcopy(scenario_payload())
+        payload["constraints"]["set_id"] = set_id
+        scenario = Scenario.model_validate(payload)
+        assert scenario.constraints.set_id == set_id
+
+    payload = copy.deepcopy(scenario_payload())
+    payload["constraints"]["set_id"] = "unknown_set"
+    with pytest.raises(ValidationError, match="unsupported constraint set"):
         Scenario.model_validate(payload)
 
 
@@ -949,19 +963,28 @@ def test_shutdown_marks_queued_jobs_interrupted(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_constraints_endpoint_exposes_screening_v0_defaults(tmp_path: Path) -> None:
+def test_constraints_endpoint_exposes_both_supported_sets(tmp_path: Path) -> None:
     runtime = tmp_path / "runtime"
     with make_client(runtime, allow_runs=True) as client:
         response = client.get("/api/constraints")
         assert response.status_code == 200, response.text
         payload = response.json()
         assert payload["default_set_id"] == "screening_v0"
-        assert len(payload["sets"]) == 1
-        constraint_set = payload["sets"][0]
-        assert constraint_set["set_id"] == "screening_v0"
+        assert payload["schema_version"] == "clews.constraint_sets.v2"
+        assert len(payload["sets"]) == 2
+        by_id = {item["set_id"]: item for item in payload["sets"]}
+        constraint_set = by_id["screening_v0"]
         assert constraint_set["status"] == "screening_only"
         assert constraint_set["policy_grade"] is False
+        assert constraint_set["available"] is True
         assert any("reserve-margin" in note for note in constraint_set["notes"])
+        policy = by_id["policy_test_v1"]
+        assert policy["status"] == "draft"
+        assert policy["policy_grade"] is False
+        assert policy["available"] is True
+        assert policy["screening_only"] is False
+        assert policy["policy_grade_reason"]
+        assert policy["structural_gaps"]
         defaults = constraint_set["defaults"]
         assert defaults["default_harvest_level_m3_per_year"] == 118_977_339.0
         assert defaults["default_recovery_fraction"] == 0.6
@@ -973,6 +996,8 @@ def test_constraints_endpoint_exposes_screening_v0_defaults(tmp_path: Path) -> N
         assert defaults["t4_cap_pj"] == pytest.approx(64.265464)
         assert defaults["carbon_price_usd_per_tco2e_2026"] == 115.0
         assert defaults["harvest_levels_m3_per_year"]["200"] == 200_000_000.0
+        assert defaults["harvest_feasibility"]["levels"]["200"] == "fail"
+        assert policy["defaults"] == defaults
 
 
 def test_run_output_endpoint_normalizes_summary_and_dispatch(tmp_path: Path) -> None:

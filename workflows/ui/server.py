@@ -50,6 +50,8 @@ from workflows.ui.contracts import (
     load_scenario,
     validate_scenario_id,
 )
+from workflows.ui.feasibility import assess_harvest_feasibility
+from workflows.ui.osecan_runner import POLICY_SET_PATH
 from workflows.ui.storage import atomic_write_json, read_json
 
 __all__ = ["AppSettings", "RunStore", "RunSupervisor", "create_app", "main"]
@@ -897,27 +899,10 @@ def _constraint_provenance() -> dict[str, str]:
     }
 
 
-def _canonical_constraints_payload() -> dict[str, Any]:
-    """Return the canonical constraint families and UI defaults.
+def _constraint_defaults(canonical: Any) -> dict[str, Any]:
+    """Shared run-form lever defaults for both constraint families."""
 
-    The server does not accept user-defined constraint sets in this milestone;
-    it exposes the authoritative ``screening_v0`` record and the same defaults
-    the runner parses.  A missing or drifted canonical file is a server error,
-    never a silently substituted default.
-    """
-
-    from workflows.ui.osecan_runner import RunnerError, load_canonical_set
-
-    try:
-        canonical = load_canonical_set(CONSTRAINTS_PATH)
-        raw = read_json(CONSTRAINTS_PATH)
-    except (OSError, ValueError, RunnerError) as exc:
-        raise ValueError(f"canonical constraint set is unavailable: {exc}") from exc
-    if not isinstance(raw, dict):
-        raise ValueError(  # noqa: TRY004 - corrupt canonical data maps to HTTP 500
-            "canonical constraint set is not a JSON object"
-        )
-    defaults: dict[str, Any] = {
+    return {
         "harvest_levels_m3_per_year": {
             "100": 100_000_000.0,
             "119": 118_977_339.0,
@@ -929,6 +914,16 @@ def _canonical_constraints_payload() -> dict[str, Any]:
             "119": "hold",
             "150": "high",
             "200": "custom",
+        },
+        "harvest_feasibility": {
+            "max_normal_harvest_m3": 150_000_000.0,
+            "levels": {
+                "100": "pass",
+                "119": "pass",
+                "150": "conditional",
+                "200": "fail",
+            },
+            "pareto_eligible_levels": ["119"],
         },
         "default_harvest_level_m3_per_year": 118_977_339.0,
         "default_harvest_path": "hold",
@@ -943,19 +938,92 @@ def _canonical_constraints_payload() -> dict[str, Any]:
         "supply_cost_usd_per_gj": dict(canonical.supply_cost_usd_per_gj),
         **dict(canonical.energy_defaults),
     }
-    set_payload = {
+
+
+def _policy_set_payload(defaults: dict[str, Any]) -> dict[str, Any]:
+    """Return the draft policy family, or an explicit unavailable record.
+
+    A missing or invalid policy file must not break the screening defaults or
+    silently fall back to a screening run that the user did not choose.
+    """
+
+    from workflows.ui.osecan_runner import RunnerError, load_policy_set
+
+    try:
+        policy = load_policy_set(POLICY_SET_PATH)
+        raw = read_json(POLICY_SET_PATH)
+    except (OSError, ValueError, RunnerError) as exc:
+        return {
+            "set_id": "policy_test_v1",
+            "label": "Policy test v1 — draft",
+            "status": "draft",
+            "policy_grade": False,
+            "available": False,
+            "unavailable_reason": f"policy_test_v1 is unavailable: {exc}",
+            "defaults": defaults,
+        }
+    if not isinstance(raw, dict):
+        return {
+            "set_id": "policy_test_v1",
+            "label": "Policy test v1 — draft",
+            "status": "draft",
+            "policy_grade": False,
+            "available": False,
+            "unavailable_reason": "policy_test_v1 is not a JSON object",
+            "defaults": defaults,
+        }
+    return {
+        "set_id": policy.set_id,
+        "label": policy.label,
+        "status": policy.status,
+        "value_status": policy.value_status,
+        "source_status": policy.source_status,
+        "policy_grade": policy.policy_grade,
+        "policy_grade_reason": raw.get("policy_grade_reason", ""),
+        "structural_gaps": list(policy.structural_gaps),
+        "notes": list(policy.notes),
+        "available": True,
+        "screening_only": policy.screening_only,
+        "defaults": defaults,
+    }
+
+
+def _canonical_constraints_payload() -> dict[str, Any]:
+    """Return both supported constraint families and shared UI defaults.
+
+    ``screening_v0`` remains the default.  ``policy_test_v1`` is exposed as a
+    draft (``policy_grade=false``) and is selectable only when its loader
+    succeeds; a missing or corrupt policy file yields an explicit unavailable
+    record rather than a silent substitution.
+    """
+
+    from workflows.ui.osecan_runner import RunnerError, load_canonical_set
+
+    try:
+        canonical = load_canonical_set(CONSTRAINTS_PATH)
+        raw = read_json(CONSTRAINTS_PATH)
+    except (OSError, ValueError, RunnerError) as exc:
+        raise ValueError(f"canonical constraint set is unavailable: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise ValueError(  # noqa: TRY004 - corrupt canonical data maps to HTTP 500
+            "canonical constraint set is not a JSON object"
+        )
+    defaults = _constraint_defaults(canonical)
+    screening = {
         "set_id": canonical.set_id,
         "label": raw.get("label", canonical.set_id),
         "status": canonical.status,
         "policy_grade": canonical.policy_grade,
+        "available": True,
+        "screening_only": canonical.screening_only,
         "notes": list(canonical.notes),
         "omitted_constraints": list(raw.get("omitted_constraints", [])),
         "future_sets": raw.get("future_sets", {}),
         "defaults": defaults,
     }
     return {
-        "schema_version": "clews.constraint_sets.v1",
-        "sets": [set_payload],
+        "schema_version": "clews.constraint_sets.v2",
+        "sets": [screening, _policy_set_payload(defaults)],
         "default_set_id": canonical.set_id,
         "provenance": _constraint_provenance(),
     }
@@ -1050,8 +1118,14 @@ def _scenario_summary(scenario: Scenario) -> dict[str, Any]:
         point.year: point.price_usd_per_tco2e
         for point in scenario.energy.carbon_price_schedule
     }
+    feasibility = assess_harvest_feasibility(scenario.harvest.level_m3_per_year)
     return {
         "label": scenario.label,
+        "constraint_set_id": scenario.constraints.set_id,
+        "feasibility_status": feasibility.status,
+        "feasibility_notes": list(feasibility.notes),
+        "pareto_eligible": False,
+        "harvest_exogenous": True,
         "harvest_level_m3_per_year": scenario.harvest.level_m3_per_year,
         "harvest_path": scenario.harvest.path,
         "recovery_fraction": scenario.harvest.recovery_fraction,

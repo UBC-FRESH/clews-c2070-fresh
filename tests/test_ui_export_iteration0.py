@@ -78,6 +78,12 @@ def test_scenario_contract_and_metrics(scenarios: dict) -> None:
         assert isinstance(scenario["flags"]["policy_grade"], bool)
         assert isinstance(scenario["flags"]["harvest_exogenous"], bool)
         assert isinstance(scenario["flags"]["tradeoff_eligible"], bool)
+        assert isinstance(scenario["flags"]["pareto_eligible"], bool)
+        assert scenario["feasibility_status"] in {"pass", "conditional", "fail"}
+        assert isinstance(scenario["feasibility_notes"], list) and scenario["feasibility_notes"]
+        assert isinstance(scenario["pareto_eligible"], bool)
+        assert scenario["flags"]["feasibility_status"] == scenario["feasibility_status"]
+        assert scenario["flags"]["pareto_eligible"] == scenario["pareto_eligible"]
         assert scenario["metrics"]["harvest_m3_per_year"] == pytest.approx(
             scenario["dimensions"]["harvest_m3_per_year"]
         )
@@ -92,6 +98,9 @@ def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
     assert fleet["metrics"]["emissions_total"] == pytest.approx(424.710127)
     assert fleet["metrics"]["emissions_2050"] == pytest.approx(0.0)
     assert fleet["metrics"]["pwrbcw_2050"] == pytest.approx(41.108218)
+    assert fleet["feasibility_status"] == "pass"
+    assert fleet["pareto_eligible"] is True
+    assert fleet["harvest_exogenous"] is True
     assert fleet["flags"] == {
         "solver": "optimal",
         "publishable": True,
@@ -102,14 +111,16 @@ def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
         "screening_only": True,
         "policy_grade": False,
         "harvest_exogenous": True,
+        "feasibility_status": "pass",
+        "pareto_eligible": True,
         "tradeoff_eligible": True,
         "diagnostic": False,
         "post_fix_emissions": True,
     }
     assert scenarios["tradeoff"]["canonical_scenario_id"] == fleet_id
     assert scenarios["tradeoff"]["canonical_role"] == "canonical/base"
-    assert scenarios["tradeoff"]["scenario_ids"] == [
-        fleet_id,
+    assert scenarios["tradeoff"]["scenario_ids"] == [fleet_id]
+    assert scenarios["tradeoff"]["sensitivity_scenario_ids"] == [
         "fleet_screening_ladder__screening_100m",
         "fleet_screening_ladder__screening_150m",
         "fleet_screening_ladder__screening_200m",
@@ -118,6 +129,8 @@ def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
         "tradeoff"
     ]["scenario_ids"]
     assert scenarios["tradeoff"]["harvest_exogenous_caveat"] == exporter.HARVEST_EXOGENOUS_CAVEAT
+    assert "200 Mm3" in scenarios["tradeoff"]["feasibility_caveat"]
+    assert "150 Mm3" in scenarios["tradeoff"]["feasibility_caveat"]
 
     ladder_ids = {
         "fleet_screening_ladder__screening_100m",
@@ -137,11 +150,26 @@ def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
 def test_fleet_harvest_ladder_contract(scenarios: dict) -> None:
     by_id = {item["scenario_id"]: item for item in scenarios["scenarios"]}
     expected = {
-        "fleet_screening_ladder__screening_100m": (100_000_000, 1_447_160.18, 423.050600),
-        "fleet_screening_ladder__screening_150m": (150_000_000, 1_443_635.15, 422.690612),
-        "fleet_screening_ladder__screening_200m": (200_000_000, 1_440_837.42, 421.029794),
+        "fleet_screening_ladder__screening_100m": (
+            100_000_000,
+            1_447_160.18,
+            423.050600,
+            "pass",
+        ),
+        "fleet_screening_ladder__screening_150m": (
+            150_000_000,
+            1_443_635.15,
+            422.690612,
+            "conditional",
+        ),
+        "fleet_screening_ladder__screening_200m": (
+            200_000_000,
+            1_440_837.42,
+            421.029794,
+            "fail",
+        ),
     }
-    for scenario_id, (harvest_m3, objective, emissions) in expected.items():
+    for scenario_id, (harvest_m3, objective, emissions, status) in expected.items():
         scenario = by_id[scenario_id]
         assert scenario["family"] == "fleet_screening_ladder"
         assert "sensitivity" in scenario["label"].lower()
@@ -151,20 +179,15 @@ def test_fleet_harvest_ladder_contract(scenarios: dict) -> None:
         assert scenario["metrics"]["objective"] == pytest.approx(objective)
         assert scenario["metrics"]["emissions_total"] == pytest.approx(emissions)
         assert scenario["metrics"]["emissions_2050"] == pytest.approx(0.0)
-        assert scenario["flags"] == {
-            "solver": "optimal",
-            "publishable": True,
-            "superseded_for_emissions": False,
-            "superseded_for_fleet": False,
-            "fleet_corrected": True,
-            "canonical": False,
-            "screening_only": True,
-            "policy_grade": False,
-            "harvest_exogenous": True,
-            "tradeoff_eligible": True,
-            "diagnostic": False,
-            "post_fix_emissions": True,
-        }
+        assert scenario["feasibility_status"] == status
+        assert scenario["pareto_eligible"] is False
+        assert scenario["harvest_exogenous"] is True
+        assert scenario["flags"]["harvest_exogenous"] is True
+        assert scenario["flags"]["feasibility_status"] == status
+        assert scenario["flags"]["pareto_eligible"] is False
+        assert scenario["flags"]["tradeoff_eligible"] is False
+        assert scenario["flags"]["publishable"] is True
+        assert scenario["flags"]["diagnostic"] is (status == "fail")
     ladder_family = next(
         item for item in scenarios["families"] if item["family"] == "fleet_screening_ladder"
     )
@@ -173,8 +196,10 @@ def test_fleet_harvest_ladder_contract(scenarios: dict) -> None:
     assert ladder_family["screening_only"] is True
     assert ladder_family["policy_grade"] is False
     assert ladder_family["harvest_exogenous"] is True
-    assert ladder_family["tradeoff_eligible"] is True
+    assert ladder_family["pareto_eligible"] is False
+    assert ladder_family["tradeoff_eligible"] is False
     assert by_id["fleet_capacity__screening_119m_fleet"]["flags"]["canonical"] is True
+    assert by_id["fleet_capacity__screening_119m_fleet"]["flags"]["pareto_eligible"] is True
 
 
 def test_fleet_output_excludes_other_rows(scenarios: dict) -> None:
@@ -190,11 +215,27 @@ def test_fleet_output_excludes_other_rows(scenarios: dict) -> None:
     assert set(output["category"]) == {"dispatch", "supply"}
 
 
+def test_historical_ladder_levels_keep_feasibility_labels(scenarios: dict) -> None:
+    by_id = {item["scenario_id"]: item for item in scenarios["scenarios"]}
+    assert by_id["national_150m__baseline"]["feasibility_status"] == "conditional"
+    assert by_id["national_150m__baseline"]["pareto_eligible"] is False
+    for scenario_id in (
+        "national_supply_curve__baseline",
+        "national_supply_curve_demand_sensitivity__carbon_400",
+        "harvest_sensitivity_100_200__200m",
+    ):
+        scenario = by_id[scenario_id]
+        assert scenario["feasibility_status"] == "fail", scenario_id
+        assert scenario["pareto_eligible"] is False
+        assert scenario["flags"]["diagnostic"] is True
+
+
 def test_superseded_filtering(scenarios: dict) -> None:
     by_id = {item["scenario_id"]: item for item in scenarios["scenarios"]}
     tradeoff_ids = set(scenarios["tradeoff"]["scenario_ids"])
-    assert tradeoff_ids == {
-        "fleet_capacity__screening_119m_fleet",
+    assert tradeoff_ids == {"fleet_capacity__screening_119m_fleet"}
+    sensitivity_ids = set(scenarios["tradeoff"]["sensitivity_scenario_ids"])
+    assert sensitivity_ids == {
         "fleet_screening_ladder__screening_100m",
         "fleet_screening_ladder__screening_150m",
         "fleet_screening_ladder__screening_200m",
@@ -205,6 +246,13 @@ def test_superseded_filtering(scenarios: dict) -> None:
         assert by_id[scenario_id]["flags"]["fleet_corrected"]
         assert by_id[scenario_id]["flags"]["publishable"]
         assert by_id[scenario_id]["flags"]["tradeoff_eligible"]
+        assert by_id[scenario_id]["flags"]["pareto_eligible"]
+        assert by_id[scenario_id]["feasibility_status"] == "pass"
+    for scenario_id in sensitivity_ids:
+        assert by_id[scenario_id]["flags"]["publishable"]
+        assert by_id[scenario_id]["flags"]["tradeoff_eligible"] is False
+        assert by_id[scenario_id]["flags"]["pareto_eligible"] is False
+        assert by_id[scenario_id]["flags"]["harvest_exogenous"] is True
     for family in (
         "emission_factor_fix",
         "pwrbio_cap",
@@ -325,5 +373,6 @@ def test_inputs_contract() -> None:
     assert len(ladder_link["scenario_dirs"]) == 3
     assert len(ladder_link["files"]) == 9
     assert ladder_link["harvest_exogenous"] is True
-    assert ladder_link["tradeoff_eligible"] is True
+    assert ladder_link["pareto_eligible"] is False
+    assert ladder_link["tradeoff_eligible"] is False
     assert links["validation"]["national_cap_reconciliation"]["all_tier_sum_equals_rest"] is True

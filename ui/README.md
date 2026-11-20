@@ -73,15 +73,18 @@ Plex Mono. No runtime CDN request is required.
   crosswalk. The 11 C2070 zones without authoritative polygons are shown as
   gaps, never as invented geometry.
 - **OSeCAN Links** — source-file/check ledger plus a screening lever calculator
-  (harvest 100/119/150/200 Mm³; recovery 0.35/0.60/0.75; cost basis), national
+  (harvest 100/119/150 Mm³; recovery 0.35/0.60/0.75; cost basis), national
   PJ and BC/rest split, tier-sum validation, and client-side CSV exports. When
   the live API is available, **Queue this scenario** creates a live scenario from
-  the same levers.
-- **Run** — create a `clews.scenario.v1` scenario from `screening_v0` defaults,
-  queue it on the FastAPI runner, follow SSE logs/status, and fetch normalized
-  output on completion. Completed runs enter a **Session runs** rail group, the
-  overview, trade-off, and dispatch; they are marked **screening_only** and
-  **policy_grade=false**. Failed runs add no result.
+  the same levers. The historical 200 Mm³ stress case is not offered as a normal
+  run.
+- **Run** — create a `clews.scenario.v1` scenario from `screening_v0` defaults
+  or the Stage-1 draft `policy_test_v1` selector, queue it on the FastAPI
+  runner, follow SSE logs/status, and fetch normalized output on completion.
+  `screening_v0` is **screening_only**; `policy_test_v1` is **draft** with
+  **policy_grade=false**. Completed runs enter a **Session runs** rail group and
+  comparison/Explore context, never the canonical Pareto ledger. Failed runs add
+  no result. `policy_test_v1` is unavailable in static mode.
 - **Inputs** — harvest reference paths, supply-curve tiers, and the
   managed-landbase proxy with caveats.
 
@@ -102,7 +105,7 @@ fleet-corrected 119 Mm³ run and the historical pre-fleet scenarios):
 
 | Path | Content |
 |---|---|
-| `scenarios.json` | 51 scenarios, 17 families, 4 trade-off IDs (1 canonical/base + 3 harvest sensitivity), units, flags, dimensions, metrics |
+| `scenarios.json` | 51 scenarios, 17 families, 1 Pareto-eligible ID (canonical 119 Mm³) + 3 harvest sensitivity/compare IDs, units, flags, dimensions, metrics, feasibility fields |
 | `outputs/{scenario_id}.json` | Columnar `technology`, `category`, `zone`, `year`, `value_pj`; units per category |
 | `inputs/harvest_basis.json` | Harvest template summary and 2021–2070 reference paths |
 | `inputs/supply_curve.json` | Four-tier national supply curve, reconciliation, physical basis |
@@ -127,11 +130,15 @@ The sensitivity ladder lives under
 exported twice). It is exported as family `fleet_screening_ladder` with
 `harvest_m3_per_year` dimensions and metrics read from each run summary. All
 three cases are `fleet_corrected=true`, `screening_only=true`,
-`policy_grade=false`, `harvest_exogenous=true`, and `tradeoff_eligible=true`.
+`policy_grade=false`, `harvest_exogenous=true`, `pareto_eligible=false`, and
+`tradeoff_eligible=false`. Their feasibility labels are 100 Mm³ `pass`,
+150 Mm³ `conditional` (national bound only; status-quo provincial mix fails
+NB/BC; no allocation model), and 200 Mm³ `fail` (above documented AAC/NFD;
+historical/diagnostic only).
 
-> **Harvest is exogenous and free in this model; higher harvest lowers cost and
-> emissions because no harvest cost/THLB/AAC constraint is modeled. This is a
-> sensitivity ladder, not a policy frontier.**
+> **200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is
+> conditional; harvest is exogenous. The default energy Pareto contains only the
+> canonical 119 Mm³ fleet case. The ladder is sensitivity/compare only.**
 
 ### Units and guards
 
@@ -147,20 +154,22 @@ three cases are `fleet_corrected=true`, `screening_only=true`,
 - The app fails closed at boot on schema/count/unit/tier-sum mismatches. Each
   scenario output is validated on load (scenario ID, column lengths, finite
   values, 50-year coverage, category units).
-- Trade-off eligibility is re-derived from flags (`publishable`,
-  `post_fix_emissions`, `fleet_corrected`, `tradeoff_eligible`, and neither
-  `superseded_for_emissions` nor `superseded_for_fleet`) and checked against the
-  4-ID ledger. A visible guard appears if they disagree.
-- `fleet_capacity__screening_119m_fleet` is the single canonical/base scenario
-  and is `screening_only=true`, `policy_grade=false`. The three
-  `fleet_screening_ladder__*` runs are labelled **sensitivity** with
-  **exogenous harvest**; the canonical run is labelled **canonical/base**. Every
-  earlier scenario carries `superseded_for_fleet=true` and the visible
-  **pre-fleet model — not comparable** badge/banner.
-- The trade-off/Pareto front is computed mechanically. It is legitimate for the
-  200 Mm³ sensitivity to dominate the 119 Mm³ base because harvest has no cost,
-  THLB, or AAC constraint in this model; the UI shows the caveat rather than
-  hiding the dominated base.
+- Pareto eligibility is re-derived from flags (`publishable`,
+  `post_fix_emissions`, `fleet_corrected`, `pareto_eligible`,
+  `feasibility_status="pass"`, and neither `superseded_for_emissions` nor
+  `superseded_for_fleet`) and checked against the 1-ID ledger. A visible guard
+  appears if they disagree.
+- `fleet_capacity__screening_119m_fleet` is the single canonical/base and
+  Pareto-eligible scenario and is `screening_only=true`, `policy_grade=false`.
+  The three `fleet_screening_ladder__*` runs are labelled **sensitivity** with
+  **exogenous harvest** and carry **AAC/NFD pass/conditional/fail** badges; the
+  canonical run is labelled **canonical/base**. Every earlier scenario carries
+  `superseded_for_fleet=true` and the visible **pre-fleet model — not comparable**
+  badge/banner.
+- The default trade-off/Pareto front contains only the canonical 119 Mm³ case.
+  Explore still plots the ladder as context, but dominance is evaluated only on
+  `pareto_eligible=true` rows. The UI shows the feasibility caveat rather than
+  treating the unpriced-harvest ordering as a policy frontier.
 - Superseded and diagnostic flags are visible in the rail, masthead, and file
   ledger.
 - Spatial counts and the 11-zone gap count are guarded. No C2070 zone polygon is
