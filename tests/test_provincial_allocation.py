@@ -193,6 +193,11 @@ def test_national_operable_envelope_diagnostic() -> None:
     )
     assert summary["national_envelope"]["1.2"]["deficits_m3"]["150m"] == 0.0
     assert summary["operable_proxy"]["missing_provinces"] == ["NU", "PE"]
+    sensitivity = summary["operable_proxy"]["threshold_sensitivity"]
+    assert sensitivity["default_case"] == "base"
+    assert sensitivity["cases_area"]["low"]["national_ha"] == pytest.approx(383_377_980.690, abs=1.0)
+    assert sensitivity["cases_area"]["base"]["national_ha"] == pytest.approx(332_599_169.880, abs=1.0)
+    assert sensitivity["cases_area"]["high"]["national_ha"] == pytest.approx(267_938_856.360, abs=1.0)
     status = summary["status_by_case"]["150m"]
     assert status["1.0"] == {"provincial_lp": "infeasible", "national_envelope": "infeasible"}
     assert status["1.2"] == {"provincial_lp": "infeasible", "national_envelope": "feasible"}

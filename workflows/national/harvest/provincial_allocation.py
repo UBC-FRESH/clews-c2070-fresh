@@ -623,6 +623,30 @@ def _case_payload(result: CaseResult) -> dict[str, object]:
     }
 
 
+def load_operable_proxy_sensitivity() -> dict[str, object]:
+    """Read the threshold sensitivity block from the operable-proxy summary."""
+    if not OPERABLE_PROXY_SUMMARY_PATH.is_file():
+        raise AllocationError(f"required input is missing: {OPERABLE_PROXY_SUMMARY_PATH}")
+    payload = json.loads(OPERABLE_PROXY_SUMMARY_PATH.read_text(encoding="utf-8"))
+    sensitivity = payload.get("sensitivity")
+    thresholds = payload.get("thresholds")
+    if not isinstance(sensitivity, dict) or not isinstance(thresholds, dict):
+        raise AllocationError("operable proxy summary is missing sensitivity/thresholds")
+    return {
+        "default_case": thresholds.get("default_case"),
+        "cases": thresholds.get("cases"),
+        "national_merchantable_ha": payload.get("national"),
+        "cases_area": {
+            key: {
+                "label": block.get("label"),
+                "national_ha": block.get("national_ha"),
+                "share_of_treed": block.get("share_of_treed"),
+            }
+            for key, block in sensitivity.items()
+        },
+    }
+
+
 def build_summary(
     basis: tuple[ProvinceBasis, ...],
     cases: dict[str, CaseResult],
@@ -683,6 +707,7 @@ def build_summary(
             for intensity in INTENSITY_CAP_LEVELS
         },
     }
+    operable_sensitivity = load_operable_proxy_sensitivity()
 
     return {
         "product": "provincial harvest-allocation LP",
@@ -731,6 +756,7 @@ def build_summary(
                 ),
                 "missing_provinces": operable_missing,
                 "missing_policy": "documented cap retained; flagged operable_missing; no zero substitution",
+                "threshold_sensitivity": operable_sensitivity,
                 "by_province": [
                     {
                         "province": row.province,
@@ -1247,7 +1273,14 @@ def run() -> dict[str, object]:
     write_manifest(
         manifest_path,
         summary,
-        (TEMPLATE_PATH, PROVINCES_PATH, MANAGED_LANDBASE_PATH, OPERABLE_PROXY_PATH, FEASIBILITY_DOC_PATH),
+        (
+            TEMPLATE_PATH,
+            PROVINCES_PATH,
+            MANAGED_LANDBASE_PATH,
+            OPERABLE_PROXY_PATH,
+            OPERABLE_PROXY_SUMMARY_PATH,
+            FEASIBILITY_DOC_PATH,
+        ),
         tuple(output_paths),
     )
     return summary
