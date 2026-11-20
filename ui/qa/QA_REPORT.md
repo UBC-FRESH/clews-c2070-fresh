@@ -108,3 +108,70 @@ Runtime console/network:
 
 No data files, manifests, or outputs were modified. `git status --porcelain`
 contains no `D` entries.
+
+---
+
+# Milestone 1c UI QA — live runner wiring
+
+**Date:** 2026-11-20
+**Scope:** real Chromium QA of the new **Run** tab, static fallback, FastAPI
+create→queue→SSE→output flow, session-rail/overview/trade-off/dispatch
+integration, and the failed-run path. The runner was a local fake/dry-run
+script, not a four-minute OSeCAN solve.
+
+## Environment
+
+| Item | Version / path |
+|---|---|
+| Chromium | Playwright 1.65.2 bundled (`/tmp/ui-qa-venv`) |
+| Static server | `python3 -m http.server 8015 -d ui` |
+| Live server | `.venv/bin/python -m workflows.ui.server --port 8014 --runtime-dir /tmp/ui-run-qa/runtime --allow-runs --runner-command ".../python /tmp/ui-run-qa/fake_runner.py"` |
+| Browser flags | `--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist --disable-dev-shm-usage` |
+
+The fake runner reads the immutable `--scenario` snapshot, sleeps briefly so SSE
+logs are observable, writes 200 `dispatch_by_zone.csv` rows and
+`run_summaries.json` with `screening_only: true`, `policy_grade: false`, and
+exits 1 with a failed summary when the scenario id/label contains `fail`.
+Therefore a successful 4-minute solve is **not** claimed or exercised here.
+
+## Results
+
+| Check | Result |
+|---|---|
+| Static fallback (`/api/health` 404) | **PASS** — badge `Static mode · no backend`; 47 committed scenarios; create/queue and OSeCAN queue disabled; existing precomputed views still render. Expected console entry: one 404 for the health probe. |
+| Live detection/defaults | **PASS** — badge `Live API · runner ready`; `/api/constraints` defaults populate harvest 119, recovery 0.60, carbon 115, PWRBIO 0.05, nuclear 0, T3 39.873714, T4 64.265464. |
+| Create | **PASS** — form creates `clews.scenario.v1` with a slugged id and enables **Queue run**. |
+| Queue + SSE | **PASS** — 202 accepted; event log shows `started`, runner snapshot/log lines, and terminal `completed`; elapsed timer updates. |
+| Output | **PASS** — `/api/runs/{id}/output` renders objective 123.50 M$, cumulative emissions 0.500 Mt, national BCW 30.00 PJ, PWRBCW 5.00 PJ; source path shown. |
+| Session rail/overview | **PASS** — completed run appears under **Session runs**, selects into a live overview with `screening_only` and `policy_grade=false` badges and no publishable claim. |
+| Trade-off | **PASS** — count includes `+1 live session run(s), screening only`; live point series is present. |
+| Dispatch | **PASS** — **Open dispatch** renders the ECharts canvas from the live columnar output; source note reports the live `dispatch_by_zone.csv`. |
+| Failed run | **PASS** — failed status and error message shown; no metrics, no rail entry, no trade-off point, no dispatch. |
+| Mobile 390×844 | **PASS** — 7 tabs visible in a 4-column grid, Run panel opens, `scrollWidth === innerWidth`, no page errors. |
+| Console/page errors (live page) | **0** page errors, **0** console errors, **0** HTTP responses ≥400. |
+
+## Screenshots
+
+| File | Content |
+|---|---|
+| `run-static.png` | Static-mode badge, disabled Run form, precomputed rail intact |
+| `run-complete.png` | Completed run, SSE log, screening-only output card, session rail entry |
+| `run-error.png` | Failed run, error log, and explicit “No fake results” card |
+
+Machine-readable evidence is in `ui/qa/run_qa_results.json`. Screenshots were
+captured with the sticky tab bar made static and the skip link hidden for the
+capture only (Playwright full-page stitching artefacts); the application styles
+are unchanged.
+
+## Files exercised
+
+- `ui/api.js` — health/constraints/scenario/run/SSE/output client.
+- `ui/app.js` — Run tab state machine, session rail, live overview/trade-off/
+  dispatch integration, static fallback.
+- `ui/index.html`, `ui/styles.css` — Run panel, mode badges, responsive layout.
+- `workflows/ui/server.py` — `/api/constraints`, `/api/runs/{id}/output`,
+  `--runner-command`.
+- `tests/test_ui_scenario_api.py` — endpoint and override tests.
+
+No data files, manifests, or committed static outputs were modified.
+`git status --porcelain` contains no `D` entries.

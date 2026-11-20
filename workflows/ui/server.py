@@ -18,9 +18,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import csv
 import json
+import math
 import os
 import re
+import shlex
 import signal
 import subprocess
 import sys
@@ -60,6 +63,22 @@ ACTIVE_STATUSES = frozenset({"queued", "running"})
 RUNNER_TERMINAL_STATUSES = frozenset({"completed", "failed", "not_implemented"})
 READ_ONLY_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 MAX_EVENT_READ_BYTES = 256 * 1024
+CONSTRAINTS_PATH = (
+    REPO_ROOT / "data/derived/national/clews/osecan/canonical_constraint_set.json"
+)
+LIVE_CATEGORY_UNITS = {
+    "dispatch": "PJ electricity",
+    "power_hydro": "PJ electricity",
+    "power_bcw": "PJ electricity",
+    "power_bio": "PJ electricity",
+    "power_gas": "PJ electricity",
+    "power_wind": "PJ electricity",
+    "power_uranium": "PJ electricity",
+    "supply": "PJ fuel",
+    "bio_supply": "PJ fuel",
+    "supply_bc_zonal": "PJ fuel",
+    "supply_tier": "PJ fuel",
+}
 TERMINAL_EVENT_LEVELS = {
     "completed": "info",
     "not_implemented": "info",
@@ -143,6 +162,7 @@ class AppSettings(BaseModel):
     heartbeat_seconds: float = Field(gt=0)
     poll_seconds: float = Field(gt=0)
     max_concurrent_runs: int = Field(ge=1)
+    runner_command: tuple[str, ...] = Field(min_length=1)
 
 
 class RunRequest(BaseModel):
@@ -802,6 +822,129 @@ def _summary_message(summary: dict[str, Any], status: str) -> str:
     return f"runner reported {status}"
 
 
+def _canonical_constraints_payload() -> dict[str, Any]:
+    """Return the canonical constraint families and UI defaults.
+
+    The server does not accept user-defined constraint sets in this milestone;
+    it exposes the authoritative ``screening_v0`` record and the same defaults
+    the runner parses.  A missing or drifted canonical file is a server error,
+    never a silently substituted default.
+    """
+
+    from workflows.ui.osecan_runner import RunnerError, load_canonical_set
+
+    try:
+        canonical = load_canonical_set(CONSTRAINTS_PATH)
+        raw = read_json(CONSTRAINTS_PATH)
+    except (OSError, ValueError, RunnerError) as exc:
+        raise ValueError(f"canonical constraint set is unavailable: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise ValueError(  # noqa: TRY004 - corrupt canonical data maps to HTTP 500
+            "canonical constraint set is not a JSON object"
+        )
+    defaults: dict[str, Any] = {
+        "harvest_levels_m3_per_year": {
+            "100": 100_000_000.0,
+            "119": 118_977_339.0,
+            "150": 150_000_000.0,
+            "200": 200_000_000.0,
+        },
+        "harvest_path_by_level": {
+            "100": "low",
+            "119": "hold",
+            "150": "high",
+            "200": "custom",
+        },
+        "default_harvest_level_m3_per_year": 118_977_339.0,
+        "default_harvest_path": "hold",
+        "recovery_fractions": [0.35, 0.6, 0.75],
+        "default_recovery_fraction": 0.6,
+        "cost_basis": "adopted_rest_of_canada_curve",
+        "supply_curve": "tiered",
+        "carbon_price_usd_per_tco2e_2021": 95.0,
+        "carbon_price_usd_per_tco2e_2026": 115.0,
+        "tier_caps_pj": dict(canonical.tier_caps_pj),
+        "tier_variable_costs_usd_per_gj": dict(canonical.tier_costs_usd_per_gj),
+        "supply_cost_usd_per_gj": dict(canonical.supply_cost_usd_per_gj),
+        **dict(canonical.energy_defaults),
+    }
+    set_payload = {
+        "set_id": canonical.set_id,
+        "label": raw.get("label", canonical.set_id),
+        "status": canonical.status,
+        "policy_grade": canonical.policy_grade,
+        "notes": list(canonical.notes),
+        "omitted_constraints": list(raw.get("omitted_constraints", [])),
+        "future_sets": raw.get("future_sets", {}),
+        "defaults": defaults,
+    }
+    return {
+        "schema_version": "clews.constraint_sets.v1",
+        "sets": [set_payload],
+        "default_set_id": canonical.set_id,
+    }
+
+
+def _read_dispatch_output(path: Path) -> dict[str, Any]:
+    """Parse ``dispatch_by_zone.csv`` into the static UI columnar contract."""
+
+    required = ("technology", "category", "zone", "year", "value_pj")
+    technologies: list[str] = []
+    categories: list[str] = []
+    zones: list[str] = []
+    years: list[int] = []
+    values: list[float] = []
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        missing = [name for name in required if name not in (reader.fieldnames or [])]
+        if missing:
+            raise ValueError(f"{path.name} is missing columns: {missing}")
+        for line_number, row in enumerate(reader, start=2):
+            category = row.get("category")
+            if category not in LIVE_CATEGORY_UNITS:
+                raise ValueError(
+                    f"{path.name}:{line_number}: unknown category {category!r}"
+                )
+            try:
+                year = int(row["year"])
+                value = float(row["value_pj"])
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"{path.name}:{line_number}: invalid year or value_pj"
+                ) from exc
+            if not math.isfinite(value):
+                raise ValueError(
+                    f"{path.name}:{line_number}: value_pj must be finite"
+                )
+            technology = row.get("technology")
+            zone = row.get("zone")
+            if not technology or not zone:
+                raise ValueError(
+                    f"{path.name}:{line_number}: technology and zone are required"
+                )
+            technologies.append(technology)
+            categories.append(category)
+            zones.append(zone)
+            years.append(year)
+            values.append(round(value, 6))
+    if not values:
+        raise ValueError(f"{path.name} has no dispatch rows")
+    return {
+        "row_count": len(values),
+        "technology": technologies,
+        "category": categories,
+        "zone": zones,
+        "year": years,
+        "value_pj": values,
+        "categories": sorted(set(categories)),
+        "units_by_category": {
+            category: LIVE_CATEGORY_UNITS[category]
+            for category in sorted(set(categories))
+        },
+    }
+
+
+
 def _final_status(exit_code: int, summary: dict[str, Any] | None) -> tuple[str, str]:
     """Map an exit code and optional summary to a terminal job status."""
 
@@ -857,6 +1000,7 @@ def create_app(
         heartbeat_seconds=heartbeat_seconds,
         poll_seconds=poll_seconds,
         max_concurrent_runs=max_concurrent_runs,
+        runner_command=resolved_runner,
     )
     scenarios_dir = resolved_runtime / "scenarios"
     runs_dir = resolved_runtime / "runs"
@@ -940,6 +1084,15 @@ def create_app(
             "max_concurrent_runs": settings.max_concurrent_runs,
         }
 
+    @app.get("/api/constraints")
+    def list_constraints() -> dict[str, Any]:
+        try:
+            return _canonical_constraints_payload()
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+            ) from exc
+
     @app.get("/api/scenarios")
     def list_scenarios() -> dict[str, Any]:
         if not scenarios_dir.is_dir():
@@ -1013,6 +1166,112 @@ def create_app(
     @app.get("/api/runs/{raw_run_id}")
     def get_run(raw_run_id: str) -> dict[str, Any]:
         return read_run_or_404(raw_run_id)
+
+    @app.get("/api/runs/{raw_run_id}/output")
+    def get_run_output(raw_run_id: str) -> dict[str, Any]:
+        job = read_run_or_404(raw_run_id)
+        run_id = str(job.get("run_id"))
+        job_status = str(job.get("status"))
+        if job_status not in TERMINAL_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"run {run_id} is {job_status}; output is available only "
+                    "after a terminal state"
+                ),
+                headers={"Retry-After": "2"},
+            )
+
+        run_dir = run_store.run_dir(run_id).resolve()
+        output_dir = Path(str(job.get("output_dir"))).resolve()
+        try:
+            output_dir.relative_to(run_dir)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="run output directory escapes the run directory",
+            ) from exc
+        summary_path = output_dir / "run_summaries.json"
+        dispatch_path = output_dir / "dispatch_by_zone.csv"
+        if not summary_path.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"run {run_id} has no run_summaries.json",
+            )
+        if not dispatch_path.is_file():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    f"run {run_id} has no dispatch_by_zone.csv; failed or dry "
+                    "runs do not produce dispatch"
+                ),
+            )
+        try:
+            summary = read_json(summary_path)
+            if not isinstance(summary, dict):
+                raise ValueError(  # noqa: TRY004 - corrupt summary maps to HTTP 500
+                    "run_summaries.json is not a JSON object"
+                )
+            output = _read_dispatch_output(dispatch_path)
+        except (OSError, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"run {run_id} output is invalid: {exc}",
+            ) from exc
+
+        supply = summary.get("supply")
+        supply_summary = supply if isinstance(supply, dict) else {}
+        dispatch_2050 = sum(
+            value
+            for category, year, value in zip(
+                output["category"], output["year"], output["value_pj"]
+            )
+            if category == "dispatch" and year == 2050
+        )
+        pwrbcw_2050 = sum(
+            value
+            for technology, category, year, value in zip(
+                output["technology"],
+                output["category"],
+                output["year"],
+                output["value_pj"],
+            )
+            if category == "dispatch"
+            and year == 2050
+            and technology.startswith("PWRBIO")
+        )
+        metrics = {
+            "objective": summary.get("objective_musd"),
+            "emissions_total": summary.get("emissions_total_mt"),
+            "emissions_2050": summary.get("emissions_2050_mt"),
+            "national_bcw_2050": supply_summary.get("national_total_pj_2050"),
+            "pwrbcw_2050": round(pwrbcw_2050, 6),
+            "bio_share_2050": (
+                round(pwrbcw_2050 / dispatch_2050, 9)
+                if dispatch_2050 > 0
+                else None
+            ),
+            "bio_share_basis": "derived_from_dispatch_2050",
+            "solver_status": summary.get("solver_status"),
+        }
+        try:
+            source = dispatch_path.relative_to(REPO_ROOT).as_posix()
+        except ValueError:
+            source = str(dispatch_path)
+        return {
+            "scenario_id": summary.get("scenario_id") or job.get("scenario_id"),
+            "run_id": run_id,
+            "source": source,
+            "status": job_status,
+            "runner_status": summary.get("status"),
+            "generated_utc": summary.get("generated_utc"),
+            "dry_run": bool(summary.get("dry_run", False)),
+            "screening_only": bool(summary.get("screening_only", True)),
+            "policy_grade": bool(summary.get("policy_grade", False)),
+            "summary": summary,
+            "metrics": metrics,
+            **output,
+        }
 
     @app.post("/api/runs", status_code=status.HTTP_202_ACCEPTED)
     def enqueue_run(request: RunRequest) -> dict[str, Any]:
@@ -1284,6 +1543,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="maximum live runner subprocesses (default: 2)",
     )
     parser.add_argument(
+        "--runner-command",
+        default=None,
+        help=(
+            "override the runner command for tests/QA, e.g. "
+            "'python /tmp/fake_runner.py'; the server always appends "
+            "--scenario SNAPSHOT --out RUN_OUTPUT"
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         default="info",
         choices=("critical", "error", "warning", "info", "debug", "trace"),
@@ -1293,11 +1561,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    runner_command = None
+    if args.runner_command:
+        runner_command = tuple(shlex.split(args.runner_command))
+        if not runner_command:
+            raise SystemExit("--runner-command must not be empty")
     application = create_app(
         runtime_dir=args.runtime_dir,
         allow_runs=args.allow_runs,
         read_only=args.read_only,
         max_concurrent_runs=args.max_concurrent_runs,
+        runner_command=runner_command,
     )
     uvicorn.run(
         application,

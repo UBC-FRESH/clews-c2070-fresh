@@ -2,7 +2,10 @@
 
 Milestone 1a provides the versioned scenario contract and the FastAPI
 application skeleton. Milestone 1b adds the real OSeCAN adapter behind the same
-CLI contract. Results are labelled `screening_only`; they are not policy-grade.
+CLI contract. Milestone 1c wires the browser UI to this API, adds constraint
+defaults and normalized output endpoints, and keeps the static UI usable when no
+server responds. Results are labelled `screening_only`; they are not
+policy-grade.
 
 The canonical constraint family is `screening_v0`, stored in
 `data/derived/national/clews/osecan/canonical_constraint_set.json`. It has no
@@ -113,6 +116,7 @@ Example:
 | Method | Path | Behaviour |
 |---|---|---|
 | `GET` | `/api/health` | status, schema version, read-only and allow-runs flags |
+| `GET` | `/api/constraints` | canonical constraint sets with `status`, `policy_grade`, `notes`, and UI `defaults`; at least `screening_v0` |
 | `GET` | `/api/scenarios` | `{"scenarios": [...]}` |
 | `GET` | `/api/scenarios/{id}` | one scenario; 404 if missing, 400 for an unsafe ID |
 | `POST` | `/api/scenarios` | validate and atomically write `runtime/ui/scenarios/{id}.json`; 201 create, 200 overwrite, 409 duplicate unless `?overwrite=true`, 422 contract error |
@@ -120,6 +124,25 @@ Example:
 | `POST` | `/api/runs` | body `{"scenario_id": "..."}`; 202 enqueue, 404 unknown scenario, 403 unless `--allow-runs`, 422 bad body |
 | `GET` | `/api/runs/{id}` | persisted job record |
 | `GET` | `/api/runs/{id}/events` | SSE stream of `started`, `log`, terminal status events, with heartbeat comments |
+| `GET` | `/api/runs/{id}/output` | normalized columnar output from `run_summaries.json` + `dispatch_by_zone.csv`; 404 if absent, 409 while queued/running |
+
+`/api/runs/{id}/output` returns the static UI column shape (`technology`,
+`category`, `zone`, `year`, `value_pj` column arrays, `categories`,
+`units_by_category`) plus `summary`, `metrics`, `screening_only`, and
+`policy_grade`. It never invents rows for a failed or dry run: absent dispatch is
+HTTP 404.
+
+For tests and QA, the server accepts an explicit runner command while keeping
+the scenario snapshot contract:
+
+```bash
+.venv/bin/python -m workflows.ui.server --port 8013 --allow-runs \
+  --runner-command "/path/to/.venv/bin/python /tmp/fake_runner.py"
+```
+
+The server still appends `--scenario {run}/scenario.json --out {run}/output`, so
+a fake runner sees the immutable snapshot exactly like the real
+`workflows.ui.run_scenario` command.
 
 Scenario writes use a sibling temporary file, `fsync`, and `os.replace()`. Job
 writes use the same atomic JSON helper. A run directory is
@@ -278,7 +301,9 @@ gap until it is published as a deterministic preparation script or branch.
 Tests use FastAPI `TestClient`, temporary runtime directories, and a fake
 runner subprocess. They cover contract rejection, atomic create/overwrite,
 duplicate 409, enqueue/status/SSE, read-only 403, restart interruption, path
-traversal rejection, canonical-set validation, 100/119/150/200 Mm3 cap math,
-tier-sum/no-double-count checks, and a real-model dry run when a disposable
-OSeCAN copy is present. A full 119 Mm3 solve is run manually, not in the fast
-test lane.
+traversal rejection, constraints/`screening_v0` defaults, normalized output
+(including 409 active and 404 absent cases), the CLI `--runner-command` override
+preserving the scenario snapshot, canonical-set validation, 100/119/150/200 Mm3
+cap math, tier-sum/no-double-count checks, and a real-model dry run when a
+disposable OSeCAN copy is present. A full 119 Mm3 solve is run manually, not in
+the fast test lane.

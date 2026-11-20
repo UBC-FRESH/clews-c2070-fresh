@@ -531,6 +531,79 @@ out.mkdir(parents=True, exist_ok=True)
 )
 """
 
+OUTPUT_RUNNER = """\
+import argparse
+import csv
+import json
+from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--scenario", required=True)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+scenario = json.loads(Path(args.scenario).read_text(encoding="utf-8"))
+out = Path(args.out)
+out.mkdir(parents=True, exist_ok=True)
+rows = []
+for year in range(2021, 2071):
+    rows.append(
+        {
+            "run": scenario["scenario_id"],
+            "technology": "PWRHYDB1",
+            "category": "dispatch",
+            "zone": "B1",
+            "year": year,
+            "value_pj": 10.0 if year != 2050 else 20.0,
+        }
+    )
+    rows.append(
+        {
+            "run": scenario["scenario_id"],
+            "technology": "PWRBIOB1",
+            "category": "dispatch",
+            "zone": "B1",
+            "year": year,
+            "value_pj": 5.0 if year != 2050 else 5.0,
+        }
+    )
+    rows.append(
+        {
+            "run": scenario["scenario_id"],
+            "technology": "SUPBCWT1",
+            "category": "supply",
+            "zone": "CAN",
+            "year": year,
+            "value_pj": 30.0,
+        }
+    )
+with (out / "dispatch_by_zone.csv").open("w", newline="", encoding="utf-8") as handle:
+    writer = csv.DictWriter(
+        handle,
+        fieldnames=["run", "technology", "category", "zone", "year", "value_pj"],
+    )
+    writer.writeheader()
+    writer.writerows(rows)
+(out / "run_summaries.json").write_text(
+    json.dumps(
+        {
+            "status": "completed",
+            "scenario_id": scenario["scenario_id"],
+            "scenario_label": scenario["label"],
+            "message": "output runner completed",
+            "screening_only": True,
+            "policy_grade": False,
+            "solver_status": "optimal",
+            "objective_musd": 123.5,
+            "emissions_total_mt": 0.5,
+            "emissions_2050_mt": 0.0,
+            "supply": {"national_total_pj_2050": 30.0},
+        }
+    ),
+    encoding="utf-8",
+)
+print("output runner wrote dispatch", flush=True)
+"""
+
 NO_SUMMARY_RUNNER = """\
 import argparse
 
@@ -839,3 +912,152 @@ def test_shutdown_marks_queued_jobs_interrupted(tmp_path: Path) -> None:
     events, _ = store.read_events(second_id, 0)
     assert events[-1]["event"] == "interrupted"
     assert "before the run started" in queued_job["message"]
+
+
+# ---------------------------------------------------------------------------
+# Milestone-1c: constraints, normalized output, CLI runner override
+# ---------------------------------------------------------------------------
+
+
+def test_constraints_endpoint_exposes_screening_v0_defaults(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    with make_client(runtime, allow_runs=True) as client:
+        response = client.get("/api/constraints")
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["default_set_id"] == "screening_v0"
+        assert len(payload["sets"]) == 1
+        constraint_set = payload["sets"][0]
+        assert constraint_set["set_id"] == "screening_v0"
+        assert constraint_set["status"] == "screening_only"
+        assert constraint_set["policy_grade"] is False
+        assert any("reserve-margin" in note for note in constraint_set["notes"])
+        defaults = constraint_set["defaults"]
+        assert defaults["default_harvest_level_m3_per_year"] == 118_977_339.0
+        assert defaults["default_recovery_fraction"] == 0.6
+        assert defaults["pwr_bio_cap_fraction"] == 0.05
+        assert defaults["nuclear_cap_gw"] == 0.0
+        assert defaults["wind_cost_usd_per_gj"] == 3.0
+        assert defaults["wind_cap_fraction"] == 0.2
+        assert defaults["t3_cap_pj"] == pytest.approx(39.873714)
+        assert defaults["t4_cap_pj"] == pytest.approx(64.265464)
+        assert defaults["carbon_price_usd_per_tco2e_2026"] == 115.0
+        assert defaults["harvest_levels_m3_per_year"]["200"] == 200_000_000.0
+
+
+def test_run_output_endpoint_normalizes_summary_and_dispatch(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, OUTPUT_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert response.status_code == 202, response.text
+        run_id = response.json()["run_id"]
+        assert wait_for_terminal(client, run_id)["status"] == "completed"
+
+        output_response = client.get(f"/api/runs/{run_id}/output")
+        assert output_response.status_code == 200, output_response.text
+        output = output_response.json()
+        assert output["run_id"] == run_id
+        assert output["scenario_id"] == "screening_150m_base"
+        assert output["status"] == "completed"
+        assert output["screening_only"] is True
+        assert output["policy_grade"] is False
+        assert output["row_count"] == 150
+        assert output["categories"] == ["dispatch", "supply"]
+        assert output["units_by_category"] == {
+            "dispatch": "PJ electricity",
+            "supply": "PJ fuel",
+        }
+        assert len(output["technology"]) == 150
+        assert len(output["category"]) == 150
+        assert len(output["zone"]) == 150
+        assert len(output["year"]) == 150
+        assert len(output["value_pj"]) == 150
+        assert output["metrics"]["objective"] == 123.5
+        assert output["metrics"]["emissions_total"] == 0.5
+        assert output["metrics"]["national_bcw_2050"] == 30.0
+        assert output["metrics"]["pwrbcw_2050"] == 5.0
+        assert output["metrics"]["bio_share_2050"] == pytest.approx(0.2)
+        assert output["summary"]["solver_status"] == "optimal"
+
+
+def test_run_output_is_409_while_run_is_active(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SLOW_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        assert response.status_code == 202
+        run_id = response.json()["run_id"]
+        early = client.get(f"/api/runs/{run_id}/output")
+        assert early.status_code in {409, 425}, early.text
+        wait_for_terminal(client, run_id)
+
+
+def test_run_output_is_404_without_dispatch(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, FAKE_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        assert wait_for_terminal(client, run_id)["status"] == "completed"
+        missing = client.get(f"/api/runs/{run_id}/output")
+        assert missing.status_code == 404
+        assert "dispatch_by_zone.csv" in missing.json()["detail"]
+
+
+def test_cli_runner_command_override_preserves_snapshot(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import shlex
+
+    import workflows.ui.server as server_module
+
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, SNAPSHOT_RUNNER)
+    captured: dict[str, object] = {}
+
+    def fake_uvicorn_run(application, **kwargs) -> None:
+        captured["app"] = application
+
+    monkeypatch.setattr(server_module.uvicorn, "run", fake_uvicorn_run)
+    server_module.main(
+        [
+            "--runtime-dir",
+            str(runtime),
+            "--allow-runs",
+            "--runner-command",
+            shlex.join(runner),
+        ]
+    )
+    app = captured["app"]
+    assert app.state.settings.runner_command == runner
+
+    with TestClient(app) as client:
+        created = create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": created["scenario_id"]}
+        )
+        assert response.status_code == 202, response.text
+        job = wait_for_terminal(client, response.json()["run_id"])
+        assert job["status"] == "completed"
+        command = list(job["command"])
+        assert tuple(command[: len(runner)]) == runner
+        assert command[-4:] == [
+            "--scenario",
+            job["scenario_path"],
+            "--out",
+            job["output_dir"],
+        ]
+        seen = json.loads(
+            (Path(job["output_dir"]) / "seen.json").read_text(encoding="utf-8")
+        )
+        assert seen["label"] == created["label"]

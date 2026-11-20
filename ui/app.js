@@ -59,6 +59,27 @@
   TECH_FAMILIES.forEach(function (f) { TECH_FAMILY_BY_ID[f.id] = f; });
 
   var TIER_COLORS = { T1: '#d98a2b', T2: '#c17832', T3: '#9f5a32', T4: '#7e3823' };
+  var SESSION_FAMILY = 'session_live';
+  var LIVE_MODEL_COMMIT = '40d5b43';
+  var FALLBACK_DEFAULTS = {
+    harvest_levels_m3_per_year: { 100: 100000000, 119: 118977339, 150: 150000000, 200: 200000000 },
+    harvest_path_by_level: { 100: 'low', 119: 'hold', 150: 'high', 200: 'custom' },
+    default_harvest_level_m3_per_year: 118977339,
+    default_harvest_path: 'hold',
+    recovery_fractions: [0.35, 0.6, 0.75],
+    default_recovery_fraction: 0.6,
+    cost_basis: 'adopted_rest_of_canada_curve',
+    supply_curve: 'tiered',
+    carbon_price_usd_per_tco2e_2021: 95,
+    carbon_price_usd_per_tco2e_2026: 115,
+    pwr_bio_cap_fraction: 0.05,
+    nuclear_cap_gw: 0,
+    wind_cost_usd_per_gj: 3,
+    wind_cap_fraction: 0.2,
+    generic_bio_cost_usd_per_gj: 3,
+    t3_cap_pj: 39.873714,
+    t4_cap_pj: 64.265464
+  };
 
   var state = {
     core: null,
@@ -95,6 +116,26 @@
       recovery: 0.6,
       cost: 'weighted',
       lastModel: null
+    },
+    live: {
+      mode: 'checking',
+      health: null,
+      constraints: null,
+      defaults: FALLBACK_DEFAULTS,
+      createdScenario: null,
+      lastForm: null,
+      activeForm: null,
+      activeRun: null,
+      currentJob: null,
+      eventSource: null,
+      pollTimer: null,
+      elapsedTimer: null,
+      runStartedAt: 0,
+      finalizingRunId: null,
+      logLines: [],
+      logCount: 0,
+      sessionRuns: [],
+      busy: false
     }
   };
 
@@ -338,6 +379,7 @@
     bindTabs();
     bindDispatchControls();
     bindOsecanControls();
+    bindRunControls();
     renderOsecanStatic();
     renderInputsStatic();
     activateTab(validTab(initialTab), { silent: true });
@@ -345,12 +387,18 @@
   }
 
   function renderHeader(core) {
-    $('header-scenario-count').textContent = String(core.scenarios.scenarios.length);
+    updateHeaderCounts();
     $('header-eligible-count').textContent = String(state.eligible.length);
     $('header-generated').textContent = 'Contract generated ' + fmtDate(core.scenarios.generated_utc) +
-      ' · ' + core.manifest.output_count + ' outputs · ' + fmtBytes(core.manifest.total_bytes);
+      ' · ' + core.manifest.output_count + ' outputs · ' + fmtBytes(core.manifest.total_bytes) +
+      (state.live.sessionRuns.length ? ' · ' + state.live.sessionRuns.length + ' live session run(s)' : '');
     $('footer-contract').textContent = 'Data contract ' + core.scenarios.schema_version + ' · ' +
       core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' trade-off eligible · model commit b5df675';
+  }
+
+  function updateHeaderCounts() {
+    if (!state.core) return;
+    $('header-scenario-count').textContent = String(state.core.scenarios.scenarios.length + state.live.sessionRuns.length);
   }
 
   function renderFamilies() {
@@ -407,14 +455,28 @@
       if (familyDelta !== 0) return familyDelta;
       return a.label.localeCompare(b.label);
     });
+    var sessionRows = state.live.sessionRuns.filter(scenarioMatches);
 
-    if (!rows.length) {
+    if (!rows.length && !sessionRows.length) {
       list.innerHTML = '<li class="rail-foot">No scenario matches this filter.</li>';
       setRailCount('0 shown');
       return;
     }
 
     var html = '';
+    if (sessionRows.length) {
+      html += '<li class="rail-group-label" role="presentation"><span>Session runs</span><span class="mono">live · screening only</span></li>';
+      sessionRows.forEach(function (sc) {
+        var selected = sc.scenario_id === state.selectedId;
+        html += '<li><button type="button" class="scenario-item scenario-item--live' + (selected ? ' is-selected' : '') +
+          '" data-scenario-id="' + esc(sc.scenario_id) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
+          '<span class="s-label">' + esc(sc.label) + '</span>' +
+          '<span class="s-id">' + esc(sc.runId) + '</span>' +
+          '<span class="s-badges"><span class="badge badge--family">Session live</span>' +
+          '<span class="badge badge--diag">screening only</span>' +
+          '<span class="badge badge--solve">' + esc(sc.flags.solver || 'completed') + '</span></span></button></li>';
+      });
+    }
     rows.forEach(function (sc) {
       var selected = sc.scenario_id === state.selectedId;
       var statusBadge = sc.flags.superseded_for_emissions
@@ -435,7 +497,7 @@
     });
     list.innerHTML = html;
     list.scrollTop = scrollTop;
-    setRailCount(rows.length + ' of ' + core.scenarios.scenarios.length + ' shown');
+    setRailCount((rows.length + sessionRows.length) + ' of ' + (core.scenarios.scenarios.length + state.live.sessionRuns.length) + ' shown');
   }
 
   function selectScenario(id, options) {
@@ -457,16 +519,26 @@
 
   function updateTabMeta() {
     var sc = state.core && state.core.scenarioById.get(state.selectedId);
-    $('tab-scenario-meta').innerHTML = sc
-      ? '<strong>' + esc(sc.label) + '</strong> · ' + esc(shortFamily(sc.family)) +
-        (sc.flags.superseded_for_emissions ? ' · superseded' : ' · post-fix')
-      : '';
+    if (!sc) {
+      $('tab-scenario-meta').innerHTML = '';
+      return;
+    }
+    if (sc.liveRun) {
+      $('tab-scenario-meta').innerHTML = '<strong>' + esc(sc.label) + '</strong> · live session run · screening only';
+      return;
+    }
+    $('tab-scenario-meta').innerHTML = '<strong>' + esc(sc.label) + '</strong> · ' + esc(shortFamily(sc.family)) +
+      (sc.flags.superseded_for_emissions ? ' · superseded' : ' · post-fix');
   }
 
   function renderOverview() {
     var core = state.core;
     var sc = core.scenarioById.get(state.selectedId);
     if (!sc) return;
+    if (sc.liveRun) {
+      renderLiveOverview(sc);
+      return;
+    }
     var m = sc.metrics;
     var dims = sc.dimensions;
     var eligible = state.eligibleIds.has(sc.scenario_id);
@@ -532,6 +604,55 @@
     $('overview-content').innerHTML = html;
   }
 
+  function renderLiveOverview(sc) {
+    var m = sc.metrics;
+    var dims = sc.dimensions || {};
+    var dimRows = Object.keys(dims).map(function (key) {
+      return '<div><dt>' + esc(dimensionLabel(key)) + '</dt><dd>' + dimensionValue(key, dims[key]) + '</dd></div>';
+    }).join('');
+    var flagRows = Object.keys(sc.flags).map(function (key) {
+      var value = sc.flags[key];
+      var cls = typeof value === 'boolean' ? (value ? ' is-true' : ' is-false') : '';
+      return '<span class="flag-pill' + cls + '">' + esc(key) + ': ' + esc(value) + '</span>';
+    }).join('');
+    var html = '<div class="scenario-masthead">' +
+      '<div>' +
+        '<p class="kicker masthead-family">Session run · live screening runner</p>' +
+        '<h2>' + esc(sc.label) + '</h2>' +
+        '<p class="scenario-desc">' + esc(sc.description) + '</p>' +
+        '<span class="masthead-id">' + esc(sc.contract_scenario_id) + ' · run ' + esc(sc.runId) + '</span>' +
+        '<div class="masthead-flags">' +
+          '<span class="badge badge--diag">screening_only</span>' +
+          '<span class="badge badge--superseded">policy_grade=false</span>' +
+          '<span class="badge badge--ink">not publishable</span>' +
+          '<span class="badge badge--family">live session</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="masthead-side">' +
+        '<div><p class="kicker">Status</p><p class="status-large">Screening-only run</p></div>' +
+        '<p>Generated by the FastAPI runner in this session. No reserve margin, transmission, curtailment, or build-rate constraints; never policy or forecast.</p>' +
+        '<p class="mono">solver: ' + esc(m.solver_status || '—') + '</p>' +
+      '</div>' +
+    '</div>' +
+    '<div class="overview-callout"><strong>Screening only — not policy grade</strong><br>' +
+      'This run uses constraint set <span class="mono">screening_v0</span>. It is visible in the session rail, overview, dispatch, and trade-off, but it is excluded from the 26-scenario publishable ledger.</div>' +
+    '<div class="metric-grid">' +
+      metricCard('Objective', fmt(m.objective, 2), 'M$ (million USD)', 'solver objective · live run', true) +
+      metricCard('Cumulative emissions', fmt(m.emissions_total, 3), 'Mt CO₂', 'sum over 2021—2070', false) +
+      metricCard('National BCW 2050', fmt(m.national_bcw_2050, 2), 'PJ fuel', 'national bio supply in 2050', false) +
+      metricCard('PWRBCW 2050', fmt(m.pwrbcw_2050, 2), 'PJ electricity', 'BCW power generation in 2050', false) +
+      metricCard('Bio share 2050', fmtPct(m.bio_share_2050, 3), 'share of electricity', esc(m.bio_share_basis || 'derived from dispatch'), false) +
+    '</div>' +
+    '<div class="overview-columns">' +
+      '<div class="ledger-card"><h3>Dimensions</h3><dl class="dim-list">' + dimRows + '</dl></div>' +
+      '<div class="ledger-card"><h3>Flags</h3><div class="flags-list">' + flagRows + '</div>' +
+        '<h3 style="margin-top:20px">Source paths</h3><ul class="source-list">' +
+          sc.sources.map(function (source) { return '<li>' + esc(source) + '</li>'; }).join('') +
+        '</ul></div>' +
+    '</div>';
+    $('overview-content').innerHTML = html;
+  }
+
   function metricCard(label, value, unit, context, hero) {
     return '<div class="metric-card' + (hero ? ' metric-card--hero' : '') + '">' +
       '<span class="metric-label">' + esc(label) + '</span>' +
@@ -580,7 +701,7 @@
   }
 
   function validTab(tab) {
-    return ['overview', 'dispatch', 'tradeoff', 'map', 'osecan', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
+    return ['overview', 'dispatch', 'tradeoff', 'map', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
   }
 
   function activateTab(tab, options) {
@@ -602,6 +723,7 @@
     if (state.tab === 'tradeoff') renderTradeoff();
     if (state.tab === 'map') initMap();
     if (state.tab === 'osecan') renderOsecan();
+    if (state.tab === 'run') renderRunMode();
     if (state.tab === 'inputs') renderInputsCharts();
     window.requestAnimationFrame(function () {
       if (state.tab === 'dispatch' && state.dispatch.chart) state.dispatch.chart.resize();
@@ -1097,6 +1219,42 @@
       };
     });
 
+    var livePoints = state.live.sessionRuns.filter(function (sc) {
+      return num(sc.metrics.objective) !== null && num(sc.metrics.emissions_total) !== null;
+    }).map(function (sc) {
+      var selected = sc.scenario_id === state.selectedId;
+      return {
+        value: [Number(sc.metrics.objective), Number(sc.metrics.emissions_total)],
+        name: sc.label,
+        symbol: 'diamond',
+        symbolSize: selected ? 19 : 14,
+        itemStyle: selected
+          ? { color: '#a94f31', borderColor: '#d98a2b', borderWidth: 3, shadowBlur: 14, shadowColor: 'rgba(217,138,43,0.55)' }
+          : { color: '#a94f31', borderColor: '#fbf6e9', borderWidth: 1 },
+        meta: {
+          id: sc.scenario_id,
+          family: 'Session live run — screening only',
+          label: sc.label,
+          objective: sc.metrics.objective,
+          emissions: sc.metrics.emissions_total,
+          national: sc.metrics.national_bcw_2050,
+          share: sc.metrics.bio_share_2050,
+          live: true
+        }
+      };
+    });
+    if (livePoints.length) {
+      series.push({
+        name: 'Session live runs (screening)',
+        type: 'scatter',
+        symbol: 'diamond',
+        symbolSize: 14,
+        itemStyle: { color: '#a94f31', borderColor: '#fbf6e9', borderWidth: 1 },
+        emphasis: { scale: 1.6, itemStyle: { borderColor: '#17251d', borderWidth: 2 } },
+        data: livePoints
+      });
+    }
+
     if (!state.tradeoffChart) {
       state.tradeoffChart = window.echarts.init(chartEl, null, { renderer: 'canvas' });
       state.tradeoffChart.on('click', function (params) {
@@ -1134,7 +1292,8 @@
             '<div class="chart-tip-kv"><span>Objective</span><b>' + fmt(meta.objective, 2) + ' M$</b></div>' +
             '<div class="chart-tip-kv"><span>Cumulative emissions</span><b>' + fmt(meta.emissions, 3) + ' Mt CO₂</b></div>' +
             '<div class="chart-tip-kv"><span>National BCW 2050</span><b>' + fmt(meta.national, 2) + ' PJ</b></div>' +
-            '<div class="chart-tip-kv"><span>Bio share 2050</span><b>' + fmtPct(meta.share, 3) + '</b></div></div>';
+            '<div class="chart-tip-kv"><span>Bio share 2050</span><b>' + fmtPct(meta.share, 3) + '</b></div>' +
+            (meta.live ? '<div class="chart-tip-kv"><span>Grade</span><b>screening_only · not policy</b></div>' : '') + '</div>';
         }
       },
       xAxis: {
@@ -1165,7 +1324,8 @@
     var superseded = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_emissions; }).length;
     var diagnostic = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.diagnostic; }).length;
     $('tradeoff-count').textContent = eligible.length + ' eligible · ' + (state.core.scenarios.scenarios.length - eligible.length) +
-      ' excluded (' + superseded + ' superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length;
+      ' excluded (' + superseded + ' superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length +
+      (state.live.sessionRuns.length ? ' · +' + state.live.sessionRuns.length + ' live session run(s), screening only' : '');
   }
 
   /* ---------------- Map ---------------- */
@@ -1425,6 +1585,7 @@
     });
     $('export-limits').addEventListener('click', exportActivityLimits);
     $('export-costs').addEventListener('click', exportVariableCosts);
+    $('osecan-queue').addEventListener('click', queueOsecanScenario);
     qsa('.layer-toggles input').forEach(function (input) {
       input.addEventListener('change', applyMapVisibility);
     });
@@ -1584,6 +1745,710 @@
     var slug = 'h' + model.harvest + 'm_r' + String(Math.round(model.recovery * 100)).padStart(3, '0');
     var rows = tierCsvRows(model, function (tier) { return Number(tier.cost).toFixed(6); });
     downloadCsv('SUPBCW_variable_cost_' + slug + '.csv', rows);
+  }
+
+  /* ---------------- Live runner ---------------- */
+
+  function liveApi() { return window.ForestLedgerApi || null; }
+
+  function syncHarvestCustom() {
+    var select = $('run-harvest');
+    var customField = $('run-harvest-custom-field');
+    var customInput = $('run-harvest-custom');
+    if (!select || !customField || !customInput) return;
+    var custom = select.value === 'custom';
+    customField.hidden = !custom;
+    customInput.required = custom;
+    if (custom && !customInput.value) {
+      customInput.value = String(Math.round(state.live.defaults.default_harvest_level_m3_per_year || 118977339));
+    }
+  }
+
+  function applyRunDefaults(defaults) {
+    var d = defaults || FALLBACK_DEFAULTS;
+    state.live.defaults = d;
+    var harvest = d.default_harvest_level_m3_per_year || 118977339;
+    var levelKey = String(Math.round(harvest / 1e6));
+    if ($('run-harvest')) {
+      $('run-harvest').value = Object.prototype.hasOwnProperty.call(d.harvest_levels_m3_per_year || {}, levelKey) ? levelKey : '119';
+    }
+    if ($('run-harvest-custom')) $('run-harvest-custom').value = String(harvest);
+    if ($('run-recovery')) $('run-recovery').value = String(d.default_recovery_fraction == null ? 0.6 : d.default_recovery_fraction);
+    if ($('run-cost')) $('run-cost').value = d.cost_basis || 'adopted_rest_of_canada_curve';
+    if ($('run-carbon')) $('run-carbon').value = String(d.carbon_price_usd_per_tco2e_2026 == null ? 115 : d.carbon_price_usd_per_tco2e_2026);
+    if ($('run-hydro')) $('run-hydro').value = d.hydro_mode || 'cap_2021';
+    if ($('run-pwrbio')) $('run-pwrbio').value = String(d.pwr_bio_cap_fraction == null ? 0.05 : d.pwr_bio_cap_fraction);
+    if ($('run-nuclear')) $('run-nuclear').value = String(d.nuclear_cap_gw == null ? 0 : d.nuclear_cap_gw);
+    if ($('run-wind-cost')) $('run-wind-cost').value = String(d.wind_cost_usd_per_gj == null ? 3 : d.wind_cost_usd_per_gj);
+    if ($('run-wind-cap')) $('run-wind-cap').value = String(d.wind_cap_fraction == null ? 0.2 : d.wind_cap_fraction);
+    if ($('run-t3')) $('run-t3').value = String(d.t3_cap_pj == null ? 39.873714 : d.t3_cap_pj);
+    if ($('run-t4')) $('run-t4').value = String(d.t4_cap_pj == null ? 64.265464 : d.t4_cap_pj);
+    syncHarvestCustom();
+    updateFormDisabled();
+  }
+
+  function updateFormDisabled() {
+    var mode = state.live.mode;
+    var disabled = state.live.busy || mode === 'checking' || mode === 'static' || mode === 'readonly' || mode === 'degraded';
+    qsa('#run-form input, #run-form select').forEach(function (input) { input.disabled = disabled; });
+    var create = $('run-create');
+    var queue = $('run-queue');
+    if (create) create.disabled = disabled;
+    if (queue) queue.disabled = state.live.busy || mode !== 'live' || !state.live.createdScenario || Boolean(state.live.activeRun);
+    var osecanQueue = $('osecan-queue');
+    if (osecanQueue) osecanQueue.disabled = state.live.busy || mode !== 'live';
+  }
+
+  function setModeBadge(mode, detail) {
+    var badge = $('mode-badge');
+    var text = $('mode-badge-text');
+    if (!badge || !text) return;
+    badge.classList.remove('is-checking', 'is-live', 'is-static', 'is-readonly');
+    var label = 'Checking live API…';
+    if (mode === 'live' || mode === 'no-runs') {
+      badge.classList.add('is-live');
+      label = mode === 'live' ? 'Live API · runner ready' : 'Live API · runs disabled';
+    } else if (mode === 'readonly') {
+      badge.classList.add('is-readonly');
+      label = 'Live API · read-only';
+    } else if (mode === 'static') {
+      badge.classList.add('is-static');
+      label = 'Static mode · no backend';
+    } else if (mode === 'degraded') {
+      badge.classList.add('is-static');
+      label = 'Live API · defaults unavailable';
+    }
+    text.textContent = label;
+    badge.title = detail || label;
+  }
+
+  function renderRunMode() {
+    var mode = state.live.mode;
+    var banner = $('run-mode-banner');
+    var title = $('run-mode-title');
+    var text = $('run-mode-text');
+    if (!banner || !title || !text) return;
+    banner.classList.remove('is-live', 'is-readonly');
+    if (mode === 'live') {
+      banner.classList.add('is-live');
+      title.textContent = 'Live runner ready — screening only.';
+      text.textContent = 'Create a scenario, queue it, and watch SSE status. Every completed run is added to the session rail with screening_only and policy_grade=false.';
+      setModeBadge('live', 'POST /api/scenarios and /api/runs are available.');
+    } else if (mode === 'no-runs') {
+      banner.classList.add('is-live');
+      title.textContent = 'Live API connected; run queueing is disabled.';
+      text.textContent = 'Read-only scenario and constraint endpoints respond, but the server needs --allow-runs before POST /api/runs will accept work. Static views still work.';
+      setModeBadge('no-runs', 'The live API is up without --allow-runs.');
+    } else if (mode === 'readonly') {
+      banner.classList.add('is-readonly');
+      title.textContent = 'Live API is read-only.';
+      text.textContent = 'Create and queue are disabled. The committed static views and OSeCAN exports remain available.';
+      setModeBadge('readonly', 'The server is running with --read-only.');
+    } else if (mode === 'degraded') {
+      title.textContent = 'Live API connected, but screening defaults failed to load.';
+      text.textContent = 'The canonical screening_v0 payload did not validate. Create and queue are disabled rather than running with guessed defaults.';
+      setModeBadge('degraded', 'GET /api/constraints failed validation.');
+    } else if (mode === 'static') {
+      title.textContent = 'Static mode — no backend reachable.';
+      text.textContent = 'Showing the committed iteration-0 scenarios and outputs. Start the FastAPI server with --allow-runs to create and queue live screening scenarios.';
+      setModeBadge('static', 'GET /api/health failed; using precomputed data only.');
+    } else {
+      title.textContent = 'Checking live API…';
+      text.textContent = 'Static views remain available if no backend responds.';
+      setModeBadge('checking');
+    }
+    updateFormDisabled();
+
+    var osecanBanner = $('osecan-run-banner');
+    var osecanNote = $('osecan-live-note');
+    if (osecanBanner) {
+      if (mode === 'live' || mode === 'no-runs') {
+        osecanBanner.innerHTML = '<span class="needs-run-mark">i</span><strong>Live runner available — screening only.</strong> “Queue this scenario” creates a live scenario from the calculator levers; every result is policy_grade=false.';
+      } else {
+        osecanBanner.innerHTML = '<span class="needs-run-mark">!</span><strong>Static mode — no live solver.</strong> Static exports are illustrative inputs, not solved CLEWS results.';
+      }
+    }
+    if (osecanNote) {
+      osecanNote.textContent = mode === 'live'
+        ? 'Queue this scenario is available.'
+        : 'Live queueing is unavailable in static mode.';
+    }
+    if (!state.live.activeRun && !state.live.createdScenario) {
+      setFormStatus(
+        mode === 'live'
+          ? 'Defaults loaded from screening_v0. No run yet.'
+          : (mode === 'static' ? 'Static mode: create and queue are disabled.' : 'Waiting for a live runner.'),
+        false
+      );
+    }
+  }
+
+  function setFormStatus(message, isError) {
+    var status = $('run-form-status');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function setFormError(message) {
+    var error = $('run-form-error');
+    if (!error) return;
+    if (!message) {
+      error.hidden = true;
+      error.textContent = '';
+      return;
+    }
+    error.hidden = false;
+    error.textContent = message;
+  }
+
+  function fieldNumber(id, label) {
+    var raw = $(id).value.trim();
+    var value = Number(raw);
+    if (raw === '' || !Number.isFinite(value)) throw new Error(label + ' must be a finite number.');
+    return value;
+  }
+
+  function slugify(label) {
+    var base = String(label).toLowerCase().normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 38);
+    if (!base) base = 'live-scenario';
+    return base + '-' + Date.now().toString(36);
+  }
+
+  function readRunForm() {
+    var d = state.live.defaults || FALLBACK_DEFAULTS;
+    var label = $('run-label').value.trim();
+    if (!label) throw new Error('Scenario label is required.');
+    if (label.length > 200) throw new Error('Scenario label must be 200 characters or fewer.');
+    var choice = $('run-harvest').value;
+    var level = choice === 'custom' ? fieldNumber('run-harvest-custom', 'Custom harvest') : Number(d.harvest_levels_m3_per_year[choice]);
+    if (!Number.isFinite(level) || level <= 0) throw new Error('Harvest must be a positive m³/year value.');
+    var path = choice === 'custom' ? 'custom' : (d.harvest_path_by_level[choice] || 'custom');
+    var recovery = fieldNumber('run-recovery', 'Recovery fraction');
+    if (recovery <= 0 || recovery > 1) throw new Error('Recovery fraction must be greater than 0 and at most 1.');
+    var carbon = fieldNumber('run-carbon', 'Carbon price 2026');
+    if (carbon < 0) throw new Error('Carbon price must be non-negative.');
+    var pwrbio = fieldNumber('run-pwrbio', 'PWRBIO cap');
+    var windCap = fieldNumber('run-wind-cap', 'Wind cap');
+    if (pwrbio < 0 || pwrbio > 1) throw new Error('PWRBIO cap must be between 0 and 1.');
+    if (windCap < 0 || windCap > 1) throw new Error('Wind cap must be between 0 and 1.');
+    var numbers = {
+      nuclear: fieldNumber('run-nuclear', 'Nuclear cap'),
+      windCost: fieldNumber('run-wind-cost', 'Wind cost'),
+      t3: fieldNumber('run-t3', 'T3 cap'),
+      t4: fieldNumber('run-t4', 'T4 cap')
+    };
+    Object.keys(numbers).forEach(function (key) {
+      if (numbers[key] < 0) throw new Error('Caps and costs must be non-negative.');
+    });
+    return {
+      label: label,
+      harvestChoice: choice,
+      level: level,
+      path: path,
+      recovery: recovery,
+      cost: $('run-cost').value,
+      carbon: carbon,
+      hydro: $('run-hydro').value,
+      pwrbio: pwrbio,
+      nuclear: numbers.nuclear,
+      windCost: numbers.windCost,
+      windCap: windCap,
+      t3: numbers.t3,
+      t4: numbers.t4
+    };
+  }
+
+  function buildScenarioPayload() {
+    var form = readRunForm();
+    var d = state.live.defaults || FALLBACK_DEFAULTS;
+    var canonical = state.live.constraints && state.live.constraints.default_set_id
+      ? state.live.constraints.default_set_id
+      : 'screening_v0';
+    var payload = {
+      scenario_id: slugify(form.label),
+      label: form.label,
+      description: 'Created in the Forest Ledger Run panel from screening_v0 defaults. Live screening only; not policy grade.',
+      schema_version: 'clews.scenario.v1',
+      harvest: {
+        level_m3_per_year: form.level,
+        path: form.path,
+        recovery_fraction: form.recovery,
+        cost_basis: form.cost,
+        supply_curve: 'tiered'
+      },
+      energy: {
+        carbon_price_schedule: [
+          { year: 2021, price_usd_per_tco2e: Number(d.carbon_price_usd_per_tco2e_2021 == null ? 95 : d.carbon_price_usd_per_tco2e_2021) },
+          { year: 2026, price_usd_per_tco2e: form.carbon }
+        ],
+        hydro_mode: form.hydro,
+        pwr_bio_cap_fraction: form.pwrbio,
+        nuclear_cap_gw: form.nuclear,
+        wind_cost_usd_per_gj: form.windCost,
+        wind_cap_fraction: form.windCap,
+        t3_cap_pj: form.t3,
+        t4_cap_pj: form.t4,
+        generic_bio_cost_usd_per_gj: Number(d.generic_bio_cost_usd_per_gj == null ? 3 : d.generic_bio_cost_usd_per_gj)
+      },
+      constraints: { set_id: canonical },
+      provenance: {
+        base_data_commit: 'session-live-ui',
+        model_commit: LIVE_MODEL_COMMIT,
+        created_utc: new Date().toISOString()
+      }
+    };
+    return { payload: payload, form: form };
+  }
+
+  async function createScenarioFromForm(autoQueue) {
+    if (state.live.busy) return null;
+    var client = liveApi();
+    if (!client) {
+      setFormError('Live API client is unavailable.');
+      return null;
+    }
+    if (state.live.mode !== 'live' && state.live.mode !== 'no-runs') {
+      setFormError('Create is unavailable in ' + state.live.mode + ' mode.');
+      return null;
+    }
+    var built;
+    try {
+      built = buildScenarioPayload();
+      setFormError('');
+    } catch (error) {
+      setFormError(error.message);
+      setFormStatus(error.message, true);
+      return null;
+    }
+    state.live.busy = true;
+    updateFormDisabled();
+    setFormStatus('Creating scenario ' + built.payload.scenario_id + '…', false);
+    var created = null;
+    try {
+      created = await client.createScenario(built.payload);
+      state.live.createdScenario = created;
+      state.live.lastForm = built.form;
+      state.live.activeRun = null;
+      $('run-meta-scenario').textContent = created.scenario_id;
+      setRunState('created', 'created');
+      setFormStatus('Created ' + created.scenario_id + '. Queue it to start the runner.', false);
+      announce('Created live scenario ' + created.label + '.');
+      renderRunMode();
+    } catch (error) {
+      setFormError(error.message);
+      setFormStatus('Create failed: ' + error.message, true);
+    } finally {
+      state.live.busy = false;
+      updateFormDisabled();
+    }
+    if (created && autoQueue) await queueCreatedScenario();
+    return created;
+  }
+
+  async function queueCreatedScenario() {
+    var client = liveApi();
+    var created = state.live.createdScenario;
+    if (!client || !created || state.live.activeRun) return;
+    if (state.live.mode !== 'live') {
+      setFormError('Queue is disabled; the server was not started with --allow-runs.');
+      return;
+    }
+    state.live.busy = true;
+    updateFormDisabled();
+    setFormStatus('Queueing ' + created.scenario_id + '…', false);
+    try {
+      var run = await client.queueRun(created.scenario_id);
+      state.live.activeRun = run;
+      state.live.currentJob = run;
+      state.live.activeForm = state.live.lastForm;
+      state.live.runStartedAt = Date.now();
+      state.live.logLines = [];
+      state.live.logCount = 0;
+      renderRunLog();
+      $('run-policy-flag').hidden = false;
+      $('run-output-summary').hidden = true;
+      $('run-output-summary').innerHTML = '';
+      $('run-meta-scenario').textContent = created.scenario_id;
+      $('run-meta-run').textContent = run.run_id;
+      setRunState(run.status || 'queued', run.status || 'queued');
+      startElapsed();
+      setFormStatus('Queued ' + run.run_id + '; connecting to the event stream…', false);
+      announce('Queued live run ' + run.run_id + '.');
+      subscribeToRun(run.run_id);
+    } catch (error) {
+      setFormError(error.message);
+      setFormStatus('Queue failed: ' + error.message, true);
+    } finally {
+      state.live.busy = false;
+      updateFormDisabled();
+    }
+  }
+
+  function startElapsed() {
+    stopElapsed();
+    updateElapsed();
+    state.live.elapsedTimer = window.setInterval(updateElapsed, 1000);
+  }
+
+  function stopElapsed() {
+    if (state.live.elapsedTimer) {
+      window.clearInterval(state.live.elapsedTimer);
+      state.live.elapsedTimer = null;
+    }
+    updateElapsed();
+  }
+
+  function updateElapsed() {
+    var out = $('run-meta-elapsed');
+    if (!out) return;
+    if (!state.live.runStartedAt) {
+      out.textContent = '—';
+      return;
+    }
+    var seconds = Math.max(0, Math.round((Date.now() - state.live.runStartedAt) / 1000));
+    if (seconds < 60) out.textContent = seconds + ' s';
+    else out.textContent = Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+  }
+
+  function setRunState(status, label) {
+    var text = $('run-state');
+    var badge = $('run-state-badge');
+    if (text) text.textContent = label || status || 'idle';
+    if (!badge) return;
+    badge.textContent = status || 'idle';
+    badge.classList.remove('is-running', 'is-completed', 'is-failed');
+    if (status === 'queued' || status === 'running') badge.classList.add('is-running');
+    if (status === 'completed') badge.classList.add('is-completed');
+    if (status === 'failed' || status === 'interrupted' || status === 'not_implemented') badge.classList.add('is-failed');
+  }
+
+  function formatLogTime(ts) {
+    var date = ts ? new Date(ts) : new Date();
+    if (Number.isNaN(date.getTime())) return '--:--:--';
+    return date.toTimeString().slice(0, 8);
+  }
+
+  function appendRunLog(level, event, message, ts) {
+    state.live.logLines.push({
+      level: level || 'info',
+      event: event || 'log',
+      message: message || '',
+      ts: ts || new Date().toISOString()
+    });
+    if (state.live.logLines.length > 250) state.live.logLines.shift();
+    state.live.logCount += 1;
+    renderRunLog();
+  }
+
+  function renderRunLog() {
+    var log = $('run-log');
+    if (!log) return;
+    if (!state.live.logLines.length) {
+      log.textContent = state.live.activeRun ? 'Waiting for runner events…' : 'No live run yet.';
+      $('run-log-count').textContent = '0 events';
+      return;
+    }
+    log.innerHTML = state.live.logLines.map(function (line) {
+      var cls = line.level === 'error' ? 'log-error' : (line.level === 'warning' ? 'log-warning' : (line.event === 'completed' ? 'log-completed' : ''));
+      return '<span class="' + cls + '">' + esc(formatLogTime(line.ts)) + ' · ' + esc(line.event) + ' · ' + esc(line.message) + '</span>';
+    }).join('\n');
+    log.scrollTop = log.scrollHeight;
+    $('run-log-count').textContent = state.live.logCount + ' event' + (state.live.logCount === 1 ? '' : 's');
+  }
+
+  function subscribeToRun(runId) {
+    var client = liveApi();
+    if (!client) return;
+    if (state.live.eventSource) state.live.eventSource.close();
+    state.live.eventSource = client.subscribe(runId, {
+      onEvent: function (type, event) {
+        appendRunLog(event.level, event.event, event.message, event.ts);
+        if (event.event === 'started') {
+          setRunState('running', 'running');
+          setFormStatus('Runner started. Streaming logs…', false);
+          updateFormDisabled();
+        }
+        if (['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(event.event) !== -1) {
+          if (state.live.eventSource) {
+            state.live.eventSource.close();
+            state.live.eventSource = null;
+          }
+          stopElapsed();
+          finalizeRun(runId);
+        }
+      },
+      onError: function () {
+        if (!state.live.activeRun) return;
+        setFormStatus('Event stream disconnected; polling run status…', true);
+        startPolling(runId);
+      }
+    });
+  }
+
+  function startPolling(runId) {
+    if (state.live.pollTimer) return;
+    state.live.pollTimer = window.setInterval(async function () {
+      try {
+        var job = await liveApi().getRun(runId);
+        if (['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(job.status) !== -1) {
+          window.clearInterval(state.live.pollTimer);
+          state.live.pollTimer = null;
+          stopElapsed();
+          finalizeRun(runId);
+        }
+      } catch (error) { /* keep polling until the run is readable */ }
+    }, 1200);
+  }
+
+  async function terminalJob(runId) {
+    var job = null;
+    for (var attempt = 0; attempt < 30; attempt += 1) {
+      job = await liveApi().getRun(runId);
+      if (['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(job.status) !== -1) return job;
+      await new Promise(function (resolve) { window.setTimeout(resolve, 100); });
+    }
+    return job;
+  }
+
+  async function finalizeRun(runId) {
+    var client = liveApi();
+    if (!client) return;
+    if (state.live.finalizingRunId === runId) return;
+    state.live.finalizingRunId = runId;
+    if (state.live.pollTimer) {
+      window.clearInterval(state.live.pollTimer);
+      state.live.pollTimer = null;
+    }
+    if (state.live.eventSource) {
+      state.live.eventSource.close();
+      state.live.eventSource = null;
+    }
+    var job;
+    try {
+      job = await terminalJob(runId);
+    } catch (error) {
+      setFormStatus('Could not read final run status: ' + error.message, true);
+      state.live.finalizingRunId = null;
+      return;
+    }
+    state.live.currentJob = job;
+    setRunState(job.status, job.status);
+    $('run-meta-run').textContent = job.run_id;
+    if (job.status === 'completed') {
+      setFormStatus('Run completed. Fetching normalized dispatch…', false);
+      try {
+        var output = await client.getRunOutput(runId);
+        addSessionRun(job, output);
+        renderRunOutput(job, output);
+        setFormStatus('Completed ' + job.run_id + '. Added to the session rail and trade-off.', false);
+        announce('Live run ' + job.run_id + ' completed. Screening-only result added to the session rail.');
+      } catch (error) {
+        renderRunOutputError(job, 'Run completed but normalized output is unavailable: ' + error.message);
+        setFormStatus('Completed, but output unavailable: ' + error.message, true);
+      }
+    } else {
+      renderRunOutputError(job, job.message || ('Run ended with status ' + job.status + '.'));
+      setFormStatus('Run ' + job.status + ': ' + (job.message || 'no message'), true);
+      announce('Live run ' + job.run_id + ' ' + job.status + '. No result was added.');
+    }
+    state.live.activeRun = null;
+    state.live.finalizingRunId = null;
+    updateFormDisabled();
+  }
+
+  function validateLiveOutput(output) {
+    requireTrue(output && typeof output === 'object', 'live output is not an object');
+    var n = output.row_count;
+    requireTrue(Number.isInteger(n) && n > 0, 'live output row_count is invalid');
+    ['technology', 'category', 'zone', 'year', 'value_pj'].forEach(function (key) {
+      requireTrue(Array.isArray(output[key]) && output[key].length === n, 'live output column ' + key + ' has wrong length');
+    });
+    requireTrue(output.units_by_category && typeof output.units_by_category === 'object', 'live output units are missing');
+    for (var i = 0; i < n; i += 1) {
+      requireTrue(Number.isFinite(Number(output.value_pj[i])), 'live output contains a non-finite value');
+      requireTrue(typeof output.units_by_category[output.category[i]] === 'string', 'live output is missing a category unit');
+    }
+    return output;
+  }
+
+  function addSessionRun(job, output) {
+    var checked = validateLiveOutput(output);
+    var form = state.live.activeForm || state.live.lastForm || {};
+    var summary = output.summary || {};
+    var metrics = output.metrics || {};
+    var railId = 'live:' + job.run_id;
+    var label = summary.scenario_label || form.label || output.scenario_id || job.scenario_id;
+    var scenario = {
+      scenario_id: railId,
+      contract_scenario_id: output.scenario_id || job.scenario_id,
+      liveRun: true,
+      runId: job.run_id,
+      family: SESSION_FAMILY,
+      family_label: 'Session live runs',
+      label: label,
+      description: 'Live screening-only run from this browser session. Constraint set screening_v0; not policy grade.',
+      source_run: job.run_id,
+      sources: [output.source || ('run ' + job.run_id + '/output/dispatch_by_zone.csv')],
+      dimensions: {
+        harvest: { level: form.harvestChoice === 'custom' ? 'custom' : form.harvestChoice + 'm', m3_per_year: form.level, basis: form.path },
+        carbon_price_usd_per_t: form.carbon,
+        bio_cost_usd_per_gj: state.live.defaults.generic_bio_cost_usd_per_gj,
+        recovery_fraction: form.recovery,
+        supply_curve: 'tiered',
+        hydro_mode: form.hydro,
+        pwrbio_cap: { fraction: form.pwrbio },
+        nuclear_cap_gw: form.nuclear,
+        wind: { cap: fmtPct(form.windCap, 0), integration_limit: null, cost_usd_per_gj: form.windCost },
+        zero_tiers: []
+      },
+      metrics: {
+        objective: num(metrics.objective),
+        emissions_total: num(metrics.emissions_total),
+        emissions_2050: num(metrics.emissions_2050),
+        national_bcw_2050: num(metrics.national_bcw_2050),
+        pwrbcw_2050: num(metrics.pwrbcw_2050),
+        bio_share_2050: num(metrics.bio_share_2050),
+        bio_share_basis: metrics.bio_share_basis || 'derived_from_dispatch_2050',
+        solver_status: metrics.solver_status || summary.solver_status || 'completed'
+      },
+      flags: {
+        solver: metrics.solver_status || summary.solver_status || 'completed',
+        publishable: false,
+        superseded_for_emissions: false,
+        diagnostic: false,
+        post_fix_emissions: false,
+        screening_only: true,
+        policy_grade: false,
+        live: true
+      }
+    };
+    state.outputs.set(railId, checked);
+    state.core.scenarioById.set(railId, scenario);
+    state.live.sessionRuns = state.live.sessionRuns.filter(function (item) { return item.runId !== job.run_id; });
+    state.live.sessionRuns.unshift(scenario);
+    updateHeaderCounts();
+    renderHeader(state.core);
+    renderScenarioList();
+    if (state.tab === 'tradeoff') renderTradeoff();
+    if (state.selectedId === railId) renderOverview();
+  }
+
+  function renderRunOutput(job, output) {
+    var container = $('run-output-summary');
+    if (!container) return;
+    var metrics = output.metrics || {};
+    var railId = 'live:' + job.run_id;
+    container.hidden = false;
+    container.innerHTML = '<div class="run-output-card">' +
+      '<div class="run-output-head"><h3>Completed · screening-only output</h3><span class="mono">' + esc(output.source || '') + '</span></div>' +
+      '<p class="run-output-message">' + esc((output.summary && output.summary.message) || 'Run completed.') + '</p>' +
+      '<div class="result-grid">' +
+        '<div class="result"><span>Objective</span><strong>' + fmt(metrics.objective, 2) + '</strong><small>M$</small></div>' +
+        '<div class="result"><span>Cumulative emissions</span><strong>' + fmt(metrics.emissions_total, 3) + '</strong><small>Mt CO₂</small></div>' +
+        '<div class="result"><span>National BCW 2050</span><strong>' + fmt(metrics.national_bcw_2050, 2) + '</strong><small>PJ fuel</small></div>' +
+        '<div class="result"><span>PWRBCW 2050</span><strong>' + fmt(metrics.pwrbcw_2050, 2) + '</strong><small>PJ electricity</small></div>' +
+      '</div>' +
+      '<div class="run-output-flag"><strong>screening_only · policy_grade=false</strong><br>Added to the session rail and trade-off. This is not a publishable or policy-grade C2070 result.</div>' +
+      '<div class="run-output-actions">' +
+        '<button class="button" id="run-open-dispatch" type="button">Open dispatch</button>' +
+        '<button class="button button--quiet" id="run-open-overview" type="button">Open overview</button>' +
+      '</div>' +
+    '</div>';
+    $('run-open-dispatch').addEventListener('click', function () {
+      selectScenario(railId);
+      activateTab('dispatch');
+    });
+    $('run-open-overview').addEventListener('click', function () {
+      selectScenario(railId);
+      activateTab('overview');
+    });
+  }
+
+  function renderRunOutputError(job, message) {
+    var container = $('run-output-summary');
+    if (!container) return;
+    container.hidden = false;
+    container.innerHTML = '<div class="run-output-card is-failed">' +
+      '<div class="run-output-head"><h3>No result — ' + esc(job.status) + '</h3><span class="mono">' + esc(job.run_id) + '</span></div>' +
+      '<p class="run-output-message">' + esc(message || 'The run did not complete.') + '</p>' +
+      '<div class="run-output-flag"><strong>No fake results.</strong><br>Nothing was added to the scenario rail, trade-off, or dispatch. Inspect the event log and runner summary for diagnosis.</div>' +
+    '</div>';
+  }
+
+  function renderRunOutputIdle() {
+    var container = $('run-output-summary');
+    if (!container) return;
+    container.hidden = true;
+    container.innerHTML = '';
+  }
+
+  async function queueOsecanScenario() {
+    if (state.live.mode !== 'live') return;
+    var model = state.osecan.lastModel || (state.core ? computeOsecan() : null);
+    if (!model) return;
+    var level = Number(model.harvest);
+    var select = $('run-harvest');
+    if (['100', '119', '150', '200'].indexOf(String(level)) !== -1) {
+      select.value = String(level);
+    } else {
+      select.value = 'custom';
+      $('run-harvest-custom').value = String(Math.round(level * 1e6));
+    }
+    $('run-recovery').value = String(model.recovery);
+    $('run-cost').value = 'adopted_rest_of_canada_curve';
+    $('run-label').value = 'OSeCAN ' + level + ' Mm³ · recovery ' + fmt(model.recovery, 2) + ' · live screening';
+    syncHarvestCustom();
+    renderRunOutputIdle();
+    activateTab('run');
+    await createScenarioFromForm(true);
+  }
+
+  async function initLiveMode() {
+    var client = liveApi();
+    if (!client) {
+      state.live.mode = 'static';
+      applyRunDefaults(FALLBACK_DEFAULTS);
+      renderRunMode();
+      return;
+    }
+    var probe = await client.probe();
+    if (!probe.available) {
+      state.live.mode = 'static';
+      state.live.health = null;
+      applyRunDefaults(FALLBACK_DEFAULTS);
+      renderRunMode();
+      return;
+    }
+    state.live.health = probe.health;
+    try {
+      var constraints = await client.getConstraints();
+      var set = constraints.sets[0];
+      state.live.constraints = constraints;
+      state.live.defaults = set.defaults || FALLBACK_DEFAULTS;
+      state.live.mode = probe.health.read_only ? 'readonly' : (probe.health.allow_runs ? 'live' : 'no-runs');
+      applyRunDefaults(state.live.defaults);
+    } catch (error) {
+      state.live.mode = 'degraded';
+      state.live.defaults = FALLBACK_DEFAULTS;
+      applyRunDefaults(FALLBACK_DEFAULTS);
+    }
+    renderRunMode();
+  }
+
+  function bindRunControls() {
+    var form = $('run-form');
+    if (!form) return;
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      createScenarioFromForm(false);
+    });
+    $('run-harvest').addEventListener('change', syncHarvestCustom);
+    $('run-queue').addEventListener('click', queueCreatedScenario);
   }
 
   function fileTable(files) {
@@ -1780,6 +2645,7 @@
         supply: bundle[4],
         landbase: bundle[5]
       });
+      await initLiveMode();
       if (state.warnings.length) {
         var banner = $('fatal-banner');
         banner.hidden = false;

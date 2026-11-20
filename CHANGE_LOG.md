@@ -2,6 +2,22 @@
 
 ## 2026-11-20
 
+- **Wired the iteration-0 UI to the live FastAPI scenario runner (milestone
+  1c).** Added `/api/constraints` and `/api/runs/{id}/output`, which normalize
+  `run_summaries.json` + `dispatch_by_zone.csv` into the UI's columnar contract
+  with summary metrics and explicit `screening_only` / `policy_grade` flags.
+  Added the server `--runner-command` test/QA override while preserving the
+  immutable `--scenario` snapshot and `--out` arguments. The UI keeps working
+  from the committed static bundle when `/api/health` fails (visible **Static
+  mode · no backend** badge and disabled mutations), and adds a **Run** tab that
+  creates `clews.scenario.v1` scenarios from `screening_v0` defaults, queues
+  them, streams SSE logs/status, fetches normalized output, and adds completed
+  runs to a session rail, overview, trade-off, and dispatch. Failed runs add no
+  results. OSeCAN exports remain the static fallback and gain **Queue this
+  scenario** when the live API is writable. Added FastAPI tests for constraints,
+  output (409 active / 404 absent), and the CLI runner override, plus Chromium QA
+  against a fake runner (`ui/qa/run-static.png`, `run-complete.png`,
+  `run-error.png`). No data files or public OSeCAN surfaces were changed.
 - **Closed the OSeCAN runner reproducibility gap.** Added the committed patch
   set `workflows/ui/patches/01_emission_factors.patch`,
   `02_zonal_bc.patch`, and `03_tiered_supply.patch`, plus

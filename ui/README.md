@@ -1,21 +1,30 @@
 # Forest Ledger — CLEWS/C2070 iteration-0 explorer
 
 Static, FRESH-side scenario explorer for the forest-biomass component of
-CLEWS-C2070. **Provisional: not C2070 official.** No build step, no backend, no
-live solver.
+CLEWS-C2070. **Provisional: not C2070 official.** No build step. The committed
+views work without a backend; an optional FastAPI runner adds live
+screening-only scenarios.
 
 ## Run
 
-From the repository root:
+Static fallback only (existing precomputed views):
 
 ```bash
 python3 -m http.server 8000 -d ui
 # open http://localhost:8000/
 ```
 
-Use another port if 8000 is occupied (for example
-`python3 -m http.server 8010 -d ui`). Open through HTTP; browser `fetch()` of
-`public/data/` does not work from `file://`.
+Live mode (same static files plus the API, SSE, and runner):
+
+```bash
+.venv/bin/python -m workflows.ui.server --port 8013 --allow-runs
+# open http://127.0.0.1:8013/
+```
+
+If `/api/health` is unreachable the UI shows a **Static mode · no backend** badge,
+disables create/queue, and keeps all six precomputed views and OSeCAN exports.
+If the API is up but `--allow-runs` is absent, the badge reads
+**Live API · runs disabled**; read-only mode disables mutations.
 
 The UI is vanilla HTML/CSS/JS. ECharts and MapLibre GL JS are vendored under
 `ui/vendor/`, with local WOFF2 Latin subsets of Fraunces, IBM Plex Sans, and IBM
@@ -39,7 +48,14 @@ Plex Mono. No runtime CDN request is required.
   polygons are shown as gaps, never as invented geometry.
 - **OSeCAN Links** — source-file/check ledger plus a screening lever calculator
   (harvest 100/119/150/200 Mm³; recovery 0.35/0.60/0.75; cost basis), national
-  PJ and BC/rest split, tier-sum validation, and client-side CSV exports.
+  PJ and BC/rest split, tier-sum validation, and client-side CSV exports. When
+  the live API is available, **Queue this scenario** creates a live scenario from
+  the same levers.
+- **Run** — create a `clews.scenario.v1` scenario from `screening_v0` defaults,
+  queue it on the FastAPI runner, follow SSE logs/status, and fetch normalized
+  output on completion. Completed runs enter a **Session runs** rail group, the
+  overview, trade-off, and dispatch; they are marked **screening_only** and
+  **policy_grade=false**. Failed runs add no result.
 - **Inputs** — harvest reference paths, supply-curve tiers, and the
   managed-landbase proxy with caveats.
 
@@ -130,13 +146,23 @@ shows a clear error if it is unavailable.
 | Fraunces | variable Latin subset | SIL OFL 1.1 (`vendor/fraunces.LICENSE.txt`) |
 | IBM Plex Sans / Mono | Latin subsets | SIL OFL 1.1 (`vendor/fonts.LICENSE.txt`) |
 
+## Live API client
+
+`ui/api.js` is a small no-build client for `/api/health`, `/api/constraints`,
+`/api/scenarios`, `/api/runs`, `/api/runs/{id}/events` (SSE), and
+`/api/runs/{id}/output`. It never writes to `public/data/`; session runs live in
+browser memory and disappear on reload. The static UI is the fallback, not a
+replaced surface.
+
 ## Verify
 
 ```bash
 node --check ui/app.js
+node --check ui/api.js
 python3 -m http.server 8010 -d ui
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8010/
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8010/public/data/scenarios.json
+.venv/bin/python -m pytest -q tests/test_ui_scenario_api.py
 ```
 
-No generated data or solver artifacts are written by this UI.
+No generated data or solver artifacts are written by the static UI.

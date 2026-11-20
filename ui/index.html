@@ -4,12 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Forest Ledger — CLEWS/C2070 iteration-0 scenario explorer</title>
-  <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0, no live solver.">
+  <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
   <link rel="stylesheet" href="styles.css">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
+  <script defer src="api.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -36,6 +37,7 @@
       </div>
       <div class="header-aside">
         <p class="provisional-banner"><span class="pulse-dot" aria-hidden="true"></span>FRESH-side provisional — not C2070 official</p>
+        <p class="mode-badge is-checking" id="mode-badge"><span class="mode-dot" aria-hidden="true"></span><span id="mode-badge-text">Checking live API…</span></p>
         <dl class="header-stats">
           <div><dt>Scenarios</dt><dd id="header-scenario-count">—</dd></div>
           <div><dt>Trade-off eligible</dt><dd id="header-eligible-count">—</dd></div>
@@ -80,6 +82,7 @@
           <button class="tab" id="tab-tradeoff" role="tab" aria-selected="false" aria-controls="panel-tradeoff" data-tab="tradeoff" tabindex="-1" type="button">Trade-off</button>
           <button class="tab" id="tab-map" role="tab" aria-selected="false" aria-controls="panel-map" data-tab="map" tabindex="-1" type="button">Map</button>
           <button class="tab" id="tab-osecan" role="tab" aria-selected="false" aria-controls="panel-osecan" data-tab="osecan" tabindex="-1" type="button">OSeCAN Links</button>
+          <button class="tab" id="tab-run" role="tab" aria-selected="false" aria-controls="panel-run" data-tab="run" tabindex="-1" type="button">Run</button>
           <button class="tab" id="tab-inputs" role="tab" aria-selected="false" aria-controls="panel-inputs" data-tab="inputs" tabindex="-1" type="button">Inputs</button>
         </div>
         <div class="tab-meta" id="tab-scenario-meta" aria-live="polite"></div>
@@ -186,9 +189,9 @@
             <p class="kicker">Supply-curve workbench</p>
             <h2>OSeCAN links &amp; SUPBCW inputs</h2>
           </div>
-          <p class="panel-deck">A transparent screening calculator over the committed supply curve. It does not call the solver and cannot produce a new model run.</p>
+          <p class="panel-deck">A transparent screening calculator over the committed supply curve. The exports are illustrative inputs; when the live API is available, the same levers can create a screening-only run.</p>
         </div>
-        <div class="needs-run-banner" role="status"><span class="needs-run-mark">!</span><strong>Needs run — no live solver in iteration 0.</strong> Exports are illustrative inputs, not solved CLEWS results.</div>
+        <div class="needs-run-banner" id="osecan-run-banner" role="status"><span class="needs-run-mark">!</span><strong>Static mode — no live solver.</strong> Static exports are illustrative inputs, not solved CLEWS results.</div>
 
         <div class="osecan-grid">
           <div class="control-card">
@@ -206,8 +209,10 @@
             <div class="export-row">
               <button class="button" id="export-limits" type="button">Export activity limits CSV</button>
               <button class="button" id="export-costs" type="button">Export variable cost CSV</button>
+              <button class="button button--quiet" id="osecan-queue" type="button" disabled>Queue this scenario</button>
             </div>
             <p class="method-note" id="export-note">REGION,TECHNOLOGY,YEAR,VALUE · national tier rows, 2021—2070.</p>
+            <p class="method-note" id="osecan-live-note">Live queueing is unavailable in static mode.</p>
           </div>
           <div class="result-card">
             <h3>2050 screening result</h3>
@@ -245,6 +250,122 @@
           <summary>SUPBCW input file inventory</summary>
           <div id="osecan-supbcw-table"></div>
         </details>
+      </section>
+
+      <section class="panel" id="panel-run" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Live screening runner</p>
+            <h2>Create, queue, watch</h2>
+          </div>
+          <p class="panel-deck">Create a <span class="mono">clews.scenario.v1</span> snapshot, queue it on the FastAPI runner, and follow the SSE log. Every live result is <strong>screening_only</strong> and <strong>policy_grade=false</strong>.</p>
+        </div>
+        <div class="run-mode-banner" id="run-mode-banner" role="status">
+          <span class="run-mode-mark" aria-hidden="true">…</span>
+          <div><strong id="run-mode-title">Checking live API…</strong><p id="run-mode-text">Static views remain available if no backend responds.</p></div>
+        </div>
+
+        <div class="run-layout">
+          <form class="run-form" id="run-form" novalidate>
+            <div class="run-form-head">
+              <h3>Scenario inputs</h3>
+              <p>Defaults come from <span class="mono">screening_v0</span>. The scenario is snapshotted when queued, so later edits cannot change the run.</p>
+            </div>
+            <div class="run-form-grid">
+              <label class="field field--wide">Scenario label
+                <input id="run-label" name="label" type="text" maxlength="200" placeholder="e.g. 150 Mm³ · high recovery · $200 carbon" required>
+              </label>
+              <label class="field">Harvest (Mm³/yr)
+                <select id="run-harvest" name="harvest">
+                  <option value="100">100 — scenario low</option>
+                  <option value="119">119 — observed 2024 base</option>
+                  <option value="150">150 — scenario high</option>
+                  <option value="200">200 — supply-curve basis</option>
+                  <option value="custom">Custom…</option>
+                </select>
+              </label>
+              <label class="field" id="run-harvest-custom-field" hidden>Custom harvest (m³/yr)
+                <input id="run-harvest-custom" name="harvest_custom" type="number" min="1" step="1000000" inputmode="decimal">
+              </label>
+              <label class="field">Recovery fraction
+                <select id="run-recovery" name="recovery">
+                  <option value="0.35">0.35 — low</option>
+                  <option value="0.6">0.60 — base</option>
+                  <option value="0.75">0.75 — high</option>
+                </select>
+              </label>
+              <label class="field">Cost basis
+                <select id="run-cost" name="cost">
+                  <option value="adopted_rest_of_canada_curve">Adopted rest-of-Canada curve</option>
+                  <option value="base">Base</option>
+                  <option value="low">Low</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label class="field">Carbon price 2026 (USD/t CO₂)
+                <input id="run-carbon" name="carbon" type="number" min="0" step="1" inputmode="decimal">
+              </label>
+              <label class="field">Hydro mode
+                <select id="run-hydro" name="hydro">
+                  <option value="cap_2021">Cap 2021 (upper bound)</option>
+                  <option value="fixed_2021">Fixed 2021</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+              <label class="field">PWRBIO cap (fraction)
+                <input id="run-pwrbio" name="pwrbio" type="number" min="0" max="1" step="0.01" inputmode="decimal">
+              </label>
+              <label class="field">Nuclear cap (GW)
+                <input id="run-nuclear" name="nuclear" type="number" min="0" step="0.1" inputmode="decimal">
+              </label>
+              <label class="field">Wind cost (USD/GJ)
+                <input id="run-wind-cost" name="wind_cost" type="number" min="0" step="0.01" inputmode="decimal">
+              </label>
+              <label class="field">Wind cap (fraction)
+                <input id="run-wind-cap" name="wind_cap" type="number" min="0" max="1" step="0.01" inputmode="decimal">
+              </label>
+              <label class="field">T3 cap (PJ)
+                <input id="run-t3" name="t3" type="number" min="0" step="0.001" inputmode="decimal">
+              </label>
+              <label class="field">T4 cap (PJ)
+                <input id="run-t4" name="t4" type="number" min="0" step="0.001" inputmode="decimal">
+              </label>
+            </div>
+            <p class="run-form-note">Supply curve is <span class="mono">tiered</span>. Carbon uses the 2021 baseline of $95/t plus the 2026 step entered here. PWRBIO and wind caps are fractions of the zonal 2050 reference.</p>
+            <div class="run-actions">
+              <button class="button" id="run-create" type="submit">Create scenario</button>
+              <button class="button button--quiet" id="run-queue" type="button" disabled>Queue run</button>
+            </div>
+            <p class="run-form-status" id="run-form-status" role="status">Live API not checked yet.</p>
+            <p class="run-form-error" id="run-form-error" role="alert" hidden></p>
+          </form>
+
+          <aside class="run-status-card" aria-label="Run status and event log">
+            <div class="run-status-head">
+              <div>
+                <p class="kicker">Run state</p>
+                <p class="run-state" id="run-state">idle</p>
+              </div>
+              <span class="run-state-badge" id="run-state-badge">no run</span>
+            </div>
+            <dl class="run-meta" id="run-meta">
+              <div><dt>Scenario</dt><dd id="run-meta-scenario">—</dd></div>
+              <div><dt>Run</dt><dd id="run-meta-run">—</dd></div>
+              <div><dt>Elapsed</dt><dd id="run-meta-elapsed">—</dd></div>
+            </dl>
+            <div class="run-policy-flag" id="run-policy-flag" hidden>
+              <strong>screening_only · policy_grade=false</strong>
+              <p>No reserve margin, transmission, curtailment, or build-rate constraints. Never policy or forecast.</p>
+            </div>
+            <div class="run-log-head">
+              <h3>Event log</h3>
+              <span class="mono" id="run-log-count">0 events</span>
+            </div>
+            <pre class="run-log" id="run-log" aria-live="polite">No live run yet.</pre>
+          </aside>
+        </div>
+
+        <div class="run-output" id="run-output-summary" hidden></div>
       </section>
 
       <section class="panel" id="panel-inputs" role="tabpanel" aria-labelledby="tab-inputs" tabindex="0" hidden>
@@ -291,7 +412,7 @@
   </div>
 
   <footer class="site-footer">
-    <p><span class="footer-mark" aria-hidden="true"></span> Forest Ledger · iteration-0 static UI · no build step, no backend, no live solver.</p>
+    <p><span class="footer-mark" aria-hidden="true"></span> Forest Ledger · iteration-0 static UI · no build step · optional live screening runner.</p>
     <p class="mono" id="footer-contract">Data contract: loading…</p>
   </footer>
 
