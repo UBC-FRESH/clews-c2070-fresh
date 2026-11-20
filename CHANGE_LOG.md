@@ -2,6 +2,22 @@
 
 ## 2026-11-20
 
+- **Fixed milestone-1c live-runner review findings.** `/api/runs/{id}/output`
+  now skips runner `category=other` audit rows, returns 409 for every
+  non-completed terminal status, validates `run_id`/`output_dir`, confines
+  summary and dispatch reads to the run output directory (including symlink
+  targets), and keeps `source` run-relative. Metrics now report
+  `pwrbcw_2050` from `PWRBCW*`, `pwrbio_2050` from `PWRBIO*`, and
+  `bio_share_2050` as `PWRBIO* ÷ PWR*` excluding `PWRTRN*`. SSE terminal
+  drain loops through all 256 KiB event chunks. The Run UI locks create/queue
+  during an active run, scopes SSE/poll/finalize callbacks by `run_id`, clears
+  stale poll timers, resumes polling on non-terminal finalization, re-enables
+  the form on terminal-read errors, validates health payloads, dedupes events by
+  sequence, sources provenance from `/api/constraints`, derives zero tiers from
+  T3/T4, and resets Run defaults before OSeCAN levers. Mobile tabs use a
+  3-column grid at ≤440 px. Added regression tests for each backend case and
+  refreshed Chromium QA evidence (`ui/qa/run-mobile.png` added). No data files
+  or public OSeCAN surfaces were changed.
 - **Wired the iteration-0 UI to the live FastAPI scenario runner (milestone
   1c).** Added `/api/constraints` and `/api/runs/{id}/output`, which normalize
   `run_summaries.json` + `dispatch_by_zone.csv` into the UI's columnar contract

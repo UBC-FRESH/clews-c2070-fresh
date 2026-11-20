@@ -129,6 +129,7 @@
       currentJob: null,
       eventSource: null,
       pollTimer: null,
+      pollFailures: 0,
       elapsedTimer: null,
       runStartedAt: 0,
       finalizingRunId: null,
@@ -1791,12 +1792,13 @@
     var mode = state.live.mode;
     var disabled = state.live.busy || mode === 'checking' || mode === 'static' || mode === 'readonly' || mode === 'degraded';
     qsa('#run-form input, #run-form select').forEach(function (input) { input.disabled = disabled; });
+    var activeRun = Boolean(state.live.activeRun);
     var create = $('run-create');
     var queue = $('run-queue');
-    if (create) create.disabled = disabled;
-    if (queue) queue.disabled = state.live.busy || mode !== 'live' || !state.live.createdScenario || Boolean(state.live.activeRun);
+    if (create) create.disabled = disabled || activeRun;
+    if (queue) queue.disabled = state.live.busy || mode !== 'live' || !state.live.createdScenario || activeRun;
     var osecanQueue = $('osecan-queue');
-    if (osecanQueue) osecanQueue.disabled = state.live.busy || mode !== 'live';
+    if (osecanQueue) osecanQueue.disabled = state.live.busy || mode !== 'live' || activeRun;
   }
 
   function setModeBadge(mode, detail) {
@@ -1861,25 +1863,42 @@
 
     var osecanBanner = $('osecan-run-banner');
     var osecanNote = $('osecan-live-note');
-    if (osecanBanner) {
-      if (mode === 'live' || mode === 'no-runs') {
-        osecanBanner.innerHTML = '<span class="needs-run-mark">i</span><strong>Live runner available — screening only.</strong> “Queue this scenario” creates a live scenario from the calculator levers; every result is policy_grade=false.';
-      } else {
-        osecanBanner.innerHTML = '<span class="needs-run-mark">!</span><strong>Static mode — no live solver.</strong> Static exports are illustrative inputs, not solved CLEWS results.';
+    var osecanCopy = {
+      live: {
+        banner: '<span class="needs-run-mark">i</span><strong>Live runner available — screening only.</strong> “Queue this scenario” creates a live scenario from the calculator levers; every result is policy_grade=false.',
+        note: 'Queue this scenario is available.',
+        status: 'Defaults loaded from screening_v0. No run yet.'
+      },
+      'no-runs': {
+        banner: '<span class="needs-run-mark">!</span><strong>Live API connected — run queueing is disabled.</strong> Start the server with --allow-runs to create live screening scenarios; static exports remain illustrative only.',
+        note: 'Queue this scenario needs a server started with --allow-runs.',
+        status: 'Live API is up, but run queueing is disabled without --allow-runs.'
+      },
+      readonly: {
+        banner: '<span class="needs-run-mark">!</span><strong>Live API is read-only.</strong> Create and queue are disabled; the committed static views and OSeCAN exports remain available.',
+        note: 'Queue this scenario is unavailable on a read-only server.',
+        status: 'Read-only server: create and queue are disabled.'
+      },
+      degraded: {
+        banner: '<span class="needs-run-mark">!</span><strong>Screening defaults unavailable.</strong> The canonical screening_v0 payload failed validation, so live creation is disabled rather than guessing defaults.',
+        note: 'Queue this scenario is unavailable until screening defaults load.',
+        status: 'Could not load screening_v0 defaults; create and queue are disabled.'
+      },
+      static: {
+        banner: '<span class="needs-run-mark">!</span><strong>Static mode — no live solver.</strong> Static exports are illustrative inputs, not solved CLEWS results.',
+        note: 'Live queueing is unavailable in static mode.',
+        status: 'Static mode: create and queue are disabled.'
       }
-    }
-    if (osecanNote) {
-      osecanNote.textContent = mode === 'live'
-        ? 'Queue this scenario is available.'
-        : 'Live queueing is unavailable in static mode.';
-    }
+    };
+    var copy = osecanCopy[mode] || {
+      banner: '<span class="needs-run-mark">!</span><strong>Checking for a live API.</strong> Static exports remain available while the health probe runs.',
+      note: 'Live queueing is unavailable while the API is checked.',
+      status: 'Checking for a live runner.'
+    };
+    if (osecanBanner) osecanBanner.innerHTML = copy.banner;
+    if (osecanNote) osecanNote.textContent = copy.note;
     if (!state.live.activeRun && !state.live.createdScenario) {
-      setFormStatus(
-        mode === 'live'
-          ? 'Defaults loaded from screening_v0. No run yet.'
-          : (mode === 'static' ? 'Static mode: create and queue are disabled.' : 'Waiting for a live runner.'),
-        false
-      );
+      setFormStatus(copy.status, false);
     }
   }
 
@@ -1969,6 +1988,7 @@
     var canonical = state.live.constraints && state.live.constraints.default_set_id
       ? state.live.constraints.default_set_id
       : 'screening_v0';
+    var provenance = (state.live.constraints && state.live.constraints.provenance) || {};
     var payload = {
       scenario_id: slugify(form.label),
       label: form.label,
@@ -1997,8 +2017,8 @@
       },
       constraints: { set_id: canonical },
       provenance: {
-        base_data_commit: 'session-live-ui',
-        model_commit: LIVE_MODEL_COMMIT,
+        base_data_commit: provenance.base_data_commit || 'session-live-ui',
+        model_commit: provenance.model_commit || LIVE_MODEL_COMMIT,
         created_utc: new Date().toISOString()
       }
     };
@@ -2007,6 +2027,10 @@
 
   async function createScenarioFromForm(autoQueue) {
     if (state.live.busy) return null;
+    if (state.live.activeRun) {
+      setFormError('Wait for the active run to finish before creating another scenario.');
+      return null;
+    }
     var client = liveApi();
     if (!client) {
       setFormError('Live API client is unavailable.');
@@ -2057,6 +2081,16 @@
     if (state.live.mode !== 'live') {
       setFormError('Queue is disabled; the server was not started with --allow-runs.');
       return;
+    }
+    if (state.live.pollTimer) {
+      window.clearInterval(state.live.pollTimer);
+      state.live.pollTimer = null;
+    }
+    state.live.pollFailures = 0;
+    state.live.finalizingRunId = null;
+    if (state.live.eventSource) {
+      state.live.eventSource.close();
+      state.live.eventSource = null;
     }
     state.live.busy = true;
     updateFormDisabled();
@@ -2161,19 +2195,34 @@
     $('run-log-count').textContent = state.live.logCount + ' event' + (state.live.logCount === 1 ? '' : 's');
   }
 
+  function isTerminalStatus(status) {
+    return ['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(status) !== -1;
+  }
+
+  function activeRunMatches(runId) {
+    return Boolean(state.live.activeRun && state.live.activeRun.run_id === runId);
+  }
+
+  function clearPollTimer() {
+    if (!state.live.pollTimer) return;
+    window.clearInterval(state.live.pollTimer);
+    state.live.pollTimer = null;
+  }
+
   function subscribeToRun(runId) {
     var client = liveApi();
     if (!client) return;
     if (state.live.eventSource) state.live.eventSource.close();
     state.live.eventSource = client.subscribe(runId, {
       onEvent: function (type, event) {
+        if (!activeRunMatches(runId)) return;
         appendRunLog(event.level, event.event, event.message, event.ts);
         if (event.event === 'started') {
           setRunState('running', 'running');
           setFormStatus('Runner started. Streaming logs…', false);
           updateFormDisabled();
         }
-        if (['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(event.event) !== -1) {
+        if (isTerminalStatus(event.event)) {
           if (state.live.eventSource) {
             state.live.eventSource.close();
             state.live.eventSource = null;
@@ -2182,8 +2231,14 @@
           finalizeRun(runId);
         }
       },
+      onOpen: function () {
+        if (!activeRunMatches(runId)) return;
+        // A reconnect can race with polling; let the stream own status again.
+        clearPollTimer();
+        state.live.pollFailures = 0;
+      },
       onError: function () {
-        if (!state.live.activeRun) return;
+        if (!activeRunMatches(runId)) return;
         setFormStatus('Event stream disconnected; polling run status…', true);
         startPolling(runId);
       }
@@ -2191,17 +2246,43 @@
   }
 
   function startPolling(runId) {
+    if (!activeRunMatches(runId)) return;
     if (state.live.pollTimer) return;
+    state.live.pollFailures = 0;
+    setRunState('running', 'running');
     state.live.pollTimer = window.setInterval(async function () {
+      if (!activeRunMatches(runId)) {
+        clearPollTimer();
+        return;
+      }
       try {
         var job = await liveApi().getRun(runId);
-        if (['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(job.status) !== -1) {
-          window.clearInterval(state.live.pollTimer);
-          state.live.pollTimer = null;
+        if (!activeRunMatches(runId)) {
+          clearPollTimer();
+          return;
+        }
+        if (isTerminalStatus(job.status)) {
+          clearPollTimer();
           stopElapsed();
           finalizeRun(runId);
         }
-      } catch (error) { /* keep polling until the run is readable */ }
+      } catch (error) {
+        state.live.pollFailures += 1;
+        if (state.live.pollFailures < 20) return;
+        clearPollTimer();
+        if (state.live.eventSource) {
+          state.live.eventSource.close();
+          state.live.eventSource = null;
+        }
+        stopElapsed();
+        setFormError('Run status polling failed: ' + error.message);
+        setFormStatus('Run status polling stopped after repeated failures. Refresh the run list to reconnect.', true);
+        renderRunOutputError({ status: 'unavailable', run_id: runId }, 'Run status polling failed after repeated attempts: ' + error.message);
+        state.live.activeRun = null;
+        state.live.currentJob = null;
+        state.live.finalizingRunId = null;
+        updateFormDisabled();
+      }
     }, 1200);
   }
 
@@ -2209,7 +2290,7 @@
     var job = null;
     for (var attempt = 0; attempt < 30; attempt += 1) {
       job = await liveApi().getRun(runId);
-      if (['completed', 'failed', 'interrupted', 'not_implemented'].indexOf(job.status) !== -1) return job;
+      if (isTerminalStatus(job.status)) return job;
       await new Promise(function (resolve) { window.setTimeout(resolve, 100); });
     }
     return job;
@@ -2218,12 +2299,10 @@
   async function finalizeRun(runId) {
     var client = liveApi();
     if (!client) return;
+    if (!activeRunMatches(runId)) return;
     if (state.live.finalizingRunId === runId) return;
     state.live.finalizingRunId = runId;
-    if (state.live.pollTimer) {
-      window.clearInterval(state.live.pollTimer);
-      state.live.pollTimer = null;
-    }
+    clearPollTimer();
     if (state.live.eventSource) {
       state.live.eventSource.close();
       state.live.eventSource = null;
@@ -2232,8 +2311,22 @@
     try {
       job = await terminalJob(runId);
     } catch (error) {
+      if (!activeRunMatches(runId)) return;
+      stopElapsed();
+      setFormError('Could not read final run status: ' + error.message);
       setFormStatus('Could not read final run status: ' + error.message, true);
+      renderRunOutputError({ status: 'unknown', run_id: runId }, 'Could not read final run status: ' + error.message);
+      state.live.activeRun = null;
+      state.live.currentJob = null;
       state.live.finalizingRunId = null;
+      updateFormDisabled();
+      return;
+    }
+    if (!activeRunMatches(runId)) return;
+    if (!job || !isTerminalStatus(job.status)) {
+      state.live.finalizingRunId = null;
+      setFormStatus('Final status is not available yet; resuming status polling…', true);
+      startPolling(runId);
       return;
     }
     state.live.currentJob = job;
@@ -2243,11 +2336,13 @@
       setFormStatus('Run completed. Fetching normalized dispatch…', false);
       try {
         var output = await client.getRunOutput(runId);
+        if (!activeRunMatches(runId)) return;
         addSessionRun(job, output);
         renderRunOutput(job, output);
         setFormStatus('Completed ' + job.run_id + '. Added to the session rail and trade-off.', false);
         announce('Live run ' + job.run_id + ' completed. Screening-only result added to the session rail.');
       } catch (error) {
+        if (!activeRunMatches(runId)) return;
         renderRunOutputError(job, 'Run completed but normalized output is unavailable: ' + error.message);
         setFormStatus('Completed, but output unavailable: ' + error.message, true);
       }
@@ -2256,9 +2351,11 @@
       setFormStatus('Run ' + job.status + ': ' + (job.message || 'no message'), true);
       announce('Live run ' + job.run_id + ' ' + job.status + '. No result was added.');
     }
-    state.live.activeRun = null;
-    state.live.finalizingRunId = null;
-    updateFormDisabled();
+    if (activeRunMatches(runId)) {
+      state.live.activeRun = null;
+      state.live.finalizingRunId = null;
+      updateFormDisabled();
+    }
   }
 
   function validateLiveOutput(output) {
@@ -2283,6 +2380,9 @@
     var metrics = output.metrics || {};
     var railId = 'live:' + job.run_id;
     var label = summary.scenario_label || form.label || output.scenario_id || job.scenario_id;
+    var zeroTiers = [];
+    if (Number(form.t3) === 0) zeroTiers.push('T3');
+    if (Number(form.t4) === 0) zeroTiers.push('T4');
     var scenario = {
       scenario_id: railId,
       contract_scenario_id: output.scenario_id || job.scenario_id,
@@ -2304,7 +2404,7 @@
         pwrbio_cap: { fraction: form.pwrbio },
         nuclear_cap_gw: form.nuclear,
         wind: { cap: fmtPct(form.windCap, 0), integration_limit: null, cost_usd_per_gj: form.windCost },
-        zero_tiers: []
+        zero_tiers: zeroTiers
       },
       metrics: {
         objective: num(metrics.objective),
@@ -2312,6 +2412,7 @@
         emissions_2050: num(metrics.emissions_2050),
         national_bcw_2050: num(metrics.national_bcw_2050),
         pwrbcw_2050: num(metrics.pwrbcw_2050),
+        pwrbio_2050: num(metrics.pwrbio_2050),
         bio_share_2050: num(metrics.bio_share_2050),
         bio_share_basis: metrics.bio_share_basis || 'derived_from_dispatch_2050',
         solver_status: metrics.solver_status || summary.solver_status || 'completed'
@@ -2388,9 +2489,12 @@
   }
 
   async function queueOsecanScenario() {
-    if (state.live.mode !== 'live') return;
+    if (state.live.mode !== 'live' || state.live.activeRun) return;
     var model = state.osecan.lastModel || (state.core ? computeOsecan() : null);
     if (!model) return;
+    // Start from the canonical Run-tab defaults, then apply OSeCAN levers, so
+    // stale form edits cannot leak into the queued scenario.
+    applyRunDefaults(state.live.defaults || FALLBACK_DEFAULTS);
     var level = Number(model.harvest);
     var select = $('run-harvest');
     if (['100', '119', '150', '200'].indexOf(String(level)) !== -1) {
@@ -2440,12 +2544,23 @@
     renderRunMode();
   }
 
+  function invalidateCreatedScenario() {
+    if (!state.live.createdScenario) return;
+    state.live.createdScenario = null;
+    state.live.lastForm = null;
+    setFormStatus('Run form changed; create the scenario again before queueing.', false);
+    updateFormDisabled();
+  }
+
   function bindRunControls() {
     var form = $('run-form');
     if (!form) return;
     form.addEventListener('submit', function (event) {
       event.preventDefault();
       createScenarioFromForm(false);
+    });
+    qsa('#run-form input, #run-form select').forEach(function (input) {
+      input.addEventListener('change', invalidateCreatedScenario);
     });
     $('run-harvest').addEventListener('change', syncHarvestCustom);
     $('run-queue').addEventListener('click', queueCreatedScenario);

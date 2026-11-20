@@ -41,7 +41,11 @@
     }
     if (!response.ok) throw await errorFromResponse(response);
     if (response.status === 204) return null;
-    return response.json();
+    try {
+      return await response.json();
+    } catch (error) {
+      throw new ApiError('invalid JSON response from ' + path, response.status, error.message);
+    }
   }
 
   async function probe() {
@@ -56,7 +60,15 @@
       if (!response.ok) {
         return { available: false, reason: 'HTTP ' + response.status };
       }
-      var health = await response.json();
+      var health;
+      try {
+        health = await response.json();
+      } catch (error) {
+        return { available: false, reason: 'health response was not JSON' };
+      }
+      if (!health || typeof health !== 'object' || health.status !== 'ok' || typeof health.schema_version !== 'string') {
+        return { available: false, reason: 'health payload is invalid' };
+      }
       return { available: true, health: health };
     } catch (error) {
       return {
@@ -105,11 +117,16 @@
     var options = handlers || {};
     var source = new EventSource(BASE + '/api/runs/' + encodeURIComponent(runId) + '/events');
     var closed = false;
+    var lastSequence = -1;
 
     function dispatch(type, event) {
       if (closed || !event) return;
       var payload = null;
       try { payload = JSON.parse(event.data); } catch (error) { return; }
+      if (payload && typeof payload.seq === 'number' && Number.isFinite(payload.seq)) {
+        if (payload.seq <= lastSequence) return;
+        lastSequence = payload.seq;
+      }
       if (options.onEvent) options.onEvent(type, payload);
     }
 
@@ -117,9 +134,15 @@
       source.addEventListener(type, function (event) { dispatch(type, event); });
     });
     source.onmessage = function (event) { dispatch('message', event); };
+    source.onopen = function () {
+      if (closed) return;
+      if (options.onOpen) options.onOpen();
+    };
     source.onerror = function () {
       if (closed) return;
-      if (options.onError) options.onError();
+      // readyState CONNECTING means the browser will retry; CLOSED means it will
+      // not. Callers use this to fall back to polling either way.
+      if (options.onError) options.onError(source.readyState);
     };
 
     return {

@@ -66,6 +66,7 @@ MAX_EVENT_READ_BYTES = 256 * 1024
 CONSTRAINTS_PATH = (
     REPO_ROOT / "data/derived/national/clews/osecan/canonical_constraint_set.json"
 )
+MODEL_MANIFEST_PATH = REPO_ROOT / "runtime/osecan_model/model_manifest.json"
 LIVE_CATEGORY_UNITS = {
     "dispatch": "PJ electricity",
     "power_hydro": "PJ electricity",
@@ -822,6 +823,42 @@ def _summary_message(summary: dict[str, Any], status: str) -> str:
     return f"runner reported {status}"
 
 
+def _git_head(path: Path) -> str | None:
+    """Return the checked-out commit for ``path``, or ``None`` if unavailable."""
+
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    commit = completed.stdout.strip()
+    return commit if completed.returncode == 0 and commit else None
+
+
+def _constraint_provenance() -> dict[str, str]:
+    """Resolve the data and model commits the screening set was built from."""
+
+    model_commit = _git_head(MODEL_MANIFEST_PATH.parent)
+    if model_commit is None:
+        try:
+            manifest = read_json(MODEL_MANIFEST_PATH)
+        except (OSError, ValueError):
+            manifest = None
+        if isinstance(manifest, dict):
+            recorded = manifest.get("source_commit")
+            if isinstance(recorded, str) and recorded.strip():
+                model_commit = recorded.strip()
+    return {
+        "base_data_commit": _git_head(REPO_ROOT / "data") or "unknown",
+        "model_commit": model_commit or "unknown",
+    }
+
+
 def _canonical_constraints_payload() -> dict[str, Any]:
     """Return the canonical constraint families and UI defaults.
 
@@ -882,6 +919,7 @@ def _canonical_constraints_payload() -> dict[str, Any]:
         "schema_version": "clews.constraint_sets.v1",
         "sets": [set_payload],
         "default_set_id": canonical.set_id,
+        "provenance": _constraint_provenance(),
     }
 
 
@@ -901,6 +939,10 @@ def _read_dispatch_output(path: Path) -> dict[str, Any]:
             raise ValueError(f"{path.name} is missing columns: {missing}")
         for line_number, row in enumerate(reader, start=2):
             category = row.get("category")
+            if category == "other":
+                # The runner deliberately labels non-dispatch, non-supply
+                # technologies "other"; they are audit rows, not UI columns.
+                continue
             if category not in LIVE_CATEGORY_UNITS:
                 raise ValueError(
                     f"{path.name}:{line_number}: unknown category {category!r}"
@@ -1169,21 +1211,27 @@ def create_app(
 
     @app.get("/api/runs/{raw_run_id}/output")
     def get_run_output(raw_run_id: str) -> dict[str, Any]:
-        job = read_run_or_404(raw_run_id)
-        run_id = str(job.get("run_id"))
-        job_status = str(job.get("status"))
-        if job_status not in TERMINAL_STATUSES:
+        run_id = require_run_id(raw_run_id)
+        job = read_run_or_404(run_id)
+        job_status = job.get("status")
+        if job_status != "completed":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
                     f"run {run_id} is {job_status}; output is available only "
-                    "after a terminal state"
+                    "after a completed run"
                 ),
                 headers={"Retry-After": "2"},
             )
 
+        raw_output_dir = job.get("output_dir")
+        if not isinstance(raw_output_dir, str) or not raw_output_dir.strip():
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"run {run_id} has an invalid output_dir",
+            )
         run_dir = run_store.run_dir(run_id).resolve()
-        output_dir = Path(str(job.get("output_dir"))).resolve()
+        output_dir = Path(raw_output_dir).expanduser().resolve()
         try:
             output_dir.relative_to(run_dir)
         except ValueError as exc:
@@ -1191,8 +1239,20 @@ def create_app(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="run output directory escapes the run directory",
             ) from exc
-        summary_path = output_dir / "run_summaries.json"
-        dispatch_path = output_dir / "dispatch_by_zone.csv"
+
+        def confined_output_path(name: str) -> Path:
+            candidate = (output_dir / name).resolve()
+            try:
+                candidate.relative_to(output_dir)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"run {run_id} output path escapes the output directory",
+                ) from exc
+            return candidate
+
+        summary_path = confined_output_path("run_summaries.json")
+        dispatch_path = confined_output_path("dispatch_by_zone.csv")
         if not summary_path.is_file():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -1221,43 +1281,39 @@ def create_app(
 
         supply = summary.get("supply")
         supply_summary = supply if isinstance(supply, dict) else {}
-        dispatch_2050 = sum(
-            value
-            for category, year, value in zip(
-                output["category"], output["year"], output["value_pj"]
-            )
-            if category == "dispatch" and year == 2050
-        )
-        pwrbcw_2050 = sum(
-            value
-            for technology, category, year, value in zip(
-                output["technology"],
-                output["category"],
-                output["year"],
-                output["value_pj"],
-            )
-            if category == "dispatch"
-            and year == 2050
-            and technology.startswith("PWRBIO")
-        )
+        pwrbcw_2050 = 0.0
+        pwrbio_2050 = 0.0
+        pwr_generation_2050 = 0.0
+        for technology, category, year, value in zip(
+            output["technology"],
+            output["category"],
+            output["year"],
+            output["value_pj"],
+        ):
+            if category != "dispatch" or year != 2050:
+                continue
+            if technology.startswith("PWRBCW"):
+                pwrbcw_2050 += value
+            if technology.startswith("PWRBIO"):
+                pwrbio_2050 += value
+            if technology.startswith("PWR") and not technology.startswith("PWRTRN"):
+                pwr_generation_2050 += value
         metrics = {
             "objective": summary.get("objective_musd"),
             "emissions_total": summary.get("emissions_total_mt"),
             "emissions_2050": summary.get("emissions_2050_mt"),
             "national_bcw_2050": supply_summary.get("national_total_pj_2050"),
             "pwrbcw_2050": round(pwrbcw_2050, 6),
+            "pwrbio_2050": round(pwrbio_2050, 6),
             "bio_share_2050": (
-                round(pwrbcw_2050 / dispatch_2050, 9)
-                if dispatch_2050 > 0
+                round(pwrbio_2050 / pwr_generation_2050, 9)
+                if pwr_generation_2050 > 0
                 else None
             ),
             "bio_share_basis": "derived_from_dispatch_2050",
             "solver_status": summary.get("solver_status"),
         }
-        try:
-            source = dispatch_path.relative_to(REPO_ROOT).as_posix()
-        except ValueError:
-            source = str(dispatch_path)
+        source = dispatch_path.relative_to(run_dir).as_posix()
         return {
             "scenario_id": summary.get("scenario_id") or job.get("scenario_id"),
             "run_id": run_id,
@@ -1484,19 +1540,25 @@ async def _event_stream(
         except (FileNotFoundError, OSError, ValueError):
             return
         if job.get("status") in TERMINAL_STATUSES:
-            # Drain events appended just before the terminal status write.
-            try:
-                events, offset = await asyncio.to_thread(
-                    store.read_events, run_id, offset
-                )
-            except (OSError, ValueError):
-                return
-            for event in events:
-                yield (
-                    f"id: {event['seq']}\n"
-                    f"event: {event['event']}\n"
-                    f"data: {json.dumps(event, sort_keys=True, allow_nan=False)}\n\n"
-                )
+            # Drain every event appended before the terminal status write.
+            # read_events is byte-bounded, so a large terminal burst needs
+            # repeated reads until the offset stops advancing.
+            while True:
+                previous_offset = offset
+                try:
+                    events, offset = await asyncio.to_thread(
+                        store.read_events, run_id, offset
+                    )
+                except (OSError, ValueError):
+                    return
+                for event in events:
+                    yield (
+                        f"id: {event['seq']}\n"
+                        f"event: {event['event']}\n"
+                        f"data: {json.dumps(event, sort_keys=True, allow_nan=False)}\n\n"
+                    )
+                if offset == previous_offset:
+                    break
             return
         now = time.monotonic()
         if now - last_heartbeat >= settings.heartbeat_seconds:
@@ -1562,8 +1624,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     runner_command = None
-    if args.runner_command:
-        runner_command = tuple(shlex.split(args.runner_command))
+    if args.runner_command is not None:
+        try:
+            runner_command = tuple(shlex.split(args.runner_command))
+        except ValueError as exc:
+            raise SystemExit(f"--runner-command is not valid shell syntax: {exc}") from exc
         if not runner_command:
             raise SystemExit("--runner-command must not be empty")
     application = create_app(

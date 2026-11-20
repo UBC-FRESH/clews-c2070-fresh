@@ -1,52 +1,130 @@
 {
   "static": {
     "mode": "STATIC MODE \u00b7 NO BACKEND",
-    "scenario_count": "47",
-    "tabs": [
-      "OVERVIEW",
-      "DISPATCH",
-      "TRADE-OFF",
-      "MAP",
-      "OSECAN LINKS",
-      "RUN",
-      "INPUTS"
-    ],
-    "run_banner": "STATIC MODE \u2014 NO BACKEND REACHABLE.",
+    "banner": "STATIC MODE \u2014 NO BACKEND REACHABLE.",
     "create_disabled": true,
-    "osecan_queue_disabled": true
+    "queue_disabled": true,
+    "osecan_queue_disabled": true,
+    "osecan_copy": "!Static mode \u2014 no live solver. Static exports are illustrative inputs, not solved CLEWS results.",
+    "osecan_note": "Live queueing is unavailable in static mode."
   },
   "live": {
-    "mode": "LIVE API \u00b7 RUNNER READY",
-    "defaults": {
-      "harvest": "119",
-      "recovery": "0.6",
-      "carbon": "115",
-      "pwrbio": "0.05",
-      "nuclear": "0",
-      "t3": "39.873714",
-      "t4": "64.265464"
+    "complete": {
+      "created_id": "qa-guard-complete-20261120-mwocwd99",
+      "run_id": "20261120t022458z-89035a60",
+      "guard": {
+        "createDisabled": true,
+        "queueDisabled": true,
+        "osecanDisabled": true,
+        "activeState": "created"
+      },
+      "run_count": 1,
+      "output_text": "Completed \u00b7 screening-only output\noutput/dispatch_by_zone.csv\n\nmilestone-1c QA runner completed\n\nOBJECTIVE\n123.50\nM$\nCUMULATIVE EMISSIONS\n0.500\nMt CO\u2082\nNATIONAL BCW 2050\n30.00\nPJ fuel\nPWRBCW 2050\n4.00\nPJ electricity\nscreening_only \u00b7 policy_grade=false\nAdded to the session rail and trade-off. This is not a publishable or policy-grade C2070 result.\nOPEN DISPATCH\nOPEN OVERVIEW",
+      "source": "output/dispatch_by_zone.csv",
+      "row_count": 250,
+      "categories": [
+        "dispatch",
+        "supply"
+      ],
+      "metrics": {
+        "objective": 123.5,
+        "emissions_total": 0.5,
+        "emissions_2050": 0,
+        "national_bcw_2050": 30,
+        "pwrbcw_2050": 4,
+        "pwrbio_2050": 5,
+        "bio_share_2050": 0.172413793,
+        "bio_share_basis": "derived_from_dispatch_2050",
+        "solver_status": "optimal"
+      },
+      "create_enabled_after": true
     },
-    "state": "completed",
-    "log": "01:57:55 \u00b7 started \u00b7 runner started with pid 1580919\n01:57:55 \u00b7 log \u00b7 fake runner: snapshot qa-complete-screening-run-mwobxkun -> /tmp/ui-run-qa/runtime/runs/20261120t015755z-ab379acb/output\n01:57:56 \u00b7 log \u00b7 fake runner: wrote 200 dispatch rows and completed summary\n01:57:56 \u00b7 completed \u00b7 fake QA runner completed: screening-only dispatch",
-    "session_rail_count": 1,
-    "output": "Completed \u00b7 screening-only output\n/tmp/ui-run-qa/runtime/runs/20261120t015755z-ab379acb/output/dispatch_by_zone.csv\n\nfake QA runner completed: screening-only dispatch\n\nOBJECTIVE\n123.50\nM$\nCUMULATIVE EMISSIONS\n0.500\nMt CO\u2082\nNATIONAL BCW 2050\n30.00\nPJ fuel\nPWRBCW 2050\n5.00\nPJ electricity\nscreening_only \u00b7 policy_grade=false\nAdded to the session rail and trade-off. This is not a publishable or policy-grade C2070 result.\nOPEN DISPATCH\nOPEN OVERVIEW",
-    "overview_heading": "QA complete screening run",
-    "overview_flags": "screening_onlypolicy_grade=falsenot publishablelive session",
-    "tradeoff_count": "26 eligible \u00b7 21 excluded (21 superseded, 2 diagnostic) \u00b7 expected ledger 26 \u00b7 +1 live session run(s), screening only",
-    "tradeoff_canvas": 1,
-    "dispatch_visible": true,
-    "dispatch_canvas": 1,
-    "dispatch_source": "Category set: dispatch \u00b7 units: PJ electricity \u00b7 aggregate dispatch table. Sum of 1 reporting zones with no CAN aggregate present. Source: /tmp/ui-run-qa/runtime/runs/20261120t015755z-ab379acb/output/dispatch_by_zone.csv. Never summed with the other energy ledger.",
-    "error_state": "failed",
-    "error_output": "No result \u2014 failed\n20261120t015801z-21429ebf\n\nsimulated solver failure from QA fake runner\n\nNo fake results.\nNothing was added to the scenario rail, trade-off, or dispatch. Inspect the event log and runner summary for diagnosis.",
-    "error_session_rail_count": 1
+    "failure": {
+      "run_id": "20261120t022500z-2a28b0b8",
+      "state": "failed",
+      "output_text": "No result \u2014 failed\n20261120t022500z-2a28b0b8\n\nsimulated solver failure from milestone-1c QA runner\n\nNo fake results.\nNothing was added to the scenario rail, trade-off, or dispatch. Inspect the event log and runner summary for diagnosis.",
+      "form_error": "",
+      "create_enabled": true,
+      "queue_enabled": true,
+      "osecan_enabled": true
+    }
+  },
+  "mobile": {
+    "viewport": "390x844",
+    "tabs": [
+      {
+        "text": "Overview",
+        "left": 18,
+        "right": 111,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      },
+      {
+        "text": "Dispatch",
+        "left": 111,
+        "right": 203,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      },
+      {
+        "text": "Trade-off",
+        "left": 203,
+        "right": 296,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      },
+      {
+        "text": "Map",
+        "left": 18,
+        "right": 111,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      },
+      {
+        "text": "OSeCAN Links",
+        "left": 111,
+        "right": 203,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      },
+      {
+        "text": "Run",
+        "left": 203,
+        "right": 296,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      },
+      {
+        "text": "Inputs",
+        "left": 18,
+        "right": 111,
+        "scrollWidth": 93,
+        "clientWidth": 93,
+        "barRight": 296
+      }
+    ],
+    "tabbar_scroll_width": 278,
+    "tabbar_client_width": 278,
+    "run_visible": true,
+    "create_visible": true
   },
   "console": [
-    [
-      "error",
-      "Failed to load resource: the server responded with a status of 404 (File not found)"
-    ]
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+    }
   ],
-  "page_errors": [],
-  "bad_responses": []
+  "pageerrors": [],
+  "http_errors": [
+    {
+      "url": "http://127.0.0.1:8012/api/health",
+      "status": 404
+    }
+  ]
 }

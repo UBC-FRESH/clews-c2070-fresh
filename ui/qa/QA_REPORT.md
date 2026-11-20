@@ -129,7 +129,8 @@ script, not a four-minute OSeCAN solve.
 | Browser flags | `--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist --disable-dev-shm-usage` |
 
 The fake runner reads the immutable `--scenario` snapshot, sleeps briefly so SSE
-logs are observable, writes 200 `dispatch_by_zone.csv` rows and
+logs are observable, writes 300 `dispatch_by_zone.csv` rows (250 normalized
+dispatch/supply rows plus 50 `category=other` audit rows) and
 `run_summaries.json` with `screening_only: true`, `policy_grade: false`, and
 exits 1 with a failed summary when the scenario id/label contains `fail`.
 Therefore a successful 4-minute solve is **not** claimed or exercised here.
@@ -142,12 +143,13 @@ Therefore a successful 4-minute solve is **not** claimed or exercised here.
 | Live detection/defaults | **PASS** — badge `Live API · runner ready`; `/api/constraints` defaults populate harvest 119, recovery 0.60, carbon 115, PWRBIO 0.05, nuclear 0, T3 39.873714, T4 64.265464. |
 | Create | **PASS** — form creates `clews.scenario.v1` with a slugged id and enables **Queue run**. |
 | Queue + SSE | **PASS** — 202 accepted; event log shows `started`, runner snapshot/log lines, and terminal `completed`; elapsed timer updates. |
-| Output | **PASS** — `/api/runs/{id}/output` renders objective 123.50 M$, cumulative emissions 0.500 Mt, national BCW 30.00 PJ, PWRBCW 5.00 PJ; source path shown. |
+| Output | **PASS** — `/api/runs/{id}/output` renders objective 123.50 M$, cumulative emissions 0.500 Mt, national BCW 30.00 PJ, PWRBCW 4.00 PJ; source path is run-relative (`output/dispatch_by_zone.csv`). API metrics also expose PWRBIO 5.00 PJ and bio share 0.172413793 (PWRBIO ÷ PWR excluding PWRTRN). |
 | Session rail/overview | **PASS** — completed run appears under **Session runs**, selects into a live overview with `screening_only` and `policy_grade=false` badges and no publishable claim. |
 | Trade-off | **PASS** — count includes `+1 live session run(s), screening only`; live point series is present. |
 | Dispatch | **PASS** — **Open dispatch** renders the ECharts canvas from the live columnar output; source note reports the live `dispatch_by_zone.csv`. |
-| Failed run | **PASS** — failed status and error message shown; no metrics, no rail entry, no trade-off point, no dispatch. |
-| Mobile 390×844 | **PASS** — 7 tabs visible in a 4-column grid, Run panel opens, `scrollWidth === innerWidth`, no page errors. |
+| Failed run | **PASS** — failed status and error message shown; no metrics, no rail entry, no trade-off point, no dispatch; form is re-enabled. |
+| Concurrent-run guard | **PASS** — while the queued run is active, `#run-create`, `#run-queue`, and `#osecan-queue` are disabled; double-clicking queue/create adds exactly **1** run. |
+| Mobile 390×844 | **PASS** — 7 tabs visible in a 3-column grid (`scrollWidth === clientWidth === 278`), including `OSeCAN Links` unclipped; Run panel opens, no page errors. |
 | Console/page errors (live page) | **0** page errors, **0** console errors, **0** HTTP responses ≥400. |
 
 ## Screenshots
@@ -175,3 +177,21 @@ are unchanged.
 
 No data files, manifests, or committed static outputs were modified.
 `git status --porcelain` contains no `D` entries.
+
+## Milestone-1c review fix pass (2026-11-20)
+
+Re-ran the same Chromium flow against the fixed tree with the live server on
+`127.0.0.1:8013` and static fallback on `127.0.0.1:8012`:
+
+| Check | Result |
+|---|---|
+| `category=other` dispatch rows | **PASS** — runner wrote 50 `other` audit rows; `/output` returned 250 normalized rows and categories `["dispatch", "supply"]`. |
+| PWRBCW vs PWRBIO vs PWRTRN | **PASS** — output card shows PWRBCW 4.00 PJ; API metrics expose `pwrbcw_2050=4`, `pwrbio_2050=5`, `bio_share_2050=0.172413793`; PWRTRN is excluded from the share denominator. |
+| Non-completed output | **PASS** — failed run renders the explicit “No result — failed” card; `/output` returns 409. |
+| Path handling | **PASS** — output source is `output/dispatch_by_zone.csv`; no `/tmp` host path is exposed. |
+| Mode messaging | **PASS** — static fallback and live mode show distinct copy; no “Live runner available” claim in static/degraded/read-only states. |
+| Concurrent runs | **PASS** — create/queue/OSeCAN queue stay disabled while `activeRun` is set; exactly one run was created after repeated clicks. |
+| Mobile tab bar | **PASS** — 3-column grid at 390×844 keeps all seven labels inside the tab bar. |
+
+Updated screenshots: `run-static.png`, `run-complete.png`, `run-error.png`, and
+new `run-mobile.png`. Machine-readable evidence: `ui/qa/run_qa_results.json`.

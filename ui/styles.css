@@ -1437,8 +1437,8 @@ details.family-row > summary:hover { background: var(--card-warm); }
   .metric-grid, .metric-grid--four { grid-template-columns: 1fr; }
   .metric-card--hero { grid-column: span 1; }
   .result-grid { grid-template-columns: 1fr; }
-  .tabbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
-  .tab { padding: 11px 6px 9px; font-size: 0.6rem; text-align: center; }
+  .tabbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+  .tab { padding: 11px 6px 9px; font-size: 0.6rem; text-align: center; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
   .metric-card { padding: 15px; }
 }
 

@@ -563,7 +563,27 @@ for year in range(2021, 2071):
             "category": "dispatch",
             "zone": "B1",
             "year": year,
-            "value_pj": 5.0 if year != 2050 else 5.0,
+            "value_pj": 5.0,
+        }
+    )
+    rows.append(
+        {
+            "run": scenario["scenario_id"],
+            "technology": "PWRBCWB1",
+            "category": "dispatch",
+            "zone": "B1",
+            "year": year,
+            "value_pj": 4.0,
+        }
+    )
+    rows.append(
+        {
+            "run": scenario["scenario_id"],
+            "technology": "PWRTRNB1",
+            "category": "dispatch",
+            "zone": "B1",
+            "year": year,
+            "value_pj": 3.0,
         }
     )
     rows.append(
@@ -574,6 +594,16 @@ for year in range(2021, 2071):
             "zone": "CAN",
             "year": year,
             "value_pj": 30.0,
+        }
+    )
+    rows.append(
+        {
+            "run": scenario["scenario_id"],
+            "technology": "RNWBIO",
+            "category": "other",
+            "zone": "CAN",
+            "year": year,
+            "value_pj": 999.0,
         }
     )
 with (out / "dispatch_by_zone.csv").open("w", newline="", encoding="utf-8") as handle:
@@ -965,22 +995,25 @@ def test_run_output_endpoint_normalizes_summary_and_dispatch(tmp_path: Path) -> 
         assert output["status"] == "completed"
         assert output["screening_only"] is True
         assert output["policy_grade"] is False
-        assert output["row_count"] == 150
+        assert output["row_count"] == 250
         assert output["categories"] == ["dispatch", "supply"]
         assert output["units_by_category"] == {
             "dispatch": "PJ electricity",
             "supply": "PJ fuel",
         }
-        assert len(output["technology"]) == 150
-        assert len(output["category"]) == 150
-        assert len(output["zone"]) == 150
-        assert len(output["year"]) == 150
-        assert len(output["value_pj"]) == 150
+        assert "other" not in output["categories"]
+        assert len(output["technology"]) == 250
+        assert len(output["category"]) == 250
+        assert len(output["zone"]) == 250
+        assert len(output["year"]) == 250
+        assert len(output["value_pj"]) == 250
         assert output["metrics"]["objective"] == 123.5
         assert output["metrics"]["emissions_total"] == 0.5
         assert output["metrics"]["national_bcw_2050"] == 30.0
-        assert output["metrics"]["pwrbcw_2050"] == 5.0
-        assert output["metrics"]["bio_share_2050"] == pytest.approx(0.2)
+        assert output["metrics"]["pwrbcw_2050"] == 4.0
+        assert output["metrics"]["pwrbio_2050"] == 5.0
+        assert output["metrics"]["bio_share_2050"] == pytest.approx(5.0 / 29.0)
+        assert output["source"] == "output/dispatch_by_zone.csv"
         assert output["summary"]["solver_status"] == "optimal"
 
 
@@ -1061,3 +1094,166 @@ def test_cli_runner_command_override_preserves_snapshot(
             (Path(job["output_dir"]) / "seen.json").read_text(encoding="utf-8")
         )
         assert seen["label"] == created["label"]
+
+
+def test_run_output_rejects_failed_and_interrupted_runs(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, FAILED_SUMMARY_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        assert wait_for_terminal(client, run_id)["status"] == "failed"
+        output = client.get(f"/api/runs/{run_id}/output")
+        assert output.status_code == 409, output.text
+        assert "completed" in output.json()["detail"]
+
+
+def test_run_output_rejects_output_symlink_escape(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, OUTPUT_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        job = wait_for_terminal(client, run_id)
+        output_dir = Path(job["output_dir"])
+        outside = tmp_path / "outside-output"
+        outside.mkdir()
+        (outside / "run_summaries.json").write_text(
+            json.dumps({"status": "completed"}), encoding="utf-8"
+        )
+        (outside / "dispatch_by_zone.csv").write_text(
+            "run,technology,category,zone,year,value_pj\n"
+            "x,PWRHYDB1,dispatch,B1,2050,1.0\n",
+            encoding="utf-8",
+        )
+        output_dir.rename(tmp_path / "moved-output")
+        output_dir.symlink_to(outside, target_is_directory=True)
+
+        escaped = client.get(f"/api/runs/{run_id}/output")
+        assert escaped.status_code == 500, escaped.text
+        assert "escapes" in escaped.json()["detail"]
+        assert str(tmp_path) not in escaped.json()["detail"]
+
+
+def test_run_output_rejects_symlinked_dispatch_and_malformed_files(
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "runtime"
+    runner = write_fake_runner(tmp_path, OUTPUT_RUNNER)
+    with make_client(runtime, runner=runner) as client:
+        create_scenario(client)
+        response = client.post(
+            "/api/runs", json={"scenario_id": "screening_150m_base"}
+        )
+        run_id = response.json()["run_id"]
+        job = wait_for_terminal(client, run_id)
+        output_dir = Path(job["output_dir"])
+        dispatch = output_dir / "dispatch_by_zone.csv"
+        summary = output_dir / "run_summaries.json"
+        summary_text = summary.read_text(encoding="utf-8")
+
+        outside = tmp_path / "outside-dispatch.csv"
+        outside.write_text(
+            "run,technology,category,zone,year,value_pj\n"
+            "x,PWRHYDB1,dispatch,B1,2050,1.0\n",
+            encoding="utf-8",
+        )
+        dispatch.unlink()
+        dispatch.symlink_to(outside)
+        escaped = client.get(f"/api/runs/{run_id}/output")
+        assert escaped.status_code == 500, escaped.text
+        assert "escapes" in escaped.json()["detail"]
+
+        dispatch.unlink()
+        dispatch.write_text(
+            "run,technology,category,zone,year,value_pj\n"
+            "x,PWRHYDB1,mystery,B1,2050,1.0\n",
+            encoding="utf-8",
+        )
+        malformed_dispatch = client.get(f"/api/runs/{run_id}/output")
+        assert malformed_dispatch.status_code == 500
+        assert "unknown category" in malformed_dispatch.json()["detail"]
+
+        dispatch.write_text(
+            "run,technology,category,zone,year,value_pj\n"
+            "x,PWRHYDB1,dispatch,B1,2050,1.0\n",
+            encoding="utf-8",
+        )
+        summary.write_text("[]", encoding="utf-8")
+        malformed_summary = client.get(f"/api/runs/{run_id}/output")
+        assert malformed_summary.status_code == 500
+        assert "not a JSON object" in malformed_summary.json()["detail"]
+        summary.write_text(summary_text, encoding="utf-8")
+
+
+def test_constraints_failure_is_500_and_read_only_is_200(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import workflows.ui.server as server_module
+
+    runtime = tmp_path / "runtime"
+    with make_client(runtime, read_only=True) as client:
+        response = client.get("/api/constraints")
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert isinstance(payload["provenance"]["base_data_commit"], str)
+        assert isinstance(payload["provenance"]["model_commit"], str)
+
+    missing = tmp_path / "missing-constraints.json"
+    monkeypatch.setattr(server_module, "CONSTRAINTS_PATH", missing)
+    with make_client(tmp_path / "runtime-missing", allow_runs=False) as client:
+        broken = client.get("/api/constraints")
+        assert broken.status_code == 500, broken.text
+        assert "canonical constraint set" in broken.json()["detail"]
+
+
+def test_cli_runner_command_rejects_empty_and_bad_quotes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    import workflows.ui.server as server_module
+
+    def fail_uvicorn(*args, **kwargs) -> None:
+        raise AssertionError("uvicorn.run should not be reached")
+
+    monkeypatch.setattr(server_module.uvicorn, "run", fail_uvicorn)
+    with pytest.raises(SystemExit, match="must not be empty"):
+        server_module.main(
+            ["--runtime-dir", str(tmp_path), "--runner-command", ""]
+        )
+    with pytest.raises(SystemExit, match="not valid shell syntax"):
+        server_module.main(
+            ["--runtime-dir", str(tmp_path), "--runner-command", "'"]
+        )
+
+
+def test_sse_drains_terminal_burst_larger_than_two_chunks(tmp_path: Path) -> None:
+    runtime = tmp_path / "runtime"
+    runs_dir = runtime / "runs"
+    runs_dir.mkdir(parents=True)
+    store = RunStore(runs_dir)
+    run_id = store.new_run_id()
+    store.create(
+        run_id=run_id,
+        scenario_id="screening_150m_base",
+        scenario_path=runtime / "scenarios" / "screening_150m_base.json",
+        output_dir=runs_dir / run_id / "output",
+        command=(sys.executable, "-c", "pass"),
+    )
+    message = "terminal burst " + ("x" * 120)
+    for _ in range(6000):
+        store.append_event(run_id, event="log", level="info", message=message)
+    store.finish(run_id, status="completed", message="burst completed")
+
+    with make_client(runtime) as client, client.stream(
+        "GET", f"/api/runs/{run_id}/events"
+    ) as events:
+        body = "".join(events.iter_text())
+    assert len(body.encode("utf-8")) > 2 * 256 * 1024
+    assert body.count("event: log") == 6000
+    assert body.count("event: completed") == 1
