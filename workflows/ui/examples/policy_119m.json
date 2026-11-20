@@ -1,0 +1,41 @@
+{
+  "scenario_id": "policy_119m",
+  "label": "119 Mm3 policy_test_v1 draft",
+  "description": "Stage 1 draft policy-test run; not policy-grade.",
+  "schema_version": "clews.scenario.v1",
+  "harvest": {
+    "level_m3_per_year": 118977339.0,
+    "path": "hold",
+    "recovery_fraction": 0.6,
+    "cost_basis": "adopted_rest_of_canada_curve",
+    "supply_curve": "tiered"
+  },
+  "energy": {
+    "carbon_price_schedule": [
+      {
+        "year": 2021,
+        "price_usd_per_tco2e": 95.0
+      },
+      {
+        "year": 2026,
+        "price_usd_per_tco2e": 200.0
+      }
+    ],
+    "hydro_mode": "cap_2021",
+    "pwr_bio_cap_fraction": 0.05,
+    "nuclear_cap_gw": 0.0,
+    "wind_cost_usd_per_gj": 3.0,
+    "wind_cap_fraction": 0.2,
+    "t3_cap_pj": 39.873714,
+    "t4_cap_pj": 64.265464,
+    "generic_bio_cost_usd_per_gj": 3.0
+  },
+  "constraints": {
+    "set_id": "policy_test_v1"
+  },
+  "provenance": {
+    "base_data_commit": "working-tree",
+    "model_commit": "40d5b43bb3f8b3f69c16e953144d35eeed5f0f44",
+    "created_utc": "2026-11-20T00:00:00+00:00"
+  }
+}

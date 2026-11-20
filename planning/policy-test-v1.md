@@ -8,6 +8,11 @@ changes model behaviour, and no result from this set may be labelled
 **Scope:** OSeCAN FAST / C2070 electricity core, 2021–2070, single OSeMOSYS
 `REGION=CAN`, 13 zone-coded nodes.
 
+**Source values:** the narrow source pass is recorded in
+`policy-data-review.md` (2026-11-20). It supplies the reserve-margin evidence,
+capacity-credit anchors, build-rate ranges, 2021 peaks, intertie ratings, and
+the explicit gaps. It is not a signed source register.
+
 ---
 
 ## 1. What the current model actually supports
@@ -112,30 +117,60 @@ capacity`, with `RM*peak_factor > 1`; the UDC implies the native check. Native
 RM3 therefore cannot add an unexpected constraint, but it also cannot be used
 as evidence of policy-grade reserve adequacy on its own.
 
-#### Capacity-credit assumptions (draft, pending source)
+#### Reserve-margin value: 15% national
 
-| Archetype | Draft credit | Suggested range | Rationale |
-|---|---:|---:|---|
-| `NGS` | 0.95 | 0.90–1.00 | Dispatchable; small forced-outage derate. |
-| `COA` | 0.90 | 0.85–0.95 | Dispatchable; phase-out applies separately. |
-| `URN` | 0.90 | 0.85–0.95 | High availability; planned outages. |
-| `HYD` | 0.65 | 0.55–0.75 | Energy-limited / winter derate; not firm at nameplate. |
-| `BIO`, `BSW`, `BCW` | 0.85 | 0.80–0.90 | Dispatchable, fuel-limited. |
-| `WND` | 0.20 | 0.15–0.25 | Effective load-carrying capability, not capacity factor. |
-| `SOL` | 0.05 | 0.00–0.10 | Low ELCC at system peak in most Canadian systems. |
-| `GEO` | 0.80 | 0.75–0.85 | Dispatchable geothermal. |
-| `TRN`, `PWRTRN` | 0.00 | 0.00 | No firm import contract; transmission is not generation. |
-| Storage / demand response | not modelled | — | No storage sets, no DR technology. |
+The Stage 1 national planning reserve margin is `RM = 1.15` (15% above peak;
+margin fraction 0.15) from 2026. 2021–2025 stays at 1.00 to preserve the
+observed fleet. This is a **national modelling convention**, not a Canadian
+legal standard. The narrow source review found:
+
+| Jurisdiction / criterion | Value | As-of | Status |
+|---|---:|---|---|
+| Canada national convention | 15% | 2024–2026 | Modelling recommendation; no federal PRM |
+| Ontario (IESO) | 15% | 2024 | Sourced; varies 11–16% through 2028 |
+| Manitoba (Manitoba Hydro) | 12% | 2023–2025 | Sourced; lower than the convention |
+| MISO | 15% | 2024–2025 | Sourced; 2025 PRMR 15.7%, seasonal targets vary |
+| NERC reference margin | 15% thermal / 10% hydro | 2024 | Reference level, not a standard |
+| NERC/WECC LOLE | ≤0.1 d/yr (1-in-10) | 2024 | Reliability criterion |
+
+Provincial standards are deferred. The single-region model cannot enforce a
+provincial margin (§3.1), and the review did not extract BC, Alberta,
+Saskatchewan, Quebec, or Atlantic standards. A 15% national value sits between
+Manitoba's 12% and Ontario's 15%; it is not evidence that any province is
+adequate. See `policy-data-review.md` §1.
+
+#### Capacity-credit assumptions (draft, with source anchors)
+
+| Archetype | Credit | Range | Status | Basis |
+|---|---:|---:|---|---|
+| `NGS` | 0.95 | 0.93–0.95 | Sourced anchor (ON) | IESO 2026 capacity-credit table: gas 92.96%; round to 0.95. |
+| `COA` | 0.90 | 0.85–0.95 | Draft, no source | Dispatchable; phase-out applies separately. |
+| `URN` | 0.90 | 0.90–1.00 | Draft; treated firm | No Canadian ELCC value; 0.90 is a conservative firm derate. |
+| `HYD` | 0.65 | 0.55–0.75 | Draft, no source | Energy-limited / winter derate; not firm at nameplate. |
+| `BIO`, `BSW`, `BCW` | 0.85 | 0.80–0.90 | Draft, no source | Dispatchable, fuel-limited. |
+| `WND` | 0.20 | 0.15–0.25 | Sourced anchor (ON/QC) | ON 19.66%; QC 15%; 0.20 is the national draft. |
+| `SOL` | 0.15 | 0.15–0.20 | Sourced anchor (ON) | ON 19.16%; 0.15 is a conservative national draft. The old 0.05 is withdrawn. |
+| `GEO` | 0.80 | 0.75–0.85 | Draft, no source | Dispatchable geothermal. |
+| `TRN`, `PWRTRN` | 0.00 | 0.00 | Policy | No firm import contract; transmission is not generation. |
+| Storage / demand response | not modelled | — | Gap | No storage sets, no DR technology. |
 
 `PWRBIO`, `PWRBCW`, and `PWRBSW` inherit the biomass credit. The credit is a
 fraction of nameplate capacity, independent of `CapacityFactor`; both are used
 in different constraints and must not be conflated.
 
+**Source status.** “Sourced anchor” means a public source supports the value
+or range for at least one jurisdiction; it does not make the national value
+policy-grade. Only gas, wind, and solar have a Canadian source anchor. Hydro,
+biomass, nuclear, coal, and oil are drafts. The IESO table labels the extracted
+column `MRI`, not `ELCC`; the column semantics and the national transfer are
+recorded in `policy-data-review.md` §2 and §7. `source_status` remains
+`pending`.
+
 #### Draft reserve-margin schedule
 
 ```text
 RM:          2021: 1.00, 2025: 1.00, 2026: 1.15, 2070: 1.15
-peak_factor: 2021: 1.55, 2070: 1.55
+peak_factor: 1.25 dry-run midpoint; see §2.1.1. The former 1.55 is withdrawn.
 ```
 
 - The repeated `2025`/`2026` keys make this a step, not a ramp: schedules
@@ -143,11 +178,40 @@ peak_factor: 2021: 1.55, 2070: 1.55
   would ramp through 2021–2025.
 - `2021–2025` at 1.00 avoids retroactively declaring the observed fleet
   inadequate before the first policy year.
-- `1.15` is a conventional planning reserve margin placeholder (NERC-style
-  15%); it is not a Canadian legal value.
-- `1.55` corresponds to a load factor of about 0.645. It is a placeholder
-  until provincial peak data land. A national average hides winter-peaking
-  versus summer-peaking provinces.
+- `1.15` is the national convention above; Manitoba (12%) and Ontario (15%)
+  bracket it. It is not a provincial adequacy test.
+
+#### 2.1.1 Peak factor and the 2021 provincial peaks
+
+The UDC needs `peak_factor = peak demand / average demand`. The former 1.55 is
+withdrawn. Against 625.7 TWh of 2021 generation (71.4 GW average), 1.55
+implies a national peak of about 110.7 GW. The reviewed provincial peaks do
+not support that:
+
+| Province | 2021 peak (MW) | Date | Note |
+|---|---:|---|---|
+| Ontario | 22,986 | 2021-08-24 | 133.84 TWh; load factor 0.664 |
+| Alberta | 11,729 | 2021-02-09 | Average AIL 9,728 MW; load factor 0.829 |
+| British Columbia | 10,787 | 2021-12-27 | Winter record |
+| Quebec | 40,537 | 2022-01-11 | Winter 2021–22 peak, not calendar 2021 |
+| Manitoba | 4,915 | 2021-02-11 | Record winter peak |
+| Sum of five | 90,954 | non-coincident | Not a national peak |
+| Canada generation | 625.7 TWh | 2021 | 71.4 GW average |
+
+The five-province sum is already only 1.27 times the national average load on
+a gross-generation basis, and it is non-coincident and incomplete. A national
+coincident peak would be lower. A single national `peak_factor` of 1.55 is not
+supported. The UDC activity term is gross generation, so 625.7 TWh is the
+consistent denominator; an average-demand denominator would be smaller by T&D
+losses and would raise the factor, but not to 1.55. Provincial factors also
+differ: Ontario is about 1.50, Alberta about 1.21, and Manitoba about 1.44 on
+a generation basis. A national average hides winter-peaking Quebec/BC/Manitoba
+and summer-peaking Ontario/Alberta.
+
+For dry runs, use a documented, coincidence-adjusted bounding range of
+`1.20–1.30` and mark `source_status="pending"`. Do not put a point value in a
+policy-grade set until a national coincident peak and provincial annual demand
+are sourced. This is gap 2 in §2.2.1.
 
 #### Why `peak_factor` is a hard gate
 
@@ -155,7 +219,10 @@ Without timeslices, `RM` alone compares capacity with annual energy, which is
 far weaker than a peak standard. For example, `RM=1.15` on annual average load
 would require only about 1.15 × average GW, not 1.15 × peak GW. The
 `peak_factor` is therefore part of the policy definition, not a cosmetic
-tuning knob. If it is missing or unsourced, `policy_grade` must remain false.
+tuning knob. The gate is now sharper: the old 1.55 is withdrawn, and the
+reviewed peaks only support a range. A numeric `peak_factor` is still required
+by the UDC, but it must be sourced. If only a bounding range exists,
+`policy_grade` must remain false.
 
 ### 2.2 Annual build-rate and capacity caps
 
@@ -165,19 +232,19 @@ maximum **total installed capacity** (GW) and must be at least
 `ResidualCapacity`; the model has an explicit check that fails otherwise.
 Both are already active and need no structural change.
 
-Draft build-rate table (provisional; replace with researched values):
+Draft build-rate table (source status explicit; not policy-grade):
 
-| Technology family | `TotalAnnualMaxCapacityInvestment` (GW/yr) | Notes |
-|---|---:|---|
-| `PWRWND<z>` | 2.0 (2021–2030), 3.0 (2031–2050), 2.0 (2051–2070) | National envelope split across zones; zone allocation is a separate siting choice. |
-| `PWRSOL<z>` | 1.5 (2021–2030), 3.0 (2031–2050), 2.0 (2051–2070) | No defensible total GW cap in current data; build rate is the explicit control. |
-| `PWRURN<z>` | 0.0 (2021–2030), 0.30 (2031–2070) | New-build rate only. `no_new_nuclear` means 0 GW/yr new build, not a 0 GW total cap; the observed residual fleet must be preserved. A 1 GW class unit every ~5 years is ~0.2 GW/yr average. |
-| `PWRBIO<z>`, `PWRBCW<z>`, `PWRBSW<z>` | 0.15 each | Biomass supply and boiler lead times are the binding constraints. |
-| `PWRHYD<z>` | 0.25 | Large-hydro construction is slow; 1 GW over 4 years is already aggressive. |
-| `PWRGEO<z>` | 0.10 | Small market. |
-| `PWRNGS<z>` | 1.0 | If new gas is allowed; policy case may set 0. |
-| `PWRCOA<z>` | 0.0 | Federal coal phase-out; residual capacity retires separately. |
-| `TRN<from><to>` | 0.0 or link-specific | Stage 1 can cap existing links; new corridors need Stage 2. |
+| Technology family | `TotalAnnualMaxCapacityInvestment` | Source status | Notes |
+|---|---:|---|---|
+| `PWRWND<z>` | 2.0–6.0 envelope; draft 2.0 / 3.0 / 2.0 | Sourced range | CER EF2026 gives 2–6 GW/yr; about 1.9 GW was observed in 2023–24. The JSON must pick one value per year; 3.0 is the central draft. Zone allocation is a separate siting choice. |
+| `PWRSOL<z>` | 0.2–1.0 envelope; draft 0.2 / 0.5 / 0.2 | Sourced range | 0.22–0.36 GW/yr observed in 2022–24; the CER range extends to 1.0. No defensible total GW cap; build rate is the explicit control. |
+| `PWRNGS<z>` | 2.0 | Observed anchor, draft cap | +2.02 GW observed; no forward rate. Policy case may set 0. |
+| `PWRURN<z>` | 0.0 new build | Sourced historical, policy choice | 0 net in 2023–24; refurbishments only. `no_new_nuclear` means 0 GW/yr new build, not a 0 GW total cap; the observed residual fleet must be preserved. The 0.30 GW/yr case is an optional scenario, not a sourced rate. |
+| `PWRBIO<z>`, `PWRBCW<z>`, `PWRBSW<z>` | 0.15 each | Draft, no source | Biomass supply and boiler lead times are the binding constraints; lead times are not sourced. |
+| `PWRHYD<z>` | 0.25 | Draft, no source | Large-hydro construction is slow; 1 GW over 4 years is already aggressive. |
+| `PWRGEO<z>` | 0.10 | Draft, no source | Small market. |
+| `PWRCOA<z>` | 0.0 | Policy | Federal coal phase-out; residual capacity retires separately. |
+| `TRN<from><to>` | 0.0 or link-specific | Stage 1 partial | Link ratings are reviewed in `policy-data-review.md` §5; asymmetric ratings need Stage 2. |
 
 Implementation notes:
 
@@ -192,19 +259,57 @@ Implementation notes:
 - If a technology is meant to be unbounded, omit the row and document the
   omission in `notes`. Do not write a huge sentinel value; it hides mistakes.
 
+**Source status.** “Sourced range” means a public source supports the
+envelope, not that the cap is policy-grade. Only wind, solar, gas, and nuclear
+have an observed anchor; bio, hydro, geothermal, coal, and transmission are
+drafts. `policy_grade` remains `false`.
+
+**Ranges are not schedules.** For wind and solar, pick `slow`, `central`, or
+`fast` and record the choice in `notes`; do not interpolate a range. The
+central draft above is 2.0/3.0/2.0 for wind and 0.2/0.5/0.2 for solar.
+
+**Lead times are missing.** The cap is annual new capacity, not commissioned
+capacity. No commissioning lag, queue, or manufacturing constraint was
+sourced; the model can build at the cap in the same year. This overstates the
+speed of response and is gap 6 in §2.2.1.
+
+#### 2.2.1 Remaining gaps after the narrow review
+
+`policy_grade` stays `false`. The following gates remain open:
+
+1. **Transmission and curtailment.** No network, no directional or asymmetric
+   link ratings, no simultaneous import/export, and no curtailment accounting.
+   See §3.1–§3.2.
+2. **Peak factor.** No national coincident peak and no provincial annual
+   demand; the 1.55 placeholder is withdrawn. The dry-run range is 1.20–1.30.
+3. **Source signoff.** The review records URLs and confidence, not a signed
+   source register with archived files and hashes. `source_status` remains
+   `pending`.
+4. **Oil and battery.** No oil capacity credit; storage and demand response
+   are not modelled. The 4h / 8h / 12h credits cannot be used until storage
+   sets exist.
+5. **Hydro, biomass, and nuclear credits.** 0.65 / 0.85 / 0.90 are drafts, not
+   sourced Canadian ELCC values.
+6. **Build lead times.** No commissioning lag, queue, or manufacturing data.
+7. **Provincial standards.** BC, Alberta, Saskatchewan, Quebec, and Atlantic
+   reserve margins were not extracted; the 15% value is national only.
+8. **Intertie conflicts.** The reviewed ON–MI `>3,010 MW` value conflicts with
+   the IESO 2024 table (1,500 export / 1,650 import); ON–NY and ON–QC directions
+   also need reconciliation.
+
 ### 2.3 Explicit caps by technology family
 
 | Family | Instrument | Draft policy-test treatment | Status |
 |---|---|---|---|
-| Wind (`PWRWND`) | `TotalTechnologyAnnualActivityUpperLimit` | 20% of each zone’s 2050 reference generation, as in `screening_v0`; ceiling is a scenario assumption, not policy. | Existing canonical reference. |
-| Solar (`PWRSOL`) | `TotalAnnualMaxCapacityInvestment` only | No total GW cap: no defensible Canadian siting/resource ceiling in current data. Build rate is the explicit control. | Data dependency. |
-| Nuclear (`PWRURN`) | `TotalAnnualMaxCapacityInvestment` (+ optional total cap) | Two modes: `no_new_nuclear` (0 GW/yr new build, observed residual preserved) or `build_rate_only` (0.30 GW/yr, no total cap). Mode is a scenario choice, not “policy” by itself. | Data dependency. |
+| Wind (`PWRWND`) | `TotalTechnologyAnnualActivityUpperLimit` | 20% of each zone’s 2050 reference generation, as in `screening_v0`; ceiling is a scenario assumption, not policy. Build-rate envelope is 2–6 GW/yr (§2.2). | Existing canonical reference plus sourced build range. |
+| Solar (`PWRSOL`) | `TotalAnnualMaxCapacityInvestment` only | 0.2–1.0 GW/yr envelope; 0.5 central draft. No total GW cap: no defensible Canadian siting/resource ceiling in current data. Build rate is the explicit control. | Sourced range; draft cap. |
+| Nuclear (`PWRURN`) | `TotalAnnualMaxCapacityInvestment` (+ optional total cap) | Two modes: `no_new_nuclear` (0 GW/yr new build, observed residual preserved) or `build_rate_only` (0.30 GW/yr scenario only, no total cap). The 0.30 rate is not sourced; the review supports 0 net new build. Mode is a scenario choice, not “policy” by itself. | Sourced historical; scenario choice. |
 | Bio power (`PWRBIO`) | `TotalTechnologyAnnualActivityUpperLimit` | 5% of each zone’s 2050 reference generation; 162.608451 PJ/yr total in the canonical reference. Scenario assumption, not policy. | Existing canonical reference. |
 | Woody residue (`PWRBCW`, `SUPBCWB1/2`) | Activity caps | Zonal BC caps: 43.523816 PJ/yr from 2028 (`SUPBCWB1` + `SUPBCWB2`). Supply potential, not policy. | Existing canonical reference. |
-| Hydro (`PWRHYD`) | Activity caps + build rate | `cap_2021` upper bounds per zone from canonical; 0.25 GW/yr build; credit 0.65. `fixed_2021` fixes both upper and lower bounds and is a scenario mode. | Existing reference plus draft build rate. |
+| Hydro (`PWRHYD`) | Activity caps + build rate | `cap_2021` upper bounds per zone from canonical; 0.25 GW/yr build (draft); credit 0.65 (draft). `fixed_2021` fixes both upper and lower bounds and is a scenario mode. | Existing reference plus draft build rate and draft credit. |
 | Switchgrass (`PWRBSW`) | Supply cap + build rate | Supply cap from WS3/FRESH; 0.15 GW/yr build. | Data dependency. |
 | Coal (`PWRCOA`) | Zero new build + residual retirement | 0 GW/yr build; residual -> 0 by 2030 (or province schedule). Do not set a 0 GW total cap while residual coal remains. | Baseline policy. |
-| Gas (`PWRNGS`) | Build rate | 1.0 GW/yr, no total cap; can be set to 0 in a no-new-gas scenario. | Draft. |
+| Gas (`PWRNGS`) | Build rate | 2.0 GW/yr observed anchor, no total cap; can be set to 0 in a no-new-gas scenario. | Draft cap, observed anchor. |
 | Transmission (`TRN`) | Link `TotalAnnualMaxCapacity` | Cap individual links at researched ratings; no network constraint. | Stage 1 partial / Stage 2 complete. |
 
 Important: the 5% PWRBIO cap, 20% wind cap, 0 GW nuclear cap in
@@ -260,7 +365,8 @@ What cannot be done without structural change:
   limits, contingency constraints, or deliverability.
 - **Asymmetric link ratings.** `TransmissionLinks` is a single GW tuple per
   pair; `build_params` writes the same value to both directions. Real
-  interties are often asymmetric.
+  interties are often asymmetric (BC–AB 1,200/1,000 MW; BC–US
+  3,150/2,000 MW; see `policy-data-review.md` §5).
 - **Firm vs non-firm capacity.** No contract or reliability class.
 - **New corridors.** The link list is hard-coded in `model_structure.py`;
   adding a corridor is a structure/data change, not a parameter row.
@@ -354,7 +460,7 @@ and `screening_v0` must remain untouched. Proposed:
   "method": "udc_national_peak_proxy",
   "enforcement": "udc",
   "schedule": {"2021": 1.0, "2025": 1.0, "2026": 1.15, "2070": 1.15},
-  "peak_factor": {"2021": 1.55, "2070": 1.55},
+  "peak_factor": {"2021": 1.25, "2070": 1.25},
   "native_rm3": {
     "enabled": true,
     "reserve_margin": 1.0,
@@ -372,6 +478,11 @@ until a timeslice model exists; `native_rm3.authoritative` must be `false`
 unless the native RM3 aggregation problem is fixed. Schedules interpolate
 linearly; use repeated boundary keys for a step.
 
+The `peak_factor` above is the 1.25 midpoint of the dry-run bound in §2.1.1,
+not a sourced national value. It must be replaced with a national
+coincident-peak factor before `policy_grade=true`; until then, `source_status`
+stays `pending`.
+
 ### 4.3 `capacity_credits`
 
 ```json
@@ -381,7 +492,7 @@ linearly; use repeated boundary keys for a step.
   "by_archetype": {
     "NGS": 0.95, "COA": 0.90, "URN": 0.90, "HYD": 0.65,
     "BIO": 0.85, "BSW": 0.85, "BCW": 0.85, "WND": 0.20,
-    "SOL": 0.05, "GEO": 0.80
+    "SOL": 0.15, "GEO": 0.80
   },
   "by_technology": {},
   "source_status": "pending",
@@ -395,6 +506,10 @@ must match an archetype or an explicit override. A technology value may be a
 scalar or a year schedule using the same interpolation rules as other
 schedules. Unlisted technologies get `default` (0), never an implicit 1.0.
 
+The credits are the §2.1 draft. Only `NGS`, `WND`, and `SOL` have a Canadian
+source anchor; `HYD`, `BIO`, `URN`, `COA`, and `GEO` are drafts. The IESO
+table's extracted column is `MRI`, not `ELCC`; see `policy-data-review.md` §2.
+
 ### 4.4 `build_rates`
 
 ```json
@@ -403,8 +518,9 @@ schedules. Unlisted technologies get `default` (0), never an implicit 1.0.
   "unit": "GW/yr",
   "by_technology": {
     "PWRWND<z>": {"2021": 2.0, "2030": 2.0, "2031": 3.0, "2050": 3.0, "2051": 2.0, "2070": 2.0},
-    "PWRSOL<z>": {"2021": 1.5, "2030": 1.5, "2031": 3.0, "2050": 3.0, "2051": 2.0, "2070": 2.0},
-    "PWRURN<z>": {"2021": 0.0, "2030": 0.0, "2031": 0.3, "2070": 0.3},
+    "PWRSOL<z>": {"2021": 0.2, "2030": 0.2, "2031": 0.5, "2050": 0.5, "2051": 0.2, "2070": 0.2},
+    "PWRURN<z>": {"2021": 0.0, "2070": 0.0},
+    "PWRNGS<z>": {"2021": 2.0, "2070": 2.0},
     "PWRBIO<z>": {"2021": 0.15, "2070": 0.15},
     "PWRBCW<z>": {"2021": 0.15, "2070": 0.15},
     "PWRBSW<z>": {"2021": 0.15, "2070": 0.15},
@@ -418,7 +534,9 @@ schedules. Unlisted technologies get `default` (0), never an implicit 1.0.
 Rules: each `<z>` pattern expands to all 13 zones; a pattern matching zero
 technologies is an error; schedules must cover 2021–2070 or explicitly
 declare a hold rule; values `>= 0`. Schedules interpolate linearly; the
-repeated boundary keys above turn the 2.0/3.0/2.0 wind envelope into steps.
+repeated boundary keys above turn the central wind and solar schedules into
+steps. These are one scenario inside the sourced envelopes, not the envelopes
+themselves; `source_status` stays `pending`.
 
 ### 4.5 `tech_caps`
 
@@ -447,7 +565,7 @@ repeated boundary keys above turn the 2.0/3.0/2.0 wind envelope into steps.
       "metric": "build_rate_only",
       "parameter": "TotalAnnualMaxCapacityInvestment",
       "schedule": null,
-      "note": "No total cap; 0 GW/yr in no_new_nuclear, 0.30 GW/yr otherwise."
+      "note": "No total cap; 0 GW/yr new build in the base policy case. 0.30 GW/yr is an optional scenario, not a sourced rate."
     },
     "PWRHYDQ1": {
       "metric": "activity_pj",
@@ -487,8 +605,9 @@ illustrative; production sets expand `<z>` patterns or list every zone.
 
 `mode` is `none`, `cap_2021`, or `fixed_2021`. `cap_2021` writes only the
 upper bound; `fixed_2021` writes the same value to the lower and upper bound
-and disables new hydro. The `hydro` block must agree with
-`tech_caps.PWRHYD<z>`; a mismatch is a schema error.
+and disables new hydro. The 0.65 credit is a draft; no Canadian ELCC source
+was found. The `hydro` block must agree with `tech_caps.PWRHYD<z>`; a mismatch
+is a schema error.
 
 ### 4.7 `carbon`
 
@@ -776,14 +895,16 @@ still false.
    policy package (carbon price + CER + provincial targets), or a stress
    test? The answer changes whether new nuclear is allowed, whether gas can
    be built, and which carbon instrument is required.
-2. **National or provincial reserve margin?** The current single-region
-   structure supports national only. A provincial standard needs Stage 2 or a
-   zonal capacity accounting method.
+2. **National or provincial reserve margin?** Stage 1 uses a 15% national
+   convention, with Ontario 15%, Manitoba 12%, and MISO 15% as evidence. The
+   current single-region structure supports national only. A provincial
+   standard needs Stage 2 or a zonal capacity accounting method.
 3. **Capacity credits:** should interties contribute firm capacity? If yes,
-   the credit must be tied to link ratings and firm contracts, which is a
-   Stage 2 dependency.
-4. **Hydro credit:** 0.65 is a placeholder. Is hydro treated as energy-limited
-   (low ELCC) or firm (high ELCC)? This materially changes the reserve margin.
+   the credit must be tied to the reviewed directional ratings and firm
+   contracts, which is a Stage 2 dependency.
+4. **Hydro credit:** 0.65 is a draft, not a sourced value. Is hydro treated as
+   energy-limited (low ELCC) or firm (high ELCC)? This materially changes the
+   reserve margin.
 5. **Biomass caps:** the 5% PWRBIO and BCW caps are supply/scenario
    assumptions, not policy. Should they be in `tech_caps` (model envelope) or
    in a separate `supply_assumptions` block?
@@ -800,13 +921,20 @@ still false.
 10. **Observed fleet:** when will the CER 2021 generator residual capacity be
     materialised in `runtime/osecan_model`? Until then, reserve margin results
     are not interpretable.
+11. **Peak factor:** what national coincident peak and provincial annual
+    demand series will replace the withdrawn 1.55? The review supports only a
+    1.20–1.30 dry-run bound.
+12. **IESO credit column:** which capacity-credit metric is intended, `MRI` or
+    `ELCC`? The reviewed values are the `MRI` column; the `ELCC` values differ.
 
 ---
 
 ## 9. Non-claims
 
-- This document does **not** define final policy values. The numbers marked
-  “draft” are placeholders to make the schema and tests concrete.
+- This document does **not** define final policy values. Values marked
+  “sourced anchor” or “sourced range” have a public source for at least one
+  jurisdiction; they are not policy-grade for Canada. Values marked “draft” are
+  placeholders to make the schema and tests concrete.
 - `policy_test_v1` is **not** policy-grade in Stage 1. It has no network, no
   timeslices, no curtailment, and no unit commitment.
 - Do not relabel `screening_v0` as `policy_test_v1` or as policy-grade.
