@@ -103,8 +103,8 @@ does not replace the canonical row.
 ## 3. Acceptance record
 
 **Acceptance date:** 2026-11-20. **Result:** PASS for the recorded code, UI, and
-runner checks below. The clean-checkout restore drill remains a publication
-gate; see §4.7.
+runner checks below. The clean-checkout restore drill passed on 2026-11-20; see
+[`docs/release-acceptance.md`](release-acceptance.md).
 
 | Area | Check | Recorded result | Evidence |
 |---|---|---|---|
@@ -118,6 +118,7 @@ gate; see §4.7.
 | Roles | `public` read-only; `analyst` writable; `model_builder`/`energy_modeller` guarded | PASS | `ui/qa/QA_REPORT.md` |
 | v1.2 deploy isolation | Two local instances on temporary runtime dirs/ports | PASS: distinct `0700` runtimes; analyst `allow_runs=true`; public `read_only=true`; public POST 403; no solver | Local smoke, 2026-11-20 |
 | Repository hygiene | No unexpected `D` status entries in recorded QA/handoff checks | PASS | QA reports |
+| Restore drill | Archive checkout, local data proxy, model rebuild, 119 Mm³ solve | PASS: tree hash `61dace92…`, objective 1,445,655.44 M$, 424.710127 Mt, 2050 0.0, dispatch `eeba3efd…` | `docs/release-acceptance.md` |
 
 The 3 m 42 s live API run used the `screening_119m` example before the fleet
 correction (objective 1,411,447.21 M$). It is **runner acceptance evidence**, not
@@ -335,9 +336,13 @@ is implementation evidence, not host/edge acceptance.
 
 ### 4.7 Restore drill
 
-Run this in a clean directory before public publication. The drill proves that
-the release is reconstructible from the repository, the DataLad remote, the
-model setup recipe, and the published artifacts.
+Run this in a clean directory before public publication. **Executed
+2026-11-20:** PASS for the archive checkout, local data materialization proxy,
+model rebuild, 119 Mm³ dry run, 119 Mm³ solve, static bundle, and public/analyst
+API role smoke. The run record, hashes, and remaining sub-gates are in
+[`docs/release-acceptance.md`](release-acceptance.md). A remote `datalad get`
+restore, a fresh virtualenv install, and deployment-host/edge checks were not
+repeated in that drill.
 
 1. **Clean checkout:** clone the release commit to a new directory, initialize
    the `data` submodule, create `.venv`, install `.[workflow,web]`, and retrieve
@@ -399,23 +404,29 @@ runtime is a deployment error.
   `docs/release-v1.md`); commit and tag are separate release actions.
 - [x] v1.2 per-instance launcher/template added; two-instance local smoke passed
   with distinct `0700` runtimes, distinct ports, role flags, and public 403.
-- [ ] Clean-checkout restore drill executed and signed in the handoff ledger.
+- [x] Clean-checkout restore drill executed and recorded
+  (`docs/release-acceptance.md`; local data proxy and shared environment).
 - [ ] Deployment-host smoke tests pass (systemd, tunnel, Access, public 403).
 - [ ] Host/edge v1.2 acceptance (A11) with per-instance service accounts and
   one Access policy per instance.
-- [ ] First publication ledger entry created with artifact hashes and labels.
+- [x] First publication ledger entry created with artifact hashes and labels
+  (`data/derived/national/clews/release/publication.json`; acceptance ledger,
+  not a curated public runtime publication).
 - [ ] Release tag and final sign-off recorded, if the project authorizes a tag.
 
 ## 6. Publication ledger
 
-No public runtime publication has been made from this package. Create the first
-row only after the restore drill and deployment smoke tests pass. One row per
-published artifact; do not publish analyst job paths, commands, pids, or event
-logs.
+No curated public runtime publication has been made from this package. The v1
+restore-drill acceptance ledger is recorded at
+`data/derived/national/clews/release/publication.json`; it is a release
+acceptance/publication ledger, not a curated runtime payload. Create a runtime
+row under `ui_publications/<release>/` only after the restore drill and
+deployment smoke tests pass. One row per published artifact; do not publish
+analyst job paths, commands, pids, or event logs.
 
 | Release | Date | Artifact path | Run/scenario IDs | SHA-256 | Label | Actor source | Notes |
 |---|---|---|---|---|---|---|---|
-| — | — | No entry yet | — | — | — | — | Publish after restore drill |
+| `clews-c2070-fresh-v1` | 2026-11-20 | `data/derived/national/clews/release/publication.json` | `screening_119m`; `policy_119m` (draft) | canonical dispatch `eeba3efd…4da96` | `screening_only`; `policy_grade=false` | automated release drill | Acceptance ledger only; curated runtime publication still gated |
 
 Ledger rules:
 
@@ -465,7 +476,8 @@ Give the receiving team:
 
 Next actions:
 
-1. Execute the clean-checkout restore drill and record it.
+1. Record the restore-drill sign-off (`docs/release-acceptance.md`) and close
+   the remaining remote-data, deployment-host, and runtime-publication gates.
 2. Smoke-test the public/analyst deployment on the prepared host.
 3. Publish the first curated runtime and create the first ledger entry.
 4. Review the `SUPBCW`/`B1`/`B2` interface with Taco Niet's team; classify any
