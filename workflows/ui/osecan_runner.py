@@ -756,6 +756,7 @@ def compute_supply_caps(
     if negative:
         raise RunnerError(f"BC zonal caps exceed the national total in {negative[:3]}")
 
+    tiered = scenario.harvest.supply_curve == SupplyCurveMode.TIERED
     all_tier_caps: dict[str, dict[int, float]] = {tech: {} for tech in TIER_TECHS}
     for year in YEARS:
         allocation = _tier_allocation(
@@ -763,8 +764,8 @@ def compute_supply_caps(
             t1_cap=canonical.tier_caps_pj["T1"],
             t2_cap=canonical.tier_caps_pj["T2"],
             t3_cap=canonical.tier_caps_pj["T3"],
-            t3_limit=float(scenario.energy.t3_cap_pj),
-            t4_limit=float(scenario.energy.t4_cap_pj),
+            t3_limit=float(scenario.energy.t3_cap_pj) if tiered else math.inf,
+            t4_limit=float(scenario.energy.t4_cap_pj) if tiered else math.inf,
             year=year,
         )
         for tier, technology in zip(("T1", "T2", "T3", "T4"), TIER_TECHS):
