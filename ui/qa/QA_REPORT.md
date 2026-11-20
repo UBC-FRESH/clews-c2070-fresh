@@ -195,3 +195,69 @@ Re-ran the same Chromium flow against the fixed tree with the live server on
 
 Updated screenshots: `run-static.png`, `run-complete.png`, `run-error.png`, and
 new `run-mobile.png`. Machine-readable evidence: `ui/qa/run_qa_results.json`.
+
+## Milestone-1d Explore pass (2026-11-20)
+
+**Scope:** new Explore view — parallel coordinates, Pareto front, and A/B
+comparison/delta — over the 26 published post-fix scenarios plus live session
+runs. Static fallback only; no data files were changed. `node --check` passes
+for `ui/app.js` and `ui/api.js`; the existing UI pytest suite is green (86
+passed).
+
+**Environment:** Chromium via `/tmp/ui-qa-venv`, Playwright 1.65.2, static
+server `python3 -m http.server 8017 --bind 127.0.0.1 -d ui`, viewports
+1440×1200 and 390×844 (`is_mobile`, `has_touch`). Browser flags:
+`--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist
+--disable-dev-shm-usage`.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Explore tab | **PASS** — 8 tabs total; Explore activates, sets `aria-selected`, exposes exactly one panel, and updates the hash. |
+| Parallel coordinates | **PASS** — **26** plotted scenario paths over **11** axes (objective, emissions, national BCW 2050, PWRBCW 2050, bio share, harvest, carbon price, recovery, PWRBIO cap, nuclear cap, wind cap/integration). |
+| Brushing / filtering | **PASS** — vertical drag on the emissions axis filtered to **4 of 26** visible, dimmed 22 paths, added one removable filter chip, and reset returned to 26 of 26. Axis click also clears its brush. |
+| Filter chips / form | **PASS** — removable chips; keyboard range form applies and rejects inverted ranges (`minimum must not exceed maximum`) without changing data. |
+| URL/hash state | **PASS** — the brush range, Pareto projections, and A/B pair are encoded in `#explore/...?brush=...`; a fresh page load restores the chip and the 4-of-26 status. |
+| Pareto front | **PASS** — defaults minimize objective, minimize cumulative emissions, maximize national BCW 2050; **17 on front / 26 evaluated** with no missing metrics. Dominance is computed on min–max normalized values. |
+| Pareto axes | **PASS** — projection X/Y and third objective are selectable and swap rather than silently duplicating a metric. |
+| Pareto click / badge | **PASS** — clicking a front point selected `emission_factor_fix__efix_baseline_119m`, updated the rail, overview, hash, and displayed the **ON FRONT** badge. |
+| Pareto CSV | **PASS** — export downloaded `pareto_front_iteration0.csv` with header `rank,scenario_id,label,family,grade,…` and **18 rows** (17 front rows + header). |
+| Comparison/delta | **PASS** — A/B selects, **6** metric rows, absolute and relative deltas, unit labels per row; defaults A `emission_factor_fix__efix_stress_119m`, B `pwrbio_cap__pwrbio_cap10_windint3_tier200`. First objective delta `+7,546.71` (`+0.6%`). |
+| Differing dimensions | **PASS** — **2 of 10** differ for the default pair (PWRBIO cap, wind cap/integration), listed as explicit chips. |
+| Dispatch overlay | **PASS** — optional overlay rendered an ECharts canvas for the electricity ledger (`Annual national PJ electricity · 2021—2070`); toggling hides it. Fuel-ledger absence is stated, not imputed. |
+| Live/session separation | **PASS (code path)** — live rows are dashed amber in parallel coordinates, diamonds/`screening_only` in tooltips and comparison badges; they are appended to Explore but never added to `state.eligible` or the 26-ID ledger. No live runner was started in this static pass. |
+| Mobile 390×844 | **PASS** — 8 tabs in a 4×2 grid (`scrollWidth === clientWidth === 303`), page width 390 with no horizontal overflow; parallel chart scrolls horizontally (968 px content / 332 px viewport); comparison table scrolls inside its wrapper (686 / 322). |
+| Console/page/HTTP errors | **PASS (unexpected)** — 0 page errors, 0 failed requests, 0 unexpected console errors or HTTP responses. The only console/HTTP entry is the intentional static-mode `/api/health` **404** used to select the static badge. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `parallel.png` | 11 parallel axes, emissions brush band, selected scenario, 22 dimmed paths, filter chip, 4-of-26 status |
+| `pareto.png` | 17-point highlighted front over 26 evaluated scenarios, selected point + ON FRONT badge |
+| `compare.png` | A/B table with absolute and relative deltas, units, and 2-of-10 differing-dimension chips |
+| `explore-mobile.png` | 390 px Explore panel: 4×2 tab grid, horizontally scrollable parallel chart and comparison table |
+
+Machine-readable evidence is in `ui/qa/qa_results.json` under `explore`.
+Screenshots were cropped from a full-page capture at scroll zero so the sticky
+tab bar appears only once; application styles were not altered for capture.
+
+### Live integration spot-check
+
+A separate QA-only run used the existing fake runner
+(`/tmp/ui-run-qa/fake_runner.py`, not a solver) behind
+`workflows.ui.server --port 8018 --allow-runs`. The UI reported
+`LIVE API · RUNNER READY`, created and completed one session run, and then
+opened Explore:
+
+| Check | Result |
+|---|---|
+| Explore rows | **PASS** — 27 parallel paths = 26 static eligible + **1** live session run; the live path carries `pc-line--live` and the legend gains `Live session · screening_only`. |
+| Pareto | **PASS** — `18 on front · 27 evaluated`; the live run participates without entering the 26-ID publishable ledger. |
+| Explore mode note | **PASS** — states that the live run is screening_only and excluded from the publishable ledger. |
+| A/B against live | **PASS** — B set to the live run; grade badges show `LIVE · SCREENING_ONLY` and `SCREENING_ONLY · NOT POLICY GRADE`; PWRBIO 2050 appears only for the live row and missing static deltas are suppressed as `—`. |
+| Errors | **0** page errors, **0** console errors in the live spot-check. |
+
+The fake runner is QA infrastructure only and is not committed; it does not
+represent a real solve or policy-grade result.

@@ -22,7 +22,7 @@ Live mode (same static files plus the API, SSE, and runner):
 ```
 
 If `/api/health` is unreachable the UI shows a **Static mode · no backend** badge,
-disables create/queue, and keeps all six precomputed views and OSeCAN exports.
+disables create/queue, and keeps all precomputed views and OSeCAN exports.
 If the API is up but `--allow-runs` is absent, the badge reads
 **Live API · runs disabled**; read-only mode disables mutations.
 
@@ -42,6 +42,19 @@ Plex Mono. No runtime CDN request is required.
 - **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for exactly
   the 26 flag-eligible post-fix scenarios; colour by family; superseded rows are
   explicitly excluded.
+- **Explore** — multi-criteria workspace over the same 26 eligible scenarios plus
+  any live session runs. Parallel coordinates cover 11 axes (objective,
+  emissions, national BCW, PWRBCW, bio share, harvest, carbon price, recovery,
+  PWRBIO cap, nuclear cap, wind cap/integration). Vertically brush an axis or use
+  the range form; every filter appears as a removable chip, and active filters
+  persist in the URL hash. A three-objective Pareto view defaults to minimize
+  objective, minimize cumulative emissions, and maximize national BCW 2050;
+  dominance is computed on min–max normalized metrics, the front can be exported
+  as CSV, and missing metrics are excluded with a visible label. Scenario A/B
+  comparison shows absolute and relative deltas with units, lists differing
+  dimensions, and offers an optional annual dispatch overlay for one energy
+  ledger at a time. Live session runs are dashed/marked `screening_only` and are
+  never folded into the 26-scenario publishable ledger.
 - **Map** — MapLibre with 13 provinces, 36 ecoprovinces, 385 RSYC tiles, and a
   `recoverable_pj_base` choropleth. Tile popups, layer toggles, zoom, fit button,
   and B1/B2 authoritative anchors. The 11 C2070 zones without authoritative
@@ -59,9 +72,12 @@ Plex Mono. No runtime CDN request is required.
 - **Inputs** — harvest reference paths, supply-curve tiers, and the
   managed-landbase proxy with caveats.
 
-Scenario selection in the left rail updates the overview, dispatch, and
-trade-off views. Filters include family chips and free-text search. Deep links
-use hashes such as `#dispatch/emission_factor_fix__efix_stress_119m`.
+Scenario selection in the left rail updates the overview, dispatch, trade-off,
+and Explore views. Filters include family chips and free-text search. Deep links
+use hashes such as `#dispatch/emission_factor_fix__efix_stress_119m`. Explore
+adds query parameters to the hash for brush ranges, Pareto projections, and the
+A/B pair, for example
+`#explore/emission_factor_fix__efix_stress_119m?brush=emissions_total%3A0.45%3A0.49&px=objective&py=emissions_total&pz=national_bcw_2050`.
 
 ## Data contract
 

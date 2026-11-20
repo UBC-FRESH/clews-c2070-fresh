@@ -81,6 +81,45 @@
     t4_cap_pj: 64.265464
   };
 
+  var PC_AXES = [
+    { id: 'objective', label: 'Objective', unit: 'M$', get: function (sc) { return finiteOrNull((sc.metrics || {}).objective); }, format: function (v) { return fmt(v, 2) + ' M$'; }, tick: function (v) { return fmtAxis(v); } },
+    { id: 'emissions_total', label: 'Emissions', unit: 'Mt CO₂ cumulative', get: function (sc) { return finiteOrNull((sc.metrics || {}).emissions_total); }, format: function (v) { return fmt(v, 3) + ' Mt CO₂'; }, tick: function (v) { return fmt(v, 2); } },
+    { id: 'national_bcw_2050', label: 'National BCW', unit: 'PJ fuel · 2050', get: function (sc) { return finiteOrNull((sc.metrics || {}).national_bcw_2050); }, format: function (v) { return fmt(v, 2) + ' PJ fuel'; }, tick: function (v) { return fmt(v, 0); } },
+    { id: 'pwrbcw_2050', label: 'PWRBCW', unit: 'PJ electricity · 2050', get: function (sc) { return finiteOrNull((sc.metrics || {}).pwrbcw_2050); }, format: function (v) { return fmt(v, 2) + ' PJ elec'; }, tick: function (v) { return fmt(v, 0); } },
+    { id: 'bio_share_2050', label: 'Bio share', unit: '% electricity · 2050', get: function (sc) { return finiteOrNull((sc.metrics || {}).bio_share_2050); }, format: function (v) { return fmtPct(v, 2); }, tick: function (v) { return fmtPct(v, 1); } },
+    { id: 'harvest', label: 'Harvest', unit: 'Mm³/yr', raw: function (sc) { var h = (sc.dimensions || {}).harvest; return h ? finiteOrNull(h.m3_per_year) : null; }, get: function (sc) { var h = (sc.dimensions || {}).harvest; return h ? finiteOrNull(h.m3_per_year) : null; }, format: function (v) { return fmt(v / 1e6, 2) + ' Mm³/yr'; }, tick: function (v) { return fmt(v / 1e6, 1); } },
+    { id: 'carbon_price_usd_per_t', label: 'Carbon price', unit: '$/t CO₂', raw: function (sc) { return finiteOrNull((sc.dimensions || {}).carbon_price_usd_per_t); }, get: function (sc) { return finiteOrNull((sc.dimensions || {}).carbon_price_usd_per_t); }, format: function (v) { return '$' + fmt(v, 2) + '/t'; }, tick: function (v) { return fmt(v, 0); } },
+    { id: 'recovery_fraction', label: 'Recovery', unit: 'fraction', raw: function (sc) { return finiteOrNull((sc.dimensions || {}).recovery_fraction); }, get: function (sc) { return finiteOrNull((sc.dimensions || {}).recovery_fraction); }, format: function (v) { return fmtPct(v, 1) + ' (' + fmt(v, 2) + ')'; }, tick: function (v) { return fmtPct(v, 0); } },
+    { id: 'pwrbio_cap', label: 'PWRBIO cap', unit: 'PJ · 0 = none/zero', raw: function (sc) { var v = (sc.dimensions || {}).pwrbio_cap; return v === null || v === undefined ? null : finiteOrNull(v); }, get: function (sc) { return pwrbioCapValue((sc.dimensions || {}).pwrbio_cap); }, format: function (v) { return fmt(v, 2) + ' PJ'; }, tick: function (v) { return fmt(v, 0); } },
+    { id: 'nuclear_cap_gw', label: 'Nuclear cap', unit: 'GW · 0 = none/zero', raw: function (sc) { return finiteOrNull((sc.dimensions || {}).nuclear_cap_gw); }, get: function (sc) { return nuclearCapValue((sc.dimensions || {}).nuclear_cap_gw); }, format: function (v) { return fmt(v, 2) + ' GW'; }, tick: function (v) { return fmt(v, 0); } },
+    { id: 'wind_cap', label: 'Wind cap/int', unit: '% · max of cap or integration', raw: function (sc) { var w = (sc.dimensions || {}).wind; if (!w || (w.cap === 'none' && w.integration_limit == null)) return null; return windCapValue(w); }, get: function (sc) { return windCapValue((sc.dimensions || {}).wind); }, format: function (v) { return fmt(v, 1) + '%'; }, tick: function (v) { return fmt(v, 0) + '%'; } }
+  ];
+  var PC_AXIS_BY_ID = {};
+  PC_AXES.forEach(function (axis) { PC_AXIS_BY_ID[axis.id] = axis; });
+
+  var PARETO_METRICS = [
+    { id: 'objective', label: 'Objective', unit: 'M$', get: PC_AXIS_BY_ID.objective.get, format: PC_AXIS_BY_ID.objective.format, higher: false },
+    { id: 'emissions_total', label: 'Cumulative emissions', unit: 'Mt CO₂', get: PC_AXIS_BY_ID.emissions_total.get, format: PC_AXIS_BY_ID.emissions_total.format, higher: false },
+    { id: 'national_bcw_2050', label: 'National BCW 2050', unit: 'PJ fuel', get: PC_AXIS_BY_ID.national_bcw_2050.get, format: PC_AXIS_BY_ID.national_bcw_2050.format, higher: true },
+    { id: 'pwrbcw_2050', label: 'PWRBCW 2050', unit: 'PJ electricity', get: PC_AXIS_BY_ID.pwrbcw_2050.get, format: PC_AXIS_BY_ID.pwrbcw_2050.format, higher: true },
+    { id: 'bio_share_2050', label: 'Bio share 2050', unit: 'share of electricity', get: PC_AXIS_BY_ID.bio_share_2050.get, format: PC_AXIS_BY_ID.bio_share_2050.format, higher: true },
+    { id: 'emissions_2050', label: 'Emissions 2050', unit: 'Mt CO₂', get: function (sc) { return finiteOrNull((sc.metrics || {}).emissions_2050); }, format: function (v) { return fmt(v, 3) + ' Mt CO₂'; }, higher: false },
+    { id: 'pwrbio_2050', label: 'PWRBIO 2050', unit: 'PJ electricity', get: function (sc) { return finiteOrNull((sc.metrics || {}).pwrbio_2050); }, format: function (v) { return fmt(v, 2) + ' PJ elec'; }, higher: true }
+  ];
+  var PARETO_BY_ID = {};
+  PARETO_METRICS.forEach(function (metric) { PARETO_BY_ID[metric.id] = metric; });
+  var PARETO_DEFAULTS = { x: 'objective', y: 'emissions_total', z: 'national_bcw_2050' };
+
+  var COMPARE_METRICS = [
+    { key: 'objective', label: 'Objective', unit: 'M$ (million USD)', digits: 2 },
+    { key: 'emissions_total', label: 'Cumulative emissions', unit: 'Mt CO₂ · 2021—2070', digits: 3 },
+    { key: 'emissions_2050', label: 'Emissions 2050', unit: 'Mt CO₂', digits: 3 },
+    { key: 'national_bcw_2050', label: 'National BCW 2050', unit: 'PJ fuel', digits: 2 },
+    { key: 'pwrbcw_2050', label: 'PWRBCW 2050', unit: 'PJ electricity', digits: 2 },
+    { key: 'bio_share_2050', label: 'Bio share 2050', unit: 'share of electricity', digits: 3, percent: true },
+    { key: 'pwrbio_2050', label: 'PWRBIO 2050', unit: 'PJ electricity', digits: 2, optional: true }
+  ];
+
   var state = {
     core: null,
     outputs: new Map(),
@@ -102,7 +141,20 @@
       processed: null
     },
     tradeoffChart: null,
+    paretoChart: null,
+    compareChart: null,
     harvestChart: null,
+    explore: {
+      brushes: {},
+      pareto: { x: PARETO_DEFAULTS.x, y: PARETO_DEFAULTS.y, z: PARETO_DEFAULTS.z },
+      compare: { a: null, b: null },
+      overlay: false,
+      energy: 'electricity',
+      overlayToken: 0,
+      lastFront: null,
+      formError: '',
+      resizeTimer: null
+    },
     mapState: {
       initialized: false,
       loading: false,
@@ -156,6 +208,29 @@
   function num(value) {
     var n = Number(value);
     return Number.isFinite(n) ? n : null;
+  }
+  function finiteOrNull(value) {
+    if (value === null || value === undefined || value === '') return null;
+    var n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  function pwrbioCapValue(value) {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'object') return finiteOrNull(value.total_pj);
+    return finiteOrNull(value);
+  }
+  function nuclearCapValue(value) {
+    return value === null || value === undefined ? 0 : finiteOrNull(value);
+  }
+  function windCapValue(value) {
+    if (!value || typeof value !== 'object') return 0;
+    var values = [];
+    [value.cap, value.integration_limit].forEach(function (raw) {
+      if (!raw || raw === 'none') return;
+      var match = /^([\d.]+)\s*(?:pct|%)/i.exec(String(raw));
+      if (match) values.push(Number(match[1]));
+    });
+    return values.length ? Math.max.apply(null, values) : 0;
   }
   function fmt(value, digits) {
     if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
@@ -369,6 +444,7 @@
 
     var defaultId = 'emission_factor_fix__efix_stress_119m';
     var hash = parseHash();
+    applyExploreHash(hash.params);
     var initialTab = hash.tab || 'overview';
     var initialId = hash.id && core.scenarioById.has(hash.id) ? hash.id : defaultId;
     if (!core.scenarioById.has(initialId)) initialId = core.scenarios.scenarios[0].scenario_id;
@@ -379,6 +455,7 @@
     bindRailToggle();
     bindTabs();
     bindDispatchControls();
+    bindExploreControls();
     bindOsecanControls();
     bindRunControls();
     renderOsecanStatic();
@@ -515,6 +592,7 @@
     if (state.dispatch.chart) state.dispatch.chart.clear();
     if (state.tab === 'dispatch') renderDispatch();
     if (state.tab === 'tradeoff') renderTradeoff();
+    if (state.tab === 'explore') renderExplore({ refreshOverlay: false });
     updateHash();
   }
 
@@ -702,7 +780,7 @@
   }
 
   function validTab(tab) {
-    return ['overview', 'dispatch', 'tradeoff', 'map', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
+    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
   }
 
   function activateTab(tab, options) {
@@ -722,6 +800,7 @@
     });
     if (state.tab === 'dispatch') renderDispatch();
     if (state.tab === 'tradeoff') renderTradeoff();
+    if (state.tab === 'explore') renderExplore();
     if (state.tab === 'map') initMap();
     if (state.tab === 'osecan') renderOsecan();
     if (state.tab === 'run') renderRunMode();
@@ -729,6 +808,10 @@
     window.requestAnimationFrame(function () {
       if (state.tab === 'dispatch' && state.dispatch.chart) state.dispatch.chart.resize();
       if (state.tab === 'tradeoff' && state.tradeoffChart) state.tradeoffChart.resize();
+      if (state.tab === 'explore') {
+        if (state.paretoChart) state.paretoChart.resize();
+        if (state.compareChart) state.compareChart.resize();
+      }
       if (state.tab === 'inputs' && state.harvestChart) state.harvestChart.resize();
       if (state.tab === 'map' && state.mapState.map) state.mapState.map.resize();
     });
@@ -786,20 +869,82 @@
     });
   }
 
+  function parseHashQuery(query) {
+    var out = {};
+    query.split('&').forEach(function (pair) {
+      if (!pair) return;
+      var split = pair.indexOf('=');
+      var key = split === -1 ? pair : pair.slice(0, split);
+      var value = split === -1 ? '' : pair.slice(split + 1);
+      try { out[decodeURIComponent(key)] = decodeURIComponent(value); } catch (error) { /* ignore malformed pair */ }
+    });
+    return out;
+  }
+
   function parseHash() {
     var raw = window.location.hash.replace(/^#/, '');
     if (!raw) return {};
+    var query = '';
+    var split = raw.indexOf('?');
+    if (split !== -1) {
+      query = raw.slice(split + 1);
+      raw = raw.slice(0, split);
+    }
     var parts = raw.split('/');
     var id = null;
     if (parts[1]) {
       try { id = decodeURIComponent(parts[1]); } catch (error) { id = parts[1]; }
     }
-    return { tab: parts[0] || null, id: id };
+    return { tab: parts[0] || null, id: id, params: parseHashQuery(query) };
+  }
+
+  function applyExploreHash(params) {
+    if (!params || !state.core) return;
+    if (params.brush) {
+      params.brush.split(';').forEach(function (chunk) {
+        var pieces = chunk.split(':');
+        if (pieces.length !== 3) return;
+        var axis = PC_AXIS_BY_ID[pieces[0]];
+        if (!axis) return;
+        var min = finiteOrNull(pieces[1]);
+        var max = finiteOrNull(pieces[2]);
+        if (min === null || max === null || min > max) return;
+        state.explore.brushes[axis.id] = { min: min, max: max };
+      });
+    }
+    var selected = [params.px, params.py, params.pz];
+    if (selected.every(function (id) { return id && PARETO_BY_ID[id]; }) && new Set(selected).size === 3) {
+      state.explore.pareto = { x: selected[0], y: selected[1], z: selected[2] };
+    }
+    if (params.a && state.core.scenarioById.has(params.a)) state.explore.compare.a = params.a;
+    if (params.b && state.core.scenarioById.has(params.b)) state.explore.compare.b = params.b;
+    if (params.ov === '1') state.explore.overlay = true;
+    if (params.en === 'fuel' || params.en === 'electricity') state.explore.energy = params.en;
+  }
+
+  function exploreHashQuery() {
+    var parts = [];
+    var brushed = PC_AXES.filter(function (axis) { return state.explore.brushes[axis.id]; });
+    if (brushed.length) {
+      parts.push('brush=' + encodeURIComponent(brushed.map(function (axis) {
+        var brush = state.explore.brushes[axis.id];
+        return axis.id + ':' + brush.min + ':' + brush.max;
+      }).join(';')));
+    }
+    parts.push('px=' + encodeURIComponent(state.explore.pareto.x));
+    parts.push('py=' + encodeURIComponent(state.explore.pareto.y));
+    parts.push('pz=' + encodeURIComponent(state.explore.pareto.z));
+    if (state.explore.compare.a) parts.push('a=' + encodeURIComponent(state.explore.compare.a));
+    if (state.explore.compare.b) parts.push('b=' + encodeURIComponent(state.explore.compare.b));
+    if (state.explore.overlay) parts.push('ov=1');
+    if (state.explore.energy !== 'electricity') parts.push('en=' + encodeURIComponent(state.explore.energy));
+    return parts.join('&');
   }
 
   function updateHash() {
     if (!state.core) return;
     var next = '#' + state.tab + '/' + encodeURIComponent(state.selectedId || '');
+    if (state.tab === 'explore') next += '?' + exploreHashQuery();
     if (window.location.hash !== next) {
       try { window.history.replaceState(null, '', next); } catch (error) { /* file:// may refuse */ }
     }
@@ -1329,6 +1474,1028 @@
       (state.live.sessionRuns.length ? ' · +' + state.live.sessionRuns.length + ' live session run(s), screening only' : '');
   }
 
+  /* ---------------- Explore: parallel coordinates, Pareto, compare ---------------- */
+
+  function exploreRows() {
+    return state.eligible.concat(state.live.sessionRuns);
+  }
+
+  function exploreIsLive(sc) {
+    return !!(sc && sc.liveRun);
+  }
+
+  function exploreGrade(sc) {
+    return exploreIsLive(sc) ? 'live · screening_only' : 'post-fix · publishable';
+  }
+
+  function explorePassesBrushes(sc) {
+    var ids = Object.keys(state.explore.brushes);
+    for (var i = 0; i < ids.length; i += 1) {
+      var axis = PC_AXIS_BY_ID[ids[i]];
+      if (!axis) continue;
+      var value = axis.get(sc);
+      if (value === null || value === undefined) return false;
+      var brush = state.explore.brushes[ids[i]];
+      if (value < brush.min || value > brush.max) return false;
+    }
+    return true;
+  }
+
+  function pcDomain(axis, rows) {
+    var values = [];
+    rows.forEach(function (sc) {
+      var value = axis.get(sc);
+      if (value !== null && value !== undefined && Number.isFinite(value)) values.push(value);
+    });
+    if (!values.length) return { min: 0, max: 1 };
+    var min = Math.min.apply(null, values);
+    var max = Math.max.apply(null, values);
+    if (max - min < 1e-12) {
+      var pad = Math.abs(max) * 0.02 || 1;
+      min -= pad;
+      max += pad;
+    }
+    return { min: min, max: max };
+  }
+
+  function pcAxisShortUnit(axis) {
+    var units = {
+      objective: 'M$',
+      emissions_total: 'Mt CO₂',
+      national_bcw_2050: 'PJ fuel',
+      pwrbcw_2050: 'PJ elec',
+      bio_share_2050: '% elec',
+      harvest: 'Mm³/yr',
+      carbon_price_usd_per_t: '$/t',
+      recovery_fraction: 'fraction',
+      pwrbio_cap: 'PJ',
+      nuclear_cap_gw: 'GW',
+      wind_cap: '%'
+    };
+    return units[axis.id] || axis.unit;
+  }
+
+  function pcLineTitle(sc) {
+    var bits = [sc.label, sc.scenario_id, exploreGrade(sc)];
+    ['objective', 'emissions_total', 'national_bcw_2050', 'bio_share_2050'].forEach(function (id) {
+      var axis = PC_AXIS_BY_ID[id];
+      var value = axis.get(sc);
+      bits.push(axis.label + ': ' + (value === null ? 'not set' : axis.format(value)));
+    });
+    return bits.join('\n');
+  }
+
+  function renderParallelCoordinates() {
+    var chart = $('pc-chart');
+    if (!chart || !state.core) return;
+    var rows = exploreRows();
+    var width = Math.max(960, chart.clientWidth || 0);
+    var height = 518;
+    var margin = { top: 106, right: 44, bottom: 34, left: 42 };
+    var plotWidth = width - margin.left - margin.right;
+    var plotHeight = height - margin.top - margin.bottom;
+    var stepX = PC_AXES.length > 1 ? plotWidth / (PC_AXES.length - 1) : 0;
+    var positions = PC_AXES.map(function (axis, index) { return margin.left + index * stepX; });
+    var domains = PC_AXES.map(function (axis) { return pcDomain(axis, rows); });
+    var brushIds = Object.keys(state.explore.brushes);
+    var visibleCount = 0;
+
+    function yFor(value, domain) {
+      var ratio = (value - domain.min) / (domain.max - domain.min);
+      return margin.top + plotHeight - Math.max(0, Math.min(1, ratio)) * plotHeight;
+    }
+
+    function valueForY(y, domain) {
+      var ratio = (margin.top + plotHeight - y) / plotHeight;
+      return domain.min + Math.max(0, Math.min(1, ratio)) * (domain.max - domain.min);
+    }
+
+    var svg = ['<svg viewBox="0 0 ' + width + ' ' + height + '" width="' + width + '" height="' + height + '" aria-hidden="true" focusable="false">'];
+
+    PC_AXES.forEach(function (axis, index) {
+      var x = positions[index];
+      var domain = domains[index];
+      var brushed = !!state.explore.brushes[axis.id];
+      svg.push('<line class="pc-axis-line' + (brushed ? ' is-brushed' : '') + '" x1="' + x + '" y1="' + margin.top + '" x2="' + x + '" y2="' + (margin.top + plotHeight) + '"/>');
+      for (var t = 0; t <= 2; t += 1) {
+        var tickValue = domain.min + (domain.max - domain.min) * (t / 2);
+        var tickY = yFor(tickValue, domain);
+        var anchor = index === PC_AXES.length - 1 ? 'end' : 'start';
+        var tickX = index === PC_AXES.length - 1 ? x - 7 : x + 7;
+        svg.push('<line class="pc-tick-line" x1="' + (x - 5) + '" y1="' + tickY.toFixed(1) + '" x2="' + (x + 5) + '" y2="' + tickY.toFixed(1) + '"/>');
+        svg.push('<text class="pc-tick" x="' + tickX + '" y="' + (tickY + 3).toFixed(1) + '" text-anchor="' + anchor + '">' + esc(axis.tick(tickValue)) + '</text>');
+      }
+      var labelAnchor = index === PC_AXES.length - 1 ? 'end' : 'start';
+      var labelX = index === PC_AXES.length - 1 ? x + 8 : x - 8;
+      svg.push('<text class="pc-axis-name" x="' + labelX + '" y="' + (margin.top - 26) + '" text-anchor="' + labelAnchor + '" transform="rotate(-38 ' + labelX + ' ' + (margin.top - 26) + ')">' + esc(axis.label + ' · ' + pcAxisShortUnit(axis)) + '</text>');
+    });
+
+    var ordered = rows.slice().sort(function (a, b) {
+      var pa = explorePassesBrushes(a) ? 1 : 0;
+      var pb = explorePassesBrushes(b) ? 1 : 0;
+      return pa - pb;
+    });
+
+    ordered.forEach(function (sc) {
+      var passes = explorePassesBrushes(sc);
+      if (passes) visibleCount += 1;
+      var path = '';
+      var penDown = false;
+      PC_AXES.forEach(function (axis, index) {
+        var value = axis.get(sc);
+        if (value === null || value === undefined || !Number.isFinite(value)) {
+          penDown = false;
+          return;
+        }
+        var x = positions[index];
+        var y = yFor(value, domains[index]);
+        path += (penDown ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+        penDown = true;
+      });
+      if (!path) return;
+      var classes = ['pc-line'];
+      if (!passes) classes.push('pc-line--filtered');
+      if (exploreIsLive(sc)) classes.push('pc-line--live');
+      if (sc.scenario_id === state.selectedId) classes.push('pc-line--selected');
+      var color = exploreIsLive(sc) ? '#e8a63c' : familyColor(sc.family);
+      svg.push('<path class="' + classes.join(' ') + '" d="' + path.trim() + '" stroke="' + color + '" data-scenario-id="' + esc(sc.scenario_id) + '"><title>' + esc(pcLineTitle(sc)) + '</title></path>');
+    });
+
+    brushIds.forEach(function (id) {
+      var index = PC_AXES.findIndex(function (axis) { return axis.id === id; });
+      if (index === -1) return;
+      var domain = domains[index];
+      var brush = state.explore.brushes[id];
+      var top = Math.min(yFor(brush.min, domain), yFor(brush.max, domain));
+      var bottom = Math.max(yFor(brush.min, domain), yFor(brush.max, domain));
+      var x = positions[index];
+      svg.push('<line class="pc-brush-guide" x1="' + margin.left + '" y1="' + top.toFixed(1) + '" x2="' + (width - margin.right) + '" y2="' + top.toFixed(1) + '"/>');
+      svg.push('<line class="pc-brush-guide" x1="' + margin.left + '" y1="' + bottom.toFixed(1) + '" x2="' + (width - margin.right) + '" y2="' + bottom.toFixed(1) + '"/>');
+      svg.push('<rect class="pc-brush" x="' + (x - 9) + '" y="' + top.toFixed(1) + '" width="18" height="' + Math.max(1, bottom - top).toFixed(1) + '"/>');
+    });
+
+    PC_AXES.forEach(function (axis, index) {
+      svg.push('<rect class="pc-axis-hit" data-axis="' + esc(axis.id) + '" x="' + (positions[index] - 12) + '" y="' + margin.top + '" width="24" height="' + plotHeight + '"/>');
+    });
+    svg.push('</svg>');
+    chart.innerHTML = svg.join('');
+
+    var svgEl = chart.querySelector('svg');
+    if (!svgEl) return;
+
+    svgEl.addEventListener('click', function (event) {
+      var target = event.target;
+      while (target && target !== svgEl && !target.getAttribute('data-scenario-id')) target = target.parentNode;
+      if (target && target !== svgEl) selectScenario(target.getAttribute('data-scenario-id'));
+    });
+
+    var drag = null;
+    var tempRect = null;
+    function pointerY(event) {
+      var point = svgEl.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      var matrix = svgEl.getScreenCTM();
+      if (!matrix) return null;
+      return point.matrixTransform(matrix.inverse()).y;
+    }
+    svgEl.addEventListener('pointerdown', function (event) {
+      var target = event.target;
+      while (target && target !== svgEl && !target.getAttribute('data-axis')) target = target.parentNode;
+      if (!target || target === svgEl) return;
+      var axisId = target.getAttribute('data-axis');
+      var index = PC_AXES.findIndex(function (axis) { return axis.id === axisId; });
+      if (index === -1) return;
+      var y = pointerY(event);
+      if (y === null) return;
+      event.preventDefault();
+      drag = { axisId: axisId, index: index, startY: Math.max(margin.top, Math.min(margin.top + plotHeight, y)) };
+      tempRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      tempRect.setAttribute('class', 'pc-brush-temp');
+      tempRect.setAttribute('x', String(positions[index] - 10));
+      tempRect.setAttribute('width', '20');
+      tempRect.setAttribute('y', String(drag.startY));
+      tempRect.setAttribute('height', '1');
+      svgEl.appendChild(tempRect);
+      try { svgEl.setPointerCapture(event.pointerId); } catch (error) { /* older pointer implementations */ }
+    });
+    svgEl.addEventListener('pointermove', function (event) {
+      if (!drag) return;
+      var y = pointerY(event);
+      if (y === null) return;
+      var current = Math.max(margin.top, Math.min(margin.top + plotHeight, y));
+      tempRect.setAttribute('y', String(Math.min(drag.startY, current)));
+      tempRect.setAttribute('height', String(Math.max(1, Math.abs(current - drag.startY))));
+    });
+    function finishBrush(event) {
+      if (!drag) return;
+      var y = pointerY(event);
+      var current = y === null ? drag.startY : Math.max(margin.top, Math.min(margin.top + plotHeight, y));
+      var domain = domains[drag.index];
+      var axis = PC_AXES[drag.index];
+      var start = drag.startY;
+      if (tempRect && tempRect.parentNode) tempRect.parentNode.removeChild(tempRect);
+      tempRect = null;
+      var moved = Math.abs(current - start);
+      drag = null;
+      if (moved < 5) {
+        delete state.explore.brushes[axis.id];
+        announce('Cleared the ' + axis.label + ' filter.');
+      } else {
+        var first = valueForY(start, domain);
+        var second = valueForY(current, domain);
+        state.explore.brushes[axis.id] = { min: Math.min(first, second), max: Math.max(first, second) };
+        announce('Filtered ' + axis.label + ' to ' + axis.format(Math.min(first, second)) + ' – ' + axis.format(Math.max(first, second)) + '.');
+      }
+      state.explore.formError = '';
+      renderParallelCoordinates();
+      updatePcFilterHint();
+      updateHash();
+    }
+    svgEl.addEventListener('pointerup', finishBrush);
+    svgEl.addEventListener('pointercancel', function () {
+      if (!drag) return;
+      if (tempRect && tempRect.parentNode) tempRect.parentNode.removeChild(tempRect);
+      tempRect = null;
+      drag = null;
+    });
+
+    renderPcAux(rows, visibleCount);
+  }
+
+  function renderPcAux(rows, visibleCount) {
+    var legend = $('pc-legend');
+    if (legend) {
+      var families = [];
+      rows.forEach(function (sc) {
+        if (!exploreIsLive(sc) && families.indexOf(sc.family) === -1) families.push(sc.family);
+      });
+      var order = state.core.scenarios.families.map(function (f) { return f.family; });
+      families.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+      var html = families.map(function (family) {
+        return '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:' + familyColor(family) + '"></span>' + esc(shortFamily(family)) + '</span>';
+      }).join('');
+      if (rows.some(exploreIsLive)) {
+        html += '<span class="pc-legend-item"><span class="pc-legend-swatch is-live" style="color:#e8a63c"></span>Live session · screening_only</span>';
+      }
+      html += '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:var(--paper);opacity:.5"></span>post-fix · publishable</span>';
+      legend.innerHTML = html;
+    }
+
+    var formError = state.explore.formError;
+    var brushIds = Object.keys(state.explore.brushes);
+    var missingOnBrush = 0;
+    if (brushIds.length) {
+      rows.forEach(function (sc) {
+        if (!explorePassesBrushes(sc)) {
+          var hasMissing = brushIds.some(function (id) { return PC_AXIS_BY_ID[id] && PC_AXIS_BY_ID[id].get(sc) === null; });
+          if (hasMissing) missingOnBrush += 1;
+        }
+      });
+    }
+
+    var chips = $('pc-chips');
+    if (chips) {
+      if (!brushIds.length) {
+        chips.innerHTML = '<span class="filter-empty">No filters — all scenarios visible. Drag an axis or use the range form.</span>';
+      } else {
+        chips.innerHTML = PC_AXES.filter(function (axis) { return state.explore.brushes[axis.id]; }).map(function (axis) {
+          var brush = state.explore.brushes[axis.id];
+          return '<span class="filter-chip"><span><b>' + esc(axis.label) + '</b> ' + esc(axis.format(brush.min)) + ' – ' + esc(axis.format(brush.max)) + '</span>' +
+            '<button type="button" data-axis="' + esc(axis.id) + '" aria-label="Remove ' + esc(axis.label) + ' filter">×</button></span>';
+        }).join('');
+      }
+    }
+
+    var status = $('pc-status');
+    if (status) {
+      var text = visibleCount + ' of ' + rows.length + ' visible · ' + state.eligible.length + ' static eligible + ' + state.live.sessionRuns.length + ' live';
+      if (brushIds.length) text += ' · ' + brushIds.length + ' axis filter' + (brushIds.length === 1 ? '' : 's');
+      if (missingOnBrush) text += ' · ' + missingOnBrush + ' hidden with missing filtered metrics';
+      if (formError) text = 'Filter not applied: ' + formError + ' · ' + text;
+      status.textContent = text;
+    }
+  }
+
+  function ensureParetoAxes() {
+    var pareto = state.explore.pareto;
+    var ids = [pareto.x, pareto.y, pareto.z];
+    var valid = ids.every(function (id) { return PARETO_BY_ID[id]; }) && new Set(ids).size === 3;
+    if (!valid) state.explore.pareto = { x: PARETO_DEFAULTS.x, y: PARETO_DEFAULTS.y, z: PARETO_DEFAULTS.z };
+  }
+
+  function paretoSelectOptions(selected, used) {
+    return PARETO_METRICS.map(function (metric) {
+      var usedElsewhere = used.indexOf(metric.id) !== -1 && metric.id !== selected;
+      return '<option value="' + esc(metric.id) + '"' + (metric.id === selected ? ' selected' : '') + '>' +
+        esc(metric.label + ' · ' + metric.unit + ' · ' + (metric.higher ? 'maximize' : 'minimize') + (usedElsewhere ? ' · swaps' : '')) + '</option>';
+    }).join('');
+  }
+
+  function syncParetoSelects() {
+    var pareto = state.explore.pareto;
+    var x = $('pareto-x');
+    var y = $('pareto-y');
+    var z = $('pareto-z');
+    if (!x || !y || !z) return;
+    x.innerHTML = paretoSelectOptions(pareto.x, [pareto.y, pareto.z]);
+    y.innerHTML = paretoSelectOptions(pareto.y, [pareto.x, pareto.z]);
+    z.innerHTML = paretoSelectOptions(pareto.z, [pareto.x, pareto.y]);
+    x.value = pareto.x;
+    y.value = pareto.y;
+    z.value = pareto.z;
+  }
+
+  function renderPareto() {
+    if (!state.core) return;
+    ensureParetoAxes();
+    syncParetoSelects();
+    var chartEl = $('pareto-chart');
+    var guard = $('pareto-guard');
+    var countEl = $('pareto-count');
+    var selectedEl = $('pareto-selected');
+    if (!chartEl || !countEl || !selectedEl) return;
+    var pareto = state.explore.pareto;
+    var metrics = [PARETO_BY_ID[pareto.x], PARETO_BY_ID[pareto.y], PARETO_BY_ID[pareto.z]];
+    var rows = exploreRows();
+    var complete = [];
+    var missing = [];
+    rows.forEach(function (sc) {
+      var values = metrics.map(function (metric) { return metric.get(sc); });
+      var absent = metrics.filter(function (metric, index) { return values[index] === null; });
+      if (absent.length) missing.push({ sc: sc, fields: absent.map(function (metric) { return metric.label; }) });
+      else complete.push({ sc: sc, raw: values, score: [] });
+    });
+
+    var normalized = metrics.map(function (metric, index) {
+      var values = complete.map(function (row) { return row.raw[index]; });
+      var min = values.length ? Math.min.apply(null, values) : 0;
+      var max = values.length ? Math.max.apply(null, values) : 1;
+      return values.map(function (value) {
+        return max - min < 1e-12 ? 0.5 : (value - min) / (max - min);
+      });
+    });
+    complete.forEach(function (row, rowIndex) {
+      row.score = metrics.map(function (metric, index) {
+        var norm = normalized[index][rowIndex];
+        return metric.higher ? 1 - norm : norm;
+      });
+    });
+
+    function dominates(a, b) {
+      var strict = false;
+      for (var i = 0; i < a.score.length; i += 1) {
+        if (a.score[i] > b.score[i] + 1e-12) return false;
+        if (a.score[i] < b.score[i] - 1e-12) strict = true;
+      }
+      return strict;
+    }
+
+    complete.forEach(function (row, index) {
+      row.front = !complete.some(function (other, otherIndex) {
+        return otherIndex !== index && dominates(other, row);
+      });
+    });
+
+    var frontRows = complete.filter(function (row) { return row.front; });
+    var xi = 0;
+    var yi = 1;
+    var selected = state.core.scenarioById.get(state.selectedId);
+    var frontIds = new Set(frontRows.map(function (row) { return row.sc.scenario_id; }));
+
+    if (guard) {
+      if (missing.length) {
+        guard.hidden = false;
+        guard.textContent = 'Excluded from the front for missing selected objectives: ' + missing.map(function (item) {
+          return item.sc.label + ' (' + item.fields.join(', ') + ')';
+        }).join('; ') + '. Missing metrics are never imputed.';
+      } else {
+        guard.hidden = true;
+        guard.textContent = '';
+      }
+    }
+
+    if (!window.echarts) {
+      chartEl.innerHTML = '<div class="empty-state" style="display:grid">ECharts failed to load. Check vendor/echarts.min.js.</div>';
+      countEl.textContent = frontRows.length + ' on front · chart unavailable';
+      return;
+    }
+
+    if (!state.paretoChart) {
+      state.paretoChart = window.echarts.init(chartEl, null, { renderer: 'canvas' });
+      state.paretoChart.on('click', function (params) {
+        var meta = params && params.data && params.data.meta;
+        if (!meta || !meta.id) return;
+        selectScenario(meta.id);
+      });
+    }
+
+    function point(row, onFront) {
+      var sc = row.sc;
+      var isSelected = sc.scenario_id === state.selectedId;
+      return {
+        value: [row.raw[xi], row.raw[yi]],
+        name: sc.label,
+        symbol: onFront ? 'diamond' : 'circle',
+        symbolSize: isSelected ? (onFront ? 22 : 16) : (onFront ? 17 : 10),
+        itemStyle: {
+          color: exploreIsLive(sc) ? '#a94f31' : familyColor(sc.family),
+          borderColor: isSelected ? '#17251d' : (onFront ? '#f2b45c' : '#fbf6e9'),
+          borderWidth: isSelected ? 4 : (onFront ? 3 : 1),
+          shadowBlur: onFront ? 12 : 0,
+          shadowColor: 'rgba(217,138,43,0.5)'
+        },
+        meta: {
+          id: sc.scenario_id,
+          label: sc.label,
+          family: shortFamily(sc.family),
+          grade: exploreGrade(sc),
+          front: onFront,
+          metrics: metrics.map(function (metric, index) {
+            return { label: metric.label, unit: metric.unit, text: metric.format(row.raw[index]) };
+          })
+        }
+      };
+    }
+
+    var dominated = complete.filter(function (row) { return !row.front; }).map(function (row) { return point(row, false); });
+    var front = frontRows.map(function (row) { return point(row, true); });
+    var unitNote = function (metric) { return metric.unit + ' · ' + (metric.higher ? 'maximize' : 'minimize'); };
+
+    state.paretoChart.setOption({
+      animationDuration: 480,
+      textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
+      grid: { left: 86, right: 34, top: 52, bottom: 66, containLabel: true },
+      legend: {
+        bottom: 0,
+        left: 'center',
+        itemWidth: 11,
+        itemHeight: 8,
+        textStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#435347' }
+      },
+      tooltip: {
+        trigger: 'item',
+        confine: true,
+        backgroundColor: '#0c1f19',
+        borderColor: '#d98a2b',
+        borderWidth: 1,
+        padding: 0,
+        textStyle: { color: '#f3ead7', fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 12 },
+        formatter: function (params) {
+          var meta = params.data && params.data.meta;
+          if (!meta) return '';
+          return '<div class="chart-tip"><div class="chart-tip-head"><span>' + esc(meta.id) + '</span></div>' +
+            '<div class="chart-tip-title">' + esc(meta.label) + '</div>' +
+            '<div class="chart-tip-sub">' + esc(meta.family) + ' · ' + esc(meta.grade) + '</div>' +
+            meta.metrics.map(function (item) {
+              return '<div class="chart-tip-kv"><span>' + esc(item.label + ' (' + item.unit + ')') + '</span><b>' + esc(item.text) + '</b></div>';
+            }).join('') +
+            '<div class="chart-tip-kv"><span>Pareto status</span><b>' + (meta.front ? 'on front' : 'dominated') + '</b></div></div>';
+        }
+      },
+      xAxis: {
+        type: 'value',
+        name: metrics[xi].label + ' (' + unitNote(metrics[xi]) + ')',
+        nameLocation: 'middle',
+        nameGap: 38,
+        scale: true,
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#435347' },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: fmtAxis },
+        splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } },
+        axisLine: { lineStyle: { color: '#b8a57e' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: metrics[yi].label + ' (' + unitNote(metrics[yi]) + ')',
+        nameLocation: 'middle',
+        nameGap: 58,
+        scale: true,
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#435347' },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: fmtAxis },
+        splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } },
+        axisLine: { show: false }
+      },
+      series: [
+        { name: 'Dominated', type: 'scatter', data: dominated, emphasis: { scale: 1.5 } },
+        { name: 'Pareto front', type: 'scatter', data: front, z: 3, emphasis: { scale: 1.4 } }
+      ]
+    }, true);
+    state.paretoChart.resize();
+
+    state.explore.lastFront = {
+      metrics: metrics,
+      rows: frontRows.slice().sort(function (a, b) {
+        return a.raw[xi] - b.raw[xi] || a.raw[yi] - b.raw[yi];
+      })
+    };
+
+    var labelText = frontRows.length + ' on front · ' + complete.length + ' evaluated · ' +
+      (missing.length ? missing.length + ' excluded for missing metrics' : 'no missing metrics') +
+      ' · dominance on min–max normalized values';
+    countEl.textContent = labelText;
+
+    if (selected) {
+      var onFront = frontIds.has(selected.scenario_id);
+      selectedEl.innerHTML = 'Selected <strong>' + esc(selected.label) + '</strong> ' +
+        '<span class="badge ' + (onFront ? 'badge--front' : 'badge--plain') + '">' + (onFront ? 'on front' : 'not on front') + '</span> ' +
+        '<span class="badge badge--plain">' + esc(exploreGrade(selected)) + '</span>';
+    } else {
+      selectedEl.textContent = 'Select a point to load its scenario.';
+    }
+  }
+
+  function exportParetoFront() {
+    var model = state.explore.lastFront;
+    if (!model || !model.rows.length) {
+      announce('No Pareto front rows to export.');
+      return;
+    }
+    var header = ['rank', 'scenario_id', 'label', 'family', 'grade'].concat(model.metrics.map(function (metric) {
+      return metric.label + ' (' + metric.unit + ')';
+    }));
+    var rows = model.rows.map(function (row, index) {
+      return [index + 1, row.sc.scenario_id, row.sc.label, row.sc.family, exploreGrade(row.sc)].concat(row.raw.map(function (value) {
+        return Number.isFinite(value) ? String(value) : '';
+      }));
+    });
+    downloadCsvWithHeader('pareto_front_iteration0.csv', header, rows);
+  }
+
+  function compareRows() {
+    return state.core.scenarios.scenarios.concat(state.live.sessionRuns);
+  }
+
+  function orderedCompareRows() {
+    var order = new Map();
+    state.core.scenarios.families.forEach(function (family, index) { order.set(family.family, index); });
+    return compareRows().slice().sort(function (a, b) {
+      if (exploreIsLive(a) !== exploreIsLive(b)) return exploreIsLive(a) ? 1 : -1;
+      var familyDelta = (order.get(a.family) || 0) - (order.get(b.family) || 0);
+      if (familyDelta !== 0) return familyDelta;
+      return a.label.localeCompare(b.label);
+    });
+  }
+
+  function ensureCompareSelection() {
+    var ids = new Set(compareRows().map(function (sc) { return sc.scenario_id; }));
+    var preferredA = 'emission_factor_fix__efix_stress_119m';
+    var preferredB = 'pwrbio_cap__pwrbio_cap10_windint3_tier200';
+    if (!state.explore.compare.a || !ids.has(state.explore.compare.a)) {
+      state.explore.compare.a = ids.has(preferredA) ? preferredA : (state.selectedId || null);
+    }
+    if (!state.explore.compare.b || !ids.has(state.explore.compare.b)) {
+      state.explore.compare.b = state.selectedId && state.selectedId !== state.explore.compare.a
+        ? state.selectedId
+        : (ids.has(preferredB) ? preferredB : null);
+    }
+    if (!state.explore.compare.a) {
+      var first = compareRows()[0];
+      state.explore.compare.a = first ? first.scenario_id : null;
+    }
+    if (!state.explore.compare.b) {
+      var second = compareRows()[1];
+      state.explore.compare.b = second ? second.scenario_id : state.explore.compare.a;
+    }
+  }
+
+  function populateCompareSelects() {
+    var selectA = $('compare-a');
+    var selectB = $('compare-b');
+    if (!selectA || !selectB) return;
+    var order = new Map();
+    state.core.scenarios.families.forEach(function (family, index) { order.set(family.family, index); });
+    var staticRows = state.core.scenarios.scenarios.slice().sort(function (a, b) {
+      var familyDelta = (order.get(a.family) || 0) - (order.get(b.family) || 0);
+      if (familyDelta !== 0) return familyDelta;
+      return a.label.localeCompare(b.label);
+    });
+    function options(rows) {
+      return rows.map(function (sc) {
+        return '<option value="' + esc(sc.scenario_id) + '">' + esc(sc.label + ' · ' + shortFamily(sc.family)) + '</option>';
+      }).join('');
+    }
+    var html = '<optgroup label="Committed ledger · ' + staticRows.length + ' scenarios">' + options(staticRows) + '</optgroup>';
+    if (state.live.sessionRuns.length) {
+      html += '<optgroup label="Session runs · screening_only">' + options(state.live.sessionRuns) + '</optgroup>';
+    }
+    selectA.innerHTML = html;
+    selectB.innerHTML = html;
+    selectA.value = state.explore.compare.a;
+    selectB.value = state.explore.compare.b;
+  }
+
+  function compareMetricValue(metric, sc) {
+    return finiteOrNull((sc.metrics || {})[metric.key]);
+  }
+
+  function compareDisplay(metric, value) {
+    if (value === null) return '—';
+    return metric.percent ? fmtPct(value, 3) : fmt(value, metric.digits);
+  }
+
+  function compareDelta(metric, a, b) {
+    var delta = b - a;
+    if (metric.percent) {
+      return {
+        absolute: (delta >= 0 ? '+' : '') + fmt(delta * 100, 3) + ' pp',
+        relative: a === 0 ? 'n/a (A = 0)' : (delta >= 0 ? '+' : '') + fmt(delta / Math.abs(a) * 100, 1) + '%',
+        numeric: delta
+      };
+    }
+    return {
+      absolute: (delta >= 0 ? '+' : '') + fmt(delta, metric.digits),
+      relative: a === 0 ? 'n/a (A = 0)' : (delta >= 0 ? '+' : '') + fmt(delta / Math.abs(a) * 100, 1) + '%',
+      numeric: delta
+    };
+  }
+
+  function dimensionSnapshot(sc) {
+    var dims = sc.dimensions || {};
+    var harvest = dims.harvest || {};
+    var wind = dims.wind || {};
+    var pwrbio = dims.pwrbio_cap;
+    var pwrbioText = 'not set';
+    if (pwrbio !== null && pwrbio !== undefined) {
+      if (typeof pwrbio === 'object' && pwrbio.total_pj !== undefined) {
+        pwrbioText = (pwrbio.basis || 'cap') + ' · ' + fmt(pwrbio.total_pj, 2) + ' PJ';
+      } else if (typeof pwrbio === 'object' && pwrbio.fraction !== undefined) {
+        pwrbioText = (pwrbio.basis || 'fraction') + ' · ' + fmtPct(pwrbio.fraction, 1);
+      } else {
+        pwrbioText = 'cap · ' + fmt(pwrbio, 2) + ' PJ';
+      }
+    }
+    return [
+      { label: 'Harvest', value: harvest.level ? harvest.level + ' · ' + fmt(harvest.m3_per_year / 1e6, 2) + ' Mm³/yr' : 'not set' },
+      { label: 'Carbon price', value: dims.carbon_price_usd_per_t === null || dims.carbon_price_usd_per_t === undefined ? 'not set' : '$' + fmt(dims.carbon_price_usd_per_t, 2) + '/t' },
+      { label: 'Bio cost', value: dims.bio_cost_usd_per_gj === null || dims.bio_cost_usd_per_gj === undefined ? 'not set' : '$' + fmt(dims.bio_cost_usd_per_gj, 2) + '/GJ' },
+      { label: 'Recovery', value: dims.recovery_fraction === null || dims.recovery_fraction === undefined ? 'not set' : fmtPct(dims.recovery_fraction, 1) },
+      { label: 'Supply curve', value: dims.supply_curve || 'not set' },
+      { label: 'Hydro', value: dims.hydro_mode || 'not set' },
+      { label: 'PWRBIO cap', value: pwrbioText },
+      { label: 'Nuclear cap', value: dims.nuclear_cap_gw === null || dims.nuclear_cap_gw === undefined ? 'not set' : fmt(dims.nuclear_cap_gw, 2) + ' GW' },
+      { label: 'Wind cap/int', value: (wind.cap || 'none') + ' · ' + (wind.integration_limit == null ? 'no integration limit' : wind.integration_limit) + ' · $' + fmt(wind.cost_usd_per_gj, 2) + '/GJ' },
+      { label: 'Zero tiers', value: Array.isArray(dims.zero_tiers) && dims.zero_tiers.length ? dims.zero_tiers.join(', ') : 'none' }
+    ];
+  }
+
+  function compareDimensionRows(a, b) {
+    var left = dimensionSnapshot(a);
+    var right = dimensionSnapshot(b);
+    var differing = [];
+    var same = [];
+    left.forEach(function (item, index) {
+      var other = right[index];
+      if (item.value === other.value) same.push(item.label);
+      else differing.push({ label: item.label, a: item.value, b: other.value });
+    });
+    return { differing: differing, same: same };
+  }
+
+  function renderCompare() {
+    if (!state.core) return;
+    ensureCompareSelection();
+    populateCompareSelects();
+    var a = state.core.scenarioById.get(state.explore.compare.a);
+    var b = state.core.scenarioById.get(state.explore.compare.b);
+    var table = $('compare-table');
+    var grade = $('compare-grade');
+    var dims = $('compare-dims');
+    var status = $('compare-status');
+    if (!a || !b || !table || !grade || !dims || !status) return;
+
+    grade.innerHTML =
+      '<span class="badge">A · ' + esc(shortFamily(a.family)) + ' · ' + esc(exploreGrade(a)) + '</span>' +
+      '<span class="badge">B · ' + esc(shortFamily(b.family)) + ' · ' + esc(exploreGrade(b)) + '</span>' +
+      (a.scenario_id === b.scenario_id ? '<span class="badge badge--live">A and B are the same scenario</span>' : '') +
+      (exploreIsLive(a) || exploreIsLive(b) ? '<span class="badge badge--live">screening_only · not policy grade</span>' : '');
+
+    var rows = COMPARE_METRICS.filter(function (metric) {
+      if (!metric.optional) return true;
+      return compareMetricValue(metric, a) !== null || compareMetricValue(metric, b) !== null;
+    });
+
+    var body = rows.map(function (metric) {
+      var av = compareMetricValue(metric, a);
+      var bv = compareMetricValue(metric, b);
+      var delta = av === null || bv === null ? null : compareDelta(metric, av, bv);
+      var cls = delta && Math.abs(delta.numeric) > 1e-12 ? (delta.numeric > 0 ? 'is-pos' : 'is-neg') : '';
+      return '<tr data-metric="' + esc(metric.key) + '">' +
+        '<th scope="row">' + esc(metric.label) + '<span class="unit">' + esc(metric.unit) + '</span></th>' +
+        '<td>' + esc(compareDisplay(metric, av)) + '</td>' +
+        '<td>' + esc(compareDisplay(metric, bv)) + '</td>' +
+        '<td class="' + cls + '">' + esc(delta ? delta.absolute : '—') + '</td>' +
+        '<td class="' + cls + '">' + esc(delta ? delta.relative : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    table.innerHTML = '<caption>Deltas are B − A. Relative delta uses |A|; it is shown as n/a when A = 0. Units are per row; — means the metric is missing and deltas are suppressed.</caption>' +
+      '<thead><tr><th scope="col">Metric</th>' +
+      '<th scope="col">A <span class="mono muted small">' + esc(a.scenario_id) + '</span></th>' +
+      '<th scope="col">B <span class="mono muted small">' + esc(b.scenario_id) + '</span></th>' +
+      '<th scope="col">Δ absolute</th><th scope="col">Δ relative</th></tr></thead>' +
+      '<tbody>' + body + '</tbody>';
+
+    var diff = compareDimensionRows(a, b);
+    var diffHtml = diff.differing.map(function (item) {
+      return '<span class="diff-chip"><b>' + esc(item.label) + '</b> ' + esc(item.a) + ' → ' + esc(item.b) + '</span>';
+    }).join('');
+    if (!diff.differing.length) diffHtml = '<span class="diff-chip diff-chip--same">All 10 dimensions identical</span>';
+    dims.innerHTML = '<span class="kicker">Differing dimensions · ' + diff.differing.length + ' of 10</span>' + diffHtml;
+
+    status.textContent = 'Comparing ' + rows.length + ' metrics · ' + diff.differing.length + ' differing dimensions · ' +
+      (exploreIsLive(a) || exploreIsLive(b) ? 'one or both runs are live screening_only' : 'both runs are committed post-fix scenarios');
+  }
+
+  function aggregateLedger(output, energy) {
+    var processed;
+    try {
+      processed = processDispatch(output, energy);
+    } catch (error) {
+      return null;
+    }
+    if (!processed) return null;
+    var rows = filterDispatchRows(processed, 'ALL');
+    var totals = new Map();
+    rows.forEach(function (row) {
+      totals.set(row.year, (totals.get(row.year) || 0) + row.value);
+    });
+    return {
+      unit: processed.unit,
+      values: YEARS.map(function (year) { return totals.has(year) ? totals.get(year) : null; }),
+      note: processed.selection.note
+    };
+  }
+
+  function loadOverlayOutput(id) {
+    return getOutput(id).then(function (output) {
+      return { ok: true, output: output };
+    }, function (error) {
+      return { ok: false, error: error && error.message ? error.message : String(error) };
+    });
+  }
+
+  function renderCompareOverlay() {
+    var frame = $('compare-overlay-frame');
+    var note = $('compare-overlay-note');
+    if (!frame || !note) return;
+    if (!state.explore.overlay) {
+      frame.hidden = true;
+      if (state.compareChart) state.compareChart.clear();
+      return;
+    }
+    frame.hidden = false;
+    var token = ++state.explore.overlayToken;
+    var aId = state.explore.compare.a;
+    var bId = state.explore.compare.b;
+    var a = state.core.scenarioById.get(aId);
+    var b = state.core.scenarioById.get(bId);
+    if (!a || !b) {
+      note.textContent = 'Select two scenarios to overlay dispatch.';
+      return;
+    }
+    note.textContent = 'Loading dispatch outputs for A and B…';
+    var energy = state.explore.energy;
+    Promise.all([loadOverlayOutput(aId), loadOverlayOutput(bId)]).then(function (results) {
+      if (token !== state.explore.overlayToken || !state.explore.overlay) return;
+      var left = results[0].ok ? aggregateLedger(results[0].output, energy) : null;
+      var right = results[1].ok ? aggregateLedger(results[1].output, energy) : null;
+      if (!left && !right) {
+        note.textContent = 'No ' + energy + ' ledger is available for either scenario. ' + (results[0].error || results[1].error || '');
+        if (state.compareChart) state.compareChart.clear();
+        return;
+      }
+      if (!window.echarts) {
+        note.textContent = 'ECharts failed to load; dispatch overlay is unavailable.';
+        return;
+      }
+      if (!state.compareChart) state.compareChart = window.echarts.init($('compare-overlay-chart'), null, { renderer: 'canvas' });
+      var unit = left ? left.unit : right.unit;
+      var series = [];
+      if (left) {
+        series.push({
+          name: 'A · ' + a.label,
+          type: 'line',
+          data: left.values,
+          showSymbol: false,
+          lineStyle: { width: 2.6, color: '#d98a2b' },
+          itemStyle: { color: '#d98a2b' },
+          areaStyle: { color: 'rgba(217,138,43,0.08)' }
+        });
+      }
+      if (right) {
+        series.push({
+          name: 'B · ' + b.label,
+          type: 'line',
+          data: right.values,
+          showSymbol: false,
+          lineStyle: { width: 2.2, color: '#4f7d80', type: left && right ? 'dashed' : 'solid' },
+          itemStyle: { color: '#4f7d80' }
+        });
+      }
+      state.compareChart.setOption({
+        animationDuration: 420,
+        textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
+        grid: { left: 64, right: 28, top: 46, bottom: 44, containLabel: true },
+        legend: {
+          top: 0,
+          left: 0,
+          itemWidth: 14,
+          itemHeight: 8,
+          textStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#435347' }
+        },
+        tooltip: {
+          trigger: 'axis',
+          confine: true,
+          backgroundColor: '#0c1f19',
+          borderColor: '#d98a2b',
+          borderWidth: 1,
+          textStyle: { color: '#f3ead7', fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 12 },
+          valueFormatter: function (value) { return fmt(value, 2) + ' ' + unit; }
+        },
+        xAxis: {
+          type: 'category',
+          data: YEARS.map(String),
+          axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c', interval: 9 },
+          axisLine: { lineStyle: { color: '#b8a57e' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: unit,
+          scale: true,
+          nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#435347' },
+          axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c', formatter: fmtAxis },
+          splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } }
+        },
+        series: series
+      }, true);
+      state.compareChart.resize();
+      var skipped = [];
+      if (!left) skipped.push('A has no ' + energy + ' ledger');
+      if (!right) skipped.push('B has no ' + energy + ' ledger');
+      note.textContent = 'Annual national ' + unit + ' · 2021—2070 · ' +
+        (left ? left.note : '') + (right && right.note !== (left && left.note) ? ' ' + right.note : '') +
+        (skipped.length ? ' · ' + skipped.join('; ') : '') +
+        (a.scenario_id === b.scenario_id ? ' · A and B are the same scenario' : '');
+    });
+  }
+
+  function updatePcFilterHint() {
+    var select = $('pc-axis-select');
+    var min = $('pc-min');
+    var max = $('pc-max');
+    if (!select || !min || !max) return;
+    var axis = PC_AXIS_BY_ID[select.value] || PC_AXES[0];
+    var domain = pcDomain(axis, exploreRows());
+    var brush = state.explore.brushes[axis.id];
+    min.placeholder = String(Number(domain.min.toPrecision(8)));
+    max.placeholder = String(Number(domain.max.toPrecision(8)));
+    min.value = brush ? String(brush.min) : '';
+    max.value = brush ? String(brush.max) : '';
+  }
+
+  function bindExploreControls() {
+    var form = $('pc-filter-form');
+    var axisSelect = $('pc-axis-select');
+    if (axisSelect && !axisSelect.options.length) {
+      axisSelect.innerHTML = PC_AXES.map(function (axis) {
+        return '<option value="' + esc(axis.id) + '">' + esc(axis.label + ' · ' + pcAxisShortUnit(axis)) + '</option>';
+      }).join('');
+    }
+    if (axisSelect) {
+      axisSelect.addEventListener('change', function () {
+        state.explore.formError = '';
+        updatePcFilterHint();
+      });
+    }
+    if (form) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var axis = PC_AXIS_BY_ID[axisSelect.value];
+        var min = finiteOrNull($('pc-min').value);
+        var max = finiteOrNull($('pc-max').value);
+        if (!axis) {
+          state.explore.formError = 'choose an axis';
+        } else if (min === null || max === null) {
+          state.explore.formError = 'enter finite minimum and maximum values';
+        } else if (min > max) {
+          state.explore.formError = 'minimum must not exceed maximum';
+        } else {
+          state.explore.brushes[axis.id] = { min: min, max: max };
+          state.explore.formError = '';
+          announce('Filtered ' + axis.label + ' to ' + axis.format(min) + ' – ' + axis.format(max) + '.');
+        }
+        renderParallelCoordinates();
+        updatePcFilterHint();
+        updateHash();
+      });
+    }
+    var chips = $('pc-chips');
+    if (chips) {
+      chips.addEventListener('click', function (event) {
+        var button = event.target.closest('button[data-axis]');
+        if (!button) return;
+        delete state.explore.brushes[button.getAttribute('data-axis')];
+        renderParallelCoordinates();
+        updatePcFilterHint();
+        updateHash();
+        announce('Removed filter.');
+      });
+    }
+    var reset = $('pc-reset');
+    if (reset) {
+      reset.addEventListener('click', function () {
+        state.explore.brushes = {};
+        state.explore.formError = '';
+        renderParallelCoordinates();
+        updatePcFilterHint();
+        updateHash();
+        announce('Reset all parallel-coordinate filters.');
+      });
+    }
+    ['x', 'y', 'z'].forEach(function (position) {
+      var select = $('pareto-' + position);
+      if (!select) return;
+      select.addEventListener('change', function () {
+        var previous = state.explore.pareto[position];
+        var chosen = select.value;
+        ['x', 'y', 'z'].forEach(function (other) {
+          if (other !== position && state.explore.pareto[other] === chosen) state.explore.pareto[other] = previous;
+        });
+        state.explore.pareto[position] = chosen;
+        ensureParetoAxes();
+        renderPareto();
+        updateHash();
+      });
+    });
+    var exportButton = $('pareto-export');
+    if (exportButton) exportButton.addEventListener('click', exportParetoFront);
+    var selectA = $('compare-a');
+    var selectB = $('compare-b');
+    if (selectA) {
+      selectA.addEventListener('change', function () {
+        state.explore.compare.a = selectA.value;
+        renderCompare();
+        if (state.explore.overlay) renderCompareOverlay();
+        updateHash();
+      });
+    }
+    if (selectB) {
+      selectB.addEventListener('change', function () {
+        state.explore.compare.b = selectB.value;
+        renderCompare();
+        if (state.explore.overlay) renderCompareOverlay();
+        updateHash();
+      });
+    }
+    var toggle = $('compare-overlay-toggle');
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        state.explore.overlay = !state.explore.overlay;
+        toggle.setAttribute('aria-pressed', state.explore.overlay ? 'true' : 'false');
+        toggle.textContent = state.explore.overlay ? 'Hide dispatch overlay' : 'Show dispatch overlay';
+        renderCompareOverlay();
+        updateHash();
+      });
+    }
+    var energy = $('compare-energy');
+    if (energy) {
+      energy.value = state.explore.energy;
+      energy.addEventListener('change', function () {
+        state.explore.energy = energy.value;
+        if (state.explore.overlay) renderCompareOverlay();
+        updateHash();
+      });
+    }
+    updatePcFilterHint();
+  }
+
+  function renderExplore(options) {
+    if (!state.core) return;
+    var note = $('explore-mode-note');
+    if (note) {
+      if (state.live.sessionRuns.length) {
+        note.hidden = false;
+        note.textContent = state.live.sessionRuns.length + ' live session run(s) are included as dashed amber lines and diamonds. ' +
+          'They are screening_only and are excluded from the 26-scenario publishable ledger.';
+      } else {
+        note.hidden = true;
+        note.textContent = '';
+      }
+    }
+    ensureParetoAxes();
+    renderParallelCoordinates();
+    renderPareto();
+    renderCompare();
+    var toggle = $('compare-overlay-toggle');
+    if (toggle) {
+      toggle.setAttribute('aria-pressed', state.explore.overlay ? 'true' : 'false');
+      toggle.textContent = state.explore.overlay ? 'Hide dispatch overlay' : 'Show dispatch overlay';
+    }
+    var energy = $('compare-energy');
+    if (energy) energy.value = state.explore.energy;
+    if (state.explore.overlay && (!options || options.refreshOverlay !== false)) renderCompareOverlay();
+  }
+
   /* ---------------- Map ---------------- */
 
   function quantileBreaks(values, count) {
@@ -1717,8 +2884,8 @@
     return text;
   }
 
-  function downloadCsv(filename, rows) {
-    var lines = ['REGION,TECHNOLOGY,YEAR,VALUE'];
+  function downloadCsvWithHeader(filename, header, rows) {
+    var lines = [header.map(csvCell).join(',')];
     rows.forEach(function (row) {
       lines.push(row.map(csvCell).join(','));
     });
@@ -1732,6 +2899,10 @@
     link.remove();
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
     announce('Downloaded ' + filename);
+  }
+
+  function downloadCsv(filename, rows) {
+    downloadCsvWithHeader(filename, ['REGION', 'TECHNOLOGY', 'YEAR', 'VALUE'], rows);
   }
 
   function exportActivityLimits() {
@@ -2407,13 +3578,13 @@
         zero_tiers: zeroTiers
       },
       metrics: {
-        objective: num(metrics.objective),
-        emissions_total: num(metrics.emissions_total),
-        emissions_2050: num(metrics.emissions_2050),
-        national_bcw_2050: num(metrics.national_bcw_2050),
-        pwrbcw_2050: num(metrics.pwrbcw_2050),
-        pwrbio_2050: num(metrics.pwrbio_2050),
-        bio_share_2050: num(metrics.bio_share_2050),
+        objective: finiteOrNull(metrics.objective),
+        emissions_total: finiteOrNull(metrics.emissions_total),
+        emissions_2050: finiteOrNull(metrics.emissions_2050),
+        national_bcw_2050: finiteOrNull(metrics.national_bcw_2050),
+        pwrbcw_2050: finiteOrNull(metrics.pwrbcw_2050),
+        pwrbio_2050: finiteOrNull(metrics.pwrbio_2050),
+        bio_share_2050: finiteOrNull(metrics.bio_share_2050),
         bio_share_basis: metrics.bio_share_basis || 'derived_from_dispatch_2050',
         solver_status: metrics.solver_status || summary.solver_status || 'completed'
       },
@@ -2436,6 +3607,7 @@
     renderHeader(state.core);
     renderScenarioList();
     if (state.tab === 'tradeoff') renderTradeoff();
+    if (state.tab === 'explore') renderExplore();
     if (state.selectedId === railId) renderOverview();
   }
 
@@ -2777,6 +3949,14 @@
     if (state.tradeoffChart) state.tradeoffChart.resize();
     if (state.harvestChart) state.harvestChart.resize();
     if (state.mapState.map) state.mapState.map.resize();
+    if (state.tab === 'explore') {
+      if (state.paretoChart) state.paretoChart.resize();
+      if (state.compareChart) state.compareChart.resize();
+      window.clearTimeout(state.explore.resizeTimer);
+      state.explore.resizeTimer = window.setTimeout(function () {
+        if (state.tab === 'explore') renderParallelCoordinates();
+      }, 140);
+    }
   });
 
   init();

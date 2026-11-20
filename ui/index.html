@@ -80,6 +80,7 @@
           <button class="tab is-active" id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" data-tab="overview" type="button">Overview</button>
           <button class="tab" id="tab-dispatch" role="tab" aria-selected="false" aria-controls="panel-dispatch" data-tab="dispatch" tabindex="-1" type="button">Dispatch</button>
           <button class="tab" id="tab-tradeoff" role="tab" aria-selected="false" aria-controls="panel-tradeoff" data-tab="tradeoff" tabindex="-1" type="button">Trade-off</button>
+          <button class="tab" id="tab-explore" role="tab" aria-selected="false" aria-controls="panel-explore" data-tab="explore" tabindex="-1" type="button">Explore</button>
           <button class="tab" id="tab-map" role="tab" aria-selected="false" aria-controls="panel-map" data-tab="map" tabindex="-1" type="button">Map</button>
           <button class="tab" id="tab-osecan" role="tab" aria-selected="false" aria-controls="panel-osecan" data-tab="osecan" tabindex="-1" type="button">OSeCAN Links</button>
           <button class="tab" id="tab-run" role="tab" aria-selected="false" aria-controls="panel-run" data-tab="run" tabindex="-1" type="button">Run</button>
@@ -144,6 +145,99 @@
           <p class="method-note">X: objective, M$ (million USD). Y: cumulative emissions, Mt CO₂. Colour: scenario family. Hover for labels; click a point or select in the rail to load that scenario.</p>
           <p class="mono small" id="tradeoff-count"></p>
         </div>
+      </section>
+
+      <section class="panel" id="panel-explore" role="tabpanel" aria-labelledby="tab-explore" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Multi-criteria workspace</p>
+            <h2>Explore the trade space</h2>
+          </div>
+          <p class="panel-deck">The 26 published post-fix scenarios plus live session runs. Every filter is visible as a removable chip and survives in the URL hash; live runs stay screening-only and never enter the publishable ledger.</p>
+        </div>
+        <div id="explore-mode-note" class="guard-note" hidden></div>
+
+        <section class="explore-block explore-block--pc" aria-labelledby="pc-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Eleven dimensions</p>
+              <h3 id="pc-title">Parallel coordinates</h3>
+            </div>
+            <p class="explore-hint">Drag vertically on an axis to brush; click an axis to clear. Lines break where a metric is absent — nothing is imputed. Absent PWRBIO/nuclear caps plot at 0, which also means an explicit zero cap; the axis unit says so.</p>
+          </div>
+          <div class="pc-legend" id="pc-legend" aria-label="Scenario family colours"></div>
+          <div class="pc-scroll">
+            <div class="pc-chart" id="pc-chart" role="img" aria-describedby="pc-status" aria-label="Parallel coordinates plot of eligible scenarios across objective, emissions, national biomass, power biomass, bio share, harvest, carbon price, recovery, PWRBIO cap, nuclear cap, and wind cap"></div>
+          </div>
+          <div class="pc-controls">
+            <div class="filter-chips" id="pc-chips" role="group" aria-label="Active parallel-coordinate filters"></div>
+            <form class="filter-form" id="pc-filter-form" aria-label="Add a parallel-coordinate range filter">
+              <label>Axis <select id="pc-axis-select"></select></label>
+              <label>Min <input id="pc-min" type="number" step="any" inputmode="decimal"></label>
+              <label>Max <input id="pc-max" type="number" step="any" inputmode="decimal"></label>
+              <button class="button button--quiet" type="submit">Apply filter</button>
+              <button class="button button--quiet" type="button" id="pc-reset">Reset filters</button>
+            </form>
+          </div>
+          <p class="mono small explore-status" id="pc-status" aria-live="polite"></p>
+        </section>
+
+        <section class="explore-block" aria-labelledby="pareto-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Nondominated set</p>
+              <h3 id="pareto-title">Pareto front</h3>
+            </div>
+            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. Points outside the front remain as context.</p>
+          </div>
+          <div class="pareto-controls">
+            <label>Projection X <select id="pareto-x"></select></label>
+            <label>Projection Y <select id="pareto-y"></select></label>
+            <label>Third objective <select id="pareto-z"></select></label>
+            <button class="button button--quiet" id="pareto-export" type="button">Export front CSV</button>
+          </div>
+          <div id="pareto-guard" class="guard-note" hidden></div>
+          <div class="chart-frame chart-frame--scatter">
+            <div class="chart" id="pareto-chart" role="img" aria-describedby="pareto-count pareto-selected" aria-label="Pareto scatter plot with nondominated scenarios highlighted"></div>
+          </div>
+          <div class="chart-foot chart-foot--split">
+            <p class="method-note" id="pareto-selected" aria-live="polite">Select a point to load its scenario.</p>
+            <p class="mono small" id="pareto-count"></p>
+          </div>
+        </section>
+
+        <section class="explore-block" aria-labelledby="compare-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Side by side</p>
+              <h3 id="compare-title">Scenario comparison &amp; deltas</h3>
+            </div>
+            <p class="explore-hint">Absolute and relative deltas are computed from the committed metrics. Differing dimensions are listed explicitly rather than hidden in the table.</p>
+          </div>
+          <div class="compare-controls">
+            <label class="compare-pick">Scenario A <select id="compare-a"></select></label>
+            <label class="compare-pick">Scenario B <select id="compare-b"></select></label>
+          </div>
+          <div id="compare-grade" class="compare-grade"></div>
+          <div class="table-wrap" id="compare-table-wrap">
+            <table class="data-table compare-table" id="compare-table"></table>
+          </div>
+          <div class="compare-dims" id="compare-dims" aria-live="polite"></div>
+          <div class="compare-overlay-controls">
+            <button class="button button--quiet" id="compare-overlay-toggle" type="button" aria-pressed="false" aria-controls="compare-overlay-frame">Show dispatch overlay</button>
+            <label class="select-field">Ledger
+              <select id="compare-energy">
+                <option value="electricity">Electricity · PJ electricity</option>
+                <option value="fuel">Fuel · PJ fuel</option>
+              </select>
+            </label>
+          </div>
+          <div class="chart-frame chart-frame--dispatch compare-overlay" id="compare-overlay-frame" hidden>
+            <div class="chart" id="compare-overlay-chart" role="img" aria-label="Dispatch overlay for the two compared scenarios"></div>
+            <p class="mono small" id="compare-overlay-note"></p>
+          </div>
+          <p class="mono small explore-status" id="compare-status" aria-live="polite"></p>
+        </section>
       </section>
 
       <section class="panel" id="panel-map" role="tabpanel" aria-labelledby="tab-map" tabindex="0" hidden>

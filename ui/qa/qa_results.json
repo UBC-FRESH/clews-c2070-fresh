@@ -109,7 +109,7 @@
         "hash": "#tradeoff/emission_factor_fix__efix_stress_119m"
       },
       "guardHidden": true,
-      "count": "26 eligible \u00b7 21 excluded (21 superseded, 2 diagnostic) \u00b7 expected ledger 26",
+      "count": "26 eligible · 21 excluded (21 superseded, 2 diagnostic) · expected ledger 26",
       "canvas": [
         {
           "width": 1030,
@@ -269,7 +269,7 @@
         "bc": "43.53",
         "rest": "65.89",
         "cost": "$2.457",
-        "validation": "\u2713 tier-sum validated \u00b7 4 tiers = 213.538 PJ \u00b7 max reconciliation residual 0.000000 PJ"
+        "validation": "✓ tier-sum validated · 4 tiers = 213.538 PJ · max reconciliation residual 0.000000 PJ"
       },
       "familyRows": 15,
       "familyRowTexts": [
@@ -331,7 +331,7 @@
       ],
       "tierTableRows": 6,
       "managedRows": 14,
-      "summary": "SCENARIOS / OUTPUTS\n47 / 47\nrecords\n47 scenario contracts \u00b7 47 columnar outputs\nHARVEST TEMPLATE\n750\nrows\n13 provinces \u00b7 50 years\nSUPPLY TIER SUM\n213.54\nPJ fuel\nterminal upper bound \u00b7 reconciles\nMANAGED PROXY\n166.3\nMha\nscreening only \u2014 not legal THLB"
+      "summary": "SCENARIOS / OUTPUTS\n47 / 47\nrecords\n47 scenario contracts · 47 columnar outputs\nHARVEST TEMPLATE\n750\nrows\n13 provinces · 50 years\nSUPPLY TIER SUM\n213.54\nPJ fuel\nterminal upper bound · reconciles\nMANAGED PROXY\n166.3\nMha\nscreening only — not legal THLB"
     }
   },
   "badges": {
@@ -612,5 +612,180 @@
   ],
   "pageerrors": [],
   "failed_requests": [],
-  "http_errors": []
+  "http_errors": [],
+  "explore": {
+    "generated_utc": "2026-11-20",
+    "mode": "static",
+    "base_url": "http://127.0.0.1:8017/",
+    "tab_count": 8,
+    "tabs": [
+      "OVERVIEW",
+      "DISPATCH",
+      "TRADE-OFF",
+      "EXPLORE",
+      "MAP",
+      "OSECAN LINKS",
+      "RUN",
+      "INPUTS"
+    ],
+    "parallel": {
+      "paths": 26,
+      "axes": 11,
+      "status": "4 of 26 visible · 26 static eligible + 0 live · 1 axis filter",
+      "chips": [
+        "Emissions 0.483 Mt CO₂ – 0.518 Mt CO₂\n×"
+      ],
+      "filteredPaths": 22,
+      "hash": "#explore/emission_factor_fix__efix_stress_119m?brush=emissions_total%3A0.48252847291710266%3A0.5181715949387323&px=objective&py=emissions_total&pz=national_bcw_2050&a=emission_factor_fix__efix_stress_119m&b=pwrbio_cap__pwrbio_cap10_windint3_tier200",
+      "restoredChips": [
+        "Emissions 0.483 Mt CO₂ – 0.518 Mt CO₂\n×"
+      ],
+      "restoredStatus": "4 of 26 visible · 26 static eligible + 0 live · 1 axis filter"
+    },
+    "pareto": {
+      "frontCount": 17,
+      "status": "17 on front · 26 evaluated · no missing metrics · dominance on min–max normalized values",
+      "clicked": {
+        "pixel": [
+          213.38393279999946,
+          319.63553333333334
+        ],
+        "id": "emission_factor_fix__efix_baseline_119m",
+        "label": "119M base baseline: $95->115/t, normal hydro"
+      },
+      "selectedMeta": "119M base baseline: $95->115/t, normal hydro · Emission factor fix · post-fix",
+      "selectedBadge": "Selected 119M base baseline: $95->115/t, normal hydro ON FRONT POST-FIX · PUBLISHABLE",
+      "hash": "#explore/emission_factor_fix__efix_baseline_119m?brush=emissions_total%3A0.48252847291710266%3A0.5181715949387323&px=objective&py=emissions_total&pz=national_bcw_2050&a=emission_factor_fix__efix_stress_119m&b=pwrbio_cap__pwrbio_cap10_windint3_tier200",
+      "csvRows": 18,
+      "csvHeader": [
+        "rank",
+        "scenario_id",
+        "label",
+        "family",
+        "grade",
+        "Objective (M$)",
+        "Cumulative emissions (Mt CO₂)",
+        "National BCW 2050 (PJ fuel)"
+      ]
+    },
+    "compare": {
+      "rows": 6,
+      "grade": "A · EMISSION FACTOR FIX · POST-FIX · PUBLISHABLE\nB · PWRBIO CAP · POST-FIX · PUBLISHABLE",
+      "dims": "DIFFERING DIMENSIONS · 2 OF 10\nPWRBIO cap not set → 10pct_zone_generation · 325.22 PJ\nWind cap/int none · no integration limit · $0.00/GJ → none · 3pct · $3.00/GJ",
+      "firstDelta": "+7,546.71",
+      "overlayNote": "Annual national PJ electricity · 2021—2070 · aggregate dispatch table."
+    },
+    "desktop_overflow": {
+      "doc": 1440,
+      "win": 1440
+    },
+    "mobile": {
+      "viewport": "390x844",
+      "tabs": {
+        "tabs": 8,
+        "scrollWidth": 303,
+        "clientWidth": 303,
+        "height": 62.71875,
+        "bottom": 454.046875
+      },
+      "overflow": {
+        "doc": 390,
+        "win": 390
+      },
+      "pcScroll": {
+        "scrollWidth": 968,
+        "clientWidth": 332
+      },
+      "compareTableWrap": {
+        "scrollWidth": 686,
+        "clientWidth": 322
+      },
+      "screenshot": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/explore-mobile.png",
+        "size": [
+          354,
+          3475
+        ]
+      },
+      "console": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+        }
+      ],
+      "pageerrors": [],
+      "failedRequests": [],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:8017/api/health",
+          "status": 404
+        }
+      ]
+    },
+    "screenshots": {
+      "parallel": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/parallel.png",
+        "size": [
+          1031,
+          860
+        ]
+      },
+      "pareto": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/pareto.png",
+        "size": [
+          1031,
+          878
+        ]
+      },
+      "compare": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/compare.png",
+        "size": [
+          1031,
+          730
+        ]
+      }
+    },
+    "console": [
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+      }
+    ],
+    "pageerrors": [],
+    "failed_requests": [],
+    "http_errors": [
+      {
+        "url": "http://127.0.0.1:8017/api/health",
+        "status": 404
+      }
+    ],
+    "summary": {
+      "consoleErrorsUnexpected": [],
+      "consoleErrorsMobileUnexpected": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:8017/api/health",
+          "status": 404
+        },
+        {
+          "url": "http://127.0.0.1:8017/api/health",
+          "status": 404
+        }
+      ],
+      "httpErrorsUnexpected": [],
+      "expectedStaticHealthProbe": [
+        {
+          "url": "http://127.0.0.1:8017/api/health",
+          "status": 404
+        },
+        {
+          "url": "http://127.0.0.1:8017/api/health",
+          "status": 404
+        }
+      ],
+      "pass": true
+    }
+  }
 }
