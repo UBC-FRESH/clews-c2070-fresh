@@ -89,6 +89,20 @@
         <div class="tab-meta" id="tab-scenario-meta" aria-live="polite"></div>
       </div>
 
+      <div class="time-deck" id="time-deck" role="group" aria-label="Shared year control">
+        <button class="time-play" id="year-play" type="button" aria-label="Play years" aria-pressed="false">▶</button>
+        <div class="time-slider-wrap">
+          <div class="time-head">
+            <span class="time-kicker">Shared year</span>
+            <output class="time-readout" id="year-global-out" for="year-global">2050</output>
+            <span class="time-window" id="year-window-note">window 2021—2070</span>
+          </div>
+          <input id="year-global" type="range" min="2021" max="2070" step="1" value="2050" aria-label="Shared year, 2021 to 2070">
+          <div class="time-scale" aria-hidden="true"><span>2021</span><span>2035</span><span>2050</span><span>2060</span><span>2070</span></div>
+        </div>
+        <button class="time-reset" id="year-reset" type="button">Reset to 2050</button>
+      </div>
+
       <section class="panel is-active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
         <div id="overview-content">
           <div class="skeleton-block">Reading scenario ledger…</div>
@@ -127,6 +141,19 @@
           <p id="dispatch-source-note" class="method-note">Source category and units will appear after the scenario output loads.</p>
           <div class="swatch-legend" id="dispatch-legend" aria-label="Technology family colours"></div>
         </div>
+
+        <section class="year-snapshot" aria-labelledby="snapshot-title">
+          <div class="year-snapshot-head">
+            <div>
+              <p class="kicker">Shared-year slice</p>
+              <h3 id="snapshot-title">Dispatch snapshot</h3>
+            </div>
+            <p class="year-snapshot-caption" id="dispatch-snapshot-caption">The shared year control selects the snapshot year. The year-window sliders above still control the chart extent.</p>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table data-table--compact" id="dispatch-snapshot" aria-live="polite"></table>
+          </div>
+        </section>
       </section>
 
       <section class="panel" id="panel-tradeoff" role="tabpanel" aria-labelledby="tab-tradeoff" tabindex="0" hidden>
@@ -246,18 +273,25 @@
             <p class="kicker">Spatial bundle</p>
             <h2>Provinces, ecoprovinces &amp; RSYC tiles</h2>
           </div>
-          <p class="panel-deck">Tile choropleth shows recoverable base energy. C2070 zone polygons are not invented: only B1 and B2 have authoritative anchors.</p>
+          <p class="panel-deck">Tile choropleth shows recoverable base energy. Click through Canada → province → ecoprovince → tile. C2070 zone polygons are not invented: only B1 and B2 have authoritative anchors.</p>
         </div>
+        <nav class="map-breadcrumb" id="map-breadcrumb" aria-label="Spatial drill-down"></nav>
         <div class="map-layout">
           <div class="map-stage">
             <div id="map" aria-label="Map of Canada with provinces, ecoprovinces, and RSYC supply tiles"></div>
             <div id="map-load-state" class="map-state">Spatial bundle loads when this tab opens.</div>
+            <div class="map-year-gauge" id="map-year-gauge" aria-hidden="true">
+              <span class="map-year-gauge-title">Year</span>
+              <div class="map-year-gauge-track"><i id="map-year-gauge-dot"></i></div>
+              <span class="map-year-gauge-label" id="map-year-gauge-label">2050</span>
+            </div>
             <div class="map-legend" id="map-legend" hidden>
               <span class="map-legend-title">Recoverable base (PJ)</span>
               <div id="map-legend-items"></div>
             </div>
           </div>
-          <aside class="map-side" aria-label="Map layers and spatial caveats">
+          <aside class="map-side" aria-label="Map selection, layers and spatial caveats">
+            <section class="map-selection" id="map-selection" aria-live="polite"></section>
             <h3>Layers</h3>
             <div class="layer-toggles">
               <label><input type="checkbox" id="layer-provinces" checked><span>Provinces <span class="mono muted">13</span></span></label>
@@ -265,7 +299,10 @@
               <label><input type="checkbox" id="layer-tiles" checked><span>RSYC tiles <span class="mono muted">385</span></span></label>
               <label><input type="checkbox" id="layer-anchors" checked><span>B1 / B2 anchors <span class="mono muted">2</span></span></label>
             </div>
-            <button class="button button--quiet" id="map-fit" type="button">Fit to Canada</button>
+            <div class="map-button-row">
+              <button class="button button--quiet" id="map-fit" type="button">Fit to Canada</button>
+              <button class="button button--quiet" id="map-reset" type="button">Reset selection</button>
+            </div>
             <div class="spatial-gap-note">
               <strong>11 C2070 zones lack polygons</strong>
               <p>No authoritative geometry exists in the repository. Nothing is fabricated. Gap zones:</p>

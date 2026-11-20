@@ -2,6 +2,17 @@
 
 ## 2026-11-20
 
+- **Added milestone-1e linked spatial/temporal exploration to the UI.** Map
+  drill-down now links Canada → province → ecoprovince → RSYC tile with
+  breadcrumbs, a selection panel (area, recoverable PJ, tile cells, explicit
+  species-not-joined caveat, evidence), map click priority, and URL/hash
+  restore/reset. Provinces, ecoprovinces, and tiles state explicitly that no
+  documented C2070 zone mapping exists; B1/B2 remain authoritative point anchors
+  and filter dispatch to their zones. A shared 2021–2070 year control with
+  play/pause, vertical chart guide, map gauge, and dispatch-by-family snapshot
+  is synced to the existing year-window sliders. No data, public OSeCAN, or
+  dependency changes; QA evidence is in `ui/qa/QA_REPORT.md` and
+  `ui/qa/map-linked.png` / `ui/qa/timeline.png`.
 - **Fixed milestone-1c live-runner review findings.** `/api/runs/{id}/output`
   now skips runner `category=other` audit rows, returns 409 for every
   non-completed terminal status, validates `run_id`/`output_dir`, confines

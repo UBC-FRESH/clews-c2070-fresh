@@ -109,7 +109,7 @@
         "hash": "#tradeoff/emission_factor_fix__efix_stress_119m"
       },
       "guardHidden": true,
-      "count": "26 eligible · 21 excluded (21 superseded, 2 diagnostic) · expected ledger 26",
+      "count": "26 eligible \u00b7 21 excluded (21 superseded, 2 diagnostic) \u00b7 expected ledger 26",
       "canvas": [
         {
           "width": 1030,
@@ -269,7 +269,7 @@
         "bc": "43.53",
         "rest": "65.89",
         "cost": "$2.457",
-        "validation": "✓ tier-sum validated · 4 tiers = 213.538 PJ · max reconciliation residual 0.000000 PJ"
+        "validation": "\u2713 tier-sum validated \u00b7 4 tiers = 213.538 PJ \u00b7 max reconciliation residual 0.000000 PJ"
       },
       "familyRows": 15,
       "familyRowTexts": [
@@ -331,7 +331,7 @@
       ],
       "tierTableRows": 6,
       "managedRows": 14,
-      "summary": "SCENARIOS / OUTPUTS\n47 / 47\nrecords\n47 scenario contracts · 47 columnar outputs\nHARVEST TEMPLATE\n750\nrows\n13 provinces · 50 years\nSUPPLY TIER SUM\n213.54\nPJ fuel\nterminal upper bound · reconciles\nMANAGED PROXY\n166.3\nMha\nscreening only — not legal THLB"
+      "summary": "SCENARIOS / OUTPUTS\n47 / 47\nrecords\n47 scenario contracts \u00b7 47 columnar outputs\nHARVEST TEMPLATE\n750\nrows\n13 provinces \u00b7 50 years\nSUPPLY TIER SUM\n213.54\nPJ fuel\nterminal upper bound \u00b7 reconciles\nMANAGED PROXY\n166.3\nMha\nscreening only \u2014 not legal THLB"
     }
   },
   "badges": {
@@ -631,20 +631,20 @@
     "parallel": {
       "paths": 26,
       "axes": 11,
-      "status": "4 of 26 visible · 26 static eligible + 0 live · 1 axis filter",
+      "status": "4 of 26 visible \u00b7 26 static eligible + 0 live \u00b7 1 axis filter",
       "chips": [
-        "Emissions 0.483 Mt CO₂ – 0.518 Mt CO₂\n×"
+        "Emissions 0.483 Mt CO\u2082 \u2013 0.518 Mt CO\u2082\n\u00d7"
       ],
       "filteredPaths": 22,
       "hash": "#explore/emission_factor_fix__efix_stress_119m?brush=emissions_total%3A0.48252847291710266%3A0.5181715949387323&px=objective&py=emissions_total&pz=national_bcw_2050&a=emission_factor_fix__efix_stress_119m&b=pwrbio_cap__pwrbio_cap10_windint3_tier200",
       "restoredChips": [
-        "Emissions 0.483 Mt CO₂ – 0.518 Mt CO₂\n×"
+        "Emissions 0.483 Mt CO\u2082 \u2013 0.518 Mt CO\u2082\n\u00d7"
       ],
-      "restoredStatus": "4 of 26 visible · 26 static eligible + 0 live · 1 axis filter"
+      "restoredStatus": "4 of 26 visible \u00b7 26 static eligible + 0 live \u00b7 1 axis filter"
     },
     "pareto": {
       "frontCount": 17,
-      "status": "17 on front · 26 evaluated · no missing metrics · dominance on min–max normalized values",
+      "status": "17 on front \u00b7 26 evaluated \u00b7 no missing metrics \u00b7 dominance on min\u2013max normalized values",
       "clicked": {
         "pixel": [
           213.38393279999946,
@@ -653,8 +653,8 @@
         "id": "emission_factor_fix__efix_baseline_119m",
         "label": "119M base baseline: $95->115/t, normal hydro"
       },
-      "selectedMeta": "119M base baseline: $95->115/t, normal hydro · Emission factor fix · post-fix",
-      "selectedBadge": "Selected 119M base baseline: $95->115/t, normal hydro ON FRONT POST-FIX · PUBLISHABLE",
+      "selectedMeta": "119M base baseline: $95->115/t, normal hydro \u00b7 Emission factor fix \u00b7 post-fix",
+      "selectedBadge": "Selected 119M base baseline: $95->115/t, normal hydro ON FRONT POST-FIX \u00b7 PUBLISHABLE",
       "hash": "#explore/emission_factor_fix__efix_baseline_119m?brush=emissions_total%3A0.48252847291710266%3A0.5181715949387323&px=objective&py=emissions_total&pz=national_bcw_2050&a=emission_factor_fix__efix_stress_119m&b=pwrbio_cap__pwrbio_cap10_windint3_tier200",
       "csvRows": 18,
       "csvHeader": [
@@ -664,16 +664,16 @@
         "family",
         "grade",
         "Objective (M$)",
-        "Cumulative emissions (Mt CO₂)",
+        "Cumulative emissions (Mt CO\u2082)",
         "National BCW 2050 (PJ fuel)"
       ]
     },
     "compare": {
       "rows": 6,
-      "grade": "A · EMISSION FACTOR FIX · POST-FIX · PUBLISHABLE\nB · PWRBIO CAP · POST-FIX · PUBLISHABLE",
-      "dims": "DIFFERING DIMENSIONS · 2 OF 10\nPWRBIO cap not set → 10pct_zone_generation · 325.22 PJ\nWind cap/int none · no integration limit · $0.00/GJ → none · 3pct · $3.00/GJ",
+      "grade": "A \u00b7 EMISSION FACTOR FIX \u00b7 POST-FIX \u00b7 PUBLISHABLE\nB \u00b7 PWRBIO CAP \u00b7 POST-FIX \u00b7 PUBLISHABLE",
+      "dims": "DIFFERING DIMENSIONS \u00b7 2 OF 10\nPWRBIO cap not set \u2192 10pct_zone_generation \u00b7 325.22 PJ\nWind cap/int none \u00b7 no integration limit \u00b7 $0.00/GJ \u2192 none \u00b7 3pct \u00b7 $3.00/GJ",
       "firstDelta": "+7,546.71",
-      "overlayNote": "Annual national PJ electricity · 2021—2070 · aggregate dispatch table."
+      "overlayNote": "Annual national PJ electricity \u00b7 2021\u20142070 \u00b7 aggregate dispatch table."
     },
     "desktop_overflow": {
       "doc": 1440,
@@ -786,6 +786,253 @@
         }
       ],
       "pass": true
+    }
+  },
+  "milestone_1e": {
+    "generated_utc": "2026-11-20",
+    "base_url": "http://127.0.0.1:8021/",
+    "mode": "static",
+    "scenario": "emission_factor_fix__efix_stress_119m",
+    "map": {
+      "stats": "Provinces | 13 | Ecoprovinces | 36 | RSYC tiles | 385 | Tile recoverable base | 54,157.3 PJ | Zone anchors | 2 / 13 | Zone gaps | 11",
+      "tileClick": {
+        "title": "RSYC tile U6",
+        "breadcrumb": "Canada / Northwest Territories / Old Crow-Eagle Plains / U6",
+        "facts": "AREA | 0.23 Mha | RECOVERABLE BASE | 35.3 PJ | CELLS / TILES | 1 RSYC tile | SPECIES | not joined in this bundle | PROVINCE | Northwest Territories | ECOPROVINCE | Old Crow-Eagle Plains (11.2)",
+        "hash": "sel=tile\u2026"
+      },
+      "provinceClick": {
+        "title": "Northwest Territories",
+        "subtitle": "CA-NT \u00b7 province",
+        "breadcrumb": "Canada / Northwest Territories",
+        "facts": "AREA | 64.58 Mha | RECOVERABLE BASE | 7,620.0 PJ | CELLS / TILES | 67 RSYC tiles | SPECIES | not joined in this bundle | PROVINCE | Northwest Territories | ECOPROVINCE | \u2014"
+      },
+      "chipDrilldown": {
+        "province": "British Columbia",
+        "ecoprovince": "Central Montane Cordillera",
+        "breadcrumb": "Canada / British Columbia / Central Montane Cordillera",
+        "tiles": 5,
+        "reset": "Canada"
+      },
+      "zoneAnchor": {
+        "hash": "#map/emission_factor_fix__efix_stress_119m?sel=zone%3AB1&y=2050",
+        "linkedContext": "SPATIAL SELECTION | C2070 zone B1 | mapped to C2070 zone B1 (authoritative anchor; dispatch filter) | MAP | DISPATCH \u00b7 B1",
+        "dispatchZone": "B1",
+        "snapshot": "Zone B1 \u00b7 2050 \u00b7 dispatch (PJ electricity)"
+      },
+      "screenshot": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/map-linked.png",
+        "size": [
+          1440,
+          2296
+        ],
+        "mean": [
+          125.69,
+          113.04,
+          93.45
+        ]
+      }
+    },
+    "temporal": {
+      "year": 2060,
+      "snapshot": "Zone B1 \u00b7 2060 \u00b7 dispatch (PJ electricity)",
+      "guideIndex": 39,
+      "playYear": 2062,
+      "playPause": "PASS",
+      "resetYear": 2050,
+      "windowExpand": "2021\u20142062",
+      "screenshot": {
+        "path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/timeline.png",
+        "size": [
+          1440,
+          1817
+        ],
+        "mean": [
+          142.47,
+          151.2,
+          139.19
+        ]
+      }
+    },
+    "deeplinks": {
+      "tileU6": {
+        "title": "RSYC tile U6",
+        "year": 2060,
+        "breadcrumb": "Canada / Northwest Territories / Old Crow-Eagle Plains / U6"
+      },
+      "zoneB2": {
+        "title": "C2070 zone B2",
+        "dispatchZone": "B2"
+      }
+    },
+    "mobile": {
+      "viewport": [
+        390,
+        844
+      ],
+      "mapOverflow": {
+        "doc": 390,
+        "win": 390
+      },
+      "dispatchOverflow": {
+        "doc": 390,
+        "win": 390
+      },
+      "selection": "British Columbia",
+      "tabs": 8,
+      "screenshot": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui/qa/timeline-mobile.png"
+    },
+    "runtime": {
+      "desktop": {
+        "consoleErrors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+          }
+        ],
+        "consoleErrorsUnexpected": [],
+        "pageErrors": [],
+        "failedRequests": [],
+        "httpErrors": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "httpErrorsUnexpected": [],
+        "expectedStaticHealthProbe": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "pass": true
+      },
+      "deepLinkTile": {
+        "consoleErrors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+          }
+        ],
+        "consoleErrorsUnexpected": [],
+        "pageErrors": [],
+        "failedRequests": [],
+        "httpErrors": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "httpErrorsUnexpected": [],
+        "expectedStaticHealthProbe": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "pass": true
+      },
+      "deepLinkZone": {
+        "consoleErrors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+          }
+        ],
+        "consoleErrorsUnexpected": [],
+        "pageErrors": [],
+        "failedRequests": [],
+        "httpErrors": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "httpErrorsUnexpected": [],
+        "expectedStaticHealthProbe": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "pass": true
+      },
+      "screenshotMap": {
+        "consoleErrors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+          }
+        ],
+        "consoleErrorsUnexpected": [],
+        "pageErrors": [],
+        "failedRequests": [],
+        "httpErrors": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "httpErrorsUnexpected": [],
+        "expectedStaticHealthProbe": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "pass": true
+      },
+      "screenshotTimeline": {
+        "consoleErrors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+          }
+        ],
+        "consoleErrorsUnexpected": [],
+        "pageErrors": [],
+        "failedRequests": [],
+        "httpErrors": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "httpErrorsUnexpected": [],
+        "expectedStaticHealthProbe": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "pass": true
+      },
+      "mobile": {
+        "consoleErrors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 404 (File not found)"
+          }
+        ],
+        "consoleErrorsUnexpected": [],
+        "pageErrors": [],
+        "failedRequests": [],
+        "httpErrors": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "httpErrorsUnexpected": [],
+        "expectedStaticHealthProbe": [
+          {
+            "url": "http://127.0.0.1:8021/api/health",
+            "status": 404
+          }
+        ],
+        "pass": true
+      }
     }
   }
 }

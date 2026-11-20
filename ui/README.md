@@ -38,7 +38,9 @@ Plex Mono. No runtime CDN request is required.
 - **Dispatch** — ECharts stacked annual energy by technology family
   (HYD/WND/SOL/BIO/BCW/NGS/URN/COA/other), 2021–2070. Electricity and fuel are
   separate ledgers. Includes zone filter, year-window sliders, tooltips, legend,
-  and a dashed total line.
+  and a dashed total line. A shared 2021–2070 year control (slider, play/pause,
+  reset) draws a vertical guide on the chart and drives a dispatch snapshot
+  table by technology family for the selected year.
 - **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for exactly
   the 26 flag-eligible post-fix scenarios; colour by family; superseded rows are
   explicitly excluded.
@@ -56,9 +58,13 @@ Plex Mono. No runtime CDN request is required.
   ledger at a time. Live session runs are dashed/marked `screening_only` and are
   never folded into the 26-scenario publishable ledger.
 - **Map** — MapLibre with 13 provinces, 36 ecoprovinces, 385 RSYC tiles, and a
-  `recoverable_pj_base` choropleth. Tile popups, layer toggles, zoom, fit button,
-  and B1/B2 authoritative anchors. The 11 C2070 zones without authoritative
-  polygons are shown as gaps, never as invented geometry.
+  `recoverable_pj_base` choropleth. Linked Canada → province → ecoprovince →
+  RSYC tile drill-down with breadcrumbs, a selection panel (area, recoverable
+  PJ, tile cells, species caveat, evidence), layer toggles, zoom, fit/reset, and
+  B1/B2 authoritative anchors. Selections without a documented C2070 zone
+  mapping say so explicitly; dispatch stays national rather than inventing a
+  crosswalk. The 11 C2070 zones without authoritative polygons are shown as
+  gaps, never as invented geometry.
 - **OSeCAN Links** — source-file/check ledger plus a screening lever calculator
   (harvest 100/119/150/200 Mm³; recovery 0.35/0.60/0.75; cost basis), national
   PJ and BC/rest split, tier-sum validation, and client-side CSV exports. When
@@ -78,6 +84,9 @@ use hashes such as `#dispatch/emission_factor_fix__efix_stress_119m`. Explore
 adds query parameters to the hash for brush ranges, Pareto projections, and the
 A/B pair, for example
 `#explore/emission_factor_fix__efix_stress_119m?brush=emissions_total%3A0.45%3A0.49&px=objective&py=emissions_total&pz=national_bcw_2050`.
+Map deep links carry the spatial selection and shared year, for example
+`#map/emission_factor_fix__efix_stress_119m?sel=ecoprovince%3A14.2&y=2050` or
+`?sel=zone%3AB1&y=2060`; dispatch links carry `?y=`.
 
 ## Data contract
 

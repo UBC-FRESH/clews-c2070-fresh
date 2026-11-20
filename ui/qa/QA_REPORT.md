@@ -261,3 +261,68 @@ opened Explore:
 
 The fake runner is QA infrastructure only and is not committed; it does not
 represent a real solve or policy-grade result.
+
+## Milestone-1e linked spatial/temporal pass (2026-11-20)
+
+**Scope:** map drill-down and linked selection (Canada → province →
+ecoprovince → RSYC tile), explicit no-zone-mapping handling, B1/B2 anchor
+dispatch filtering, shared 2021–2070 year control with playback and vertical
+guide, year snapshot table, URL/hash restore/reset, and mobile 390×844.
+Static fallback only; no data files were changed.
+
+**Environment:** Chromium via `/tmp/ui-qa-venv` (Playwright 1.65.2), static
+server `python3 -m http.server 8021 --bind 127.0.0.1 -d ui`, viewports
+1440×1200 and 390×844 (`is_mobile`, `has_touch`). Browser flags:
+`--use-gl=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist
+--disable-dev-shm-usage`. `node --check ui/app.js ui/api.js` passes.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Map click: tile | **PASS** — clicked a rendered RSYC tile; selection panel read `RSYC tile U6`, area 0.23 Mha, recoverable base 35.3 PJ, 1 RSYC tile, province Northwest Territories, ecoprovince Old Crow-Eagle Plains. |
+| Map click: province | **PASS** — with the tile layer hidden, clicked province fill; panel read `Northwest Territories`, area 64.58 Mha, 7,620.0 PJ, 67 RSYC tiles. Breadcrumb `Canada / Northwest Territories`. |
+| Breadcrumb / drill-down | **PASS** — Canada → British Columbia → Central Montane Cordillera → tile restores through breadcrumb buttons; root reset returns to `Canada` and clears the hash selection. |
+| Selection panel | **PASS** — area, recoverable PJ, cell/tile count, province, ecoprovince, explicit species-not-joined caveat, evidence/caveats, fit/reset actions. |
+| No-zone mapping message | **PASS** — every province/ecoprovince/tile selection states that no documented C2070 zone mapping exists and that dispatch/overview stay national; no zone geometry is invented. |
+| B1/B2 anchor mapping | **PASS** — clicking the B1 marker selects zone B1 through its authoritative point anchor; dispatch zone filter becomes `B1` and the snapshot caption reads `Zone B1 · 2050`. The overview shows the linked-context strip and dispatch shortcut. |
+| Reset zone filter | **PASS** — resetting the map selection removes `sel=` from the hash and restores dispatch zone to `ALL` (national CAN aggregate). |
+| Shared year slider | **PASS** — default 2050; slider to 2060 updates the readout, hash `y=2060`, chart vertical guide (category index 39), and snapshot caption/year. |
+| Play / pause | **PASS** — play advanced the year to 2062 during the QA interval and set `aria-pressed=true`; pause stopped playback and set `aria-pressed=false`. Reset returns to 2050. |
+| Year-window coherence | **PASS** — narrowing the window to 2021—2055 while the shared year is 2060 marks the year outside the window; moving the shared year to 2062 expands the window to 2021—2062. Existing From/To sliders remain independent. |
+| Year snapshot | **PASS** — table lists dispatch by technology family for the selected year with PJ, share, and total; it uses the same CAN/zone filter as the chart. |
+| URL deep links | **PASS** — fresh load of `#map/<id>?sel=tile%3AU6&y=2060` restores tile U6 and the 2060 year; `#map/<id>?sel=zone%3AB2&y=2050` restores zone B2 and filters dispatch to B2. |
+| Explore/Pareto/Compare regression | **PASS** — the existing Explore browser QA script was rerun against the new build: 26 parallel paths / 11 axes, brush filter and chip reset, Pareto front and CSV export, A/B delta table, and dispatch overlay all passed; runtime pass true. |
+| Mobile 390×844 | **PASS** — 8 tabs in the 4×2 grid; map selection, time deck, dispatch chart, and snapshot render with `scrollWidth === innerWidth === 390`. |
+| Console/page/HTTP errors | **PASS** — 0 page errors, 0 failed requests, 0 unexpected console or HTTP errors in all desktop/deep-link/screenshot/mobile runs. The only HTTP/console entry is the intentional static-mode `/api/health` 404. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `map-linked.png` | 1440×2296 — shared year deck, Canada/British Columbia/Central Montane Cordillera breadcrumb, highlighted ecoprovince, selection panel with no-zone mapping notice, layers and evidence |
+| `timeline.png` | 1440×1817 — shared year 2050, play control, dispatch chart with vertical 2050 guide, and the dispatch-by-family snapshot table |
+| `timeline-mobile.png` | 390 px dispatch view — time deck, guide, and snapshot table without horizontal overflow |
+
+Machine-readable evidence is under `milestone_1e` in `ui/qa/qa_results.json`
+(map click results, selection facts, zone anchor, temporal checks, deep links,
+mobile overflow, runtime summary). All six runtime groups report pass.
+
+### Files changed
+
+- `ui/app.js`: spatial data preparation (province/ecoprovince/tile lookups,
+  centroid/vertex ecoprovince assignment, tile aggregation), map click
+  priority, selection source/highlight, breadcrumbs, selection panel, B1/B2
+  anchor selection, dispatch/overview linked context, hash selection/year
+  restore, shared temporal state, playback, chart guide, snapshot table.
+- `ui/index.html`: shared year deck, map breadcrumb, selection panel, reset
+  button, map year gauge, dispatch snapshot section.
+- `ui/styles.css`: time deck, map breadcrumb/selection/gauge, snapshot table,
+  linked-context strip, mobile rules.
+- `ui/README.md`: view notes and map deep-link examples.
+- `ui/qa/QA_REPORT.md`, `ui/qa/qa_results.json`, `ui/qa/map-linked.png`,
+  `ui/qa/timeline.png`, `ui/qa/timeline-mobile.png`.
+- `CHANGE_LOG.md`: milestone-1e entry.
+
+No data submodule, manifest, output, or public OSeCAN surface was modified.
+`git status --porcelain` contains no `D` entries.

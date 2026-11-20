@@ -14,6 +14,8 @@
   var CANADA_BOUNDS = [[-141, 41], [-52, 84]];
   var CANADA_FIT_OPTIONS = { padding: 34 };
   var MOBILE_RAIL_QUERY = '(max-width: 720px)';
+  var TEMPORAL_DEFAULT = 2050;
+  var PROVINCE_ALIAS = { QC: 'CA-QB' };
 
   var FAMILY_SHORT = {
     emission_factor_fix: 'Emission factor fix',
@@ -144,6 +146,11 @@
     paretoChart: null,
     compareChart: null,
     harvestChart: null,
+    temporal: {
+      year: TEMPORAL_DEFAULT,
+      playing: false,
+      timer: null
+    },
     explore: {
       brushes: {},
       pareto: { x: PARETO_DEFAULTS.x, y: PARETO_DEFAULTS.y, z: PARETO_DEFAULTS.z },
@@ -161,7 +168,12 @@
       error: false,
       map: null,
       data: null,
-      markers: []
+      markers: [],
+      pendingSelection: null
+    },
+    spatial: {
+      selection: null,
+      mappedZone: null
     },
     osecan: {
       harvest: 119,
@@ -445,6 +457,9 @@
     var defaultId = 'emission_factor_fix__efix_stress_119m';
     var hash = parseHash();
     applyExploreHash(hash.params);
+    var initialYear = parseHashYear(hash.params);
+    if (initialYear !== null) state.temporal.year = initialYear;
+    if (hash.params.sel) state.mapState.pendingSelection = parseSelectionKey(hash.params.sel);
     var initialTab = hash.tab || 'overview';
     var initialId = hash.id && core.scenarioById.has(hash.id) ? hash.id : defaultId;
     if (!core.scenarioById.has(initialId)) initialId = core.scenarios.scenarios[0].scenario_id;
@@ -455,6 +470,8 @@
     bindRailToggle();
     bindTabs();
     bindDispatchControls();
+    bindTemporalControls();
+    bindHashRouting();
     bindExploreControls();
     bindOsecanControls();
     bindRunControls();
@@ -610,6 +627,21 @@
       (sc.flags.superseded_for_emissions ? ' · superseded' : ' · post-fix');
   }
 
+  function linkedContextHtml() {
+    var sel = state.spatial.selection;
+    if (!sel) return '';
+    var zoneText = sel.zoneId
+      ? 'mapped to C2070 zone ' + sel.zoneId + ' (authoritative anchor; dispatch filter)'
+      : 'no documented C2070 zone mapping — dispatch and overview stay national';
+    return '<div class="linked-context" role="status">' +
+      '<span class="kicker">Spatial selection</span>' +
+      '<strong>' + esc(sel.title) + '</strong>' +
+      '<span class="linked-zone' + (sel.zoneId ? ' is-mapped' : '') + '">' + esc(zoneText) + '</span>' +
+      '<button class="button button--quiet" type="button" data-linked-tab="map">Map</button>' +
+      (sel.zoneId ? '<button class="button button--quiet" type="button" data-linked-tab="dispatch">Dispatch · ' + esc(sel.zoneId) + '</button>' : '') +
+      '</div>';
+  }
+
   function renderOverview() {
     var core = state.core;
     var sc = core.scenarioById.get(state.selectedId);
@@ -629,7 +661,7 @@
         ? 'Eligible for the 26-scenario trade-off view under the committed publishable / post-fix / non-superseded rule.'
         : 'Not in the trade-off ledger; retain the flags when comparing across families.');
 
-    var html = '<div class="scenario-masthead">' +
+    var html = linkedContextHtml() + '<div class="scenario-masthead">' +
       '<div>' +
         '<p class="kicker masthead-family">' + esc(sc.family_label) + '</p>' +
         '<h2>' + esc(sc.label) + '</h2>' +
@@ -694,7 +726,7 @@
       var cls = typeof value === 'boolean' ? (value ? ' is-true' : ' is-false') : '';
       return '<span class="flag-pill' + cls + '">' + esc(key) + ': ' + esc(value) + '</span>';
     }).join('');
-    var html = '<div class="scenario-masthead">' +
+    var html = linkedContextHtml() + '<div class="scenario-masthead">' +
       '<div>' +
         '<p class="kicker masthead-family">Session run · live screening runner</p>' +
         '<h2>' + esc(sc.label) + '</h2>' +
@@ -801,7 +833,8 @@
     if (state.tab === 'dispatch') renderDispatch();
     if (state.tab === 'tradeoff') renderTradeoff();
     if (state.tab === 'explore') renderExplore();
-    if (state.tab === 'map') initMap();
+    if (state.tab === 'map') { initMap(); renderBreadcrumb(); renderSelectionPanel(); }
+    if (state.tab === 'overview' && state.core) renderOverview();
     if (state.tab === 'osecan') renderOsecan();
     if (state.tab === 'run') renderRunMode();
     if (state.tab === 'inputs') renderInputsCharts();
@@ -867,6 +900,33 @@
       if (!button) return;
       selectScenario(button.getAttribute('data-scenario-id'));
     });
+    document.addEventListener('click', function (event) {
+      var link = event.target.closest('[data-linked-tab]');
+      if (!link) return;
+      var tab = link.getAttribute('data-linked-tab');
+      if (tab !== 'map' && tab !== 'dispatch') return;
+      activateTab(tab);
+    });
+  }
+
+  function bindHashRouting() {
+    window.addEventListener('hashchange', function () {
+      if (!state.core) return;
+      var hash = parseHash();
+      var tab = validTab(hash.tab);
+      if (hash.id && state.core.scenarioById.has(hash.id) && hash.id !== state.selectedId) {
+        selectScenario(hash.id, { silent: true });
+      }
+      if (tab !== state.tab) activateTab(tab, { silent: true });
+      var year = parseHashYear(hash.params);
+      if (year !== null && year !== state.temporal.year) {
+        setTemporalYear(year, { skipHash: true });
+      }
+      if (tab === 'map') {
+        if (hash.params.sel) applySpatialHash(hash.params, { duration: 0 });
+        else if (state.spatial.selection) clearSpatialSelection({ skipHash: true, fit: false, silent: true });
+      }
+    });
   }
 
   function parseHashQuery(query) {
@@ -922,6 +982,42 @@
     if (params.en === 'fuel' || params.en === 'electricity') state.explore.energy = params.en;
   }
 
+  function parseHashYear(params) {
+    if (!params || !params.y) return null;
+    var year = Number(params.y);
+    if (!Number.isInteger(year) || year < YEAR_FIRST || year > YEAR_LAST) return null;
+    return year;
+  }
+
+  function selectionHashKey() {
+    var sel = state.spatial.selection;
+    if (!sel) return null;
+    return sel.kind + ':' + sel.id;
+  }
+
+  function parseSelectionKey(value) {
+    if (!value) return null;
+    var split = value.indexOf(':');
+    if (split <= 0 || split === value.length - 1) return null;
+    return { kind: value.slice(0, split), id: value.slice(split + 1) };
+  }
+
+  function applySpatialHash(params, options) {
+    if (!params || !state.core) return;
+    if (!params.sel) {
+      if (state.spatial.selection) clearSpatialSelection({ skipHash: true, fit: false });
+      return;
+    }
+    var parsed = parseSelectionKey(params.sel);
+    if (!parsed) return;
+    var data = state.mapState.data;
+    if (!data) {
+      state.mapState.pendingSelection = parsed;
+      return;
+    }
+    restoreSelection(parsed, options || {});
+  }
+
   function exploreHashQuery() {
     var parts = [];
     var brushed = PC_AXES.filter(function (axis) { return state.explore.brushes[axis.id]; });
@@ -944,13 +1040,143 @@
   function updateHash() {
     if (!state.core) return;
     var next = '#' + state.tab + '/' + encodeURIComponent(state.selectedId || '');
-    if (state.tab === 'explore') next += '?' + exploreHashQuery();
+    var params = [];
+    if (state.tab === 'explore') {
+      var explore = exploreHashQuery();
+      if (explore) params.push(explore);
+    }
+    if (state.tab === 'map') {
+      var key = selectionHashKey();
+      if (!key && state.mapState.pendingSelection) key = state.mapState.pendingSelection.kind + ':' + state.mapState.pendingSelection.id;
+      if (key) params.push('sel=' + encodeURIComponent(key));
+      params.push('y=' + state.temporal.year);
+    } else if (state.tab === 'dispatch') {
+      params.push('y=' + state.temporal.year);
+    } else if (state.temporal.year !== TEMPORAL_DEFAULT) {
+      params.push('y=' + state.temporal.year);
+    }
+    if (params.length) next += '?' + params.join('&');
     if (window.location.hash !== next) {
       try { window.history.replaceState(null, '', next); } catch (error) { /* file:// may refuse */ }
     }
   }
 
-  /* ---------------- Dispatch ---------------- */
+  /* ---------------- Shared temporal control ---------------- */
+
+  function temporalSlider() { return $('year-global'); }
+
+  function bindTemporalControls() {
+    var slider = temporalSlider();
+    if (!slider) return;
+    slider.value = String(state.temporal.year);
+    slider.addEventListener('input', function () {
+      setTemporalYear(Number(slider.value), { source: 'slider' });
+    });
+    var play = $('year-play');
+    if (play) play.addEventListener('click', toggleTemporalPlay);
+    var reset = $('year-reset');
+    if (reset) reset.addEventListener('click', function () {
+      stopTemporalPlay();
+      setTemporalYear(TEMPORAL_DEFAULT, { source: 'reset' });
+    });
+    updateTemporalUI();
+    updateMapYearGauge();
+  }
+
+  function stopTemporalPlay() {
+    if (state.temporal.timer) window.clearInterval(state.temporal.timer);
+    state.temporal.timer = null;
+    state.temporal.playing = false;
+    updateTemporalUI();
+  }
+
+  function toggleTemporalPlay() {
+    if (state.temporal.playing) {
+      stopTemporalPlay();
+      announce('Year playback paused at ' + state.temporal.year + '.');
+      return;
+    }
+    if (state.temporal.year >= YEAR_LAST) setTemporalYear(YEAR_FIRST, { source: 'play' });
+    state.temporal.playing = true;
+    updateTemporalUI();
+    announce('Playing years from ' + state.temporal.year + '.');
+    state.temporal.timer = window.setInterval(function () {
+      var next = state.temporal.year + 1;
+      if (next > YEAR_LAST) {
+        stopTemporalPlay();
+        return;
+      }
+      setTemporalYear(next, { source: 'play' });
+      if (next === YEAR_LAST) stopTemporalPlay();
+    }, 620);
+  }
+
+  function ensureDispatchWindowIncludes(year) {
+    var min = $('year-min');
+    var max = $('year-max');
+    if (!min || !max) return;
+    var changed = false;
+    if (year < state.dispatch.from) {
+      state.dispatch.from = year;
+      min.value = String(year);
+      changed = true;
+    }
+    if (year > state.dispatch.to) {
+      state.dispatch.to = year;
+      max.value = String(year);
+      changed = true;
+    }
+    if (!changed) return;
+    $('year-min-out').textContent = String(state.dispatch.from);
+    $('year-max-out').textContent = String(state.dispatch.to);
+    $('year-range-label').textContent = state.dispatch.from + '—' + state.dispatch.to;
+    if (state.dispatch.processed) renderDispatchChart();
+  }
+
+  function setTemporalYear(year, options) {
+    var opts = options || {};
+    var next = Math.max(YEAR_FIRST, Math.min(YEAR_LAST, Math.round(Number(year))));
+    if (!Number.isFinite(next)) return;
+    state.temporal.year = next;
+    var slider = temporalSlider();
+    if (slider && Number(slider.value) !== next) slider.value = String(next);
+    if (opts.expandWindow !== false) ensureDispatchWindowIncludes(next);
+    updateTemporalUI();
+    updateMapYearGauge();
+    updateDispatchYearGuide();
+    renderDispatchSnapshot();
+    if (!opts.skipHash) updateHash();
+  }
+
+  function updateTemporalUI() {
+    var readout = $('year-global-out');
+    if (readout) readout.textContent = String(state.temporal.year);
+    var play = $('year-play');
+    if (play) {
+      play.classList.toggle('is-playing', state.temporal.playing);
+      play.setAttribute('aria-pressed', state.temporal.playing ? 'true' : 'false');
+      play.setAttribute('aria-label', state.temporal.playing ? 'Pause year playback' : 'Play years');
+      play.textContent = state.temporal.playing ? '❚❚' : '▶';
+    }
+    var note = $('year-window-note');
+    if (note) {
+      var inside = state.temporal.year >= state.dispatch.from && state.temporal.year <= state.dispatch.to;
+      note.textContent = 'window ' + state.dispatch.from + '—' + state.dispatch.to;
+      note.classList.toggle('is-outside', !inside);
+      if (!inside) note.textContent += ' · year outside window';
+    }
+  }
+
+  function updateMapYearGauge() {
+    var dot = $('map-year-gauge-dot');
+    var label = $('map-year-gauge-label');
+    if (!dot || !label) return;
+    var fraction = (state.temporal.year - YEAR_FIRST) / (YEAR_LAST - YEAR_FIRST);
+    dot.style.bottom = (fraction * 100).toFixed(2) + '%';
+    label.textContent = String(state.temporal.year);
+    var gauge = $('map-year-gauge');
+    if (gauge) gauge.setAttribute('aria-label', 'Shared year ' + state.temporal.year);
+  }
 
   function technologyFamily(technology) {
     if (/^PWRHYD/.test(technology)) return 'HYD';
@@ -1065,7 +1291,7 @@
     var select = $('dispatch-zone');
     if (!processed) {
       select.innerHTML = '<option value="ALL">No reporting zones</option>';
-      state.dispatch.zone = 'ALL';
+      if (!state.dispatch.zone) state.dispatch.zone = 'ALL';
       return;
     }
     var options = ['<option value="ALL">' + esc(processed.allLabel) + '</option>'];
@@ -1105,6 +1331,7 @@
       $('year-min-out').textContent = String(a);
       $('year-max-out').textContent = String(b);
       $('year-range-label').textContent = a + '—' + b;
+      updateTemporalUI();
       renderDispatchChart();
     }
     min.addEventListener('input', onRange);
@@ -1145,6 +1372,12 @@
     loading.hidden = true;
     state.dispatch.processed = processed;
     renderZoneOptions(processed);
+    if (state.spatial.mappedZone) {
+      if (processed.zones.indexOf(state.spatial.mappedZone) === -1) state.dispatch.zone = 'ALL';
+      else state.dispatch.zone = state.spatial.mappedZone;
+      renderZoneOptions(processed);
+    }
+    if (state.tab === 'map') renderSelectionPanel();
     if (!processed) {
       empty.hidden = false;
       empty.innerHTML = '<div><strong>No ' + state.dispatch.energy + ' ledger in this scenario.</strong><br>' +
@@ -1216,6 +1449,7 @@
     });
     series.push({
       name: 'Total',
+      id: 'dispatch-total',
       type: 'line',
       symbol: 'none',
       z: 20,
@@ -1223,6 +1457,24 @@
       itemStyle: { color: '#17251d' },
       emphasis: { focus: 'series' },
       tooltip: { show: false },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        animation: false,
+        lineStyle: { color: '#a94f31', width: 1.5, type: 'solid' },
+        label: {
+          show: true,
+          position: 'insideEndTop',
+          rotate: 0,
+          formatter: String(state.temporal.year),
+          color: '#7e3823',
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: 10,
+          backgroundColor: 'rgba(246, 223, 180, 0.92)',
+          padding: [2, 4]
+        },
+        data: (state.temporal.year >= from && state.temporal.year <= to) ? [{ xAxis: state.temporal.year - from }] : []
+      },
       data: totals
     });
 
@@ -1297,6 +1549,88 @@
       },
       series: series
     }, true);
+    updateTemporalUI();
+    renderDispatchSnapshot();
+  }
+
+  function updateDispatchYearGuide() {
+    var chart = state.dispatch.chart;
+    if (!chart || !state.dispatch.processed) return;
+    var year = state.temporal.year;
+    var inside = year >= state.dispatch.from && year <= state.dispatch.to;
+    chart.setOption({
+      series: [{
+        id: 'dispatch-total',
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          animation: false,
+          lineStyle: { color: '#a94f31', width: 1.5, type: 'solid' },
+          label: {
+            show: true,
+            position: 'insideEndTop',
+            rotate: 0,
+            formatter: String(year),
+            color: '#7e3823',
+            fontFamily: 'IBM Plex Mono, monospace',
+            fontSize: 10,
+            backgroundColor: 'rgba(246, 223, 180, 0.92)',
+            padding: [2, 4]
+          },
+          data: inside ? [{ xAxis: year - state.dispatch.from }] : []
+        }
+      }]
+    });
+  }
+
+  function renderDispatchSnapshot() {
+    var table = $('dispatch-snapshot');
+    if (!table) return;
+    var processed = state.dispatch.processed;
+    var caption = $('dispatch-snapshot-caption');
+    if (!processed) {
+      table.innerHTML = '<caption>Waiting for the selected scenario output.</caption><tbody><tr><td>No dispatch rows loaded.</td></tr></tbody>';
+      if (caption) caption.textContent = 'The shared year control selects the snapshot year. The year-window sliders above still control the chart extent.';
+      return;
+    }
+    var year = state.temporal.year;
+    var rows = filterDispatchRows(processed, state.dispatch.zone).filter(function (row) { return row.year === year; });
+    var zoneLabel = state.dispatch.zone === 'ALL' ? processed.allLabel : 'Zone ' + state.dispatch.zone;
+    var totals = {};
+    TECH_FAMILIES.forEach(function (family) { totals[family.id] = 0; });
+    rows.forEach(function (row) {
+      if (!Object.prototype.hasOwnProperty.call(totals, row.family)) totals[row.family] = 0;
+      totals[row.family] += row.value;
+    });
+    var grand = Object.keys(totals).reduce(function (sum, key) { return sum + totals[key]; }, 0);
+    if (caption) {
+      caption.textContent = zoneLabel + ' · ' + year + ' · ' + processed.selection.label + ' · ' +
+        (processed.unit || '') + (state.dispatch.zone === 'ALL' && processed.hasCan
+          ? ' · CAN aggregate rows only (no zone double-count).'
+          : '');
+    }
+    if (!rows.length) {
+      table.innerHTML = '<caption>' + esc(zoneLabel) + ' · ' + year + '</caption><tbody><tr><td>No ' +
+        esc(processed.selection.label) + ' rows for this year in the selected window/zone.</td></tr></tbody>';
+      return;
+    }
+    var body = TECH_FAMILIES.filter(function (family) { return Math.abs(totals[family.id] || 0) > 1e-9; }).map(function (family) {
+      var value = totals[family.id] || 0;
+      var share = grand > 0 ? (value / grand) * 100 : 0;
+      return '<tr><td><i class="snapshot-swatch" style="background:' + family.color + '"></i> ' + esc(family.label) +
+        '</td><td class="num">' + fmt(value, 2) + '</td><td class="num">' + fmt(share, 1) + '%</td></tr>';
+    }).join('');
+    var extras = Object.keys(totals).filter(function (key) { return !TECH_FAMILY_BY_ID[key] && Math.abs(totals[key]) > 1e-9; });
+    extras.forEach(function (key) {
+      var value = totals[key] || 0;
+      body += '<tr><td>' + esc(key) + '</td><td class="num">' + fmt(value, 2) + '</td><td class="num">' +
+        fmt(grand > 0 ? (value / grand) * 100 : 0, 1) + '%</td></tr>';
+    });
+    table.innerHTML = '<caption>' + esc(zoneLabel) + ' · ' + year + ' · ' + esc(processed.selection.label) +
+      ' (' + esc(processed.unit || 'units') + ')</caption>' +
+      '<thead><tr><th scope="col">Technology family</th><th scope="col" class="num">PJ</th><th scope="col" class="num">Share</th></tr></thead>' +
+      '<tbody>' + body + '<tr class="snapshot-total"><th scope="row">Total</th><td class="num">' + fmt(grand, 2) +
+      '</td><td class="num">100.0%</td></tr></tbody>';
   }
 
   function outputSourcePath(id) {
@@ -2511,6 +2845,547 @@
     return breaks;
   }
 
+  function eachGeometryCoordinate(geometry, callback) {
+    if (!geometry || !geometry.coordinates) return;
+    var stack = [geometry.coordinates];
+    while (stack.length) {
+      var item = stack.pop();
+      if (!item) continue;
+      if (typeof item[0] === 'number' && typeof item[1] === 'number') {
+        callback(item[0], item[1]);
+      } else {
+        for (var i = 0; i < item.length; i += 1) stack.push(item[i]);
+      }
+    }
+  }
+
+  function geometryBBox(geometry) {
+    var box = [Infinity, Infinity, -Infinity, -Infinity];
+    eachGeometryCoordinate(geometry, function (lng, lat) {
+      if (lng < box[0]) box[0] = lng;
+      if (lat < box[1]) box[1] = lat;
+      if (lng > box[2]) box[2] = lng;
+      if (lat > box[3]) box[3] = lat;
+    });
+    return box;
+  }
+
+  function geometryCentroid(geometry) {
+    var sumX = 0;
+    var sumY = 0;
+    var count = 0;
+    eachGeometryCoordinate(geometry, function (lng, lat) {
+      sumX += lng;
+      sumY += lat;
+      count += 1;
+    });
+    return count ? [sumX / count, sumY / count] : [0, 0];
+  }
+
+  function ringContains(lng, lat, ring) {
+    var inside = false;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+      var xi = ring[i][0];
+      var yi = ring[i][1];
+      var xj = ring[j][0];
+      var yj = ring[j][1];
+      if (((yi > lat) !== (yj > lat)) && (lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function polygonContains(coordinates, lng, lat) {
+    if (!coordinates.length || !ringContains(lng, lat, coordinates[0])) return false;
+    for (var i = 1; i < coordinates.length; i += 1) {
+      if (ringContains(lng, lat, coordinates[i])) return false;
+    }
+    return true;
+  }
+
+  function geometryContains(geometry, lng, lat) {
+    if (!geometry) return false;
+    if (geometry.type === 'Polygon') return polygonContains(geometry.coordinates, lng, lat);
+    if (geometry.type === 'MultiPolygon') {
+      return geometry.coordinates.some(function (polygon) { return polygonContains(polygon, lng, lat); });
+    }
+    return false;
+  }
+
+  function featureBoxIntersectsPoint(box, lng, lat) {
+    return lng >= box[0] && lng <= box[2] && lat >= box[1] && lat <= box[3];
+  }
+
+  function geometrySamplePoints(geometry) {
+    var points = [];
+    if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
+      var polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+      polygons.forEach(function (polygon) {
+        var ring = polygon[0];
+        if (!ring || !ring.length) return;
+        points.push(ring[0]);
+        points.push(ring[Math.floor(ring.length / 2)]);
+      });
+    }
+    var centroid = geometryCentroid(geometry);
+    points.push(centroid);
+    var box = geometryBBox(geometry);
+    points.push([(box[0] + box[2]) / 2, (box[1] + box[3]) / 2]);
+    return points;
+  }
+
+  function prepareSpatialData(provinces, ecoprovinces, tiles, zoneNodes) {
+    var provinceFeatures = provinces.features.map(function (feature) {
+      feature._bbox = geometryBBox(feature.geometry);
+      return feature;
+    });
+    var provinceByIso = new Map();
+    provinceFeatures.forEach(function (feature) { provinceByIso.set(feature.properties.iso, feature); });
+
+    var ecoFeatures = ecoprovinces.features.map(function (feature) {
+      feature._bbox = geometryBBox(feature.geometry);
+      feature._centroid = geometryCentroid(feature.geometry);
+      feature._tiles = [];
+      feature._provinceIso = null;
+      return feature;
+    });
+    var ecoById = new Map();
+    ecoFeatures.forEach(function (feature) { ecoById.set(feature.properties.ecoprovince_id, feature); });
+
+    var tileById = new Map();
+    var tileEco = new Map();
+    var tilesByProvince = new Map();
+    tiles.features.forEach(function (tile) {
+      tile._bbox = geometryBBox(tile.geometry);
+      tile._centroid = geometryCentroid(tile.geometry);
+      tile._provinceCodes = String(tile.properties.provinces || '').split(';').filter(Boolean);
+      tile._provinceIso = tile._provinceCodes.length ? (PROVINCE_ALIAS[tile._provinceCodes[0]] || 'CA-' + tile._provinceCodes[0]) : null;
+      tileById.set(tile.properties.tile_id, tile);
+      tile._provinceCodes.forEach(function (code) {
+        var iso = PROVINCE_ALIAS[code] || 'CA-' + code;
+        if (!tilesByProvince.has(iso)) tilesByProvince.set(iso, []);
+        tilesByProvince.get(iso).push(tile);
+      });
+    });
+
+    tiles.features.forEach(function (tile) {
+      var chosen = null;
+      var centroid = tile._centroid;
+      ecoFeatures.some(function (eco) {
+        if (!featureBoxIntersectsPoint(eco._bbox, centroid[0], centroid[1])) return false;
+        if (geometryContains(eco.geometry, centroid[0], centroid[1])) { chosen = eco; return true; }
+        return false;
+      });
+      if (!chosen) {
+        var samples = [];
+        var ring = tile.geometry.type === 'Polygon' ? tile.geometry.coordinates[0] : tile.geometry.coordinates[0][0];
+        if (ring) {
+          ring.forEach(function (point) { samples.push(point); });
+        }
+        samples.push([(tile._bbox[0] + tile._bbox[2]) / 2, (tile._bbox[1] + tile._bbox[3]) / 2]);
+        samples.some(function (point) {
+          return ecoFeatures.some(function (eco) {
+            if (!featureBoxIntersectsPoint(eco._bbox, point[0], point[1])) return false;
+            if (geometryContains(eco.geometry, point[0], point[1])) { chosen = eco; return true; }
+            return false;
+          });
+        });
+      }
+      if (!chosen) {
+        var best = Infinity;
+        ecoFeatures.forEach(function (eco) {
+          var dx = eco._centroid[0] - centroid[0];
+          var dy = eco._centroid[1] - centroid[1];
+          var distance = dx * dx + dy * dy;
+          if (distance < best) { best = distance; chosen = eco; }
+        });
+      }
+      if (chosen) {
+        tileEco.set(tile.properties.tile_id, chosen.properties.ecoprovince_id);
+        chosen._tiles.push(tile);
+      }
+    });
+
+    ecoFeatures.forEach(function (eco) {
+      var centroid = eco._centroid;
+      var province = null;
+      if (featureBoxIntersectsPoint(eco._bbox, centroid[0], centroid[1])) {
+        province = provinceFeatures.filter(function (feature) {
+          return featureBoxIntersectsPoint(feature._bbox, centroid[0], centroid[1]) &&
+            geometryContains(feature.geometry, centroid[0], centroid[1]);
+        })[0] || null;
+      }
+      if (!province && eco._tiles.length) {
+        var counts = {};
+        eco._tiles.forEach(function (tile) {
+          tile._provinceCodes.forEach(function (code) {
+            var iso = PROVINCE_ALIAS[code] || 'CA-' + code;
+            counts[iso] = (counts[iso] || 0) + 1;
+          });
+        });
+        var bestIso = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0];
+        province = bestIso ? provinceByIso.get(bestIso) : null;
+      }
+      eco._provinceIso = province ? province.properties.iso : null;
+    });
+
+    return {
+      provinces: provinces,
+      ecoprovinces: ecoprovinces,
+      tiles: tiles,
+      zoneNodes: zoneNodes,
+      provinceFeatures: provinceFeatures,
+      ecoFeatures: ecoFeatures,
+      provinceByIso: provinceByIso,
+      ecoById: ecoById,
+      tileById: tileById,
+      tileEco: tileEco,
+      tilesByProvince: tilesByProvince
+    };
+  }
+
+  function selectedTilesFor(selection) {
+    var data = state.mapState.data;
+    if (!data || !selection) return [];
+    if (selection.kind === 'tile') {
+      var tile = data.tileById.get(selection.id);
+      return tile ? [tile] : [];
+    }
+    if (selection.kind === 'province') return data.tilesByProvince.get(selection.id) || [];
+    if (selection.kind === 'ecoprovince') {
+      var eco = data.ecoById.get(selection.id);
+      return eco ? eco._tiles.slice() : [];
+    }
+    if (selection.kind === 'canada') return data.tiles.features.slice();
+    return [];
+  }
+
+  function selectionStats(selection) {
+    var tiles = selectedTilesFor(selection);
+    var area = 0;
+    var pj = 0;
+    var over = 0;
+    tiles.forEach(function (tile) {
+      var a = Number(tile.properties.area_ha);
+      var p = Number(tile.properties.recoverable_pj_base);
+      if (Number.isFinite(a)) area += a;
+      if (Number.isFinite(p)) pj += p;
+      if (tile.properties.over_capacity) over += 1;
+    });
+    return { tiles: tiles, area: area, pj: pj, cells: tiles.length, over: over };
+  }
+
+  function buildSpatialSelection(kind, id) {
+    var data = state.mapState.data;
+    if (!data) return null;
+    if (kind === 'province') {
+      var province = data.provinceByIso.get(id);
+      if (!province) return null;
+      return {
+        kind: 'province', id: id, title: province.properties.name, subtitle: id + ' · province',
+        provinceIso: id, ecoId: null, tile: null, zoneId: null, feature: province, bbox: province._bbox
+      };
+    }
+    if (kind === 'ecoprovince') {
+      var eco = data.ecoById.get(id);
+      if (!eco) return null;
+      return {
+        kind: 'ecoprovince', id: id, title: eco.properties.ecoprovince,
+        subtitle: 'Ecoprovince ' + id + ' · ' + eco.properties.ecozone,
+        provinceIso: eco._provinceIso, ecoId: id, tile: null, zoneId: null, feature: eco, bbox: eco._bbox
+      };
+    }
+    if (kind === 'tile') {
+      var tile = data.tileById.get(id);
+      if (!tile) return null;
+      var ecoId = data.tileEco.get(id) || null;
+      return {
+        kind: 'tile', id: id, title: 'RSYC tile ' + id, subtitle: 'Supply tile · ' + tile.properties.provinces,
+        provinceIso: tile._provinceIso, ecoId: ecoId, tile: tile, zoneId: null, feature: tile, bbox: tile._bbox
+      };
+    }
+    if (kind === 'zone') {
+      var zone = data.zoneNodes.zones.filter(function (item) { return item.zone_id === id; })[0];
+      if (!zone || !zone.anchor) return null;
+      return {
+        kind: 'zone', id: id, title: 'C2070 zone ' + id,
+        subtitle: 'Authoritative point anchor · no polygon drawn',
+        provinceIso: null, ecoId: null, tile: null, zoneId: id, zone: zone, bbox: null
+      };
+    }
+    return null;
+  }
+
+  function selectionZoneMessage(selection) {
+    if (selection.zoneId) {
+      var status = 'zone filter pending';
+      if (state.dispatch.processed) {
+        status = state.dispatch.processed.zones.indexOf(selection.zoneId) !== -1
+          ? 'dispatch filtered to zone ' + selection.zoneId
+          : 'zone ' + selection.zoneId + ' is absent from this output — dispatch stays national';
+      }
+      return { mapped: true, text: 'Mapped through the authoritative anchor. ' + status + '. No zone polygon is drawn.' };
+    }
+    return {
+      mapped: false,
+      text: 'No documented mapping from this ' + selection.kind + ' to a C2070 zone. Dispatch and overview stay national; no zone geometry is invented.'
+    };
+  }
+
+  function renderBreadcrumb() {
+    var el = $('map-breadcrumb');
+    if (!el) return;
+    var sel = state.spatial.selection;
+    var crumbs = [{ label: 'Canada', action: 'root', current: !sel, root: true }];
+    if (sel) {
+      if (sel.provinceIso && sel.kind !== 'province') {
+        crumbs.push({ label: provinceDisplayName(sel.provinceIso), action: 'province:' + sel.provinceIso, current: false });
+      }
+      if (sel.kind === 'province') {
+        crumbs.push({ label: sel.title, action: 'province:' + sel.id, current: true });
+      } else if (sel.kind === 'ecoprovince') {
+        crumbs.push({ label: sel.title, action: 'ecoprovince:' + sel.id, current: true });
+      } else if (sel.kind === 'tile') {
+        if (sel.ecoId) crumbs.push({ label: ecoDisplayName(sel.ecoId), action: 'ecoprovince:' + sel.ecoId, current: false });
+        crumbs.push({ label: sel.id, action: 'tile:' + sel.id, current: true });
+      } else if (sel.kind === 'zone') {
+        crumbs.push({ label: 'Zone ' + sel.id, action: 'zone:' + sel.id, current: true });
+      }
+    }
+    el.innerHTML = crumbs.map(function (crumb, index) {
+      var html = index ? '<span class="crumb-sep" aria-hidden="true">/</span>' : '';
+      if (crumb.current) {
+        return html + '<span class="is-current" aria-current="page">' + esc(crumb.label) + '</span>';
+      }
+      return html + '<button type="button" data-spatial-nav="' + esc(crumb.action) + '"' +
+        (crumb.root ? ' class="crumb-root"' : '') + '>' + esc(crumb.label) + '</button>';
+    }).join('');
+  }
+
+  function provinceDisplayName(iso) {
+    var data = state.mapState.data;
+    var feature = data && data.provinceByIso.get(iso);
+    return feature ? feature.properties.name : iso;
+  }
+
+  function ecoDisplayName(id) {
+    var data = state.mapState.data;
+    var feature = data && data.ecoById.get(id);
+    return feature ? feature.properties.ecoprovince : id;
+  }
+
+  function renderSelectionPanel() {
+    var el = $('map-selection');
+    if (!el) return;
+    var sel = state.spatial.selection;
+    var data = state.mapState.data;
+    if (!sel) {
+      el.innerHTML = '<p class="selection-kicker">Linked spatial selection</p>' +
+        '<h4>Start with a province</h4>' +
+        '<p class="selection-empty">Click a province, an ecoprovince boundary, or an RSYC tile. The selection stays linked to the shared year and the URL hash. No C2070 zone is inferred without a documented anchor.</p>' +
+        (data ? '<div class="selection-drill"><h5>Provinces</h5><div class="selection-chip-list">' +
+          data.provinceFeatures.map(function (feature) {
+            return '<button type="button" class="selection-chip" data-spatial-pick="province:' + esc(feature.properties.iso) + '">' +
+              esc(feature.properties.name) + '</button>';
+          }).join('') + '</div></div>' : '');
+      return;
+    }
+    var stats = selectionStats(sel);
+    var zoneMessage = selectionZoneMessage(sel);
+    var areaText = sel.zoneId ? '—' : fmt(stats.area / 1e6, 2) + ' Mha';
+    var pjText = sel.zoneId ? '—' : fmt(stats.pj, 1) + ' PJ';
+    var cellsText = sel.zoneId ? 'anchor only' : stats.cells + ' RSYC tile' + (stats.cells === 1 ? '' : 's');
+    var speciesText = sel.zoneId ? 'not applicable' : 'not joined in this bundle';
+    var provinceText = sel.provinceIso ? provinceDisplayName(sel.provinceIso) : (sel.kind === 'zone' ? 'British Columbia anchor' : 'not inferred');
+    var ecoText = sel.ecoId ? ecoDisplayName(sel.ecoId) + ' (' + sel.ecoId + ')' : (sel.kind === 'zone' ? 'no ecoprovince crosswalk' : '—');
+    var facts = sel.kind === 'zone'
+      ? '<div><dt>Anchor</dt><dd>' + esc(sel.zone.node_id) + '</dd></div>' +
+        '<div><dt>Lon / lat</dt><dd>' + fmt(sel.zone.lon, 3) + ', ' + fmt(sel.zone.lat, 3) + '</dd></div>' +
+        '<div><dt>Weight basis</dt><dd>' + esc(sel.zone.weight_basis) + '</dd></div>' +
+        '<div><dt>Geometry</dt><dd>point only</dd></div>'
+      : '<div><dt>Area</dt><dd>' + areaText + '</dd></div>' +
+        '<div><dt>Recoverable base</dt><dd>' + pjText + '</dd></div>' +
+        '<div><dt>Cells / tiles</dt><dd>' + cellsText + '</dd></div>' +
+        '<div><dt>Species</dt><dd>' + speciesText + '</dd></div>' +
+        '<div><dt>Province</dt><dd>' + esc(provinceText) + '</dd></div>' +
+        '<div><dt>Ecoprovince</dt><dd>' + esc(ecoText) + '</dd></div>';
+
+    var actions = '<button class="button button--quiet" type="button" data-selection-action="fit">Fit selection</button>' +
+      (sel.zoneId ? '<button class="button button--quiet" type="button" data-selection-action="dispatch">Open dispatch · ' + esc(sel.zoneId) + '</button>' : '') +
+      '<button class="button button--quiet" type="button" data-selection-action="reset">Reset</button>';
+
+    var drill = '';
+    if (data) {
+      if (sel.kind === 'province') {
+        var ecos = data.ecoFeatures.filter(function (eco) { return eco._provinceIso === sel.id; });
+        drill = '<div class="selection-drill"><h5>Ecoprovinces in this province</h5><div class="selection-chip-list">' +
+          (ecos.length ? ecos.map(function (eco) {
+            return '<button type="button" class="selection-chip" data-spatial-pick="ecoprovince:' + esc(eco.properties.ecoprovince_id) + '">' +
+              esc(eco.properties.ecoprovince) + ' · ' + eco._tiles.length + ' tiles</button>';
+          }).join('') : '<span class="selection-empty">No ecoprovince centroid falls in this province.</span>') +
+          '</div></div>';
+      } else if (sel.kind === 'ecoprovince') {
+        var ecoTiles = stats.tiles.slice().sort(function (a, b) {
+          return Number(b.properties.recoverable_pj_base) - Number(a.properties.recoverable_pj_base);
+        });
+        drill = '<div class="selection-drill"><h5>RSYC tiles in this ecoprovince</h5><div class="selection-chip-list">' +
+          (ecoTiles.length ? ecoTiles.map(function (tile) {
+            return '<button type="button" class="selection-chip" data-spatial-pick="tile:' + esc(tile.properties.tile_id) + '">' +
+              esc(tile.properties.tile_id) + ' · ' + fmt(tile.properties.recoverable_pj_base, 1) + ' PJ</button>';
+          }).join('') : '<span class="selection-empty">No RSYC tile centroid or vertex falls in this ecoprovince.</span>') +
+          '</div></div>';
+      } else if (sel.kind === 'tile' && sel.ecoId) {
+        var siblings = (data.ecoById.get(sel.ecoId)._tiles || []).filter(function (tile) { return tile.properties.tile_id !== sel.id; });
+        drill = '<div class="selection-drill"><h5>Other tiles in this ecoprovince</h5><div class="selection-chip-list">' +
+          (siblings.length ? siblings.slice(0, 24).map(function (tile) {
+            return '<button type="button" class="selection-chip" data-spatial-pick="tile:' + esc(tile.properties.tile_id) + '">' +
+              esc(tile.properties.tile_id) + ' · ' + fmt(tile.properties.recoverable_pj_base, 1) + ' PJ</button>';
+          }).join('') : '<span class="selection-empty">No sibling tiles assigned.</span>') +
+          '</div></div>';
+      } else if (sel.kind === 'zone') {
+        drill = '<div class="selection-drill"><h5>Other anchor</h5><div class="selection-chip-list">' +
+          data.zoneNodes.zones.filter(function (zone) { return zone.anchor && zone.zone_id !== sel.id; }).map(function (zone) {
+            return '<button type="button" class="selection-chip" data-spatial-pick="zone:' + esc(zone.zone_id) + '">Zone ' + esc(zone.zone_id) + '</button>';
+          }).join('') + '</div></div>';
+      }
+    }
+
+    var evidence = [];
+    evidence.push('Geometry sources: spatial/provinces.geojson (13), spatial/ecoprovinces.geojson (36), spatial/rsyc_tiles.geojson (385).');
+    if (!sel.zoneId) evidence.push('Recoverable base is the committed recoverable_pj_base field, not solved dispatch. Species composition is not present in this spatial bundle and is never imputed.');
+    if (sel.kind === 'ecoprovince' || sel.kind === 'tile') evidence.push('Ecoprovince assignment uses tile-centroid/vertex containment; boundary-straddling tiles are approximate.');
+    if (sel.kind === 'province') evidence.push('RSYC tiles can list more than one province; provincial sums are not additive.');
+    if (sel.zoneId) evidence.push('B1/B2 coordinates come from spatial/zone_nodes.json. The other 11 zones carry explicit gaps; no polygon is fabricated.');
+    if (stats.over) evidence.push(stats.over + ' tile(s) in this selection carry the over_capacity flag.');
+
+    el.innerHTML = '<p class="selection-kicker">' + esc(sel.kind === 'zone' ? 'C2070 anchor' : 'Linked spatial selection') + '</p>' +
+      '<h4>' + esc(sel.title) + '</h4>' +
+      '<p class="selection-sub">' + esc(sel.subtitle) + '</p>' +
+      '<dl class="selection-facts">' + facts + '</dl>' +
+      '<div class="selection-zone ' + (zoneMessage.mapped ? 'is-mapped' : 'is-none') + '"><strong>C2070 zone mapping</strong>' +
+        esc(zoneMessage.text) + '</div>' +
+      '<div class="selection-actions">' + actions + '</div>' +
+      drill +
+      '<details class="selection-evidence"><summary>Evidence &amp; caveats</summary><ul>' +
+        evidence.map(function (line) { return '<li>' + esc(line) + '</li>'; }).join('') +
+      '</ul></details>';
+  }
+
+  function applySelectionSource(selection) {
+    var map = state.mapState.map;
+    if (!map || !map.getSource('spatial-selection')) return;
+    var features = [];
+    if (selection && selection.feature) {
+      features.push({ type: 'Feature', properties: { kind: selection.kind }, geometry: selection.feature.geometry });
+    }
+    map.getSource('spatial-selection').setData({ type: 'FeatureCollection', features: features });
+  }
+
+  function updateAnchorSelectionState() {
+    var sel = state.spatial.selection;
+    state.mapState.markers.forEach(function (marker) {
+      var el = marker.getElement();
+      var id = el.getAttribute('data-zone-id');
+      el.classList.toggle('is-selected', !!sel && sel.kind === 'zone' && sel.id === id);
+    });
+  }
+
+  function fitSpatialSelection(selection, duration) {
+    var map = state.mapState.map;
+    if (!map || !selection) return;
+    if (selection.kind === 'zone' && selection.zone) {
+      map.easeTo({ center: [selection.zone.lon, selection.zone.lat], zoom: 5.2, duration: duration === undefined ? 650 : duration });
+      return;
+    }
+    if (selection.bbox) {
+      map.fitBounds([[selection.bbox[0], selection.bbox[1]], [selection.bbox[2], selection.bbox[3]]], {
+        padding: 46,
+        maxZoom: selection.kind === 'tile' ? 8 : 6,
+        duration: duration === undefined ? 650 : duration
+      });
+    }
+  }
+
+  function applyDispatchZone(zoneId) {
+    if (zoneId && state.dispatch.processed && state.dispatch.processed.zones.indexOf(zoneId) === -1) {
+      state.dispatch.zone = 'ALL';
+    } else {
+      state.dispatch.zone = zoneId || 'ALL';
+    }
+    if ($('dispatch-zone')) {
+      renderZoneOptions(state.dispatch.processed);
+      if (state.dispatch.processed) renderDispatchChart();
+    }
+  }
+
+  function selectSpatial(selection, options) {
+    if (!selection) return;
+    var opts = options || {};
+    var previousZone = state.spatial.mappedZone;
+    state.spatial.selection = selection;
+    state.spatial.mappedZone = selection.zoneId || null;
+    state.mapState.pendingSelection = null;
+    if (selection.zoneId) applyDispatchZone(selection.zoneId);
+    else if (previousZone) applyDispatchZone(null);
+    applySelectionSource(selection);
+    updateAnchorSelectionState();
+    renderBreadcrumb();
+    renderSelectionPanel();
+    if (state.tab === 'overview' && state.core) renderOverview();
+    if (state.tab === 'dispatch' && state.dispatch.processed) renderDispatchChart();
+    if (opts.fit !== false) fitSpatialSelection(selection, opts.duration);
+    if (!opts.skipHash) updateHash();
+    if (!opts.silent) announce('Selected ' + selection.title + '.');
+  }
+
+  function clearSpatialSelection(options) {
+    var opts = options || {};
+    var previousZone = state.spatial.mappedZone;
+    state.spatial.selection = null;
+    state.spatial.mappedZone = null;
+    state.mapState.pendingSelection = null;
+    if (previousZone) applyDispatchZone(null);
+    applySelectionSource(null);
+    updateAnchorSelectionState();
+    renderBreadcrumb();
+    renderSelectionPanel();
+    if (state.tab === 'overview' && state.core) renderOverview();
+    if (opts.fit !== false && state.mapState.map) {
+      state.mapState.map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: opts.duration === undefined ? 600 : opts.duration });
+    }
+    if (!opts.skipHash) updateHash();
+    if (!opts.silent) announce('Spatial selection reset.');
+  }
+
+  function restoreSelection(parsed, options) {
+    var selection = buildSpatialSelection(parsed.kind, parsed.id);
+    if (!selection) {
+      state.mapState.pendingSelection = null;
+      return false;
+    }
+    selectSpatial(selection, {
+      skipHash: true,
+      silent: true,
+      fit: (options && options.fit) !== false,
+      duration: options && options.duration
+    });
+    return true;
+  }
+
+  function spatialNavigation(action) {
+    if (!action || action === 'root') {
+      clearSpatialSelection();
+      return;
+    }
+    var split = action.indexOf(':');
+    if (split === -1) return;
+    var kind = action.slice(0, split);
+    var id = action.slice(split + 1);
+    var selection = buildSpatialSelection(kind, id);
+    if (selection) selectSpatial(selection);
+  }
+
   async function initMap() {
     if (state.mapState.initialized || state.mapState.loading || state.mapState.error) return;
     state.mapState.loading = true;
@@ -2539,6 +3414,7 @@
       requireTrue(ecoprovinces.features && ecoprovinces.features.length === 36, 'expected 36 ecoprovinces, found ' + (ecoprovinces.features || []).length);
       requireTrue(tiles.features && tiles.features.length === 385, 'expected 385 RSYC tiles, found ' + (tiles.features || []).length);
       requireTrue(zoneNodes.zone_count === 13 && zoneNodes.gap_count === 11 && zoneNodes.anchor_count === 2, 'zone-node contract mismatch');
+      var spatialData = prepareSpatialData(provinces, ecoprovinces, tiles, zoneNodes);
 
       var values = tiles.features.map(function (feature) { return Number(feature.properties.recoverable_pj_base); }).filter(Number.isFinite);
       var breaks = quantileBreaks(values, 5);
@@ -2594,30 +3470,60 @@
           paint: { 'line-color': '#8aa892', 'line-width': 0.7, 'line-opacity': 0.55, 'line-dasharray': [3, 2] }
         });
         map.addLayer({
+          id: 'ecoprovince-hit',
+          type: 'line',
+          source: 'ecoprovinces',
+          paint: { 'line-color': '#8aa892', 'line-width': 9, 'line-opacity': 0.01 }
+        });
+        map.addLayer({
           id: 'tiles-line',
           type: 'line',
           source: 'tiles',
           paint: { 'line-color': '#5b351f', 'line-width': 0.45, 'line-opacity': 0.6 }
         });
+        map.addSource('spatial-selection', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        map.addLayer({
+          id: 'spatial-selection-fill',
+          type: 'fill',
+          source: 'spatial-selection',
+          paint: { 'fill-color': '#f2b45c', 'fill-opacity': 0.18 }
+        });
+        map.addLayer({
+          id: 'spatial-selection-line',
+          type: 'line',
+          source: 'spatial-selection',
+          paint: { 'line-color': '#f2b45c', 'line-width': 2.2, 'line-opacity': 0.95 }
+        });
 
-        map.on('click', 'tiles-fill', function (event) {
-          var feature = event.features && event.features[0];
-          if (!feature) return;
-          var props = feature.properties || {};
-          var html = '<h4>RSYC tile ' + esc(props.tile_id) + '</h4>' +
-            '<div class="popup-grid">' +
-              '<span>Province</span><b>' + esc(props.provinces) + '</b>' +
-              '<span>Area</span><b>' + fmt(props.area_ha / 1000, 1) + ' kha</b>' +
-              '<span>Volume</span><b>' + fmtCompact(props.volume_m3, 1) + ' m³</b>' +
-              '<span>Recoverable ODT</span><b>' + fmtCompact(props.recoverable_odt_base, 1) + '</b>' +
-              '<span>Recoverable base</span><b>' + fmt(props.recoverable_pj_base, 2) + ' PJ</b>' +
-              '<span>Over capacity</span><b>' + (props.over_capacity ? 'yes' : 'no') + '</b>' +
-            '</div>';
-          new window.maplibregl.Popup({ closeButton: true, maxWidth: '290px' })
-            .setLngLat(event.lngLat).setHTML(html).addTo(map);
+        map.on('click', function (event) {
+          var tileFeatures = map.queryRenderedFeatures(event.point, { layers: ['tiles-fill'] });
+          if (tileFeatures.length) {
+            var tileId = tileFeatures[0].properties.tile_id;
+            var tileSelection = buildSpatialSelection('tile', tileId);
+            if (tileSelection) selectSpatial(tileSelection);
+            return;
+          }
+          var ecoBox = [[event.point.x - 5, event.point.y - 5], [event.point.x + 5, event.point.y + 5]];
+          var ecoFeatures = map.queryRenderedFeatures(ecoBox, { layers: ['ecoprovince-hit'] });
+          if (ecoFeatures.length) {
+            var ecoSelection = buildSpatialSelection('ecoprovince', ecoFeatures[0].properties.ecoprovince_id);
+            if (ecoSelection) selectSpatial(ecoSelection);
+            return;
+          }
+          var provinceFeatures = map.queryRenderedFeatures(event.point, { layers: ['province-fill'] });
+          if (provinceFeatures.length) {
+            var provinceSelection = buildSpatialSelection('province', provinceFeatures[0].properties.iso);
+            if (provinceSelection) selectSpatial(provinceSelection);
+            return;
+          }
+          if (state.spatial.selection) clearSpatialSelection({ fit: false, silent: true });
         });
         map.on('mouseenter', 'tiles-fill', function () { map.getCanvas().style.cursor = 'pointer'; });
         map.on('mouseleave', 'tiles-fill', function () { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', 'province-fill', function () { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'province-fill', function () { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', 'ecoprovince-line', function () { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', 'ecoprovince-line', function () { map.getCanvas().style.cursor = ''; });
 
         applyMapVisibility();
         mapState.hidden = true;
@@ -2628,11 +3534,43 @@
         applyMapVisibility();
         state.mapState.initialized = true;
         state.mapState.loading = false;
-        state.mapState.data = { provinces: provinces, ecoprovinces: ecoprovinces, tiles: tiles, zoneNodes: zoneNodes, breaks: breaks, colors: colors };
+        state.mapState.data = spatialData;
+        state.mapState.data.breaks = breaks;
+        state.mapState.data.colors = colors;
         map.resize();
-        map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 0 });
+        if (state.mapState.pendingSelection) {
+          var pending = state.mapState.pendingSelection;
+          state.mapState.pendingSelection = null;
+          restoreSelection(pending, { duration: 0, fit: true });
+        } else {
+          map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 0 });
+        }
+        renderBreadcrumb();
+        renderSelectionPanel();
       });
-      $('map-fit').onclick = function () { map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 700 }); };
+      $('map-fit').onclick = function () {
+        if (state.mapState.pendingSelection) state.mapState.pendingSelection = null;
+        map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 700 });
+      };
+      $('map-reset').onclick = function () { clearSpatialSelection(); };
+      $('map-breadcrumb').onclick = function (event) {
+        var button = event.target.closest('button[data-spatial-nav]');
+        if (!button) return;
+        spatialNavigation(button.getAttribute('data-spatial-nav'));
+      };
+      $('map-selection').onclick = function (event) {
+        var pick = event.target.closest('[data-spatial-pick]');
+        if (pick) {
+          spatialNavigation(pick.getAttribute('data-spatial-pick'));
+          return;
+        }
+        var action = event.target.closest('[data-selection-action]');
+        if (!action) return;
+        var name = action.getAttribute('data-selection-action');
+        if (name === 'reset') clearSpatialSelection();
+        else if (name === 'fit' && state.spatial.selection) fitSpatialSelection(state.spatial.selection);
+        else if (name === 'dispatch') activateTab('dispatch');
+      };
     } catch (error) {
       state.mapState.loading = false;
       state.mapState.error = true;
@@ -2649,6 +3587,12 @@
       var element = document.createElement('div');
       element.className = 'anchor-label';
       element.textContent = zone.zone_id;
+      element.setAttribute('data-zone-id', zone.zone_id);
+      element.addEventListener('click', function (event) {
+        event.stopPropagation();
+        var selection = buildSpatialSelection('zone', zone.zone_id);
+        if (selection) selectSpatial(selection);
+      });
       var popup = new window.maplibregl.Popup({ closeButton: true, offset: 18 })
         .setHTML('<h4>C2070 zone ' + esc(zone.zone_id) + '</h4>' +
           '<div class="popup-grid"><span>Node</span><b>' + esc(zone.node_id) + '</b>' +
@@ -2671,6 +3615,7 @@
     map.setLayoutProperty('province-fill', 'visibility', provinces ? 'visible' : 'none');
     map.setLayoutProperty('province-line', 'visibility', provinces ? 'visible' : 'none');
     map.setLayoutProperty('ecoprovince-line', 'visibility', ecoprovinces ? 'visible' : 'none');
+    map.setLayoutProperty('ecoprovince-hit', 'visibility', ecoprovinces ? 'visible' : 'none');
     map.setLayoutProperty('tiles-fill', 'visibility', tiles ? 'visible' : 'none');
     map.setLayoutProperty('tiles-line', 'visibility', tiles ? 'visible' : 'none');
     state.mapState.markers.forEach(function (marker) {
