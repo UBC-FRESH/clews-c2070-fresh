@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -17,9 +18,10 @@ from workflows.ui.osecan_runner import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MODEL_AVAILABLE = (REPO_ROOT / "runtime/osecan_model").is_dir() or Path(
-    "/tmp/osecan_emfix"
-).is_dir()
+MODEL_ROOT = Path(
+    os.environ.get("CLEWS_OSECAN_MODEL_ROOT", REPO_ROOT / "runtime/osecan_model")
+)
+MODEL_AVAILABLE = (MODEL_ROOT / "model_manifest.json").is_file()
 
 
 def scenario_payload(*, scenario_id: str, level_m3: float, path: str = "custom") -> dict:
@@ -152,6 +154,8 @@ def test_dry_run_generates_harmonized_params(tmp_path: Path) -> None:
             "--out",
             str(output_dir),
             "--dry-run",
+            "--model-root",
+            str(MODEL_ROOT),
         ],
         cwd=REPO_ROOT,
         capture_output=True,

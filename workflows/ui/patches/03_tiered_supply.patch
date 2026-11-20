@@ -1,0 +1,47 @@
+diff --git a/src/osecan/data/build_params.py b/src/osecan/data/build_params.py
+index d113b9b..652cd20 100644
+--- a/src/osecan/data/build_params.py
++++ b/src/osecan/data/build_params.py
+@@ -155,6 +155,10 @@ def build(out: Path):
+                 capital.append([R, t, y, ms.LineCapexPerKW]); capfac.append([R, t, TS, y, 1.0])
+         elif kind == "feedstock":
+             life.append([R, t, 1]); c2a.append([R, t, 1.0])
++            if t in ms.TieredBiomassSupply:
++                # Tier caps and costs are scenario inputs; leaving no base rows
++                # prevents a bare build-params from dispatching the tiers.
++                continue
+             for y in years:
+                 variable.append([R, t, 1, y, WS3_FEEDSTOCK_COST])
+                 max_act.append([R, t, y, WS3_FEEDSTOCK_CAP_PJ])
+diff --git a/src/osecan/model_structure.py b/src/osecan/model_structure.py
+index 6da7037..8376f10 100644
+--- a/src/osecan/model_structure.py
++++ b/src/osecan/model_structure.py
+@@ -294,6 +294,13 @@ ZonalBiomassSupply = {
+     "B2": "BCWB2",
+ }
+ 
++# [STRUCTURAL] Tiered rest-of-Canada biomass supply. Four incremental technologies
++# inject into the national BCW pool; their activity caps and variable costs are
++# scenario inputs owned by the FRESH/WS3 supply-curve builder. The base parameter
++# build therefore creates the technologies and their output ratios but deliberately
++# leaves caps and costs absent, so a bare `osecan build-params` cannot dispatch them.
++TieredBiomassSupply = ("SUPBCWT1", "SUPBCWT2", "SUPBCWT3", "SUPBCWT4")
++
+ # Same positional layout as BiomassConversion: [tech, fuel_in, IAR, fuel_out, OAR, label, mode].
+ #
+ # [STRUCTURAL] Both rows have an EMPTY input fuel and an empty IAR, so sets_n_ratios skips the
+diff --git a/src/osecan/sets_n_ratios.py b/src/osecan/sets_n_ratios.py
+index 65d4970..0a881fc 100644
+--- a/src/osecan/sets_n_ratios.py
++++ b/src/osecan/sets_n_ratios.py
+@@ -172,6 +172,9 @@ def BuildOSeCAN(include_land_water: bool = False):
+     for zone, fuel in ms.ZonalBiomassSupply.items():
+         ensure_fuel(fuel); ensure_tech(f"SUP{fuel}", f"Biomass feedstock supply {fuel} ({zone})")
+         AddActivityListItems(Years, R, f"SUP{fuel}", fuel, OAR, value="1")
++    for tier in ms.TieredBiomassSupply:
++        ensure_tech(tier, f"Biomass supply tier {tier[-1]} (national BCW pool)")
++        AddActivityListItems(Years, R, tier, "BCW", OAR, value="1")
+ 
+     for tech, fin, iar, fout, oar, name, moo in ms.TransformationTechnologies:
+         ensure_tech(tech, name)

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from workflows.ui.contracts import HarvestPath, HydroMode, Scenario, SupplyCurveMode
+from workflows.ui.model_tree import MODEL_COPY_ENTRIES, tree_sha256
 from workflows.ui.storage import atomic_write_json
 
 __all__ = [
@@ -54,7 +55,7 @@ CANONICAL_SET_PATH = (
     REPO_ROOT
     / "data/derived/national/clews/osecan/canonical_constraint_set.json"
 )
-DEFAULT_MODEL_ROOT = Path("/tmp/osecan_emfix")
+DEFAULT_MODEL_ROOT = REPO_ROOT / "runtime/osecan_model"
 MODEL_DIR_NAME = "model"
 RUN_DIR_NAME = "run"
 PARAMS_DIR_NAME = "run/params"
@@ -369,7 +370,12 @@ def _git_value(root: Path, *arguments: str) -> str | None:
     return completed.stdout.strip()
 
 
-def _pick_python(root: Path) -> Path:
+def _pick_python(root: Path, manifest: Mapping[str, Any] | None = None) -> Path:
+    recorded = manifest.get("python") if manifest else None
+    if isinstance(recorded, str) and recorded:
+        candidate = Path(recorded)
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
     candidate = root / ".venv/bin/python"
     if candidate.is_file() and os.access(candidate, os.X_OK):
         return candidate
@@ -378,12 +384,58 @@ def _pick_python(root: Path) -> Path:
     raise RunnerError(f"no Python interpreter found for model source {root}")
 
 
-def _pick_otoole(root: Path) -> Path | None:
+def _pick_otoole(root: Path, manifest: Mapping[str, Any] | None = None) -> Path | None:
+    recorded = manifest.get("otoole") if manifest else None
+    if isinstance(recorded, str) and recorded:
+        candidate = Path(recorded)
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
     candidate = root / ".venv/bin/otoole"
     if candidate.is_file() and os.access(candidate, os.X_OK):
         return candidate
     found = shutil.which("otoole")
     return Path(found) if found else None
+
+
+def _verify_model_manifest(root: Path) -> dict[str, Any] | None:
+    """Validate the setup manifest when one is present.
+
+    Args:
+        root: Candidate model source root.
+
+    Returns:
+        Parsed manifest, or ``None`` for a legacy source without one.
+
+    Raises:
+        RunnerError: If the manifest names a different commit or the serialized
+            model tree no longer matches the recorded hash.
+    """
+
+    path = root / "model_manifest.json"
+    if not path.is_file():
+        return None
+    manifest = _read_json(path)
+    if not isinstance(manifest, dict):
+        raise RunnerError(f"model manifest is not a JSON object: {path}")
+    if manifest.get("schema_version") != "clews.osecan_model_manifest.v1":
+        raise RunnerError(f"unsupported model manifest schema: {path}")
+    commit = _git_value(root, "rev-parse", "HEAD")
+    recorded_commit = manifest.get("source_commit")
+    if commit and recorded_commit != commit:
+        raise RunnerError(
+            f"model manifest commit {recorded_commit!r} does not match "
+            f"git HEAD {commit!r} at {root}"
+        )
+    recorded_tree = manifest.get("model_tree_sha256")
+    if not isinstance(recorded_tree, str) or len(recorded_tree) != 64:
+        raise RunnerError(f"model manifest has no valid tree hash: {path}")
+    actual_tree = tree_sha256(root)
+    if actual_tree != recorded_tree:
+        raise RunnerError(
+            f"model tree hash {actual_tree} does not match manifest "
+            f"{recorded_tree}; rebuild with workflows.ui.setup_osecan_model"
+        )
+    return manifest
 
 
 def resolve_model_source(explicit: Path | None = None) -> ModelSource:
@@ -404,12 +456,13 @@ def resolve_model_source(explicit: Path | None = None) -> ModelSource:
         candidates = (Path(explicit).expanduser(),)
         origin = "--model-root"
     else:
-        candidates = (REPO_ROOT / "runtime/osecan_model", DEFAULT_MODEL_ROOT)
-        origin = "runtime/osecan_model or /tmp/osecan_emfix"
+        candidates = (DEFAULT_MODEL_ROOT,)
+        origin = str(DEFAULT_MODEL_ROOT.relative_to(REPO_ROOT))
     for candidate in candidates:
         root = candidate.resolve()
         if not root.is_dir():
             continue
+        manifest = _verify_model_manifest(root)
         missing = [name for name in REQUIRED_MODEL_PATHS if not (root / name).is_file()]
         if missing:
             raise RunnerError(
@@ -436,13 +489,13 @@ def resolve_model_source(explicit: Path | None = None) -> ModelSource:
             root=root,
             commit=_git_value(root, "rev-parse", "HEAD") or "unknown",
             dirty=bool(dirty_text.strip()),
-            python=_pick_python(root),
-            otoole=_pick_otoole(root),
+            python=_pick_python(root, manifest),
+            otoole=_pick_otoole(root, manifest),
         )
     raise RunnerError(
-        f"no OSeCAN model copy found ({origin}). Expected a disposable copy with "
-        "corrected output-basis emission factors and zonal/tier structure. Set "
-        "--model-root or prepare runtime/osecan_model; refusing to fabricate outputs."
+        f"no OSeCAN model copy found ({origin}). Run "
+        "`.venv/bin/python -m workflows.ui.setup_osecan_model` to rebuild it from "
+        "deltae/C2070@40d5b43, or pass --model-root PATH; refusing to fabricate outputs."
     )
 
 
@@ -471,18 +524,6 @@ _COPY_IGNORE = shutil.ignore_patterns(
     ".ruff_cache",
 )
 
-_COPY_ENTRIES = (
-    "src",
-    "SETs",
-    "config",
-    "data/params",
-    "resources",
-    "pyproject.toml",
-    "README.md",
-    "LICENSE",
-)
-
-
 def copy_model_source(source: ModelSource, destination: Path) -> Path:
     """Copy the reduced model tree below the run output directory.
 
@@ -494,7 +535,7 @@ def copy_model_source(source: ModelSource, destination: Path) -> Path:
     if destination.exists():
         raise RunnerError(f"model copy destination already exists: {destination}")
     destination.mkdir(parents=True)
-    for entry in _COPY_ENTRIES:
+    for entry in MODEL_COPY_ENTRIES:
         source_path = source.root / entry
         if not source_path.exists():
             continue
@@ -518,27 +559,6 @@ def copy_model_source(source: ModelSource, destination: Path) -> Path:
         encoding="utf-8",
     )
     return destination
-
-
-def tree_sha256(root: Path) -> str:
-    """Hash file names and bytes of the copied reduced model tree."""
-
-    digest = hashlib.sha256()
-    ignored_parts = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
-    files = sorted(
-        path
-        for path in root.rglob("*")
-        if path.is_file()
-        and ".osecan-model-copy" != path.name
-        and path.suffix != ".pyc"
-        and not ignored_parts.intersection(path.parts)
-    )
-    for path in files:
-        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-        digest.update(b"\0")
-    return digest.hexdigest()
 
 
 # ---------------------------------------------------------------------------

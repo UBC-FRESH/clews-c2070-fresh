@@ -168,21 +168,47 @@ Example dry run and real screening run:
 
 .venv/bin/python -m workflows.ui.run_scenario \
   --scenario workflows/ui/examples/screening_119m.json \
-  --out /tmp/screening_119m_real --model-root /tmp/osecan_emfix
+  --out /tmp/screening_119m_real --model-root runtime/osecan_model
 ```
+
+### Reproducible model rebuild
+
+The public `deltae/C2070` tree is not vendored. Build the disposable copy from
+the public base commit and the committed patches:
+
+```bash
+.venv/bin/python -m workflows.ui.setup_osecan_model \
+  --base /path/to/C2070 \
+  --out runtime/osecan_model \
+  --python /path/to/osecan/.venv/bin/python
+```
+
+Omit `--base` to clone `https://github.com/deltae/C2070.git`. The script checks
+out `40d5b43bb3f8b3f69c16e953144d35eeed5f0f44`, applies
+`workflows/ui/patches/01_emission_factors.patch`,
+`02_zonal_bc.patch`, and `03_tiered_supply.patch` in order, verifies each patch
+SHA-256, runs `osecan build-sets`, `osecan build-params`, and
+`osecan harmonize`, and writes `model_manifest.json` with the source commit,
+patch hashes, and a deterministic model-tree hash.
+
+The setup fails closed on a commit mismatch, patch-hash mismatch, unexpected
+patched file, missing `SUPBCWT1`-`T4` / `SUPBCWB1`-`B2` structure, raw
+fuel-basis emission factor, or harmonization failure. The runner also verifies
+the manifest tree hash when one is present.
 
 ### Model source
 
-The runner never edits its source model. It selects, in order:
+The runner never edits its source model. It selects:
 
 1. `--model-root PATH`;
-2. `runtime/osecan_model`;
-3. `/tmp/osecan_emfix`.
+2. `runtime/osecan_model` (the default).
 
-The selected copy must contain the zonal/tier SETs, the corrected output-basis
-emission factors, `resources/osemosys_fast_osecan.txt`, and an OSeCAN Python
-environment. If none is usable the runner fails with a clear message and writes
-a `failed` summary; it never fabricates dispatch or objective values.
+There is no `/tmp` fallback. If the default tree is missing or fails its
+manifest check, the runner fails with a setup instruction; it never fabricates
+dispatch or objective values. A selected copy must contain the zonal/tier SETs,
+the corrected output-basis emission factors, `resources/osemosys_fast_osecan.txt`,
+and a usable OSeCAN Python environment. The manifest records the interpreter and
+`otoole` path used by the setup, and the runner reads them from there.
 
 ### Generated parameters
 

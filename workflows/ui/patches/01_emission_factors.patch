@@ -1,0 +1,57 @@
+diff --git a/src/osecan/data/build_params.py b/src/osecan/data/build_params.py
+index 1e067ee..d113b9b 100644
+--- a/src/osecan/data/build_params.py
++++ b/src/osecan/data/build_params.py
+@@ -81,6 +81,31 @@ def zone_of(t):
+     return z if z in ms.Zones else None
+ 
+ 
++def emission_factor_per_output_pj(arch: str) -> float:
++    """Return CO2 emissions per PJ of plant output activity.
++
++    ``ARCH[...]["co2"]`` is a fuel-input factor: the placeholder values 0.051
++    and 0.090 are t/GJ, which is numerically identical to Mt/PJ.  OSeMOSYS
++    applies ``EmissionActivityRatio`` to output activity, while each plant
++    consumes ``InputActivityRatio`` PJ of fuel per PJ of output, so the
++    parameter must be scaled by that input ratio.
++
++    Args:
++        arch: Power-plant archetype code, e.g. ``NGS`` or ``COA``.
++
++    Returns:
++        Mt CO2 per PJ of output activity.
++
++    Raises:
++        KeyError: If the archetype has no documented input activity ratio.
++
++    """
++    if arch not in ms.PowerPlants:
++        raise KeyError(f"{arch}: no documented power-plant input activity ratio")
++    input_ratio = float(ms.PowerPlants[arch][1])
++    return round(float(ARCH[arch]["co2"]) * input_ratio, 6)
++
++
+ def build(out: Path):
+     """Generate parameter CSVs and a placeholder inventory.
+ 
+@@ -115,7 +140,7 @@ def build(out: Path):
+                     variable.append([R, t, 1, y, attr["var"]])
+                 capfac.append([R, t, TS, y, attr["cf"]])
+                 if attr["co2"]:
+-                    ear.append([R, t, "CO2", 1, y, attr["co2"]])
++                    ear.append([R, t, "CO2", 1, y, emission_factor_per_output_pj(a)])
+             life.append([R, t, attr["life"]]); c2a.append([R, t, CAP2ACT])
+             resid.append([R, t, years[0], 0.0])
+         elif kind == "distribution":
+@@ -173,7 +198,10 @@ def build(out: Path):
+                     for z in pzones:
+                         for arch, attr in ARCH.items():
+                             if attr["co2"] and f"PWR{arch}{z}" in techs:
+-                                udc_mult_act.append([R, f"PWR{arch}{z}", u, y, attr["co2"]])
++                                udc_mult_act.append(
++                                    [R, f"PWR{arch}{z}", u, y,
++                                     emission_factor_per_output_pj(arch)]
++                                )
+ 
+     _w(out, "CapitalCost", ["REGION", "TECHNOLOGY", "YEAR", "VALUE"], capital)
+     _w(out, "FixedCost", ["REGION", "TECHNOLOGY", "YEAR", "VALUE"], fixed)

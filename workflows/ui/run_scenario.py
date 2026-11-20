@@ -142,7 +142,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--model-root",
         type=Path,
         default=None,
-        help="disposable OSeCAN model copy (default: runtime/osecan_model, then /tmp/osecan_emfix)",
+        help=(
+            "prepared OSeCAN model copy (default: runtime/osecan_model; rebuild it "
+            "with python -m workflows.ui.setup_osecan_model)"
+        ),
     )
     return parser
 

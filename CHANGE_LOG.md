@@ -2,11 +2,25 @@
 
 ## 2026-11-20
 
+- **Closed the OSeCAN runner reproducibility gap.** Added the committed patch
+  set `workflows/ui/patches/01_emission_factors.patch`,
+  `02_zonal_bc.patch`, and `03_tiered_supply.patch`, plus
+  `workflows/ui/setup_osecan_model.py`. The setup script checks out public
+  `deltae/C2070@40d5b43`, verifies and applies all three patch hashes,
+  regenerates `SETs` and `data/params`, runs `osecan harmonize`, verifies the
+  zonal/tier structure and corrected output-basis emission factors, and writes
+  `model_manifest.json` with the source commit, patch hashes, interpreter, and
+  deterministic model-tree hash. The runner now defaults only to
+  `runtime/osecan_model`, verifies that manifest when present, and fails with a
+  setup instruction instead of silently using `/tmp`. Added setup/patch/manifest
+  tests and a dry-run from the rebuilt tree; no public OSeCAN repository or
+  remote was modified.
+
 - **Implemented the milestone-1b real OSeCAN runner behind the milestone-1a
   CLI.** Added `workflows/ui/osecan_runner.py` and extended
   `workflows/ui/run_scenario.py` with `--dry-run` and `--model-root`. The
-  runner selects a disposable model copy (`runtime/osecan_model`, then
-  `/tmp/osecan_emfix`), copies a reduced tree below the run output, applies the
+  runner selects a disposable model copy (`runtime/osecan_model`), copies a
+  reduced tree below the run output, applies the
   scenario parameter files, runs `osecan harmonize` and the GLPK solve, and
   writes normalized `run_summaries.json`, `dispatch_by_zone.csv`,
   `supply_caps.json`, and `manifest.json`. It never modifies the source model.

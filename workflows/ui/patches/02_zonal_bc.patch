@@ -1,0 +1,62 @@
+diff --git a/src/osecan/model_structure.py b/src/osecan/model_structure.py
+index 7829dbd..6da7037 100644
+--- a/src/osecan/model_structure.py
++++ b/src/osecan/model_structure.py
+@@ -181,6 +181,8 @@ def link_kind(a, b):
+ # ---------------------------------------------------------------- commodities
+ NamingConvention = {
+     "BIO": "Biomass", "BSW": "Biomass — switchgrass", "BCW": "Biomass — woody residue",
++    "BCWB1": "Biomass — BC woody residue (B1 South Coast)",
++    "BCWB2": "Biomass — BC woody residue (B2 Interior & North)",
+     "COA": "Coal", "CRU": "Crude oil", "DSL": "Diesel", "ELC": "Electricity (grid)",
+     "GEO": "Geothermal", "GSL": "Gasoline", "HDG": "Hydrogen", "HFO": "Heavy fuel oil",
+     "HYD": "Hydropower", "JFL": "Jet fuel", "LPG": "LPG", "NGS": "Natural gas",
+@@ -281,6 +283,17 @@ BiomassConversion = [
+ ]
+ BiomassFeedstocks = ["BSW", "BCW"]
+ 
++# [STRUCTURAL] Zonal BC woody-residue supply for the FRESH/WS3 seam. B1 and B2 are the
++# two BC zones; their PWRBCW plants switch from the national BCW pool to a dedicated
++# zone fuel, and a SUP<fuel> technology supplies each one. This makes the FRESH-side
++# SUPBCWB1/SUPBCWB2 activity limits and costs representable without changing the
++# national BCW chain used by every other zone. Matter state and units are inherited
++# from BCW: biomass in PJ, no separate OSeMOSYS fuel metadata exists.
++ZonalBiomassSupply = {
++    "B1": "BCWB1",
++    "B2": "BCWB2",
++}
++
+ # Same positional layout as BiomassConversion: [tech, fuel_in, IAR, fuel_out, OAR, label, mode].
+ #
+ # [STRUCTURAL] Both rows have an EMPTY input fuel and an empty IAR, so sets_n_ratios skips the
+diff --git a/src/osecan/sets_n_ratios.py b/src/osecan/sets_n_ratios.py
+index fb578d1..65d4970 100644
+--- a/src/osecan/sets_n_ratios.py
++++ b/src/osecan/sets_n_ratios.py
+@@ -128,9 +128,13 @@ def BuildOSeCAN(include_land_water: bool = False):
+         # --- biomass conversion (WS3 seam) ---
+         for base, fin, iar, fout, oar, name, moo in ms.BiomassConversion:
+             tech = f"{base}{z}"; ensure_tech(tech, f"{name} ({z})")
+-            if fin:
+-                ensure_fuel(fin)
+-                AddActivityListItems(Years, R, tech, fin, IAR, value=str(iar), g=moo)
++            # BCW in a zone with a dedicated zonal supply consumes that zone fuel;
++            # every other zone keeps the national BCW pool.
++            zonal_fuel = ms.ZonalBiomassSupply.get(z) if base == "PWRBCW" else None
++            in_fuel = zonal_fuel or fin
++            if in_fuel:
++                ensure_fuel(in_fuel)
++                AddActivityListItems(Years, R, tech, in_fuel, IAR, value=str(iar), g=moo)
+             out = f"ELC{z}01" if fout == "ELC" else fout
+             if out:
+                 ensure_fuel(out)
+@@ -165,6 +169,9 @@ def BuildOSeCAN(include_land_water: bool = False):
+     for fs in ms.BiomassFeedstocks:
+         ensure_fuel(fs); ensure_tech(f"SUP{fs}", f"Biomass feedstock supply {fs}")
+         AddActivityListItems(Years, R, f"SUP{fs}", fs, OAR, value="1")
++    for zone, fuel in ms.ZonalBiomassSupply.items():
++        ensure_fuel(fuel); ensure_tech(f"SUP{fuel}", f"Biomass feedstock supply {fuel} ({zone})")
++        AddActivityListItems(Years, R, f"SUP{fuel}", fuel, OAR, value="1")
+ 
+     for tech, fin, iar, fout, oar, name, moo in ms.TransformationTechnologies:
+         ensure_tech(tech, name)

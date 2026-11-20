@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import subprocess
 import sys
 import time
@@ -444,9 +445,10 @@ def test_path_traversal_is_rejected(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-MODEL_AVAILABLE = (REPO_ROOT / "runtime/osecan_model").is_dir() or Path(
-    "/tmp/osecan_emfix"
-).is_dir()
+MODEL_ROOT = Path(
+    os.environ.get("CLEWS_OSECAN_MODEL_ROOT", REPO_ROOT / "runtime/osecan_model")
+)
+MODEL_AVAILABLE = (MODEL_ROOT / "model_manifest.json").is_file()
 
 
 @pytest.mark.skipif(not MODEL_AVAILABLE, reason="disposable OSeCAN model copy is unavailable")
@@ -465,6 +467,8 @@ def test_runner_dry_run_writes_completed_summary(tmp_path: Path) -> None:
             "--out",
             str(output_dir),
             "--dry-run",
+            "--model-root",
+            str(MODEL_ROOT),
         ],
         cwd=REPO_ROOT,
         capture_output=True,
