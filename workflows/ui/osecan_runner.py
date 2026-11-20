@@ -524,10 +524,14 @@ def tree_sha256(root: Path) -> str:
     """Hash file names and bytes of the copied reduced model tree."""
 
     digest = hashlib.sha256()
+    ignored_parts = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
     files = sorted(
         path
         for path in root.rglob("*")
-        if path.is_file() and ".osecan-model-copy" != path.name
+        if path.is_file()
+        and ".osecan-model-copy" != path.name
+        and path.suffix != ".pyc"
+        and not ignored_parts.intersection(path.parts)
     )
     for path in files:
         digest.update(path.relative_to(root).as_posix().encode("utf-8"))
