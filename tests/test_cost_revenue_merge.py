@@ -36,15 +36,19 @@ def test_merge_conserves_every_input_row(merged: merge.MergeResult) -> None:
     output_rows = read_csv(merged.output_path)
 
     assert output_rows == input_rows
-    assert len(merged.ledger) == len(input_rows) == 217
-    assert merged.summary["row_counts"]["by_jurisdiction"] == {"BC": 200, "QC": 17}
+    assert len(merged.ledger) == len(input_rows) == 940
+    assert merged.summary["row_counts"]["by_jurisdiction"] == {"BC": 200, "QC": 740}
     assert merged.summary["row_counts"]["by_source"] == {
         "prov_bcts_auction_results": 200,
-        "prov_qc_meris": 17,
+        "prov_qc_meris": 740,
     }
     assert merged.summary["row_counts"]["by_perspective"] == {
-        "crown": 106,
-        "forest_sector": 111,
+        "crown": 100,
+        "forest_sector": 840,
+    }
+    assert merged.summary["row_counts"]["by_evidence_class"] == {
+        "model_input": 740,
+        "observed": 200,
     }
     assert merged.summary["merge_rules"]["no_imputation"] is True
 
@@ -91,28 +95,28 @@ def test_a_second_additive_source_fails_closed(tmp_path: Path) -> None:
 
 
 def test_unpaired_mirror_fails_closed(tmp_path: Path) -> None:
-    qc_rows = read_csv(QC_BLOCK)
-    mirror = next(row for row in qc_rows if row["notes"].endswith("mirror=1"))
+    bc_rows = read_csv(BC_BLOCK)
+    mirror = next(row for row in bc_rows if row["notes"].endswith("mirror=1"))
     counterpart_index = next(
         index
-        for index, row in enumerate(qc_rows)
+        for index, row in enumerate(bc_rows)
         if row["licence"] == mirror["licence"]
         and row["component"] == mirror["component"]
         and row["perspective"] == "crown"
         and not row["notes"].endswith("mirror=1")
     )
-    tampered = tmp_path / "unpaired_qc.csv"
+    tampered = tmp_path / "unpaired_bc.csv"
     with tampered.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=merge.LEDGER_FIELDS)
         writer.writeheader()
         writer.writerows(
-            qc_rows[:counterpart_index] + qc_rows[counterpart_index + 1 :]
+            bc_rows[:counterpart_index] + bc_rows[counterpart_index + 1 :]
         )
 
     with pytest.raises(LedgerValidationError, match="mirror row has no matching"):
         merge.run_merge(
             output_dir=tmp_path / "out",
-            block_specs=((BC_BLOCK, "BC"), (tampered, "QC")),
+            block_specs=((tampered, "BC"), (QC_BLOCK, "QC")),
         )
 
 
@@ -135,18 +139,24 @@ def test_coverage_math_uses_stated_denominators(merged: merge.MergeResult) -> No
         "share"
     ] == pytest.approx(1_940_031.2286 / 38_876_568, abs=1e-6)
 
-    assert qc["ledger"]["current_stumpage_rate_rows"] == 5
-    assert qc["current_rate_row_share"]["share"] == pytest.approx(5 / 2_674, abs=1e-6)
-    assert qc["zone_share"]["share"] == pytest.approx(1 / 191, abs=1e-6)
-    assert qc["treatment_share"]["share"] == pytest.approx(1 / 94, abs=1e-6)
+    assert qc["ledger"]["current_stumpage_rate_rows"] == 0
+    assert qc["current_rate_row_share"]["share"] == pytest.approx(0.0)
+    assert qc["zone_share"]["share"] == pytest.approx(191 / 191, abs=1e-6)
+    assert qc["treatment_share"]["share"] == pytest.approx(40 / 94, abs=1e-6)
     assert qc["ledger"]["observed_volume_m3"] == 0.0
+    assert qc["ledger"]["observed_rows"] == 0
+    assert qc["ledger"]["model_input_rows"] == 740
+    assert qc["ledger"]["delivered_log_revenue_model_input_rows"] == 127
+    assert qc["ledger"]["delivered_log_revenue_observed_rows"] == 0
     assert qc["harvest_volume_share"]["share"] is None
     assert qc["harvest_volume_share"]["status"] == "not_estimable"
 
     assert coverage["denominators"]["bc_plus_qc_share_of_national"][
         "share"
     ] == pytest.approx(64_815_624 / 118_977_339, abs=1e-6)
-    assert merged.summary["row_counts"]["total_rows"] == 217
+    assert merged.summary["row_counts"]["total_rows"] == 940
+    assert merged.summary["evidence_classes"]["observed_rows"] == 200
+    assert merged.summary["evidence_classes"]["model_input_rows"] == 740
 
 
 def test_no_cross_perspective_or_cross_province_summation(
@@ -179,27 +189,31 @@ def test_no_cross_perspective_or_cross_province_summation(
         entry["jurisdiction"] not in {"CAN", "BC+QC"}
         for entry in totals
     )
+    assert all(
+        entry["value_cad"] is None
+        for entry in totals
+        if entry["evidence_class"] == "model_input"
+    )
     assert "total" not in merged.summary["coverage"]
 
 
-def test_no_delivered_log_revenue_was_fabricated(merged: merge.MergeResult) -> None:
+def test_no_observed_delivered_log_revenue_was_fabricated(
+    merged: merge.MergeResult,
+) -> None:
     delivered = [
         row
         for row in merged.ledger
         if row.component is Component.DELIVERED_LOG_REVENUE
     ]
-    assert delivered == []
+    assert len(delivered) == 127
+    assert {row.value_basis.evidence for row in delivered} == {Evidence.MODEL_INPUT}
+    assert all(row.notes_tokens["not_observed"] == "1" for row in delivered)
 
     bcts = [row for row in merged.ledger if row.source == "prov_bcts_auction_results"]
     qc = [row for row in merged.ledger if row.source == "prov_qc_meris"]
     assert {row.value_basis.evidence for row in bcts} == {Evidence.OBSERVED_SALE}
     assert {row.value_basis.price_point for row in bcts} == {PricePoint.STANDING}
-    assert {row.value_basis.evidence for row in qc} <= {
-        Evidence.ADMINISTERED_RATE,
-        Evidence.MODEL_DERIVED,
-        Evidence.PUBLISHED_AVERAGE,
-        Evidence.APPRAISAL_ALLOWANCE,
-    }
+    assert {row.value_basis.evidence for row in qc} == {Evidence.MODEL_INPUT}
     assert all(
         row.component is not Component.STUMPAGE_TOTAL for row in merged.ledger
     )
@@ -215,7 +229,8 @@ def test_coverage_artifacts_are_written_and_self_describing(
     assert summary["coverage"]["qc_meris"]["sample_not_population"] is True
 
     markdown = merged.coverage_md_path.read_text(encoding="utf-8")
-    assert "sample, not a population" in markdown
+    assert "not a population" in markdown
+    assert "model-input" in markdown
     assert "not estimable" in markdown
     assert "`not_estimated`" in markdown
     assert "delivered_log_revenue" in markdown

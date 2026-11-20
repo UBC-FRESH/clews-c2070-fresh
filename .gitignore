@@ -17,6 +17,7 @@ tmp/
 
 # Earlier local solve outputs; run artifacts are regenerated, not committed.
 /runs/
+/out/
 
 # Local credential files must never be tracked.
 *.env

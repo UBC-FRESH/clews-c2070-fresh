@@ -2,6 +2,26 @@
 
 ## 2026-11-20
 
+- **Integrated the full QC MERIS model-input deck and the Forest-Sector LP v1
+  synthesis.** Replaced the 17-row QC sample in the cost/revenue merge with
+  `meris_qc_full/forest_cost_revenue_qc_model.csv`; the sample is excluded
+  because its keys overlap the full block. The merged ledger now has **940
+  rows** (BC 200 observed, QC 740 model input), **100 Crown / 840
+  forest-sector** rows, and **100 paired mirrors**; `load_ledger` accepts all
+  rows. Coverage now reports observed and model-input rows separately:
+  **200 observed**, **740 model input**, **0 observed delivered-log revenue**,
+  **127 model-input delivered-log rows**, and **0 observed QC harvest volume**.
+  Added `workflows/national/harvest/forest_lp_v1.py` and
+  `tests/test_forest_lp_v1.py`. The synthesis writes **117 allocation rows**
+  (13 provinces x 3 levels x 3 cap cases); documented-ceiling sums are
+  **100.000 / 118.977 / 150.000 Mm3**, base recoverable residue is **109.681 /
+  130.981 / 166.801 PJ**, the 150M intensity cases remain infeasible
+  (**16.296 / 4.492 Mm3** deficits), and every province-year keeps
+  `net_value_status=not_estimated`. Model-input rows are counted but never
+  monetised; no cross-perspective, cross-source, or combined monetary total is
+  produced. Generated LP outputs stay under `out/forest_lp_v1/`. No public
+  OSeCAN changes.
+
 - **Staged the BC Timber Sales sale schedule and built a Crown stumpage ledger
   sample.** Added `workflows/national/harvest/bcts_bc.py`,
   `scripts/national/build_bcts_bc.py`, and `tests/test_bcts_bc.py`. The BCGW

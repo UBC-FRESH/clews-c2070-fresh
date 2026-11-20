@@ -1,4 +1,4 @@
-"""Merge the BC BCTS and QC MERIS cost/revenue blocks and report coverage.
+"""Merge the BC BCTS and full QC MERIS cost/revenue blocks and report coverage.
 
 The two inputs are already in the canonical 16-field ledger schema.  This
 module concatenates them without re-keying, re-weighting, imputing, or
@@ -6,15 +6,22 @@ cross-province aggregation.  Each block is validated on its own before the
 merge and the merged file is validated again with
 :func:`workflows.national.harvest.cost_revenue.load_ledger`.
 
+The QC input is the 740-row full MERIS model-input deck.  The earlier 17-row
+sample is deliberately excluded: its keys overlap the full block, so merging
+both would double-count source keys.  Observed BCTS rows and model-input MERIS
+rows are counted and reported separately, and model-input values are never
+monetised.
+
 Outputs under ``data/derived/national/harvest_basis/forest_cost_revenue/``:
 
 * ``forest_cost_revenue.csv`` -- the merged audit ledger;
 * ``coverage_summary.json`` -- machine-readable row counts and coverage math;
 * ``FOREST_COST_REVENUE_COVERAGE.md`` -- the human-readable coverage report.
 
-The coverage report is deliberately explicit that the ledger is a selected
-sample.  It never scales BCTS to BC, MERIS to QC, or BC/QC to Canada, and it
-never adds the Crown and forest-sector perspectives together.
+The coverage report is deliberately explicit that the BCTS block is a selected
+sample and the MERIS block is a model-input deck.  It never scales BCTS to BC,
+MERIS to QC, or BC/QC to Canada, and it never adds the Crown and forest-sector
+perspectives together.
 """
 
 from __future__ import annotations
@@ -34,6 +41,7 @@ from workflows.national.harvest.cost_revenue import (
     LEDGER_FIELDS,
     Component,
     Confidence,
+    Evidence,
     Ledger,
     LedgerValidationError,
     Perspective,
@@ -45,7 +53,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 HARVEST_BASIS_DIR = REPO_ROOT / "data/derived/national/harvest_basis"
 
 BC_BLOCK_PATH = HARVEST_BASIS_DIR / "bcts_bc/bcts_bid_ledger.csv"
-QC_BLOCK_PATH = HARVEST_BASIS_DIR / "meris_qc_sample/forest_cost_revenue_sample.csv"
+QC_BLOCK_PATH = HARVEST_BASIS_DIR / "meris_qc_full/forest_cost_revenue_qc_model.csv"
 BCTS_SUMMARY_PATH = HARVEST_BASIS_DIR / "bcts_bc/bcts_sales_summary.json"
 BCTS_RESULTS_PROVENANCE_PATH = (
     HARVEST_BASIS_DIR / "bcts_bc/bcts_bid_results_provenance.json"
@@ -63,10 +71,22 @@ NATIONAL_HARVEST_2024_M3 = 118_977_339.0
 BC_HARVEST_2024_M3 = 38_876_568.0
 QC_HARVEST_2024_M3 = 25_939_056.0
 
-# MERIS table counts, from meris_qc_sample/tables_key.csv and README.md.
+# MERIS full-deck counts, from meris_qc_full/manifest.json and
+# QC_MERIS_DECK_REPORT.md.  The full deck replaces the earlier 17-row sample;
+# the sample must not be merged again because its keys overlap the full block.
 QC_TARIFICATION_ZONES = 191
 QC_STUMPAGE_RATE_ROWS = 2_674
 QC_TREATMENT_ROWS = 94
+QC_TREATMENTS_USABLE = 40
+QC_PRICE_DECK_CELLS = 630
+OBSERVED_EVIDENCE = frozenset(
+    {
+        Evidence.OBSERVED_PAYMENT,
+        Evidence.OBSERVED_SALE,
+        Evidence.OBSERVED_PRICE,
+    }
+)
+MODEL_EVIDENCE = frozenset({Evidence.MODEL_INPUT, Evidence.MODEL_DERIVED})
 
 BLOCK_SPECS: tuple[tuple[Path, str], ...] = (
     (BC_BLOCK_PATH, "BC"),
@@ -237,7 +257,9 @@ def write_ledger(path: Path, rows: Iterable[Mapping[str, str]]) -> Ledger:
     temporary = path.with_name(f".{path.name}.tmp")
     try:
         with temporary.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=LEDGER_FIELDS)
+            writer = csv.DictWriter(
+                handle, fieldnames=LEDGER_FIELDS, lineterminator="\n"
+            )
             writer.writeheader()
             for row in rows:
                 writer.writerow({name: row[name] for name in LEDGER_FIELDS})
@@ -255,6 +277,39 @@ def _share(numerator: float, denominator: float, *, digits: int = 6) -> dict[str
         "numerator": round(numerator, 6),
         "denominator": round(denominator, 6),
         "share": round(numerator / denominator, digits),
+    }
+
+
+def _is_model_input(row) -> bool:
+    """A model-input row is explicit, never inferred from a missing price."""
+    return row.value_basis.evidence is Evidence.MODEL_INPUT
+
+
+def _is_observed(row) -> bool:
+    return row.value_basis.evidence in OBSERVED_EVIDENCE
+
+
+def _evidence_class_counts(ledger: Ledger) -> dict[str, object]:
+    by_jurisdiction: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"observed": 0, "model_input": 0, "other": 0}
+    )
+    for row in ledger:
+        evidence_class = (
+            "model_input" if _is_model_input(row) else "observed" if _is_observed(row) else "other"
+        )
+        by_jurisdiction[row.jurisdiction.value][evidence_class] += 1
+    return {
+        "observed_rows": sum(1 for row in ledger if _is_observed(row)),
+        "model_input_rows": sum(1 for row in ledger if _is_model_input(row)),
+        "other_rows": sum(
+            1 for row in ledger if not _is_observed(row) and not _is_model_input(row)
+        ),
+        "by_jurisdiction": dict(sorted(by_jurisdiction.items())),
+        "rule": (
+            "observed = observed_payment/observed_sale/observed_price; "
+            "model_input = model_input evidence with model_input=1 and "
+            "not_observed=1; the classes are counted separately and never summed"
+        ),
     }
 
 
@@ -320,6 +375,14 @@ def _group_component_counts(ledger: Ledger) -> list[dict[str, object]]:
                 "quantity_unit": quantity_unit,
                 "quantity_weight": round(sum(row.volume_m3 for row in rows), 6),
                 "confidence": sorted({row.confidence.value for row in rows}),
+                "evidence": sorted(
+                    {
+                        "model_input"
+                        if _is_model_input(row)
+                        else "observed" if _is_observed(row) else "other"
+                        for row in rows
+                    }
+                ),
                 "quantity_note": (
                     "sale weight, not harvest"
                     if key[0] == "BC"
@@ -331,11 +394,19 @@ def _group_component_counts(ledger: Ledger) -> list[dict[str, object]]:
 
 
 def _value_totals(ledger: Ledger) -> list[dict[str, object]]:
-    """Totals within one perspective, currency/year, and unit only."""
-    groups: dict[tuple[str, str, int, str, str, str], list] = defaultdict(list)
+    """Totals only within one source, perspective, component, year, and unit.
+
+    Model-input rows are counted but never monetised: a MERIS rate deck is not
+    a transaction and summing its per-species or per-zone rates would create a
+    meaningless monetary total.
+    """
+    groups: dict[tuple[str, str, int, str, str, str, str, str], list] = defaultdict(list)
     for row in ledger:
         if row.is_comparison_only:
             continue
+        evidence_class = (
+            "model_input" if _is_model_input(row) else "observed" if _is_observed(row) else "other"
+        )
         groups[
             (
                 row.jurisdiction.value,
@@ -343,13 +414,16 @@ def _value_totals(ledger: Ledger) -> list[dict[str, object]]:
                 row.year,
                 row.notes_tokens["currency_basis"],
                 row.perspective.value,
+                row.component.value,
                 row.unit.value,
+                evidence_class,
             )
         ].append(row)
 
     totals: list[dict[str, object]] = []
     for key in sorted(groups):
         rows = groups[key]
+        evidence_class = key[7]
         totals.append(
             {
                 "jurisdiction": key[0],
@@ -357,16 +431,30 @@ def _value_totals(ledger: Ledger) -> list[dict[str, object]]:
                 "year": key[2],
                 "currency_basis": key[3],
                 "perspective": key[4],
-                "unit": key[5],
+                "component": key[5],
+                "unit": key[6],
+                "evidence_class": evidence_class,
                 "rows": len(rows),
-                "value_cad": round(
-                    sum(row.value_cad * row.volume_m3 * int(row.sign) for row in rows),
-                    6,
+                "value_cad": (
+                    None
+                    if evidence_class == "model_input"
+                    else round(
+                        sum(
+                            row.value_cad * row.volume_m3 * int(row.sign)
+                            for row in rows
+                        ),
+                        6,
+                    )
+                ),
+                "status": (
+                    "not_summed_model_input"
+                    if evidence_class == "model_input"
+                    else "within_source_perspective_component_total"
                 ),
                 "note": (
-                    "sum(value_cad * quantity * sign) within one perspective, "
-                    "year, currency basis, and unit; never added across any of "
-                    "them or across provinces"
+                    "only observed rows are monetised, and only within one "
+                    "source, perspective, component, year, currency basis, and "
+                    "unit; never added across any of them or across provinces"
                 ),
             }
         )
@@ -404,6 +492,12 @@ def _component_readiness(
 
         reasons: list[str] = []
         status = "present"
+        if any(_is_model_input(row) for row in component_rows):
+            status = "partial"
+            reasons.append("model-input deck, not an observed transaction")
+        if any(row.notes_tokens.get("not_observed") == "1" for row in component_rows):
+            status = "partial"
+            reasons.append("source marks the row not_observed=1")
         if any(row.confidence is Confidence.LOW for row in component_rows):
             status = "partial"
             reasons.append("at least one row is low confidence")
@@ -515,6 +609,28 @@ def build_coverage_summary(
             }
         }
     )
+    qc_delivered_rows = [
+        row for row in qc_rows if row.component is Component.DELIVERED_LOG_REVENUE
+    ]
+    qc_observed_delivered_rows = [
+        row for row in qc_delivered_rows if _is_observed(row)
+    ]
+    qc_model_input_delivered_rows = [
+        row for row in qc_delivered_rows if _is_model_input(row)
+    ]
+    qc_zone_ids = {
+        row.spatial_unit
+        for row in qc_rows
+        if row.spatial_unit.startswith("QC-ZONE_")
+    }
+    qc_treatments_covered = len(
+        {
+            row.notes_tokens.get("treatment")
+            for row in qc_rows
+            if row.component is Component.SILVICULTURE
+            and row.notes_tokens.get("treatment")
+        }
+    )
 
     bc_readiness, bc_unusable = _component_readiness(ledger, "BC")
     qc_readiness, qc_unusable = _component_readiness(ledger, "QC")
@@ -547,7 +663,9 @@ def build_coverage_summary(
             "perspectives_not_added": True,
             "mirrors_preserved": True,
             "no_imputation": True,
-            "no_delivered_log_revenue_unless_observed": True,
+            "no_observed_delivered_log_revenue_injected": True,
+            "observed_and_model_input_rows_separated": True,
+            "model_input_not_monetised": True,
         },
         "row_counts": {
             "total_rows": len(ledger),
@@ -559,10 +677,19 @@ def build_coverage_summary(
                 lambda row: f"{row.jurisdiction.value}/{row.source}",
             ),
             "by_component": _count(ledger, lambda row: row.component.value),
+            "by_evidence_class": _count(
+                ledger,
+                lambda row: (
+                    "model_input"
+                    if _is_model_input(row)
+                    else "observed" if _is_observed(row) else "other"
+                ),
+            ),
             "by_jurisdiction_source_perspective_component": _group_component_counts(
                 ledger
             ),
         },
+        "evidence_classes": _evidence_class_counts(ledger),
         "mirrors": {
             "mirror_rows": sum(1 for row in ledger if row.mirror_requested),
             "transfer_pairs": sum(1 for row in ledger if row.mirror_requested),
@@ -639,21 +766,53 @@ def build_coverage_summary(
                     "tarification_zones": QC_TARIFICATION_ZONES,
                     "stumpage_rate_rows": QC_STUMPAGE_RATE_ROWS,
                     "treatments": QC_TREATMENT_ROWS,
-                    "sample_zone": "QC-ZONE_151",
-                    "source": "MERIS 3.3.0 tables_key.csv and README.md",
+                    "treatments_usable": QC_TREATMENTS_USABLE,
+                    "price_deck_cells": QC_PRICE_DECK_CELLS,
+                    "deck": "full_model_input",
+                    "source": "meris_qc_full/manifest.json and QC_MERIS_DECK_REPORT.md (MERIS 3.3.0, database release 2025-09-23)",
                 },
                 "ledger": {
                     "rows": len(qc_rows),
+                    "observed_rows": sum(1 for row in qc_rows if _is_observed(row)),
+                    "model_input_rows": sum(
+                        1 for row in qc_rows if _is_model_input(row)
+                    ),
+                    "zones_covered": len(qc_zone_ids),
+                    "treatments_covered": qc_treatments_covered,
+                    "delivered_log_revenue_rows": len(qc_delivered_rows),
+                    "delivered_log_revenue_observed_rows": len(
+                        qc_observed_delivered_rows
+                    ),
+                    "delivered_log_revenue_model_input_rows": len(
+                        qc_model_input_delivered_rows
+                    ),
                     "current_stumpage_rate_rows": len(qc_current_stumpage),
                     "stumpage_years": qc_stumpage_years,
                     "cost_components": qc_cost_components,
                     "observed_volume_m3": 0.0,
+                    "observed_transactions": False,
                 },
-                "current_rate_row_share": _share(
-                    len(qc_current_stumpage), QC_STUMPAGE_RATE_ROWS
+                "current_rate_row_share": {
+                    **_share(len(qc_current_stumpage), QC_STUMPAGE_RATE_ROWS),
+                    "status": "not_in_full_model_input_deck",
+                },
+                "zone_share": {
+                    **_share(len(qc_zone_ids), QC_TARIFICATION_ZONES),
+                    "status": "full_cost_deck_zone_coverage",
+                },
+                "treatment_share": _share(
+                    qc_treatments_covered, QC_TREATMENT_ROWS
                 ),
-                "zone_share": _share(1, QC_TARIFICATION_ZONES),
-                "treatment_share": _share(1, QC_TREATMENT_ROWS),
+                "delivered_log_revenue": {
+                    "model_input_rows": len(qc_model_input_delivered_rows),
+                    "observed_rows": len(qc_observed_delivered_rows),
+                    "status": "model_input_not_observed",
+                    "price_point": "mill_gate",
+                    "reason": (
+                        "MERIS price-deck values are model inputs net of "
+                        "processing cost; they are not mill settlements"
+                    ),
+                },
                 "harvest_volume_share": {
                     "numerator": 0.0,
                     "denominator": QC_HARVEST_2024_M3,
@@ -662,6 +821,8 @@ def build_coverage_summary(
                     "reason": "MERIS has no observed permit-volume register; ledger rows use volume_m3=1.0 as a rate denominator",
                 },
                 "sample_not_population": True,
+                "observed_transactions": False,
+                "model_input_only": True,
             },
         },
         "net_value_readiness": {
@@ -678,15 +839,16 @@ def build_coverage_summary(
                 "components": qc_readiness,
                 "missing_or_partial": sorted(set(qc_unusable)),
                 "net_value_status": "not_estimated",
-                "reason": "delivered log revenue is absent, harvest is loading-only, and silviculture is CAD/ha without a yield conversion",
+                "reason": "the full MERIS deck is model input only: delivered log revenue is a mill-gate model price, harvest is loading-only, road excludes tertiary road, silviculture is CAD/ha without a yield conversion, and no observed volume or full cost exists",
             },
         },
         "caveats": [
-            "The merged file is a sample ledger, not a provincial or national population estimate.",
+            "The ledger combines a BCTS auction sample with the full QC MERIS model-input deck; it is not a provincial or national population estimate.",
+            "Observed rows and model-input rows are counted separately; model-input values are never monetised.",
             "BCTS and MERIS rows are never summed; each remains a separate source under its own province.",
             "Crown and forest-sector rows are never summed into a combined total; only the reconciliation identity may relate them.",
             "BCTS sells standing timber: its upset and bonus are stumpage, not delivered log revenue.",
-            "MERIS is a tarification/cost parameter set, not an observed harvest or delivered-price register.",
+            "MERIS is a tarification/cost parameter set, not an observed harvest or delivered-price register; its delivered-log values are mill-gate model inputs, not settlements.",
             "Missing components are missing, not zero; no value, volume, or component was imputed.",
         ],
     }
@@ -721,7 +883,7 @@ def render_markdown(summary: Mapping[str, object]) -> str:
     lines.append("")
     lines.append(
         f"**Status:** `{summary['status']}` · `policy_grade=false` · "
-        "**sample, not a population**"
+        "**observed sample plus model-input deck; not a population**"
     )
     lines.append("")
     lines.append(f"**Generated:** {summary['generated_utc']}")
@@ -753,18 +915,31 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         )
         + "."
     )
+    evidence = summary["evidence_classes"]
+    lines.append("")
+    lines.append(
+        f"Evidence classes: **{evidence['observed_rows']} observed** rows and "
+        f"**{evidence['model_input_rows']} model-input** rows. "
+        + "; ".join(
+            f"{jurisdiction}: observed {classes['observed']}, "
+            f"model input {classes['model_input']}"
+            for jurisdiction, classes in evidence["by_jurisdiction"].items()
+        )
+        + ". The classes are counted separately and never summed."
+    )
     lines.append("")
     lines.append("### Rows by province / source / perspective / component")
     lines.append("")
     lines.append(
-        "| Province | Source | Perspective | Component | Rows | Licences | "
-        "Unit | Quantity weight | Confidence |"
+        "| Province | Source | Perspective | Component | Evidence | Rows | "
+        "Licences | Unit | Quantity weight | Confidence |"
     )
-    lines.append("|---|---|---|---|---:|---:|---|---:|---|")
+    lines.append("|---|---|---|---|---|---:|---:|---|---:|---|")
     for entry in counts["by_jurisdiction_source_perspective_component"]:
         lines.append(
             f"| {entry['jurisdiction']} | `{entry['source']}` | "
-            f"{entry['perspective']} | `{entry['component']}` | {entry['rows']} | "
+            f"{entry['perspective']} | `{entry['component']}` | "
+            f"{', '.join(entry['evidence'])} | {entry['rows']} | "
             f"{entry['licences']} | {', '.join(entry['units'])} | "
             f"{entry['quantity_weight']:,.2f} | "
             f"{', '.join(entry['confidence'])} |"
@@ -779,9 +954,10 @@ def render_markdown(summary: Mapping[str, object]) -> str:
     lines.append("")
     lines.append(
         "**Not a population.** The ledger covers selected BCTS auctions and "
-        "one MERIS tarification zone. The shares below describe how much of "
-        "each source frame is represented; they do **not** estimate provincial "
-        "values or allow scaling to the provincial harvest."
+        "the full MERIS model-input deck. The shares below describe how much "
+        "of each source frame is represented; they do **not** estimate "
+        "provincial values or allow scaling to the provincial harvest. "
+        "MERIS coverage is model-input coverage, not observed transactions."
     )
     lines.append("")
     lines.append("| Measure | Numerator | Denominator | Share |")
@@ -815,20 +991,28 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         f"{_percent(bc['awarded_block_share_of_scheduled']['share'])} |"
     )
     lines.append(
-        f"| MERIS current stumpage rate rows | "
-        f"{qc['ledger']['current_stumpage_rate_rows']} | "
-        f"{qc['sample_frame']['stumpage_rate_rows']:,} zone-species rows | "
-        f"{_percent(qc['current_rate_row_share']['share'])} |"
+        f"| MERIS delivered-log model inputs | "
+        f"{qc['ledger']['delivered_log_revenue_model_input_rows']} model-input rows | "
+        f"{qc['ledger']['delivered_log_revenue_observed_rows']} observed rows | "
+        "**model input, not observed** |"
     )
     lines.append(
-        f"| MERIS tarification zones | 1 (zone 151) | "
+        f"| MERIS cost-deck tarification zones | "
+        f"{qc['ledger']['zones_covered']} | "
         f"{qc['sample_frame']['tarification_zones']} zones | "
         f"{_percent(qc['zone_share']['share'])} |"
     )
     lines.append(
-        f"| MERIS silviculture treatments | 1 (BPR) | "
+        f"| MERIS usable silviculture treatments | "
+        f"{qc['ledger']['treatments_covered']} | "
         f"{qc['sample_frame']['treatments']} treatments | "
         f"{_percent(qc['treatment_share']['share'])} |"
+    )
+    lines.append(
+        f"| MERIS current Crown stumpage rate rows | "
+        f"{qc['ledger']['current_stumpage_rate_rows']} | "
+        f"{qc['sample_frame']['stumpage_rate_rows']:,} zone-species rows | "
+        "**not in full model deck** |"
     )
     lines.append(
         f"| MERIS observed harvest volume | 0 | "
@@ -863,16 +1047,24 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         "Two lump-sum sales publish a bonus but no upset; no base was fabricated."
     )
     lines.append("")
-    lines.append("### QC MERIS sample detail")
+    lines.append("### QC MERIS full model-input deck detail")
     lines.append("")
     lines.append(
-        f"- One tarification zone (151), {qc['ledger']['current_stumpage_rate_rows']} "
-        f"current zone-species stumpage rows, cost components "
-        f"{', '.join(qc['ledger']['cost_components'])}."
+        f"- {qc['ledger']['rows']} rows, all `model_input` and `forest_sector`; "
+        f"{qc['ledger']['zones_covered']} cost-deck zones and "
+        f"{qc['ledger']['treatments_covered']} usable silviculture treatments. "
+        f"Cost components: {', '.join(qc['ledger']['cost_components'])}."
     )
     lines.append(
-        "- `harvest` is loading-only (`not_for_net_value=1`), `road` excludes "
-        "tertiary road, and `silviculture` is a CAD/ha treatment sample."
+        f"- {qc['ledger']['delivered_log_revenue_rows']} "
+        f"`delivered_log_revenue` rows are mill-gate model inputs "
+        f"({qc['ledger']['delivered_log_revenue_observed_rows']} observed). "
+        "They are not mill settlements and are not monetised."
+    )
+    lines.append(
+        "- `harvest` is loading-only (`partial=loading_only`), `road` excludes "
+        "tertiary road, and `silviculture` is a CAD/ha treatment catalogue. "
+        "The deck has no Crown perspective and no mirrors."
     )
     lines.append(
         "- MERIS has no observed permit-volume register: every row uses "
@@ -945,8 +1137,14 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         "currency/volume-basis mixing, and unpaired mirrors fail the merge."
     )
     lines.append(
-        "- No `delivered_log_revenue` row exists in either source; none was "
-        "invented."
+        f"- {qc['ledger']['delivered_log_revenue_model_input_rows']} "
+        "`delivered_log_revenue` rows are model inputs; "
+        f"{qc['ledger']['delivered_log_revenue_observed_rows']} are observed. "
+        "No observed delivered-log revenue was invented."
+    )
+    lines.append(
+        "- Model-input rows are counted and reported but excluded from every "
+        "monetary total."
     )
     lines.append("")
     lines.append("## 5. Caveats")
