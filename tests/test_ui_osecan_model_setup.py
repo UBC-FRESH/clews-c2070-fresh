@@ -90,6 +90,36 @@ def test_setup_applies_patches_and_writes_manifest(built_model: Path) -> None:
     assert manifest["model_tree_sha256"] == tree_sha256(built_model)
 
 
+def test_setup_ingests_2021_capacity(built_model: Path) -> None:
+    manifest = json.loads((built_model / "model_manifest.json").read_text("utf-8"))
+    capacity = manifest["capacity"]
+    checks = manifest["checks"]["capacity"]
+    assert capacity["sha256"] == (
+        "8db7b8140765621b764af640248551741dbbb62200b6bce770b897863faf5fcc"
+    )
+    assert capacity["scenario"] == "Current Measures"
+    assert capacity["base_year"] == 2021
+    assert checks["residual_years"] == [2021, 2070]
+    assert checks["residual_pwr_rows_2021_nonzero"] == 70
+    assert checks["residual_2021_gw"] == pytest.approx(145.02, abs=0.01)
+    assert checks["pwrbio_2021_gw"] > 0
+    assert checks["pwr_bsw_bcw_2021_gw"] == 0
+    assert checks["limit_rows"]["TotalAnnualMaxCapacity.csv"] > 0
+    assert checks["limit_rows"]["TotalAnnualMaxCapacityInvestment.csv"] > 0
+    assert set(checks["limit_rows"]) == {
+        "TotalAnnualMaxCapacity.csv",
+        "TotalAnnualMaxCapacityInvestment.csv",
+        "TotalAnnualMinCapacity.csv",
+        "TotalAnnualMinCapacityInvestment.csv",
+    }
+    assert checks["max_capacity_below_residual"] == 0
+    assert checks["coal_phase_out_2030"] is True
+    assert any("Oil" in line for line in capacity["dropped_report"])
+    assert any("Battery Storage" in line for line in capacity["dropped_report"])
+    assert any("total dropped:" in line for line in capacity["dropped_report"])
+    assert any("clean-capacity" in command for command in manifest["build_commands"])
+
+
 def test_patch_application_is_minimal(built_model: Path) -> None:
     commit = subprocess.run(
         ["git", "-C", str(built_model), "rev-parse", "HEAD"],

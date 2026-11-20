@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import subprocess
@@ -169,3 +170,55 @@ def test_dry_run_generates_harmonized_params(tmp_path: Path) -> None:
     assert summary["supply"]["checks"]["tier_sum_equals_rest_all_years"] is True
     assert (output_dir / "run/params/TotalTechnologyAnnualActivityUpperLimit.csv").is_file()
     assert (output_dir / "manifest.json").is_file()
+
+
+def _rows_by_technology(path: Path) -> dict[tuple[str, int], float]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        return {
+            (row["TECHNOLOGY"], int(row["YEAR"])): float(row["VALUE"])
+            for row in csv.DictReader(handle)
+        }
+
+
+@pytest.mark.skipif(not MODEL_AVAILABLE, reason="disposable OSeCAN model copy is unavailable")
+def test_zero_nuclear_new_build_keeps_residual_fleet_feasible(tmp_path: Path) -> None:
+    scenario_path = tmp_path / "scenario.json"
+    scenario_path.write_text(
+        json.dumps(scenario_payload(scenario_id="nuclear_floor", level_m3=118_977_339.0)),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "output"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "workflows.ui.run_scenario",
+            "--scenario",
+            str(scenario_path),
+            "--out",
+            str(output_dir),
+            "--dry-run",
+            "--model-root",
+            str(MODEL_ROOT),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    params = output_dir / "run/params"
+    residual = _rows_by_technology(params / "ResidualCapacity.csv")
+    total_max = _rows_by_technology(params / "TotalAnnualMaxCapacity.csv")
+    investment = _rows_by_technology(
+        params / "TotalAnnualMaxCapacityInvestment.csv"
+    )
+    nuclear = {key: value for key, value in residual.items() if key[0].startswith("PWRURN")}
+    assert nuclear
+    for key, value in nuclear.items():
+        assert total_max[key] >= value
+    assert all(
+        value == 0.0
+        for key, value in investment.items()
+        if key[0].startswith("PWRURN")
+    )

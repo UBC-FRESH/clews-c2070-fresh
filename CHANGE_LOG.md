@@ -2,6 +2,22 @@
 
 ## 2026-11-20
 
+- **Ingested the CER EF2026 2021 capacity fleet into the reproducible model.**
+  `setup_osecan_model.py` now downloads/copies and SHA-256 verifies
+  `electricity-capacity-2026.csv` (`8db7b814...f5fcc`), runs `osecan
+  clean-capacity --scenario "Current Measures" --base-year 2021`, and records
+  the cleaner summary plus its explicit oil/battery drop report in the manifest.
+  A clean setup now writes `ResidualCapacity.csv` for 2021-2070 and all four
+  capacity-bound files: 70 non-zero `PWR*` rows totalling 145.019845 GW in 2021,
+  `PWRBIO` carrying 2.56888 GW, `PWRBSW`/`PWRBCW` at zero, coal retired by 2030,
+  and build-rate rows for hydro/solar/wind/nuclear. Added patch
+  `04_capacity_bounds.patch` so the coal bound stays above the observed stock
+  before phase-out, and floored the runner's `nuclear_cap_gw` total-capacity
+  row at residual capacity so a zero new-build cap does not strand the 14.5 GW
+  fleet. Manifest tree hash moved to `61dace92...f1fb0`. The real 119 Mm3
+  screening solve is feasible again: objective **1,445,655.44 M$**, cumulative
+  emissions **424.710127 Mt**, 2050 emissions 0.0, versus the pre-capacity
+  **1,411,447.21 M$ / 0.538720 Mt**. No public OSeCAN repository was changed.
 - **Added milestone-1f session persistence, cancel/retry, and long-run UX.**
   Added `POST /api/runs/{id}/cancel` (queued removal or process-group SIGTERM →
   SIGKILL, `cancelled` terminal event, no monitor overwrite) and

@@ -610,6 +610,16 @@ def _read_series(path: Path, technology: str) -> dict[int, float]:
     return dict(sorted(series.items()))
 
 
+def _residual_capacity(params_dir: Path) -> dict[str, dict[int, float]]:
+    """Read exogenous residual capacity as technology -> year -> GW."""
+
+    _, rows = _read_rows(params_dir / "ResidualCapacity.csv")
+    residual: dict[str, dict[int, float]] = defaultdict(dict)
+    for row in rows:
+        residual[row["TECHNOLOGY"]][int(row["YEAR"])] = float(row["VALUE"])
+    return dict(residual)
+
+
 def _read_tier_definitions(path: Path) -> tuple[dict[str, float], dict[str, float]]:
     _, rows = _read_rows(path)
     caps: dict[str, float] = {}
@@ -1074,19 +1084,36 @@ def build_parameter_set(
         )
 
     # Nuclear: national GW cap allocated by the documented reference shares.
+    # The cap governs new build; the observed fleet is exogenous ResidualCapacity,
+    # so TotalAnnualMaxCapacity must never sit below it (OSeMOSYS treats that as
+    # infeasible). A zero new-build cap therefore retires nuclear by attrition.
     nuclear_cap = float(scenario.energy.nuclear_cap_gw)
-    for capacity_file in ("TotalAnnualMaxCapacity.csv", "TotalAnnualMaxCapacityInvestment.csv"):
-        path = params_dir / capacity_file
-        for technology in PWRURN_TECHS:
-            value = nuclear_cap * canonical.nuclear_zone_shares[technology]
-            _upsert_technology(
-                path,
-                technology,
-                [
-                    {"REGION": "CAN", "TECHNOLOGY": technology, "YEAR": year, "VALUE": repr(value)}
-                    for year in YEARS
-                ],
-            )
+    residual = _residual_capacity(params_dir)
+    max_capacity_path = params_dir / "TotalAnnualMaxCapacity.csv"
+    investment_path = params_dir / "TotalAnnualMaxCapacityInvestment.csv"
+    for technology in PWRURN_TECHS:
+        value = nuclear_cap * canonical.nuclear_zone_shares[technology]
+        _upsert_technology(
+            max_capacity_path,
+            technology,
+            [
+                {
+                    "REGION": "CAN",
+                    "TECHNOLOGY": technology,
+                    "YEAR": year,
+                    "VALUE": repr(max(value, residual.get(technology, {}).get(year, 0.0))),
+                }
+                for year in YEARS
+            ],
+        )
+        _upsert_technology(
+            investment_path,
+            technology,
+            [
+                {"REGION": "CAN", "TECHNOLOGY": technology, "YEAR": year, "VALUE": repr(value)}
+                for year in YEARS
+            ],
+        )
 
     # Generic non-power bioenergy cost.
     _upsert_technology(

@@ -210,22 +210,35 @@ the public base commit and the committed patches:
 Omit `--base` to clone `https://github.com/deltae/C2070.git`. The script checks
 out `40d5b43bb3f8b3f69c16e953144d35eeed5f0f44`, applies
 `workflows/ui/patches/01_emission_factors.patch`,
-`02_zonal_bc.patch`, and `03_tiered_supply.patch` in order, verifies each patch
-SHA-256, runs `osecan build-sets`, `osecan build-params`, `osecan clean-demand
-"Current Measures"`, and `osecan harmonize`, and writes `model_manifest.json`
-with the source commit, patch hashes, demand provenance, and a deterministic
-model-tree hash.
+`02_zonal_bc.patch`, `03_tiered_supply.patch`, and `04_capacity_bounds.patch`
+in order, verifies each patch SHA-256, runs `osecan build-sets`,
+`osecan build-params`, `osecan clean-demand
+"Current Measures"`, `osecan clean-capacity --scenario "Current Measures"
+--base-year 2021`, and `osecan harmonize`, and writes `model_manifest.json`
+with the source commit, patch hashes, demand/capacity provenance, and a
+deterministic model-tree hash.
 
 The CER Energy Futures 2026 end-use demand file is pinned by SHA-256. It is
 copied from `--external-data` when that cache exists and otherwise downloaded
 from the public CER URL. `--skip-demand` keeps the public base's 10 PJ
 placeholder demand for structure-only checks.
 
+Capacity is always ingested. The pinned CER EF2026 electricity-capacity file
+(SHA-256 `8db7b814...f5fcc`) supplies the observed 2021 fleet only: the cleaner
+writes `ResidualCapacity.csv` for every year 2021-2070 and the four
+`TotalAnnual*Capacity*` bounds. The generated base has 70 non-zero `PWR*` rows
+in 2021 totalling 145.02 GW, biomass carried by `PWRBIO` with `PWRBSW`/`PWRBCW`
+at zero, coal phased out by 2030, and explicit build-rate rows for hydro, solar,
+wind, and nuclear. Dropped oil (6.0 GW) and battery (0.1 GW) capacity is printed
+by the cleaner and recorded in `capacity.dropped_report` in the manifest rather
+than silently discarded.
+
 The setup fails closed on a commit mismatch, patch-hash mismatch, unexpected
 patched file, missing `SUPBCWT1`-`T4` / `SUPBCWB1`-`B2` structure, raw
-fuel-basis emission factor, placeholder demand when demand was requested, or
-harmonization failure. The runner also verifies the manifest tree hash when one
-is present.
+fuel-basis emission factor, placeholder demand when demand was requested,
+missing 2021-2070 residual-capacity coverage, a 2021 fleet total other than
+145.02 GW, missing capacity-limit files, or harmonization failure. The runner
+also verifies the manifest tree hash when one is present.
 
 ### Model source
 
@@ -260,7 +273,10 @@ use the committed reference paths; `custom` uses `level_m3_per_year`.
 
 The runner also emits `PWRBIO<z>` caps from the documented 2050 zonal reference,
 `PWRWND<z>` caps and variable costs, `PWRURN<z>` capacity caps, hydro upper/lower
-bounds, `RNWBIO` cost, and the carbon-price schedule.
+bounds, `RNWBIO` cost, and the carbon-price schedule. `nuclear_cap_gw` caps new
+build through `TotalAnnualMaxCapacityInvestment`; `TotalAnnualMaxCapacity` is
+floored at the exogenous 2021 residual fleet so a zero new-build cap retires
+nuclear by attrition instead of making the observed units infeasible.
 
 ### Outputs
 

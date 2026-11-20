@@ -1,0 +1,15 @@
+diff --git a/config/capacity.yaml b/config/capacity.yaml
+index 26e8d24..9fc355f 100644
+--- a/config/capacity.yaml
++++ b/config/capacity.yaml
+@@ -113,7 +113,9 @@ constraints:
+   # TotalAnnualMaxCapacity (GW) — resource or siting ceilings
+   max_capacity:
+     URN: {2021: 14.5, 2035: 20.0, 2070: 30.0}   # no new greenfield siting assumed pre-2035
+-    COA: {2021: 8.4, 2030: 0.0, 2070: 0.0}      # consistent with the phase-out above
++    # Hold the coal bound above the observed stock until the 2030 phase-out;
++    # a linear 2021->2030 bound would sit below ResidualCapacity in 2028-2029.
++    COA: {2021: 8.4, 2029: 8.4, 2030: 0.0, 2070: 0.0}
+     # WND@N1: {2021: 0.5, 2070: 2.0}
+ 
+   # TotalAnnualMaxCapacityInvestment (GW/yr) — build-rate realism; the single most

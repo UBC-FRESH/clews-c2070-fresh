@@ -2,7 +2,7 @@
 
 The parent repository does not vendor ``deltae/C2070``.  This script creates
 ``runtime/osecan_model`` (or ``--out``) by checking out the public base commit,
-applying the three committed UI patches in ``workflows/ui/patches``, rebuilding
+applying the four committed UI patches in ``workflows/ui/patches``, rebuilding
 the OSeMOSYS sets and placeholder parameters, and verifying the structure the
 runner depends on.  It never pushes or commits to the public OSeCAN repository.
 
@@ -14,10 +14,13 @@ Example::
         --python /tmp/osecan_src/.venv/bin/python \
         --external-data /tmp/osecan_src/data/external
 
-The pinned CER Energy Futures 2026 demand file is copied from
-``--external-data`` when available and otherwise downloaded and SHA-256
-verified.  ``--skip-demand`` keeps the public base's 10 PJ placeholder demand
-for structure-only checks.  The rebuilt tree is deliberately left dirty
+The pinned CER Energy Futures 2026 demand and electricity-capacity files are
+copied from ``--external-data`` when available and otherwise downloaded and
+SHA-256 verified.  Capacity is cleaned for the 2021 observed fleet, producing
+ResidualCapacity for 2021-2070 plus the four annual capacity-bound parameters.
+``--skip-demand`` keeps the public base's 10 PJ placeholder demand for
+structure-only checks; capacity is always ingested.  The rebuilt tree is
+deliberately left dirty
 relative to the base commit: the
 patches are applied to the working tree and recorded by SHA-256 in
 ``model_manifest.json``.  A run's manifest therefore identifies both the public
@@ -31,6 +34,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -84,10 +88,15 @@ PATCHES = (
         "03_tiered_supply.patch",
         "54b466ae9c803808a6541a8cdc17946c9674541945f1aacc7b6b4a6fdb4a8cdb",
     ),
+    Patch(
+        "04_capacity_bounds.patch",
+        "5b3bdd09d283df32ebd73339fa5acf33240e200ed6de855559d3ca2e6e8e6432",
+    ),
 )
 
 PATCHED_FILES = frozenset(
     {
+        "config/capacity.yaml",
         "src/osecan/data/build_params.py",
         "src/osecan/model_structure.py",
         "src/osecan/sets_n_ratios.py",
@@ -97,6 +106,24 @@ DEMAND_SCENARIO = "Current Measures"
 DEMAND_URL = "https://www.cer-rec.gc.ca/open/energy/energyfutures2026/end-use-demand-2026.csv"
 DEMAND_SHA256 = "ec178ec02c3f5560b98056232d1fc9e705f243a31744d557e8a2442a290d70f0"
 DEMAND_RELATIVE = Path("data/external/cer_ef2026_end_use_demand/end-use-demand-2026.csv")
+CAPACITY_SCENARIO = "Current Measures"
+CAPACITY_BASE_YEAR = 2021
+CAPACITY_URL = (
+    "https://www.cer-rec.gc.ca/open/energy/energyfutures2026/"
+    "electricity-capacity-2026.csv"
+)
+CAPACITY_SHA256 = "8db7b8140765621b764af640248551741dbbb62200b6bce770b897863faf5fcc"
+CAPACITY_RELATIVE = Path(
+    "data/external/cer_ef2026_electricity_capacity/electricity-capacity-2026.csv"
+)
+CAPACITY_LIMIT_FILES = (
+    "TotalAnnualMaxCapacity.csv",
+    "TotalAnnualMaxCapacityInvestment.csv",
+    "TotalAnnualMinCapacity.csv",
+    "TotalAnnualMinCapacityInvestment.csv",
+)
+EXPECTED_PWR_2021_ROWS = 70
+EXPECTED_2021_CAPACITY_GW = 145.02
 TIER_TECHS = ("SUPBCWT1", "SUPBCWT2", "SUPBCWT3", "SUPBCWT4")
 BC_ZONAL_TECHS = ("SUPBCWB1", "SUPBCWB2")
 BC_ZONAL_FUELS = ("BCWB1", "BCWB2")
@@ -256,26 +283,69 @@ def _download(url: str, destination: Path) -> None:
         raise SetupError(f"cannot download {url}: {exc}") from exc
 
 
-def _local_demand_source(external_data: Path | None, base: str) -> Path | None:
-    """Find a cached CER demand CSV without touching the network."""
+def _local_external_source(
+    external_data: Path | None,
+    base: str,
+    relative: Path,
+) -> Path | None:
+    """Find a cached external CSV without touching the network."""
 
     candidates: list[Path] = []
     if external_data is not None:
         external_data = external_data.expanduser()
         candidates.extend(
             (
-                external_data / DEMAND_RELATIVE,
-                external_data / DEMAND_RELATIVE.relative_to("data/external"),
+                external_data / relative,
+                external_data / relative.relative_to("data/external"),
                 external_data,
             )
         )
     base_path = Path(base).expanduser()
     if base_path.is_dir():
-        candidates.append(base_path / DEMAND_RELATIVE)
+        candidates.append(base_path / relative)
     for candidate in candidates:
         if candidate.is_file():
             return candidate
     return None
+
+
+def _install_pinned_source(
+    repository: Path,
+    *,
+    external_data: Path | None,
+    base: str,
+    relative: Path,
+    url: str,
+    expected_sha256: str,
+    label: str,
+) -> tuple[Path, str, str]:
+    """Copy or download one pinned source file and verify its hash."""
+
+    target = repository / relative
+    local = _local_external_source(external_data, base, relative)
+    if local is not None:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(local, target)
+        origin = str(local)
+    else:
+        _download(url, target)
+        origin = url
+    digest = _sha256_file(target)
+    if digest != expected_sha256:
+        raise SetupError(
+            f"{label} source hash mismatch: got {digest}, expected {expected_sha256}"
+        )
+    return target, origin, digest
+
+
+def _osecan_environment(repository: Path) -> dict[str, str]:
+    """Return a deterministic environment for OSeCAN build commands."""
+
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(repository / "src")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONHASHSEED"] = "0"
+    return env
 
 
 def _provision_demand(
@@ -287,34 +357,105 @@ def _provision_demand(
 ) -> dict[str, Any]:
     """Install the pinned CER demand file and run ``osecan clean-demand``."""
 
-    target = repository / DEMAND_RELATIVE
-    local = _local_demand_source(external_data, base)
-    if local is not None:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(local, target)
-        origin = str(local)
-    else:
-        _download(DEMAND_URL, target)
-        origin = DEMAND_URL
-    digest = _sha256_file(target)
-    if digest != DEMAND_SHA256:
-        raise SetupError(
-            f"demand source hash mismatch: got {digest}, expected {DEMAND_SHA256}"
-        )
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(repository / "src")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env["PYTHONHASHSEED"] = "0"
+    _, origin, digest = _install_pinned_source(
+        repository,
+        external_data=external_data,
+        base=base,
+        relative=DEMAND_RELATIVE,
+        url=DEMAND_URL,
+        expected_sha256=DEMAND_SHA256,
+        label="demand",
+    )
     _run(
         [str(python), "-m", "osecan.cli", "clean-demand", DEMAND_SCENARIO],
         cwd=repository,
-        env=env,
+        env=_osecan_environment(repository),
     )
     return {
         "basis": f"CER EF2026 {DEMAND_SCENARIO}",
         "source": origin,
         "sha256": digest,
         "scenario": DEMAND_SCENARIO,
+    }
+
+
+def _assumption_loss_report(output: str) -> list[str]:
+    """Extract the cleaner's explicit dropped-capacity report."""
+
+    collecting = False
+    report: list[str] = []
+    for line in output.splitlines():
+        if "[assumption loss]" in line:
+            collecting = True
+        if not collecting:
+            continue
+        report.append(line.strip())
+        if "total dropped:" in line:
+            return report
+    return report
+
+
+def _provision_capacity(
+    repository: Path,
+    python: Path,
+    *,
+    external_data: Path | None,
+    base: str,
+) -> dict[str, Any]:
+    """Install CER capacity and rebuild residual capacity plus bounds."""
+
+    _, origin, digest = _install_pinned_source(
+        repository,
+        external_data=external_data,
+        base=base,
+        relative=CAPACITY_RELATIVE,
+        url=CAPACITY_URL,
+        expected_sha256=CAPACITY_SHA256,
+        label="capacity",
+    )
+    command = [
+        str(python),
+        "-m",
+        "osecan.cli",
+        "clean-capacity",
+        "--scenario",
+        CAPACITY_SCENARIO,
+        "--base-year",
+        str(CAPACITY_BASE_YEAR),
+    ]
+    output = _run(command, cwd=repository, env=_osecan_environment(repository))
+    report = _assumption_loss_report(output)
+    if not report or "total dropped:" not in report[-1]:
+        raise SetupError("capacity cleaner did not report dropped oil/battery capacity")
+    if not any("Oil" in line for line in report):
+        raise SetupError("capacity cleaner did not report the dropped oil fleet")
+    if not any("Battery Storage" in line for line in report):
+        raise SetupError("capacity cleaner did not report the dropped battery fleet")
+
+    summary_match = re.search(r"^\[clean-capacity\] (.+)$", output, re.MULTILINE)
+    if summary_match is None:
+        raise SetupError("capacity cleaner did not print its summary line")
+    summary: dict[str, str] = {}
+    for token in summary_match.group(1).split():
+        key, separator, value = token.partition("=")
+        if separator:
+            summary[key] = value
+    if "observed_gw" not in summary:
+        raise SetupError("capacity cleaner summary is missing observed_gw")
+
+    log_path = repository / "data/interim/clean_capacity.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(output, encoding="utf-8")
+    return {
+        "basis": f"CER EF2026 {CAPACITY_SCENARIO}",
+        "source": origin,
+        "sha256": digest,
+        "scenario": CAPACITY_SCENARIO,
+        "base_year": CAPACITY_BASE_YEAR,
+        "command": " ".join(command),
+        "summary": summary,
+        "dropped_report": report,
+        "log_sha256": _sha256_file(log_path),
     }
 
 
@@ -325,13 +466,10 @@ def _build(
     external_data: Path | None,
     base: str,
     skip_demand: bool,
-) -> tuple[list[str], dict[str, Any]]:
-    """Regenerate SETs, parameters, and demand, then harmonize."""
+) -> tuple[list[str], dict[str, Any], dict[str, Any]]:
+    """Regenerate SETs, parameters, demand, and capacity, then harmonize."""
 
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(repository / "src")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env["PYTHONHASHSEED"] = "0"
+    env = _osecan_environment(repository)
     commands = [
         [str(python), "-m", "osecan.cli", "build-sets", "--out", "SETs"],
         [str(python), "-m", "osecan.cli", "build-params", "--out", "data/params"],
@@ -352,6 +490,14 @@ def _build(
             [str(python), "-m", "osecan.cli", "clean-demand", DEMAND_SCENARIO]
         )
 
+    capacity = _provision_capacity(
+        repository,
+        python,
+        external_data=external_data,
+        base=base,
+    )
+    commands.append(capacity["command"].split())
+
     harmonize = [
         str(python),
         "-m",
@@ -366,7 +512,7 @@ def _build(
     if "HARMONIZED" not in output:
         raise SetupError("osecan harmonize did not report HARMONIZED")
     commands.append(harmonize)
-    return [" ".join(command) for command in commands], demand
+    return [" ".join(command) for command in commands], demand, capacity
 
 
 def _read_rows(path: Path) -> list[dict[str, str]]:
@@ -385,12 +531,148 @@ def _require(condition: bool, message: str) -> None:
         raise SetupError(message)
 
 
+def _verify_capacity(repository: Path, capacity: dict[str, Any]) -> dict[str, Any]:
+    """Verify residual-capacity coverage and the generated capacity bounds."""
+
+    residual_path = repository / "data/params/ResidualCapacity.csv"
+    residual_rows = _read_rows(residual_path)
+    pwr_rows = [
+        row for row in residual_rows if row["TECHNOLOGY"].startswith("PWR")
+    ]
+    pwr_years = sorted({int(row["YEAR"]) for row in pwr_rows})
+    expected_years = list(range(CAPACITY_BASE_YEAR, 2071))
+    _require(
+        pwr_years == expected_years,
+        f"ResidualCapacity PWR years are {pwr_years}, expected 2021-2070",
+    )
+
+    rows_2021 = [row for row in pwr_rows if int(row["YEAR"]) == CAPACITY_BASE_YEAR]
+    non_zero_2021 = [row for row in rows_2021 if float(row["VALUE"]) > 1e-9]
+    total_2021_gw = round(sum(float(row["VALUE"]) for row in non_zero_2021), 6)
+    _require(
+        len(non_zero_2021) == EXPECTED_PWR_2021_ROWS,
+        f"ResidualCapacity has {len(non_zero_2021)} non-zero PWR rows in 2021, "
+        f"expected {EXPECTED_PWR_2021_ROWS}",
+    )
+    _require(
+        abs(total_2021_gw - EXPECTED_2021_CAPACITY_GW) <= 0.01,
+        f"ResidualCapacity 2021 PWR total is {total_2021_gw} GW, "
+        f"expected {EXPECTED_2021_CAPACITY_GW} GW",
+    )
+
+    bio_2021_gw = round(
+        sum(
+            float(row["VALUE"])
+            for row in rows_2021
+            if row["TECHNOLOGY"].startswith("PWRBIO")
+        ),
+        6,
+    )
+    _require(bio_2021_gw > 0.0, "PWRBIO carries no biomass capacity in 2021")
+    duplicate_bio_gw = round(
+        sum(
+            float(row["VALUE"])
+            for row in rows_2021
+            if row["TECHNOLOGY"].startswith(("PWRBSW", "PWRBCW"))
+        ),
+        6,
+    )
+    _require(
+        duplicate_bio_gw == 0.0,
+        f"PWRBSW/PWRBCW still carry {duplicate_bio_gw} GW in 2021",
+    )
+
+    limit_rows: dict[str, int] = {}
+    for file_name in CAPACITY_LIMIT_FILES:
+        path = repository / "data/params" / file_name
+        rows = _read_rows(path)
+        limit_rows[file_name] = len(rows)
+    _require(
+        limit_rows["TotalAnnualMaxCapacity.csv"] > 0,
+        "TotalAnnualMaxCapacity has no capacity-limit rows",
+    )
+    _require(
+        limit_rows["TotalAnnualMaxCapacityInvestment.csv"] > 0,
+        "TotalAnnualMaxCapacityInvestment has no build-rate rows",
+    )
+
+    max_capacity = _read_rows(repository / "data/params/TotalAnnualMaxCapacity.csv")
+    coal = [
+        row for row in max_capacity if row["TECHNOLOGY"].startswith("PWRCOA")
+    ]
+    _require(
+        any(float(row["VALUE"]) > 0.0 for row in coal if row["YEAR"] == "2021"),
+        "coal capacity limit has no positive 2021 value",
+    )
+    _require(
+        all(
+            float(row["VALUE"]) == 0.0
+            for row in coal
+            if int(row["YEAR"]) >= 2030
+        ),
+        "coal capacity limit does not encode the 2030 phase-out",
+    )
+
+    max_investment = _read_rows(
+        repository / "data/params/TotalAnnualMaxCapacityInvestment.csv"
+    )
+    investment_techs = {row["TECHNOLOGY"] for row in max_investment}
+    for prefix in ("PWRHYD", "PWRSOL", "PWRWND", "PWRURN"):
+        _require(
+            any(technology.startswith(prefix) for technology in investment_techs),
+            f"TotalAnnualMaxCapacityInvestment is missing {prefix} build-rate rows",
+        )
+
+    capacity_limits = {
+        (row["TECHNOLOGY"], int(row["YEAR"])): float(row["VALUE"])
+        for row in max_capacity
+    }
+    below_residual = [
+        (row["TECHNOLOGY"], int(row["YEAR"]), float(row["VALUE"]))
+        for row in residual_rows
+        if (row["TECHNOLOGY"], int(row["YEAR"])) in capacity_limits
+        and float(row["VALUE"])
+        > capacity_limits[(row["TECHNOLOGY"], int(row["YEAR"]))] + 1e-9
+    ]
+    _require(
+        not below_residual,
+        "TotalAnnualMaxCapacity is below ResidualCapacity for "
+        f"{below_residual[:3]}",
+    )
+
+    observed_gw = float(capacity["summary"]["observed_gw"])
+    _require(
+        abs(observed_gw - EXPECTED_2021_CAPACITY_GW) <= 0.01,
+        f"capacity cleaner observed {observed_gw} GW, expected 145.02 GW",
+    )
+
+    return {
+        "residual_years": [pwr_years[0], pwr_years[-1]],
+        "residual_pwr_rows_2021_nonzero": len(non_zero_2021),
+        "residual_2021_gw": total_2021_gw,
+        "pwrbio_2021_gw": bio_2021_gw,
+        "pwr_bsw_bcw_2021_gw": duplicate_bio_gw,
+        "limit_rows": limit_rows,
+        "max_capacity_below_residual": len(below_residual),
+        "coal_phase_out_2030": True,
+        "investment_build_rate_techs": [
+            prefix
+            for prefix in ("PWRHYD", "PWRSOL", "PWRWND", "PWRURN")
+            if any(
+                technology.startswith(prefix) for technology in investment_techs
+            )
+        ],
+        "dropped_report": capacity["dropped_report"],
+    }
+
+
 def _verify_structure(
     repository: Path,
     *,
     expect_cleaned_demand: bool,
+    capacity: dict[str, Any],
 ) -> dict[str, Any]:
-    """Verify the zonal/tier structure and corrected emission factors."""
+    """Verify the zonal/tier structure, emissions, demand, and capacity."""
 
     technologies = _values(repository / "SETs/TECHNOLOGY.csv")
     for technology in (*TIER_TECHS, *BC_ZONAL_TECHS, "PWRBCWB1", "PWRBCWB2"):
@@ -480,6 +762,7 @@ def _verify_structure(
         "demand_basis": "CER EF2026 Current Measures"
         if expect_cleaned_demand
         else "placeholder",
+        "capacity": _verify_capacity(repository, capacity),
     }
 
 
@@ -504,6 +787,7 @@ def _write_manifest(
     commands: list[str],
     checks: dict[str, Any],
     demand: dict[str, Any],
+    capacity: dict[str, Any],
 ) -> dict[str, Any]:
     manifest = {
         "schema_version": "clews.osecan_model_manifest.v1",
@@ -518,6 +802,7 @@ def _write_manifest(
         "model_tree_sha256": tree_sha256(repository),
         "build_commands": commands,
         "demand": demand,
+        "capacity": capacity,
         "checks": checks,
         "parameter_files": _parameter_inventory(repository),
     }
@@ -563,9 +848,9 @@ def setup_model(
         python: Optional interpreter with OSeCAN dependencies.
         force: Replace an existing setup tree.
         external_data: Optional cached ``data/external`` directory holding the
-            pinned CER demand file.
+            pinned CER demand and capacity files.
         skip_demand: Leave the 10 PJ placeholder demand instead of cleaning the
-            CER Current Measures path.
+            CER Current Measures path. Capacity is always ingested.
 
     Returns:
         The manifest written to ``out/model_manifest.json``.
@@ -582,7 +867,7 @@ def setup_model(
         repository = _clone_base(base, commit, staging)
         patches = _apply_patches(repository)
         interpreter = _select_python(python, repository)
-        commands, demand = _build(
+        commands, demand, capacity = _build(
             repository,
             interpreter,
             external_data=external_data,
@@ -592,6 +877,7 @@ def setup_model(
         checks = _verify_structure(
             repository,
             expect_cleaned_demand=not skip_demand,
+            capacity=capacity,
         )
         otoole = interpreter.parent / "otoole"
         otoole_path = otoole if otoole.is_file() and os.access(otoole, os.X_OK) else None
@@ -607,6 +893,7 @@ def setup_model(
             commands=commands,
             checks=checks,
             demand=demand,
+            capacity=capacity,
         )
         os.replace(repository, out)
     finally:
@@ -651,8 +938,8 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help=(
-            "cached OSeCAN data/external directory (or demand CSV); "
-            "downloaded when omitted"
+            "cached OSeCAN data/external directory (or pinned CSV); "
+            "downloads when omitted"
         ),
     )
     parser.add_argument(
