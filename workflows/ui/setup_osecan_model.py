@@ -436,7 +436,10 @@ def _verify_structure(
         raw_udc = {
             float(row["VALUE"]) for row in _read_rows(udc_path)
         }.intersection(RAW_FUEL_FACTORS)
-        _require(not raw_udc, f"fuel-basis emission factors remain in UDC multipliers: {sorted(raw_udc)}")
+        _require(
+            not raw_udc,
+            f"fuel-basis emission factors remain in UDC multipliers: {sorted(raw_udc)}",
+        )
 
     upper = _read_rows(repository / "data/params/TotalTechnologyAnnualActivityUpperLimit.csv")
     _require(
