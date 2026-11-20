@@ -1,0 +1,24 @@
+{
+  "title": "Forest Ledger — operable-proxy integration QA",
+  "date": "2026-11-20",
+  "viewport": "1440x1200",
+  "fatal_hidden": true,
+  "header_scenarios": "53",
+  "allocation_caveat": "The operable-proxy intensity screen uses SCANFI merchantable area intersected with a share-based 2016 tenure proxy, not a THLB. It has no slope, road access, age/disturbance, growth, yield, or economic content. 150 Mm3 is conditional: the 1.0 m3/ha/yr per-province screen is infeasible by 16.296 Mm3, and the 1.2 screen is still short by 4.492 Mm3 because BC, ON, YT, and NT documented caps bind below 1.2 x operable area. The national operable envelope alone would clear 150 Mm3 at 1.2. 119 Mm3 passes both. The LP allocation is a comparison/screening result, not a legal AAC, enforced provincial constraint, or policy frontier.",
+  "operable_context": "SCREENING LANDBASE\nOperable proxy · 144.69 Mha\n\n87.0% of the 166.28 Mha managed proxy. Missing: NU, PE — documented caps retained, not zero.\n\n1.0 M³/HA/YR\nprovincial LP −16.296 Mm³\nnational envelope −5.310 Mm³\n1.2 M³/HA/YR\nprovincial LP −4.492 Mm³\nnational envelope pass\n\nScreening proxy, not a legal THLB. 150 Mm³ stays conditional.",
+  "allocation_table_rows": 4,
+  "landbase_status": "screening_proxy_not_legal_thlb · base thresholds: h ≥ 5 m, biomass ≥ 20 Mg/ha, closure ≥ 10% · 13 provinces · missing NU, PE",
+  "operable_table_has_13_provinces": true,
+  "missing_pe_nu_marked_missing": true,
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 404 (File not found)"
+  ],
+  "console_error_note": "Only the optional live-mode /api/health 404 probe; no page errors and no failed data requests.",
+  "page_errors": [],
+  "failed_requests": [],
+  "screenshots": [
+    "operable-overview.png",
+    "operable-allocation.png",
+    "operable-inputs.png"
+  ]
+}
