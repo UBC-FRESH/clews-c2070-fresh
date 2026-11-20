@@ -63,23 +63,85 @@ def test_normalize_metrics_requires_objective() -> None:
 
 def test_scenario_contract_and_metrics(scenarios: dict) -> None:
     assert scenarios["schema_version"] == exporter.SCHEMA_VERSION
-    assert len(scenarios["scenarios"]) == 47
-    assert len({item["scenario_id"] for item in scenarios["scenarios"]}) == 47
+    assert len(scenarios["scenarios"]) == 48
+    assert len({item["scenario_id"] for item in scenarios["scenarios"]}) == 48
+    assert len(scenarios["families"]) == 16
     for scenario in scenarios["scenarios"]:
         for field in ("objective", "emissions_total", "emissions_2050"):
             assert scenario["metrics"][field] is not None, scenario["scenario_id"]
         assert scenario["flags"]["solver"] in set(exporter.SOLVER_STATUSES.values())
         assert isinstance(scenario["sources"], list) and scenario["sources"]
+        assert isinstance(scenario["flags"]["fleet_corrected"], bool)
+        assert isinstance(scenario["flags"]["superseded_for_fleet"], bool)
+        assert isinstance(scenario["flags"]["canonical"], bool)
+        assert isinstance(scenario["flags"]["screening_only"], bool)
+        assert isinstance(scenario["flags"]["policy_grade"], bool)
+
+
+def test_fleet_corrected_canonical_scenario(scenarios: dict) -> None:
+    by_id = {item["scenario_id"]: item for item in scenarios["scenarios"]}
+    fleet_id = "fleet_capacity__screening_119m_fleet"
+    fleet = by_id[fleet_id]
+    assert fleet["family"] == "fleet_capacity"
+    assert fleet["metrics"]["objective"] == pytest.approx(1_445_655.44)
+    assert fleet["metrics"]["emissions_total"] == pytest.approx(424.710127)
+    assert fleet["metrics"]["emissions_2050"] == pytest.approx(0.0)
+    assert fleet["metrics"]["pwrbcw_2050"] == pytest.approx(41.108218)
+    assert fleet["flags"] == {
+        "solver": "optimal",
+        "publishable": True,
+        "superseded_for_emissions": False,
+        "superseded_for_fleet": False,
+        "fleet_corrected": True,
+        "canonical": True,
+        "screening_only": True,
+        "policy_grade": False,
+        "diagnostic": False,
+        "post_fix_emissions": True,
+    }
+    assert scenarios["tradeoff"]["canonical_scenario_id"] == fleet_id
+    assert scenarios["tradeoff"]["scenario_ids"] == [fleet_id]
+    assert [item["scenario_id"] for item in scenarios["tradeoff"]["metrics"]] == [fleet_id]
+
+    for scenario in scenarios["scenarios"]:
+        if scenario["scenario_id"] == fleet_id:
+            continue
+        assert scenario["flags"]["superseded_for_fleet"] is True, scenario["scenario_id"]
+        assert scenario["flags"]["fleet_corrected"] is False, scenario["scenario_id"]
+        assert scenario["flags"]["canonical"] is False, scenario["scenario_id"]
+        assert scenario["flags"]["publishable"] is False, scenario["scenario_id"]
+
+
+def test_fleet_output_excludes_other_rows(scenarios: dict) -> None:
+    scenario = next(
+        item
+        for item in scenarios["scenarios"]
+        if item["scenario_id"] == "fleet_capacity__screening_119m_fleet"
+    )
+    output = _load_output(scenario["scenario_id"])
+    assert output["source_row_count"] == 17192
+    assert output["row_count"] == 4215
+    assert output["excluded_categories"] == {"other": 12977}
+    assert set(output["category"]) == {"dispatch", "supply"}
 
 
 def test_superseded_filtering(scenarios: dict) -> None:
     by_id = {item["scenario_id"]: item for item in scenarios["scenarios"]}
     tradeoff_ids = set(scenarios["tradeoff"]["scenario_ids"])
-    assert tradeoff_ids, "tradeoff set must not be empty"
+    assert tradeoff_ids == {"fleet_capacity__screening_119m_fleet"}
     for scenario_id in tradeoff_ids:
         assert not by_id[scenario_id]["flags"]["superseded_for_emissions"]
+        assert not by_id[scenario_id]["flags"]["superseded_for_fleet"]
+        assert by_id[scenario_id]["flags"]["fleet_corrected"]
         assert by_id[scenario_id]["flags"]["publishable"]
     for family in (
+        "emission_factor_fix",
+        "pwrbio_cap",
+        "pwrbio_tight",
+        "nuclear_audit",
+        "wind_integration_audit",
+        "full_constraint",
+        "full_windcap",
         "national_150m",
         "national_base_119m",
         "national_supply_curve",
@@ -91,7 +153,7 @@ def test_superseded_filtering(scenarios: dict) -> None:
     ):
         members = [item for item in scenarios["scenarios"] if item["family"] == family]
         assert members, family
-        assert all(item["flags"]["superseded_for_emissions"] for item in members)
+        assert all(item["flags"]["superseded_for_fleet"] for item in members)
         assert all(not item["flags"]["publishable"] for item in members)
         assert tradeoff_ids.isdisjoint(item["scenario_id"] for item in members)
     assert len(scenarios["tradeoff"]["metrics"]) == len(tradeoff_ids)
@@ -161,7 +223,7 @@ def test_spatial_join_and_zone_gaps() -> None:
 def test_manifest_sha256() -> None:
     manifest = json.loads((BUNDLE / "manifest.json").read_text())
     assert manifest["validation"]["ok"] is True
-    assert manifest["scenario_count"] == 47
+    assert manifest["scenario_count"] == 48
     assert manifest["total_bytes"] == sum(item["bytes"] for item in manifest["files"])
     for item in manifest["files"]:
         path = BUNDLE / item["path"]
@@ -181,5 +243,8 @@ def test_inputs_contract() -> None:
     landbase = json.loads((BUNDLE / "inputs/managed_landbase.json").read_text())
     assert landbase["rows"]["by_province"] == 42
     links = json.loads((BUNDLE / "inputs/osecan_links.json").read_text())
-    assert len(links["families"]) == 15
+    assert len(links["families"]) == 16
+    fleet_link = next(item for item in links["families"] if item["family"] == "fleet_capacity")
+    assert fleet_link["fleet_corrected"] is True
+    assert fleet_link["superseded_for_fleet"] is False
     assert links["validation"]["national_cap_reconciliation"]["all_tier_sum_equals_rest"] is True

@@ -41,7 +41,7 @@
         <dl class="header-stats">
           <div><dt>Scenarios</dt><dd id="header-scenario-count">—</dd></div>
           <div><dt>Trade-off eligible</dt><dd id="header-eligible-count">—</dd></div>
-          <div><dt>Model commit</dt><dd class="mono">b5df675</dd></div>
+          <div><dt>Fleet run</dt><dd class="mono">2026-11-20</dd></div>
           <div><dt>Horizon</dt><dd class="mono">2021—2070</dd></div>
         </dl>
         <p class="header-note" id="header-generated">Loading data contract…</p>
@@ -70,7 +70,7 @@
         <div class="family-filter" id="family-filter" role="group" aria-label="Filter by scenario family"></div>
         <div class="rail-divider" aria-hidden="true"></div>
         <ol class="scenario-list" id="scenario-list" aria-label="Scenarios"></ol>
-        <p class="rail-foot">Post-fix = canonical iteration-0 emissions. Superseded rows remain visible for audit.</p>
+        <p class="rail-foot">The fleet-corrected 119 Mm³ run is canonical. Pre-fleet rows remain visible for audit but are not comparable.</p>
       </div>
     </aside>
 
@@ -162,7 +162,7 @@
             <p class="kicker">Eligible frontier</p>
             <h2>Objective vs cumulative emissions</h2>
           </div>
-          <p class="panel-deck">Only the 26 published post-fix scenarios are eligible. Superseded and diagnostic scenarios are excluded even when their IDs appear elsewhere.</p>
+          <p class="panel-deck">Only the canonical fleet-corrected screening run is eligible. Pre-fleet, superseded, and diagnostic scenarios are excluded even when their IDs appear elsewhere.</p>
         </div>
         <div id="tradeoff-guard" class="guard-note" hidden></div>
         <div class="chart-frame chart-frame--scatter">
@@ -180,7 +180,7 @@
             <p class="kicker">Multi-criteria workspace</p>
             <h2>Explore the trade space</h2>
           </div>
-          <p class="panel-deck">The 26 published post-fix scenarios plus live session runs. Every filter is visible as a removable chip and survives in the URL hash; live runs stay screening-only and never enter the publishable ledger.</p>
+          <p class="panel-deck">The canonical fleet-corrected scenario plus live session runs. Every filter is visible as a removable chip and survives in the URL hash; pre-fleet and live runs stay screening-only and never enter the canonical ledger.</p>
         </div>
         <div id="explore-mode-note" class="guard-note" hidden></div>
 

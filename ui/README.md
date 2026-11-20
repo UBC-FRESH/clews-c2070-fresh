@@ -41,11 +41,12 @@ Plex Mono. No runtime CDN request is required.
   and a dashed total line. A shared 2021–2070 year control (slider, play/pause,
   reset) draws a vertical guide on the chart and drives a dispatch snapshot
   table by technology family for the selected year.
-- **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for exactly
-  the 26 flag-eligible post-fix scenarios; colour by family; superseded rows are
-  explicitly excluded.
-- **Explore** — multi-criteria workspace over the same 26 eligible scenarios plus
-  any live session runs. Parallel coordinates cover 11 axes (objective,
+- **Trade-off** — objective (M$) vs cumulative emissions (Mt CO₂) for the
+  canonical fleet-corrected screening scenario; colour by family. Pre-fleet,
+  superseded, and diagnostic rows are explicitly excluded but remain visible in
+  the rail for audit as **pre-fleet model — not comparable**.
+- **Explore** — multi-criteria workspace over the same canonical fleet-corrected
+  scenario plus any live session runs. Parallel coordinates cover 11 axes (objective,
   emissions, national BCW, PWRBCW, bio share, harvest, carbon price, recovery,
   PWRBIO cap, nuclear cap, wind cap/integration). Vertically brush an axis or use
   the range form; every filter appears as a removable chip, and active filters
@@ -56,7 +57,7 @@ Plex Mono. No runtime CDN request is required.
   comparison shows absolute and relative deltas with units, lists differing
   dimensions, and offers an optional annual dispatch overlay for one energy
   ledger at a time. Live session runs are dashed/marked `screening_only` and are
-  never folded into the 26-scenario publishable ledger.
+  never folded into the canonical fleet-corrected ledger.
 - **Map** — MapLibre with 13 provinces, 36 ecoprovinces, 385 RSYC tiles, and a
   `recoverable_pj_base` choropleth. Linked Canada → province → ecoprovince →
   RSYC tile drill-down with breadcrumbs, a selection panel (area, recoverable
@@ -90,12 +91,12 @@ Map deep links carry the spatial selection and shared year, for example
 
 ## Data contract
 
-Read-only bundle under `ui/public/data/` (committed at model/data commit
-`b5df675`):
+Read-only bundle under `ui/public/data/` (regenerated 2026-11-20 from the
+fleet-corrected 119 Mm³ run and the historical pre-fleet scenarios):
 
 | Path | Content |
 |---|---|
-| `scenarios.json` | 47 scenarios, 15 families, 26 trade-off IDs, units, flags, dimensions, metrics |
+| `scenarios.json` | 48 scenarios, 16 families, 1 canonical trade-off ID, units, flags, dimensions, metrics |
 | `outputs/{scenario_id}.json` | Columnar `technology`, `category`, `zone`, `year`, `value_pj`; units per category |
 | `inputs/harvest_basis.json` | Harvest template summary and 2021–2070 reference paths |
 | `inputs/supply_curve.json` | Four-tier national supply curve, reconciliation, physical basis |
@@ -105,6 +106,14 @@ Read-only bundle under `ui/public/data/` (committed at model/data commit
 | `spatial/ecoprovinces.geojson` | 36 ecoprovince polygons |
 | `spatial/rsyc_tiles.geojson` | 385 RSYC tiles with `recoverable_pj_base` |
 | `spatial/zone_nodes.json` | 13 C2070 zones; B1/B2 anchors; 11 explicit gaps |
+
+The canonical fleet-corrected artifact is
+`data/derived/national/clews/osecan/fleet_capacity_119m/` (summary, dispatch,
+manifest only; raw model/results are not committed). Its headline metrics are
+objective **1,445,655.44 M$**, cumulative emissions **424.710127 Mt CO₂**, and
+2050 emissions **0.0 Mt CO₂**. The fleet run records demand/audit rows under
+`category=other`; the exporter omits them from the supply-side columnar output
+and reports the count in `excluded_categories`.
 
 ### Units and guards
 
@@ -121,8 +130,13 @@ Read-only bundle under `ui/public/data/` (committed at model/data commit
   scenario output is validated on load (scenario ID, column lengths, finite
   values, 50-year coverage, category units).
 - Trade-off eligibility is re-derived from flags (`publishable`,
-  `post_fix_emissions`, not `superseded_for_emissions`) and checked against the
-  26-ID ledger. A visible guard appears if they disagree.
+  `post_fix_emissions`, `fleet_corrected`, `canonical`, and neither
+  `superseded_for_emissions` nor `superseded_for_fleet`) and checked against the
+  1-ID canonical ledger. A visible guard appears if they disagree.
+- `fleet_capacity__screening_119m_fleet` is `screening_only=true` and
+  `policy_grade=false`. Every earlier scenario carries
+  `superseded_for_fleet=true` and the visible **pre-fleet model — not comparable**
+  badge/banner; the canonical run shows **fleet-corrected**.
 - Superseded and diagnostic flags are visible in the rail, masthead, and file
   ledger.
 - Spatial counts and the 11-zone gap count are guarded. No C2070 zone polygon is

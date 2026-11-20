@@ -106,6 +106,31 @@ PWRBIO_CAPS_PJ = {
 
 FAMILY_SPECS: tuple[dict[str, Any], ...] = (
     {
+        "family": "fleet_capacity",
+        "label": "CER 2021 fleet-corrected capacity (canonical screening)",
+        "dir": "fleet_capacity_119m",
+        "case_id": "screening_119m_fleet",
+        "label_override": "119 Mm3 screening base — fleet-corrected",
+        "description_override": (
+            "Screening_v0 119 Mm3 base rerun with the CER 2021 capacity fleet. "
+            "Screening only; not policy-grade."
+        ),
+        "post_fix": True,
+        "superseded": False,
+        "fleet_corrected": True,
+        "screening_only": True,
+        "policy_grade": False,
+        "canonical": True,
+        "harvest": "119m",
+        "supply_curve": "tiered_t1_t4",
+        "hydro": "upper_2021",
+        "carbon_price_default": 200.0,
+        "pwrbio_cap": "5pct_zone_generation",
+        "nuclear_cap_gw": 0.0,
+        "wind_cost_usd_per_gj": 3.0,
+        "wind_cap": "20pct_zonal",
+    },
+    {
         "family": "emission_factor_fix",
         "label": "Post-fix emission factors (canonical iteration-0)",
         "dir": "emission_factor_fix",
@@ -390,7 +415,17 @@ def normalize_metrics(entry: dict[str, Any], *, label: str) -> dict[str, Any]:
 
     emissions_2050 = _year_value(entry.get("emissions_mt"), 2050, label=f"{label}.emissions_mt")
     if emissions_2050 is None:
-        raise ExportError(f"{label}: missing emissions_mt['2050']")
+        emissions_2050 = _number_or_none(
+            entry.get("emissions_2050_mt"), label=f"{label}.emissions_2050_mt"
+        )
+    if emissions_2050 is None:
+        emissions_2050 = _year_value(
+            entry.get("emissions_mt_by_year"),
+            2050,
+            label=f"{label}.emissions_mt_by_year",
+        )
+    if emissions_2050 is None:
+        raise ExportError(f"{label}: missing 2050 emissions")
 
     national_bcw_2050 = _year_value(
         entry.get("national_bcw_supply_pj"), 2050, label=f"{label}.national_bcw_supply_pj"
@@ -402,6 +437,13 @@ def normalize_metrics(entry: dict[str, Any], *, label: str) -> dict[str, Any]:
         ]
         present = [part for part in parts if part is not None]
         national_bcw_2050 = sum(present) if present else None
+    if national_bcw_2050 is None:
+        supply = entry.get("supply")
+        if isinstance(supply, dict):
+            national_bcw_2050 = _number_or_none(
+                supply.get("national_total_pj_2050"),
+                label=f"{label}.supply.national_total_pj_2050",
+            )
 
     pwrbcw_2050 = _year_value(
         entry.get("pwrbcw_total_pj"), 2050, label=f"{label}.pwrbcw_total_pj"
@@ -452,6 +494,12 @@ def discover_runs(artifacts_root: Path) -> list[RunCase]:
     for spec in FAMILY_SPECS:
         family_dir = artifacts_root / spec["dir"]
         summaries = _read_json(family_dir / "run_summaries.json", label=spec["family"])
+        if _has_metrics(summaries):
+            case_id = spec.get("case_id") or summaries.get("scenario_id")
+            if not isinstance(case_id, str) or not case_id:
+                raise ExportError(f"{spec['family']}: flat summary has no scenario_id")
+            runs.append(RunCase(family=spec["family"], case_id=case_id, entry=summaries))
+            continue
         table_key, table = select_case_table(summaries, family=spec["family"])
         for case_id, entry in table.items():
             runs.append(RunCase(family=spec["family"], case_id=case_id, entry=entry))
@@ -468,7 +516,10 @@ def scenario_id(family: str, case_id: str) -> str:
 
 def dispatch_run_id(entry: dict[str, Any], case_id: str) -> str:
     run = entry.get("run")
-    return run if isinstance(run, str) and run else case_id
+    if isinstance(run, str) and run:
+        return run
+    scenario = entry.get("scenario_id")
+    return scenario if isinstance(scenario, str) and scenario else case_id
 
 
 def _pwrbio_cap_for(spec: dict[str, Any], case_id: str) -> dict[str, Any] | None:
@@ -558,6 +609,8 @@ def _hydro_mode_for(
 ) -> str:
     if entry.get("hydro_capped_at_2021") is True or entry.get("hydro_2021_upper_cap") is True:
         return "upper_2021"
+    if spec.get("hydro") == "upper_2021":
+        return "upper_2021"
     if entry.get("hydro_fixed_lower_and_upper") is True or spec.get("hydro") == "fixed_2021":
         return "fixed_2021"
     label = str(entry.get("label", "")).lower()
@@ -641,22 +694,31 @@ def _zero_tiers_for(case_id: str) -> list[str]:
 def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str, entry: dict[str, Any]) -> dict[str, Any]:
     scenario_key = scenario_id(spec["family"], case_id)
     metrics = normalize_metrics(entry, label=scenario_key)
-    solver = normalize_status(entry.get("status", entry.get("solver_status")), label=scenario_key)
-    label = entry.get("label") or case_id
+    solver = normalize_status(
+        entry.get("solver_status", entry.get("status")), label=scenario_key
+    )
+    label = spec.get("label_override") or entry.get("label") or entry.get("scenario_label") or case_id
     is_diagnostic = (
         "diagnostic" in str(label).lower()
         or case_id.startswith("diag_")
         or entry.get("kind") == "diagnostic"
     )
     superseded = bool(spec["superseded"])
-    publishable = solver == "optimal" and not superseded and not is_diagnostic
+    fleet_corrected = bool(spec.get("fleet_corrected"))
+    superseded_for_fleet = not fleet_corrected
+    publishable = (
+        solver == "optimal"
+        and not superseded
+        and not is_diagnostic
+        and not superseded_for_fleet
+    )
 
     return {
         "scenario_id": scenario_key,
         "family": spec["family"],
         "family_label": spec["label"],
         "label": label,
-        "description": entry.get("description"),
+        "description": spec.get("description_override") or entry.get("description"),
         "source_run": case_id,
         "dispatch_run": dispatch_run_id(entry, case_id),
         "sources": [
@@ -670,6 +732,11 @@ def build_scenario(spec: dict[str, Any], summaries: dict[str, Any], case_id: str
             "solver": solver,
             "publishable": publishable,
             "superseded_for_emissions": superseded,
+            "superseded_for_fleet": superseded_for_fleet,
+            "fleet_corrected": fleet_corrected,
+            "canonical": bool(spec.get("canonical")) and publishable,
+            "screening_only": bool(spec.get("screening_only")),
+            "policy_grade": bool(spec.get("policy_grade")),
             "diagnostic": is_diagnostic,
             "post_fix_emissions": bool(spec["post_fix"]),
         },
@@ -699,10 +766,17 @@ def build_output(
     years: list[int] = []
     values: list[float] = []
     checks: list[dict[str, Any]] = []
+    excluded: Counter[str] = Counter()
 
     for index, row in enumerate(rows):
         label = f"{scenario_key}: dispatch row {index + 2}"
         category = row.get("category")
+        if category == "other":
+            # The fleet run records demand/audit rows under ``other``.  The
+            # static bundle is a supply-side ledger only, so keep them out of
+            # the mixed-unit arrays and report the exclusion explicitly.
+            excluded["other"] += 1
+            continue
         if category not in CATEGORY_UNITS:
             raise ExportError(f"{label}: unknown dispatch category {category!r}")
         year = row.get("year")
@@ -738,7 +812,9 @@ def build_output(
     payload = {
         "scenario_id": scenario_key,
         "source": source_path,
+        "source_row_count": len(rows),
         "row_count": len(values),
+        "excluded_categories": dict(excluded),
         "technology": technologies,
         "category": categories,
         "zone": zones,
@@ -772,6 +848,27 @@ def derive_bio_share_2050(output: dict[str, Any]) -> float | None:
     if denominator <= 0:
         return None
     return round(numerator / denominator, 6)
+
+
+def derive_pwrbcw_2050(output: dict[str, Any]) -> float | None:
+    """PWRBCW electricity in 2050, or None when the dispatch has no PWRBCW rows."""
+    total = 0.0
+    seen = False
+    for technology, category, year, value in zip(
+        output["technology"],
+        output["category"],
+        output["year"],
+        output["value_pj"],
+        strict=True,
+    ):
+        if (
+            year == 2050
+            and output["units_by_category"].get(category) == "PJ electricity"
+            and technology.startswith("PWRBCW")
+        ):
+            total += value
+            seen = True
+    return round(total, 6) if seen else None
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -996,6 +1093,8 @@ def build_osecan_links(root: Path, artifacts_root: Path) -> dict[str, Any]:
                 "source_dir": _relative(family_dir, root),
                 "post_fix_emissions": bool(spec["post_fix"]),
                 "superseded_for_emissions": bool(spec["superseded"]),
+                "superseded_for_fleet": not bool(spec.get("fleet_corrected")),
+                "fleet_corrected": bool(spec.get("fleet_corrected")),
                 "files": files,
             }
         )
@@ -1295,6 +1394,8 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
             scenario["metrics"]["bio_share_basis"] = (
                 "derived_from_dispatch_2050" if derived_share is not None else None
             )
+        if scenario["metrics"]["pwrbcw_2050"] is None:
+            scenario["metrics"]["pwrbcw_2050"] = derive_pwrbcw_2050(output)
         _record(
             checks,
             f"dispatch_years:{key}",
@@ -1317,8 +1418,19 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
         superseded_in_tradeoff,
     )
 
+    canonical_ids = [
+        scenario["scenario_id"]
+        for scenario in scenarios
+        if scenario["flags"]["canonical"]
+    ]
+    _record(checks, "single_canonical_scenario", len(canonical_ids) == 1, canonical_ids)
+
     tradeoff = {
-        "rule": "publishable and not superseded_for_emissions",
+        "rule": (
+            "publishable fleet-corrected scenario, not superseded for emissions "
+            "or for the CER 2021 fleet"
+        ),
+        "canonical_scenario_id": canonical_ids[0],
         "scenario_ids": [
             scenario["scenario_id"]
             for scenario in scenarios
@@ -1345,6 +1457,17 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
         superseded_ids.isdisjoint(tradeoff["scenario_ids"]),
         sorted(superseded_ids & set(tradeoff["scenario_ids"])),
     )
+    fleet_superseded_ids = {
+        scenario["scenario_id"]
+        for scenario in scenarios
+        if scenario["flags"]["superseded_for_fleet"]
+    }
+    _record(
+        checks,
+        "tradeoff_excludes_pre_fleet",
+        fleet_superseded_ids.isdisjoint(tradeoff["scenario_ids"]),
+        sorted(fleet_superseded_ids & set(tradeoff["scenario_ids"])),
+    )
 
     scenarios_payload = {
         "schema_version": SCHEMA_VERSION,
@@ -1365,6 +1488,11 @@ def build_bundle(root: Path, out_dir: Path) -> dict[str, Any]:
                 "source_dir": _relative(artifacts_root / spec["dir"], root),
                 "post_fix_emissions": bool(spec["post_fix"]),
                 "superseded_for_emissions": bool(spec["superseded"]),
+                "superseded_for_fleet": not bool(spec.get("fleet_corrected")),
+                "fleet_corrected": bool(spec.get("fleet_corrected")),
+                "screening_only": bool(spec.get("screening_only")),
+                "policy_grade": bool(spec.get("policy_grade")),
+                "canonical": bool(spec.get("canonical")),
                 "scenario_count": sum(1 for run in runs if run.family == spec["family"]),
             }
             for spec in FAMILY_SPECS

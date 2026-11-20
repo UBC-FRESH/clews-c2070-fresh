@@ -378,3 +378,50 @@ Machine-readable evidence is under `milestone_1f` in
 
 No data submodule, manifest, output, or public OSeCAN surface was modified.
 `git status --porcelain` contains no `D` entries.
+
+## Fleet-correction canonicalization pass (2026-11-20)
+
+**Scope:** static bundle regenerated from the CER 2021 capacity-fleet rerun;
+canonical scenario, pre-fleet historical flags, 48/16/1 boot guards, and visible
+fleet/pre-fleet badges and banners. No backend was used.
+
+**Environment:** Chromium via `/tmp/ui-qa-venv` (Playwright), static
+`python3 -m http.server 8765 -d ui`, viewport 1440×1100. The only HTTP 404 is the
+intentional `/api/health` probe in static mode; it is handled by the mode badge.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Boot guard | **PASS** — 48 scenarios, 16 families, 1 trade-off eligible; fatal banner hidden. |
+| Canonical default | **PASS** — `fleet_capacity__screening_119m_fleet` selected; overview shows objective **1,445,655.44 M$**, cumulative **424.710 Mt CO₂**, 2050 **0.000 Mt CO₂**. |
+| Canonical banner | **PASS** — visible **FLEET-CORRECTED** callout and masthead badges; screening-only/not-policy copy present. |
+| Pre-fleet banner | **PASS** — `emission_factor_fix__efix_baseline_119m` shows **pre-fleet model — not comparable** in the rail (47 rows) and overview banner/badge. |
+| Trade-off | **PASS** — guard hidden; ledger count `1 canonical fleet-corrected eligible · 47 historical/excluded`. |
+| Explore/Pareto | **PASS** — 1 static eligible, 1 on front, no missing metrics, guard hidden. |
+| Dispatch | **PASS** — 4,215 supply-side rows from the fleet run; `category=other` excluded (12,977 rows). |
+| Errors | **PASS** — 0 page errors and 0 non-static console errors. |
+
+### Screenshots
+
+| File | Content |
+|---|---|
+| `fleet-canonical.png` | Default fleet-corrected overview with metrics and canonical banner |
+| `fleet-prefleet.png` | Historical scenario with pre-fleet banner, badge, and tab metadata |
+| `fleet-tradeoff.png` | One-canonical-scenario trade-off view and historical exclusion count |
+| `fleet-dispatch.png` | Fleet-run dispatch ledger sourced from `fleet_capacity_119m` |
+| `fleet-explore.png` | One-eligible Explore/Pareto view with no missing-metric guard |
+
+### Files changed
+
+- `workflows/ui/export_iteration0.py`: flat-summary mapping, fleet family,
+  supersession/canonical flags, `other`-row exclusion, dispatch-derived PWRBCW.
+- `ui/public/data/**`: regenerated 48-scenario bundle.
+- `ui/app.js`, `ui/index.html`, `ui/styles.css`: counts, fleet/pre-fleet
+  badges and banners, canonical default and copy.
+- `tests/test_ui_export_iteration0.py`, `tests/test_ui_app_guards.py`: contract,
+  metric, flag, eligibility, and banner guards.
+- `planning/fleet-correction-canonicalization.md`, `CHANGE_LOG.md`.
+
+Data artifact commit `fb877d2` in the data submodule. `git status --porcelain`
+contains no `D` entries. No public OSeCAN repository was changed.

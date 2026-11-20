@@ -16,8 +16,14 @@
   var MOBILE_RAIL_QUERY = '(max-width: 720px)';
   var TEMPORAL_DEFAULT = 2050;
   var PROVINCE_ALIAS = { QC: 'CA-QB' };
+  var EXPECTED_SCENARIO_COUNT = 48;
+  var EXPECTED_FAMILY_COUNT = 16;
+  var EXPECTED_ELIGIBLE_COUNT = 1;
+  var FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet';
+  var FLEET_BANNER_TEXT = 'pre-fleet model — not comparable';
 
   var FAMILY_SHORT = {
+    fleet_capacity: 'Fleet capacity',
     emission_factor_fix: 'Emission factor fix',
     pwrbio_cap: 'PWRBIO cap',
     pwrbio_tight: 'PWRBIO tight',
@@ -36,6 +42,7 @@
   };
 
   var FAMILY_CHART_COLORS = {
+    fleet_capacity: '#b23b1c',
     emission_factor_fix: '#d98a2b',
     pwrbio_cap: '#4f7d80',
     pwrbio_tight: '#a94f31',
@@ -332,10 +339,10 @@
     requireTrue(s && typeof s === 'object', 'scenarios.json is missing');
     requireTrue(String(s.schema_version).indexOf('iteration0/') === 0, 'unexpected scenarios schema_version ' + s.schema_version);
     requireTrue(Array.isArray(s.scenarios), 'scenarios.json has no scenario array');
-    requireTrue(s.scenarios.length === 47, 'expected 47 scenarios, found ' + s.scenarios.length);
+    requireTrue(s.scenarios.length === EXPECTED_SCENARIO_COUNT, 'expected ' + EXPECTED_SCENARIO_COUNT + ' scenarios, found ' + s.scenarios.length);
     requireTrue(m.scenario_count === s.scenarios.length, 'manifest scenario_count does not match scenarios.json');
     requireTrue(m.output_count === s.scenarios.length, 'manifest output_count does not match scenario count');
-    requireTrue(Array.isArray(s.families) && s.families.length === 15, 'expected 15 scenario families');
+    requireTrue(Array.isArray(s.families) && s.families.length === EXPECTED_FAMILY_COUNT, 'expected ' + EXPECTED_FAMILY_COUNT + ' scenario families');
 
     var familyCounts = {};
     s.families.forEach(function (f) {
@@ -352,6 +359,10 @@
       requireTrue(sc.metrics && num(sc.metrics.objective) !== null, 'missing objective on ' + sc.scenario_id);
       requireTrue(sc.flags && typeof sc.flags === 'object', 'missing flags on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.superseded_for_emissions === 'boolean', 'missing superseded flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.superseded_for_fleet === 'boolean', 'missing fleet supersession flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.fleet_corrected === 'boolean', 'missing fleet-corrected flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.canonical === 'boolean', 'missing canonical flag on ' + sc.scenario_id);
+      requireTrue(typeof sc.flags.policy_grade === 'boolean', 'missing policy-grade flag on ' + sc.scenario_id);
       requireTrue(typeof sc.flags.post_fix_emissions === 'boolean', 'missing post-fix flag on ' + sc.scenario_id);
       requireTrue(Array.isArray(sc.sources) && sc.sources.length > 0, 'missing sources on ' + sc.scenario_id);
     });
@@ -361,13 +372,16 @@
     });
 
     requireTrue(s.tradeoff && Array.isArray(s.tradeoff.scenario_ids), 'trade-off ledger is missing');
-    requireTrue(s.tradeoff.scenario_ids.length === 26, 'expected 26 trade-off scenarios, found ' + s.tradeoff.scenario_ids.length);
+    requireTrue(s.tradeoff.scenario_ids.length === EXPECTED_ELIGIBLE_COUNT, 'expected ' + EXPECTED_ELIGIBLE_COUNT + ' trade-off scenario(s), found ' + s.tradeoff.scenario_ids.length);
+    requireTrue(s.tradeoff.canonical_scenario_id === FLEET_SCENARIO_ID, 'canonical scenario is not the fleet-corrected run');
+    var canonicalCount = s.scenarios.filter(function (sc) { return sc.flags.canonical === true; }).length;
+    requireTrue(canonicalCount === 1, 'expected exactly one canonical scenario, found ' + canonicalCount);
     s.tradeoff.scenario_ids.forEach(function (id) {
       requireTrue(seen.has(id), 'trade-off ledger references missing scenario ' + id);
     });
 
     requireTrue(links && Array.isArray(links.families), 'osecan_links.json families are missing');
-    requireTrue(links.families.length === 15, 'expected 15 linked source families');
+    requireTrue(links.families.length === EXPECTED_FAMILY_COUNT, 'expected ' + EXPECTED_FAMILY_COUNT + ' linked source families');
     links.families.forEach(function (f) {
       requireTrue(Array.isArray(f.files) && f.files.length === 3, 'linked family ' + f.family + ' does not have 3 files');
       f.files.forEach(function (file) {
@@ -440,7 +454,8 @@
     core.scenarios.tradeoff.metrics.forEach(function (metric) {
       var sc = core.scenarioById.get(metric.scenario_id);
       if (!sc) return;
-      if (sc.flags.publishable && sc.flags.post_fix_emissions && !sc.flags.superseded_for_emissions) {
+      if (sc.flags.publishable && sc.flags.post_fix_emissions && sc.flags.fleet_corrected &&
+          !sc.flags.superseded_for_emissions && !sc.flags.superseded_for_fleet) {
         eligible.push(sc);
         eligibleIds.add(sc.scenario_id);
       }
@@ -448,17 +463,17 @@
     state.eligible = eligible;
     state.eligibleIds = eligibleIds;
 
-    if (eligible.length !== 26) {
-      state.warnings.push('Trade-off guard: flag-derived eligible set is ' + eligible.length + ', expected 26.');
+    if (eligible.length !== EXPECTED_ELIGIBLE_COUNT) {
+      state.warnings.push('Trade-off guard: flag-derived eligible set is ' + eligible.length + ', expected ' + EXPECTED_ELIGIBLE_COUNT + '.');
     }
     core.scenarios.tradeoff.scenario_ids.forEach(function (id) {
       var sc = core.scenarioById.get(id);
       if (!sc || !eligibleIds.has(id)) {
-        state.warnings.push('Trade-off guard excluded ' + id + ' because its flags are not publishable post-fix.');
+        state.warnings.push('Trade-off guard excluded ' + id + ' because its flags are not fleet-corrected canonical.');
       }
     });
 
-    var defaultId = 'emission_factor_fix__efix_stress_119m';
+    var defaultId = FLEET_SCENARIO_ID;
     var hash = parseHash();
     applyExploreHash(hash.params);
     var initialYear = parseHashYear(hash.params);
@@ -492,7 +507,7 @@
       ' · ' + core.manifest.output_count + ' outputs · ' + fmtBytes(core.manifest.total_bytes) +
       (state.live.sessionRuns.length ? ' · ' + state.live.sessionRuns.length + ' live session run(s)' : '');
     $('footer-contract').textContent = 'Data contract ' + core.scenarios.schema_version + ' · ' +
-      core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' trade-off eligible · model commit b5df675';
+      core.scenarios.scenarios.length + ' scenarios · ' + state.eligible.length + ' trade-off eligible · canonical ' + FLEET_SCENARIO_ID + ' · 2026-11-20 fleet run';
   }
 
   function updateHeaderCounts() {
@@ -587,12 +602,15 @@
       var solverBadge = sc.flags.solver && sc.flags.solver !== 'optimal'
         ? '<span class="badge badge--solve">' + esc(sc.flags.solver) + '</span>'
         : '';
+      var fleetBadge = sc.flags.fleet_corrected
+        ? '<span class="badge badge--fleet">fleet-corrected</span>'
+        : '<span class="badge badge--prefleet">' + esc(FLEET_BANNER_TEXT) + '</span>';
       html += '<li><button type="button" class="scenario-item' + (selected ? ' is-selected' : '') +
         '" data-scenario-id="' + esc(sc.scenario_id) + '" aria-pressed="' + (selected ? 'true' : 'false') + '">' +
         '<span class="s-label">' + esc(sc.label) + '</span>' +
         '<span class="s-id">' + esc(sc.scenario_id) + '</span>' +
         '<span class="s-badges"><span class="badge badge--family">' + esc(shortFamily(sc.family)) + '</span>' +
-        statusBadge + diagnosticBadge + solverBadge + '</span></button></li>';
+        fleetBadge + statusBadge + diagnosticBadge + solverBadge + '</span></button></li>';
     });
     list.innerHTML = html;
     list.scrollTop = scrollTop;
@@ -628,7 +646,9 @@
       return;
     }
     $('tab-scenario-meta').innerHTML = '<strong>' + esc(sc.label) + '</strong> · ' + esc(shortFamily(sc.family)) +
-      (sc.flags.superseded_for_emissions ? ' · superseded' : ' · post-fix');
+      (sc.flags.fleet_corrected
+        ? ' · fleet-corrected · screening only'
+        : (sc.flags.superseded_for_emissions ? ' · superseded · pre-fleet' : ' · pre-fleet model — not comparable'));
   }
 
   function linkedContextHtml() {
@@ -658,29 +678,44 @@
     var dims = sc.dimensions;
     var eligible = state.eligibleIds.has(sc.scenario_id);
     var superseded = sc.flags.superseded_for_emissions;
-    var statusTitle = superseded ? 'Superseded — audit only' : (sc.flags.post_fix_emissions ? 'Post-fix canonical' : 'Pre-fix record');
-    var statusCopy = superseded
-      ? 'This run is retained for traceability. It is excluded from the trade-off frontier and must not be read as a current emissions result.'
-      : (eligible
-        ? 'Eligible for the 26-scenario trade-off view under the committed publishable / post-fix / non-superseded rule.'
-        : 'Not in the trade-off ledger; retain the flags when comparing across families.');
+    var preFleet = sc.flags.superseded_for_fleet;
+    var statusTitle = sc.flags.fleet_corrected
+      ? 'Fleet-corrected canonical'
+      : (preFleet ? FLEET_BANNER_TEXT : 'Historical record');
+    var statusCopy = sc.flags.fleet_corrected
+      ? 'Canonical 119 Mm³ screening result under the CER 2021 capacity fleet. screening_only=true and policy_grade=false; not a policy or forecast.'
+      : 'This run predates the CER 2021 capacity-fleet correction. It remains visible for audit but is excluded from the default trade-off/Pareto ledger and is not comparable with fleet-corrected results.' +
+        (superseded ? ' Its emissions factors are also superseded by the emission-factor fix.' : '');
 
-    var html = linkedContextHtml() + '<div class="scenario-masthead">' +
+    var fleetBanner = sc.flags.fleet_corrected
+      ? '<div class="overview-callout fleet-banner fleet-banner--corrected" role="status"><strong>Fleet-corrected</strong><br>' +
+        'CER 2021 capacity fleet applied. This is the canonical screening run: objective ' + fmt(m.objective, 2) +
+        ' M$, cumulative emissions ' + fmt(m.emissions_total, 3) + ' Mt CO₂, 2050 emissions ' + fmt(m.emissions_2050, 3) +
+        ' Mt CO₂. Screening only — not policy-grade.</div>'
+      : '<div class="overview-callout fleet-banner fleet-banner--pre" role="status"><strong>' + esc(FLEET_BANNER_TEXT) + '</strong><br>' +
+        'This scenario predates the CER 2021 capacity-fleet correction. It is historical audit evidence only: ' +
+        'excluded from the canonical trade-off/Pareto ledger and not comparable with fleet-corrected results.</div>';
+
+    var html = linkedContextHtml() + fleetBanner + '<div class="scenario-masthead">' +
       '<div>' +
         '<p class="kicker masthead-family">' + esc(sc.family_label) + '</p>' +
         '<h2>' + esc(sc.label) + '</h2>' +
         '<p class="scenario-desc">' + esc(sc.description || 'No scenario description in the committed contract.') + '</p>' +
         '<span class="masthead-id">' + esc(sc.scenario_id) + '</span>' +
         '<div class="masthead-flags">' +
+          (sc.flags.fleet_corrected
+            ? '<span class="badge badge--fleet">fleet-corrected</span>'
+            : '<span class="badge badge--prefleet">' + esc(FLEET_BANNER_TEXT) + '</span>') +
           '<span class="badge ' + (superseded ? 'badge--superseded' : (sc.flags.post_fix_emissions ? 'badge--postfix' : 'badge--ink')) + '">' +
             (superseded ? 'superseded for emissions' : (sc.flags.post_fix_emissions ? 'post-fix emissions' : 'pre-fix emissions')) + '</span>' +
           (sc.flags.publishable ? '<span class="badge badge--postfix">publishable</span>' : '<span class="badge badge--superseded">not publishable</span>') +
+          (sc.flags.canonical ? '<span class="badge badge--fleet">canonical screening</span>' : '') +
           (sc.flags.diagnostic ? '<span class="badge badge--diag">diagnostic</span>' : '') +
           (eligible ? '<span class="badge badge--family">trade-off eligible</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="masthead-side">' +
-        '<div><p class="kicker">Status</p><p class="status-large' + (superseded ? ' is-warn' : '') + '">' + statusTitle + '</p></div>' +
+        '<div><p class="kicker">Status</p><p class="status-large' + ((superseded || preFleet) ? ' is-warn' : '') + '">' + statusTitle + '</p></div>' +
         '<p>' + statusCopy + '</p>' +
         '<p class="mono">solver: ' + esc(sc.flags.solver || '—') + '</p>' +
       '</div>' +
@@ -750,7 +785,7 @@
       '</div>' +
     '</div>' +
     '<div class="overview-callout"><strong>Screening only — not policy grade</strong><br>' +
-      'This run uses constraint set <span class="mono">screening_v0</span>. It is visible in the session rail, overview, dispatch, and trade-off, but it is excluded from the 26-scenario publishable ledger.</div>' +
+      'This run uses constraint set <span class="mono">screening_v0</span>. It is visible in the session rail, overview, dispatch, and trade-off, but it is excluded from the canonical fleet-corrected ledger.</div>' +
     '<div class="metric-grid">' +
       metricCard('Objective', fmt(m.objective, 2), 'M$ (million USD)', 'solver objective · live run', true) +
       metricCard('Cumulative emissions', fmt(m.emissions_total, 3), 'Mt CO₂', 'sum over 2021—2070', false) +
@@ -1656,9 +1691,9 @@
     var eligibleIds = new Set(eligible.map(function (sc) { return sc.scenario_id; }));
     var missing = expected.filter(function (id) { return !eligibleIds.has(id); });
     var guard = $('tradeoff-guard');
-    if (missing.length || eligible.length !== 26) {
+    if (missing.length || eligible.length !== expected.length) {
       guard.hidden = false;
-      guard.textContent = 'Guard: the 26-ID trade-off ledger and the flag-derived eligible set disagree. ' +
+      guard.textContent = 'Guard: the ' + expected.length + '-ID trade-off ledger and the flag-derived eligible set disagree. ' +
         'Excluded by flags: ' + (missing.length ? missing.join(', ') : 'none') + '. Flag-derived count: ' + eligible.length + '.';
     } else {
       guard.hidden = true;
@@ -1806,9 +1841,11 @@
     }, true);
 
     var superseded = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_emissions; }).length;
+    var preFleet = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.superseded_for_fleet; }).length;
     var diagnostic = state.core.scenarios.scenarios.filter(function (sc) { return sc.flags.diagnostic; }).length;
-    $('tradeoff-count').textContent = eligible.length + ' eligible · ' + (state.core.scenarios.scenarios.length - eligible.length) +
-      ' excluded (' + superseded + ' superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length +
+    $('tradeoff-count').textContent = eligible.length + ' canonical fleet-corrected eligible · ' +
+      (state.core.scenarios.scenarios.length - eligible.length) + ' historical/excluded (' + preFleet +
+      ' pre-fleet, ' + superseded + ' emissions-superseded, ' + diagnostic + ' diagnostic) · expected ledger ' + expected.length +
       (state.live.sessionRuns.length ? ' · +' + state.live.sessionRuns.length + ' live session run(s), screening only' : '');
   }
 
@@ -1823,7 +1860,8 @@
   }
 
   function exploreGrade(sc) {
-    return exploreIsLive(sc) ? 'live · screening_only' : 'post-fix · publishable';
+    if (exploreIsLive(sc)) return 'live · screening_only';
+    return sc.flags.canonical ? 'fleet-corrected · canonical' : 'historical · not comparable';
   }
 
   function explorePassesBrushes(sc) {
@@ -2076,7 +2114,7 @@
       if (rows.some(exploreIsLive)) {
         html += '<span class="pc-legend-item"><span class="pc-legend-swatch is-live" style="color:#e8a63c"></span>Live session · screening_only</span>';
       }
-      html += '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:var(--paper);opacity:.5"></span>post-fix · publishable</span>';
+      html += '<span class="pc-legend-item"><span class="pc-legend-swatch" style="color:var(--paper);opacity:.5"></span>fleet-corrected · canonical</span>';
       legend.innerHTML = html;
     }
 
@@ -2814,7 +2852,7 @@
       if (state.live.sessionRuns.length) {
         note.hidden = false;
         note.textContent = state.live.sessionRuns.length + ' live session run(s) are included as dashed amber lines and diamonds. ' +
-          'They are screening_only and are excluded from the 26-scenario publishable ledger.';
+          'They are screening_only and are excluded from the canonical fleet-corrected ledger.';
       } else {
         note.hidden = true;
         note.textContent = '';
@@ -5035,9 +5073,13 @@
       var diagnostic = familyScenarios.some(function (sc) { return sc.flags.diagnostic; });
       var filesOk = family.files.length === 3;
       var shaOk = family.files.every(function (file) { return String(file.sha256).length === 64; });
-      var statusBadge = family.superseded_for_emissions
-        ? '<span class="badge badge--superseded">superseded</span>'
-        : (family.post_fix_emissions ? '<span class="badge badge--postfix">post-fix</span>' : '<span class="badge badge--ink">pre-fix</span>');
+      var statusBadge = family.fleet_corrected
+        ? '<span class="badge badge--fleet">fleet-corrected</span>'
+        : (family.superseded_for_fleet
+          ? '<span class="badge badge--prefleet">' + esc(FLEET_BANNER_TEXT) + '</span>'
+          : (family.superseded_for_emissions
+            ? '<span class="badge badge--superseded">superseded</span>'
+            : (family.post_fix_emissions ? '<span class="badge badge--postfix">post-fix</span>' : '<span class="badge badge--ink">pre-fix</span>')));
       return '<details class="family-row"><summary>' +
         '<span class="check-pill' + (filesOk && shaOk ? '' : ' is-warn') + '">' + (filesOk && shaOk ? 'files recorded' : 'check') + '</span>' +
         '<span class="family-summary-label">' + esc(scenarioFamily ? scenarioFamily.label : family.family) + '</span>' +
@@ -5060,7 +5102,7 @@
     var landbase = core.landbase;
 
     $('inputs-summary').innerHTML =
-      metricCard('Scenarios / outputs', core.scenarios.scenarios.length + ' / ' + core.manifest.output_count, 'records', '47 scenario contracts · 47 columnar outputs', true) +
+      metricCard('Scenarios / outputs', core.scenarios.scenarios.length + ' / ' + core.manifest.output_count, 'records', core.scenarios.scenarios.length + ' scenario contracts · ' + core.manifest.output_count + ' columnar outputs', true) +
       metricCard('Harvest template', fmt(harvest.template.rows, 0), 'rows', harvest.template.provinces.length + ' provinces · 50 years', false) +
       metricCard('Supply tier sum', fmt(supply.tier_sum_pj, 2), 'PJ fuel', 'terminal upper bound · reconciles', false) +
       metricCard('Managed proxy', fmt(landbase.by_province.reduce(function (sum, row) { return sum + row.managed_proxy_ha; }, 0) / 1e6, 1), 'Mha', 'screening only — not legal THLB', false);

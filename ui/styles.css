@@ -418,6 +418,8 @@ svg { display: block; }
   text-transform: uppercase;
   white-space: nowrap;
 }
+.badge--fleet { color: #123026; border-color: #d98a2b; background: #f2c46f; }
+.badge--prefleet { color: #f0c6b6; border-color: rgba(169, 79, 49, 0.7); background: rgba(169, 79, 49, 0.32); }
 .badge--postfix { color: #dce9d5; border-color: rgba(147, 168, 148, 0.45); background: rgba(88, 114, 95, 0.25); }
 .badge--superseded { color: #f0c6b6; border-color: rgba(169, 79, 49, 0.55); background: rgba(169, 79, 49, 0.2); }
 .badge--diag { color: #f3dfb6; border-color: rgba(217, 138, 43, 0.5); background: rgba(217, 138, 43, 0.16); }
@@ -434,6 +436,10 @@ svg { display: block; }
   letter-spacing: 0.045em;
   border-radius: 3px;
 }
+.masthead-flags .badge--fleet,
+.family-row > summary .badge--fleet { color: #3b2207; background: #f2c46f; border-color: #b9791f; }
+.masthead-flags .badge--prefleet,
+.family-row > summary .badge--prefleet { color: #5f1f0d; background: #f3d5c6; border-color: #c98b6f; }
 .masthead-flags .badge--postfix,
 .family-row > summary .badge--postfix { color: #173b22; background: #d8e9d1; border-color: #8aa886; }
 .masthead-flags .badge--superseded,
@@ -609,6 +615,16 @@ svg { display: block; }
   font-size: 0.82rem;
 }
 .overview-callout strong { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.fleet-banner { margin-top: 0; margin-bottom: 18px; }
+.fleet-banner--corrected {
+  border-left-color: #b9791f;
+  background: linear-gradient(90deg, rgba(242, 196, 111, 0.32), rgba(242, 196, 111, 0.08));
+  color: #3b2207;
+}
+.fleet-banner--pre {
+  border-left-color: #a94f31;
+  background: repeating-linear-gradient(135deg, rgba(169, 79, 49, 0.13), rgba(169, 79, 49, 0.13) 8px, rgba(169, 79, 49, 0.07) 8px, rgba(169, 79, 49, 0.07) 16px);
+}
 
 .metric-grid {
   display: grid;

@@ -2,6 +2,26 @@
 
 ## 2026-11-20
 
+- **Made the fleet-corrected 119 Mm³ run the canonical UI screening result.**
+  Committed the lightweight artifact
+  `data/derived/national/clews/osecan/fleet_capacity_119m/` (summary, dispatch,
+  manifest only; data commit `fb877d2`) and exported it as
+  `fleet_capacity__screening_119m_fleet`: objective **1,445,655.44 M$**,
+  cumulative emissions **424.710127 Mt**, 2050 emissions **0.0**, with
+  `screening_only=true` and `policy_grade=false`. The exporter now maps the
+  run's flat summary schema, treats it as the sole canonical/publishable
+  trade-off member, and drops its 12,977 `category=other` demand/audit rows from
+  the supply-side columnar output (4,215 rows retained; count recorded in
+  `excluded_categories`). All 15 legacy families (47 scenarios, including
+  `efix_*`) carry `superseded_for_fleet=true`, remain visible for audit, and are
+  excluded from default trade-off/Pareto eligibility; `EFix` emissions
+  supersession is kept separate. Regenerated `ui/public/data` to 48 scenarios /
+  16 families / 1 eligible, updated UI boot guards and copy, and added visible
+  **fleet-corrected** and **pre-fleet model — not comparable** badges/banners.
+  Added exporter and app-guard tests plus Chromium static QA evidence
+  (`ui/qa/fleet-*.png`, `ui/qa/QA_REPORT.md`). Open gap: the former 26-scenario
+  ledger has not been rerun under the fleet model, and Stage 1 `policy_test_v1`
+  remains unrun. No public OSeCAN repository was changed.
 - **Ingested the CER EF2026 2021 capacity fleet into the reproducible model.**
   `setup_osecan_model.py` now downloads/copies and SHA-256 verifies
   `electricity-capacity-2026.csv` (`8db7b814...f5fcc`), runs `osecan

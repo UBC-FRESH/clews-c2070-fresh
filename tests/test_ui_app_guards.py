@@ -66,3 +66,14 @@ def test_ui_log_rendering_is_bounded_and_throttled() -> None:
     assert "state.live.logLines.length > 250" in APP_JS
     assert "state.live.logRenderTimer = window.setTimeout" in APP_JS
     assert "progress" not in APP_JS.lower() or "no progress percentage is estimated" in APP_JS
+
+
+def test_ui_fleet_correction_banner_and_counts() -> None:
+    assert "EXPECTED_SCENARIO_COUNT = 48" in APP_JS
+    assert "EXPECTED_FAMILY_COUNT = 16" in APP_JS
+    assert "EXPECTED_ELIGIBLE_COUNT = 1" in APP_JS
+    assert "FLEET_SCENARIO_ID = 'fleet_capacity__screening_119m_fleet'" in APP_JS
+    assert "FLEET_BANNER_TEXT = 'pre-fleet model — not comparable'" in APP_JS
+    assert "badge--fleet" in APP_JS and "badge--prefleet" in APP_JS
+    assert "sc.flags.fleet_corrected &&" in APP_JS
+    assert "!sc.flags.superseded_for_fleet" in APP_JS
