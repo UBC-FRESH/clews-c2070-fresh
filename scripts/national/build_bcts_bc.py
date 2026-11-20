@@ -139,6 +139,11 @@ def main() -> int:
         texts["interior_mps_update_2025b"],
         texts["coast_mps_update_2025_01"],
     )
+    auction_counts = {
+        value.item: int(value.value_numeric)
+        for value in mps_values
+        if value.unit == "count" and value.value_numeric is not None
+    }
     mps_payload = {
         "artifact_version": "0.1.0",
         "generated_utc": retrieved_utc,
@@ -153,8 +158,10 @@ def main() -> int:
             },
         },
         "auction_dataset_counts": {
-            "interior_2010_2024": 3342,
-            "coast_2006_2024": 925,
+            "interior_2010_2024": auction_counts[
+                "sales in 2010-2024 auction dataset"
+            ],
+            "coast_2006_2024": auction_counts["sales in 2006-2024 auction dataset"],
         },
         "equation_coefficients": equations,
         "representative_values": [
