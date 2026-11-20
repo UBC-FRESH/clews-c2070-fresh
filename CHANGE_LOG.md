@@ -2,6 +2,22 @@
 
 ## 2026-11-20
 
+- **Added the fleet-corrected harvest ladder.** Solved 100/119/150/200 Mm³
+  log/yr under canonical `screening_v0` with the CER 2021 fleet model
+  (`runtime/osecan_model`, tree `61dace92...f1fb0`) at two concurrent solves.
+  Committed lightweight artifacts under
+  `data/derived/national/clews/osecan/fleet_screening_ladder/{100m,119m,150m,200m}/`
+  (`run_summaries.json`, `dispatch_by_zone.csv`, `manifest.json` only; data
+  commit `ff36af9`). All four solves returned `optimal` with zero 2050
+  emissions; objectives were **1,447,160.18 / 1,445,655.44 / 1,443,635.15 /
+  1,440,837.42 M$** and cumulative emissions **423.050600 / 424.710127 /
+  422.690612 / 421.029794 Mt**. The 119m case reproduced the canonical
+  objective, emissions, and a byte-identical dispatch file
+  (`eeba3efd...4da96`). National BCW 2050 was **128.530929 / 152.922679 /
+  192.796393 / 257.061857 PJ** and PWRBCW 2050 **34.551309 / 41.108218 /
+  51.826955 / 69.102626 PJ**; the national supply cap binds from 2028 in every
+  case. No UI or public OSeCAN repository changes; raw model copies and solve
+  directories were not committed.
 - **Made the fleet-corrected 119 Mm³ run the canonical UI screening result.**
   Committed the lightweight artifact
   `data/derived/national/clews/osecan/fleet_capacity_119m/` (summary, dispatch,
