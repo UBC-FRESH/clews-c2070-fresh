@@ -106,6 +106,7 @@ SALE_COLUMNS = (
     "price_cad_m3_lower_bound",
     "price_unit_basis",
     "partial_award",
+    "reoffer_of_sale_id",
     "currency_basis",
     "observed",
     "observation_type",
@@ -161,6 +162,7 @@ SUMMARY_COLUMNS = (
     "rate_cad_m3",
     "value_semantics",
     "rate_unit_basis",
+    "currency_basis",
     "is_delivered",
     "notes",
 )
@@ -175,6 +177,9 @@ RESULT_PRICE_PATTERN = re.compile(
     r"La vente a été adjugée à .*? pour ([\d\s\u00a0,]+?)\s*\$"
 )
 PDF_PRICE_PATTERN = re.compile(r"Prix de vente\s*:\s*([\d\s\u00a0,]+?)\s*\$")
+PDF_PARTIAL_AWARD_PATTERN = re.compile(
+    r"Certains volumes de bois offerts sont non-adjug", re.IGNORECASE
+)
 
 PDF_RESULTS = {
     "CS201206004": {
@@ -201,6 +206,25 @@ PDF_RESULTS = {
     },
 }
 
+REOFFERS = {
+    "CS201207001": (
+        "CS201206004",
+        8_300.0,
+        "re-offers the unsold Hackett Ouest volume from CS201206004",
+    ),
+    "SO201207001": (
+        "SO201206009",
+        13_900.0,
+        "re-offers the unsold Lac a l'Ours volume from SO201206009",
+    ),
+}
+
+REOFFER_OVERLAP_M3 = sum(overlap for _, overlap, _ in REOFFERS.values())
+REOFFERED_BY = {
+    prior_sale_id: (sale_id, overlap)
+    for sale_id, (prior_sale_id, overlap, _) in REOFFERS.items()
+}
+
 REQUIRED_EXPORT_COLUMNS = (
     "Territoire",
     "Numéro d'appel d'offres",
@@ -222,6 +246,14 @@ REQUIRED_EXPORT_COLUMNS = (
     "Latitude",
     "Longitude",
 )
+
+
+@dataclass(frozen=True, slots=True)
+class PdfResult:
+    """One parsed result PDF: published total and partial-award phrase."""
+
+    price: float
+    partial_award: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -437,7 +469,7 @@ def parse_species_lines(
 def parse_sale(
     row: dict[str, Any],
     detail_url: str,
-    pdf_prices: dict[str, float],
+    pdf_results: dict[str, PdfResult],
     pdf_urls: dict[str, str],
 ) -> Sale:
     sale_id = text(row["Numéro d'appel d'offres"])
@@ -475,10 +507,12 @@ def parse_sale(
     total_cad = export_total
     price_source = "archive_export:Prix_de_vente" if export_total is not None else ""
     price_source_url = EXPORT_URL if export_total is not None else ""
-    if total_cad is None and awarded and sale_id in pdf_prices:
-        total_cad = pdf_prices[sale_id]
+    pdf_result = pdf_results.get(sale_id)
+    if total_cad is None and awarded and pdf_result is not None:
+        total_cad = pdf_result.price
         price_source = "result_pdf:Prix_de_vente"
         price_source_url = pdf_urls[sale_id]
+    partial_award = pdf_result.partial_award if pdf_result is not None else False
     if total_cad is not None and total_cad < 0:
         raise ValueError(f"{sale_id}: negative sale price {total_cad}")
 
@@ -512,7 +546,7 @@ def parse_sale(
         total_cad=total_cad,
         price_source=price_source,
         price_source_url=price_source_url,
-        partial_award=total_cad is not None and sale_id in pdf_prices,
+        partial_award=partial_award,
         estimated_total_cad=estimated_total,
         starting_price_cad=starting_price,
         deposit_cad=deposit,
@@ -550,7 +584,12 @@ def parse_detail_price(html_path: Path) -> float | None:
     return parse_number(match.group(1), "detail result price")
 
 
-def parse_pdf_price(pdf_path: Path) -> float:
+def pdf_text_reports_partial_award(pdf_text: str) -> bool:
+    """Return whether the result PDF prints the non-awarded-volume phrase."""
+    return PDF_PARTIAL_AWARD_PATTERN.search(pdf_text) is not None
+
+
+def parse_pdf_result(pdf_path: Path) -> PdfResult:
     result = subprocess.run(
         ["pdftotext", "-layout", str(pdf_path), "-"],
         check=True,
@@ -563,11 +602,14 @@ def parse_pdf_price(pdf_path: Path) -> float:
     price = parse_number(match.group(1), f"{pdf_path}/price")
     if price is None:
         raise ValueError(f"{pdf_path}: empty 'Prix de vente' line")
-    return price
+    return PdfResult(
+        price=price,
+        partial_award=pdf_text_reports_partial_award(result.stdout),
+    )
 
 
-def load_pdf_prices(pdf_dir: Path) -> tuple[dict[str, float], dict[str, str]]:
-    prices: dict[str, float] = {}
+def load_pdf_results(pdf_dir: Path) -> tuple[dict[str, PdfResult], dict[str, str]]:
+    results: dict[str, PdfResult] = {}
     urls: dict[str, str] = {}
     for sale_id, meta in PDF_RESULTS.items():
         path = pdf_dir / meta["filename"]
@@ -578,9 +620,9 @@ def load_pdf_prices(pdf_dir: Path) -> tuple[dict[str, float], dict[str, str]]:
             raise ValueError(
                 f"{path}: sha256 {actual_hash} != expected {meta['sha256']}"
             )
-        prices[sale_id] = parse_pdf_price(path)
+        results[sale_id] = parse_pdf_result(path)
         urls[sale_id] = meta["url"]
-    return prices, urls
+    return results, urls
 
 
 def validate_detail_prices(
@@ -592,7 +634,10 @@ def validate_detail_prices(
             continue
         path = details_dir / f"{sale.sale_id}.html"
         if not path.exists():
-            continue
+            raise ValueError(
+                f"{sale.sale_id}: missing detail page {path}; cannot verify "
+                "the export price"
+            )
         detail_price = parse_detail_price(path)
         if detail_price is None:
             raise ValueError(
@@ -653,6 +698,18 @@ def sale_notes(sale: Sale) -> str:
         notes.append("partial_award_noted=1")
         notes.append("rate_not_computable_partial_award=1")
         notes.append("rate_lower_bound_uses_total_offered_volume=1")
+    reoffer = REOFFERS.get(sale.sale_id)
+    if reoffer is not None:
+        prior_sale_id, overlap_m3, _ = reoffer
+        notes.append(f"reoffer_of_sale_id={prior_sale_id}")
+        notes.append(f"reoffer_overlap_m3={format_number(overlap_m3, 3)}")
+        notes.append("reoffer_volume_double_counted_in_naive_totals=1")
+    reoffered_by = REOFFERED_BY.get(sale.sale_id)
+    if reoffered_by is not None:
+        later_sale_id, overlap_m3 = reoffered_by
+        notes.append(f"reoffered_by_sale_id={later_sale_id}")
+        notes.append(f"reoffer_overlap_m3={format_number(overlap_m3, 3)}")
+        notes.append("reoffer_volume_double_counted_in_naive_totals=1")
     if sale.tenure != "Forêt publique":
         notes.append(f"tenure={sale.tenure}")
     if sale.volume_optional_m3:
@@ -698,6 +755,9 @@ def sale_row(sale: Sale) -> dict[str, Any]:
             else ""
         ),
         "partial_award": int(sale.partial_award),
+        "reoffer_of_sale_id": (
+            REOFFERS[sale.sale_id][0] if sale.sale_id in REOFFERS else ""
+        ),
         "currency_basis": "CAD_nominal",
         "observed": int(observed),
         "observation_type": observation_type,
@@ -738,6 +798,22 @@ def species_rows(sales: list[Sale]) -> list[dict[str, Any]]:
                 }
             )
     return rows
+
+
+def summary_notes(family: str) -> str:
+    notes = ["result_pdf_checks_delivered_sales_only=1"]
+    if family != "delivered_to_destination":
+        notes.insert(0, "sale_price_is_not_delivered=1")
+        return "; ".join(notes)
+    return "; ".join(
+        [
+            "sale_price_is_delivered_total=1",
+            "price_not_allocated_by_species=1",
+            "partial_award_value_excluded_from_rate=1",
+            "volume_awarded_is_offered_volume_on_awarded_rows=1",
+            *notes,
+        ]
+    )
 
 
 def summarise_sales(sales: list[Sale]) -> list[dict[str, Any]]:
@@ -799,17 +875,52 @@ def summarise_sales(sales: list[Sale]) -> list[dict[str, Any]]:
                 "rate_cad_m3": format_number(rate, 4),
                 "value_semantics": VALUE_SEMANTICS[family],
                 "rate_unit_basis": RATE_UNIT_BASIS[family],
+                "currency_basis": "CAD_nominal",
                 "is_delivered": int(family == "delivered_to_destination"),
-                "notes": (
-                    "sale_price_is_not_delivered=1"
-                    if family != "delivered_to_destination"
-                    else "sale_price_is_delivered_total=1; "
-                    "price_not_allocated_by_species=1; "
-                    "partial_award_value_excluded_from_rate=1"
-                ),
+                "notes": summary_notes(family),
             }
         )
     return summary
+
+
+def rate_breakdown(sales: list[Sale]) -> list[dict[str, Any]]:
+    """Publish Crown and non-Crown computable rates separately."""
+    computable = [
+        sale for sale in sales if sale.total_cad is not None and not sale.partial_award
+    ]
+    segments = (
+        ("crown_public_forest", "Forêt publique"),
+        ("non_crown_teaching_research", "Forêt d'enseignement et recherche"),
+    )
+    published: list[dict[str, Any]] = []
+    for segment, tenure in segments:
+        group = [sale for sale in computable if sale.tenure == tenure]
+        volume = sum(sale.volume_m3 for sale in group)
+        if volume <= 0:
+            continue
+        value = sum(sale.total_cad for sale in group if sale.total_cad is not None)
+        pulpwood_volume = sum(
+            line["volume_m3"]
+            for sale in group
+            for line in sale.species_lines
+            if line["product"] == "pulpwood"
+        )
+        published.append(
+            {
+                "segment": segment,
+                "tenure": tenure,
+                "sale_count": len(group),
+                "volume_m3": round(volume, 3),
+                "value_cad": round(value, 2),
+                "weighted_rate_cad_m3": round(value / volume, 4),
+                "pulpwood_volume_m3": round(pulpwood_volume, 3),
+                "pulpwood_share_pct": round(100 * pulpwood_volume / volume, 1),
+                "sawlog_share_pct": round(100 * (volume - pulpwood_volume) / volume, 1),
+            }
+        )
+    if not published:
+        raise ValueError("no computable delivered sales for rate breakdown")
+    return published
 
 
 def write_csv(path: Path, columns: tuple[str, ...], rows: list[dict[str, Any]]) -> None:
@@ -824,6 +935,7 @@ def validate(
     summary: list[dict[str, Any]],
     source_rows: list[dict[str, Any]],
     detail_checks: list[dict[str, Any]],
+    breakdown: list[dict[str, Any]],
 ) -> dict[str, Any]:
     if len(source_rows) != 3_796:
         raise ValueError(f"source row count changed: {len(source_rows)} != 3796")
@@ -887,6 +999,133 @@ def validate(
     )
     if abs(sum(float(row["volume_m3"]) for row in summary) - source_volume) > 0.01:
         raise ValueError("sale type summary volume does not reconcile")
+    if any(row["currency_basis"] != "CAD_nominal" for row in summary):
+        raise ValueError("sale type summary is missing currency_basis=CAD_nominal")
+
+    sales_by_id = {sale.sale_id: sale for sale in sales}
+    for sale_id, (prior_sale_id, overlap_m3, _) in REOFFERS.items():
+        sale = sales_by_id.get(sale_id)
+        prior_sale = sales_by_id.get(prior_sale_id)
+        if sale is None or prior_sale is None:
+            raise ValueError(
+                f"re-offer link {sale_id} -> {prior_sale_id} is not present"
+            )
+        if abs(sale.volume_m3 - overlap_m3) > 1e-6:
+            raise ValueError(
+                f"{sale_id}: re-offer volume {sale.volume_m3} != "
+                f"declared overlap {overlap_m3}"
+            )
+        if sale.volume_m3 > prior_sale.volume_m3:
+            raise ValueError(
+                f"{sale_id}: re-offer volume exceeds prior sale {prior_sale_id}"
+            )
+
+    computable = [
+        sale for sale in sales if sale.total_cad is not None and not sale.partial_award
+    ]
+    all_volume = sum(sale.volume_m3 for sale in computable)
+    all_value = sum(sale.total_cad for sale in computable if sale.total_cad is not None)
+    all_rate = all_value / all_volume
+    segments = {row["segment"]: row for row in breakdown}
+    crown = segments.get("crown_public_forest")
+    non_crown = segments.get("non_crown_teaching_research")
+    if crown is None or non_crown is None:
+        raise ValueError("rate breakdown must publish Crown and non-Crown segments")
+    expected = {
+        "crown_public_forest": {
+            "sale_count": 9,
+            "volume_m3": 74_550.0,
+            "weighted_rate_cad_m3": 35.7547,
+            "pulpwood_share_pct": 57.3,
+        },
+        "non_crown_teaching_research": {
+            "sale_count": 2,
+            "volume_m3": 15_350.0,
+            "weighted_rate_cad_m3": 50.6266,
+            "sawlog_share_pct": 75.6,
+        },
+    }
+    for segment, row in (
+        ("crown_public_forest", crown),
+        ("non_crown_teaching_research", non_crown),
+    ):
+        if row["sale_count"] != expected[segment]["sale_count"]:
+            raise ValueError(f"{segment}: unexpected sale count {row['sale_count']}")
+        if abs(row["volume_m3"] - expected[segment]["volume_m3"]) > 0.01:
+            raise ValueError(f"{segment}: unexpected volume {row['volume_m3']}")
+        if (
+            abs(row["weighted_rate_cad_m3"] - expected[segment]["weighted_rate_cad_m3"])
+            > 1e-4
+        ):
+            raise ValueError(
+                f"{segment}: unexpected rate {row['weighted_rate_cad_m3']}"
+            )
+        share_key = (
+            "pulpwood_share_pct"
+            if "pulpwood_share_pct" in expected[segment]
+            else "sawlog_share_pct"
+        )
+        if abs(row[share_key] - expected[segment][share_key]) > 0.05:
+            raise ValueError(f"{segment}: unexpected {share_key} {row[share_key]}")
+    crown_rate = crown["weighted_rate_cad_m3"]
+    non_crown_rate = non_crown["weighted_rate_cad_m3"]
+    uplift = all_rate - crown_rate
+    if abs(all_rate - 38.2940) > 1e-4 or abs(uplift - 2.5393) > 1e-4:
+        raise ValueError(
+            f"all-sale rate {all_rate:.4f} / non-Crown uplift {uplift:.4f} changed"
+        )
+
+    offered_volume = sum(sale.volume_m3 for sale in sales)
+    awarded_volume = sum(sale.volume_m3 for sale in sales if sale.awarded)
+    awarded_reoffer_overlap = sum(
+        overlap
+        for sale_id, (_, overlap, _) in REOFFERS.items()
+        if sales_by_id[sale_id].awarded
+    )
+    unique_offered_volume = offered_volume - REOFFER_OVERLAP_M3
+    unique_awarded_volume = awarded_volume - awarded_reoffer_overlap
+    if abs(REOFFER_OVERLAP_M3 - 22_200.0) > 1e-6:
+        raise ValueError(f"re-offer overlap changed: {REOFFER_OVERLAP_M3}")
+
+    expected_detail_ids = {
+        sale.sale_id
+        for sale in sales
+        if sale.total_cad is not None and not sale.price_source.startswith("result_pdf")
+    }
+    checked_detail_ids = {check["sale_id"] for check in detail_checks}
+    if len(expected_detail_ids) != 11:
+        raise ValueError(
+            f"expected 11 non-PDF priced sales to detail-check, "
+            f"found {len(expected_detail_ids)}"
+        )
+    if detail_checks and checked_detail_ids != expected_detail_ids:
+        missing = sorted(expected_detail_ids - checked_detail_ids)
+        unexpected = sorted(checked_detail_ids - expected_detail_ids)
+        raise ValueError(
+            "detail price cross-check does not cover the export-priced sales: "
+            f"missing={missing!r} unexpected={unexpected!r}"
+        )
+    detail_check_complete = checked_detail_ids == expected_detail_ids
+    checks = [
+        "source_row_count=3796",
+        "delivered_sale_count=18",
+        "delivered_only_sale_type",
+        "no_duplicate_sale_ids",
+        "non_negative_volume_and_price",
+        "partial_award_inferred_from_result_pdf_phrase",
+        "partial_award_rate_not_computed",
+        "awarded_delivered_rows_have_price",
+        "unsold_rows_have_no_price",
+        "sale_year_matches_auction_end_year",
+        "species_volume_reconciles_to_sale_volume",
+        "summary_reconciles_to_export",
+        "currency_basis_recorded",
+        "reoffer_links_verified",
+        "reoffer_overlap_reported",
+        "rate_breakdown_crown_vs_non_crown",
+    ]
+    if detail_check_complete:
+        checks.append("detail_prices_match_export")
 
     return {
         "source_rows": len(source_rows),
@@ -895,10 +1134,16 @@ def validate(
         "delivered_observed_prices": sum(
             1 for sale in sales if sale.total_cad is not None
         ),
-        "delivered_volume_m3": round(sum(sale.volume_m3 for sale in sales), 3),
-        "delivered_awarded_volume_m3": round(
-            sum(sale.volume_m3 for sale in sales if sale.awarded), 3
+        "delivered_volume_m3": round(offered_volume, 3),
+        "delivered_awarded_volume_m3": round(awarded_volume, 3),
+        "delivered_volume_excluding_reoffer_overlap_m3": round(
+            unique_offered_volume, 3
         ),
+        "delivered_awarded_volume_excluding_reoffer_overlap_m3": round(
+            unique_awarded_volume, 3
+        ),
+        "reoffer_sales": len(REOFFERS),
+        "reoffer_overlap_m3": round(REOFFER_OVERLAP_M3, 3),
         "delivered_observed_value_cad": round(
             sum(sale.total_cad for sale in sales if sale.total_cad is not None),
             2,
@@ -912,37 +1157,16 @@ def validate(
             ),
             2,
         ),
-        "delivered_rate_computable_volume_m3": round(
-            sum(
-                sale.volume_m3
-                for sale in sales
-                if sale.total_cad is not None and not sale.partial_award
-            ),
-            3,
-        ),
-        "delivered_rate_computable_value_cad": round(
-            sum(
-                sale.total_cad
-                for sale in sales
-                if sale.total_cad is not None and not sale.partial_award
-            ),
-            2,
-        ),
+        "delivered_rate_computable_volume_m3": round(all_volume, 3),
+        "delivered_rate_computable_value_cad": round(all_value, 2),
+        "delivered_rate_cad_m3": round(all_rate, 4),
+        "delivered_rate_crown_cad_m3": round(crown_rate, 4),
+        "delivered_rate_non_crown_cad_m3": round(non_crown_rate, 4),
+        "delivered_rate_non_crown_uplift_cad_m3": round(uplift, 4),
         "detail_price_checks": len(detail_checks),
-        "checks": [
-            "source_row_count=3796",
-            "delivered_sale_count=18",
-            "delivered_only_sale_type",
-            "no_duplicate_sale_ids",
-            "non_negative_volume_and_price",
-            "partial_award_rate_not_computed",
-            "awarded_delivered_rows_have_price",
-            "unsold_rows_have_no_price",
-            "sale_year_matches_auction_end_year",
-            "species_volume_reconciles_to_sale_volume",
-            "summary_reconciles_to_export",
-            "detail_prices_match_export",
-        ],
+        "detail_price_check_expected": len(expected_detail_ids),
+        "detail_price_check_status": ("pass" if detail_check_complete else "not_run"),
+        "checks": checks,
     }
 
 
@@ -952,6 +1176,7 @@ def build_manifest(
     species: list[dict[str, Any]],
     summary: list[dict[str, Any]],
     validation: dict[str, Any],
+    breakdown: list[dict[str, Any]],
     detail_meta: dict[str, dict[str, str]],
     detail_checks: list[dict[str, Any]],
     output_files: list[Path],
@@ -1045,14 +1270,46 @@ def build_manifest(
             ),
         },
         "counts": validation,
+        "rate_breakdown": breakdown,
+        "reoffer_links": [
+            {
+                "sale_id": sale_id,
+                "reoffer_of_sale_id": prior_sale_id,
+                "overlap_m3": overlap,
+                "note": note,
+            }
+            for sale_id, (prior_sale_id, overlap, note) in REOFFERS.items()
+        ],
         "outputs": outputs,
         "detail_price_cross_checks": detail_checks,
         "validation": {"status": "pass", **validation},
         "gaps": [
             "Only 18 delivered-to-destination sales exist in the archive; the most recent delivered sale ends in 2015.",
             "The sale price is a total lot value and is not published by species or grade; no allocation is made.",
-            "The detail pages do not name the destination; the price point is delivered-to-destination, not a confirmed mill gate.",
-            "The two 2012 result PDFs note that some offered volume was not awarded; no awarded volume is published, so a full rate is not computed and only a lower bound based on offered volume is reported.",
+            (
+                "The detail pages do not publish a delivery destination field; "
+                "the 'Destination :' input is only a Google Maps directions box. "
+                "Delivery terms are inside the unparsed tender documents; the "
+                "price point is delivered-to-destination, not a confirmed mill gate."
+            ),
+            (
+                "CS201207001 re-offers 8,300 m3 of unsold CS201206004 timber and "
+                "SO201207001 re-offers 13,900 m3 of unsold SO201206009 timber. "
+                "The 22,200 m3 overlap is counted once in the unique offered "
+                "volume and once in the unique awarded volume; do not sum the "
+                "naive row totals."
+            ),
+            (
+                "The all-sale 38.2940 CAD/m3 computable rate is not a Crown "
+                "benchmark: two non-Crown teaching/research lots raise it by "
+                "2.54 CAD/m3. The Crown-only rate is 35.7547 CAD/m3."
+            ),
+            (
+                "The two 2012 result PDFs print '*Certains volumes de bois "
+                "offerts sont non-adjuges.'; that phrase sets partial_award=1. "
+                "No awarded volume is published, so only a lower bound based "
+                "on offered volume is reported."
+            ),
             "The sale type implies a delivered wood sale; the archive does not publish whether harvest, haul, or both are included, or the destination.",
             "Prices are nominal CAD for 2011, 2012, 2014, and 2015; no deflator is applied.",
             "BMMB auctioned volume is a sample of Crown volume, not the provincial harvest population.",
@@ -1088,7 +1345,7 @@ def main() -> int:
     source_rows = read_export(args.export)
     detail_meta = load_detail_meta(args.detail_meta)
     detail_urls = {sale_id: meta["url"] for sale_id, meta in detail_meta.items()}
-    pdf_prices, pdf_urls = load_pdf_prices(args.pdf_dir)
+    pdf_results, pdf_urls = load_pdf_results(args.pdf_dir)
 
     parsed_sales = []
     for row in source_rows:
@@ -1097,7 +1354,7 @@ def main() -> int:
             parse_sale(
                 row,
                 detail_urls.get(sale_id, ""),
-                pdf_prices,
+                pdf_results,
                 pdf_urls,
             )
         )
@@ -1117,7 +1374,8 @@ def main() -> int:
     )
     summary = summarise_sales(parsed_sales)
     species = species_rows(delivered)
-    validation = validate(delivered, summary, source_rows, detail_checks)
+    breakdown = rate_breakdown(delivered)
+    validation = validate(delivered, summary, source_rows, detail_checks, breakdown)
 
     args.out.mkdir(parents=True, exist_ok=True)
     sales_path = args.out / "bmmb_delivered_sales.csv"
@@ -1133,6 +1391,7 @@ def main() -> int:
         species,
         summary,
         validation,
+        breakdown,
         detail_meta,
         detail_checks,
         [sales_path, species_path, summary_path],

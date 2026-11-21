@@ -29,11 +29,11 @@ def fixture_rows() -> list[dict]:
     return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
 
-def parse_fixture_row(row: dict, pdf_prices=None, pdf_urls=None):
+def parse_fixture_row(row: dict, pdf_results=None, pdf_urls=None):
     return bmmb.parse_sale(
         row,
         "https://example.test/detail",
-        pdf_prices or {},
+        pdf_results or {},
         pdf_urls or {},
     )
 
@@ -80,7 +80,7 @@ def test_partial_award_has_no_full_rate_but_has_lower_bound():
     row = fixture_rows()[3]
     sale = parse_fixture_row(
         row,
-        pdf_prices={"CS202001001": 40000.0},
+        pdf_results={"CS202001001": bmmb.PdfResult(price=40000.0, partial_award=True)},
         pdf_urls={"CS202001001": "https://example.test/result.pdf"},
     )
     assert sale.awarded is True
@@ -95,12 +95,31 @@ def test_partial_award_has_no_full_rate_but_has_lower_bound():
     assert "partial_award_noted=1" in rendered["notes"]
 
 
+def test_partial_award_requires_the_pdf_phrase_not_pdf_presence():
+    row = fixture_rows()[3]
+    sale = parse_fixture_row(
+        row,
+        pdf_results={"CS202001001": bmmb.PdfResult(price=40000.0, partial_award=False)},
+        pdf_urls={"CS202001001": "https://example.test/result.pdf"},
+    )
+    assert sale.partial_award is False
+    assert sale.price_cad_m3 == pytest.approx(50.0)
+    assert sale.price_lower_bound_cad_m3 is None
+
+
+def test_pdf_text_partial_award_phrase_is_case_insensitive():
+    assert bmmb.pdf_text_reports_partial_award(
+        "*Certains volumes de bois offerts sont non-adjugés."
+    )
+    assert not bmmb.pdf_text_reports_partial_award("Prix de vente : 1 000 $")
+
+
 def test_sale_type_summary_separates_delivered_from_standing():
     rows = fixture_rows()
     sales = [parse_fixture_row(row) for row in rows]
     sales[3] = parse_fixture_row(
         rows[3],
-        pdf_prices={"CS202001001": 40000.0},
+        pdf_results={"CS202001001": bmmb.PdfResult(price=40000.0, partial_award=True)},
         pdf_urls={"CS202001001": "https://example.test/result.pdf"},
     )
     summary = bmmb.summarise_sales(sales)
@@ -119,6 +138,71 @@ def test_sale_type_summary_separates_delivered_from_standing():
     assert standing[0]["is_delivered"] == 0
     assert standing[0]["value_semantics"] == "standing_sale_total_cad"
     assert standing[0]["rate_unit_basis"] == "CAD_per_m3_standing"
+    assert {row["currency_basis"] for row in summary} == {"CAD_nominal"}
+    assert all(
+        "result_pdf_checks_delivered_sales_only=1" in row["notes"] for row in summary
+    )
+
+
+def test_rate_breakdown_separates_crown_from_non_crown():
+    rows = fixture_rows()
+    crown = parse_fixture_row(rows[0])
+    non_crown_row = json.loads(json.dumps(rows[0]))
+    non_crown_row["Numéro d'appel d'offres"] = "SE202001003"
+    non_crown_row["Provenance"] = "Forêt d'enseignement et recherche"
+    non_crown_row["Volume obligatoire total m³"] = 2000.0
+    non_crown_row["Prix de vente"] = 120000.0
+    non_crown_row["Épinettes - Volume de bois d'oeuvre obligatoire"] = 2000.0
+    non_crown_row["Épinettes - Volume de trituration obligatoire"] = 0.0
+    non_crown = parse_fixture_row(non_crown_row)
+
+    breakdown = {row["segment"]: row for row in bmmb.rate_breakdown([crown, non_crown])}
+    assert breakdown["crown_public_forest"]["sale_count"] == 1
+    assert breakdown["crown_public_forest"]["volume_m3"] == pytest.approx(1000.0)
+    assert breakdown["crown_public_forest"]["weighted_rate_cad_m3"] == pytest.approx(
+        50.0
+    )
+    assert breakdown["non_crown_teaching_research"][
+        "weighted_rate_cad_m3"
+    ] == pytest.approx(60.0)
+    assert breakdown["non_crown_teaching_research"][
+        "sawlog_share_pct"
+    ] == pytest.approx(100.0)
+
+
+def test_reoffer_sale_records_prior_sale_id_and_overlap():
+    row = json.loads(json.dumps(fixture_rows()[0]))
+    row["Numéro d'appel d'offres"] = "CS201207001"
+    row["Date de fin enchère"] = "2012-07-20 12:00:00"
+    row["Volume obligatoire total m³"] = 8300.0
+    row["Épinettes - Volume de bois d'oeuvre obligatoire"] = 0.0
+    row["Épinettes - Volume de trituration obligatoire"] = 8300.0
+    rendered = bmmb.sale_row(parse_fixture_row(row))
+    assert rendered["reoffer_of_sale_id"] == "CS201206004"
+    assert "reoffer_overlap_m3=8300" in rendered["notes"]
+    assert bmmb.REOFFER_OVERLAP_M3 == pytest.approx(22200.0)
+
+
+def test_detail_price_check_fails_when_a_required_page_is_missing(tmp_path):
+    sale = parse_fixture_row(fixture_rows()[0])
+    with pytest.raises(ValueError, match="missing detail page"):
+        bmmb.validate_detail_prices([sale], tmp_path)
+
+
+def test_detail_price_check_verifies_every_export_price(tmp_path):
+    sale = parse_fixture_row(fixture_rows()[0])
+    (tmp_path / f"{sale.sale_id}.html").write_text(
+        "<p>La vente a été adjugée à Test pour 50 000 $.</p>", encoding="utf-8"
+    )
+    checks = bmmb.validate_detail_prices([sale], tmp_path)
+    assert checks == [
+        {
+            "sale_id": sale.sale_id,
+            "export_total_cad": 50000.0,
+            "detail_total_cad": 50000.0,
+            "status": "pass",
+        }
+    ]
 
 
 def test_unexpected_sale_type_fails_loudly():
