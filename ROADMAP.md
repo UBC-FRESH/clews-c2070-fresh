@@ -4,8 +4,9 @@
 
 Governing note: [planning/forest-sector-evidence-v2.md](planning/forest-sector-evidence-v2.md).
 
-Status: evidence collection complete through landbase screening; the BC
-benchmark and v2d net-value benchmark remain pending.
+Status: evidence collection and the v2d net-value evidence layer are complete.
+BC net value remains `not_estimated` because general logging and truck-haul
+$/m3 are not published; no combined national net value is computed.
 
 - [x] v2a source review — no public QC mill-settlement ledger; BMMB/MRNF, BC
   log-market, MRDEM, and THLB limits recorded.
@@ -20,8 +21,14 @@ benchmark and v2d net-value benchmark remain pending.
 - [x] Slope screen — 960 m MRDEM-30; >30% removes 1.51%; core20 98.39 Mha.
 - [x] Operable proxy v3 — core20 >30% 98.39 Mha, 150M 1.525 m3/ha/yr; core30
   76.01 Mha, 150M 1.973 m3/ha/yr.
-- [ ] BC benchmark — pending appraisal-cost extraction.
-- [ ] v2d net-value benchmark — pending a validated BC/QC cost/revenue basis.
+- [x] BC benchmark inputs — IAM/CAM appraisal allowances extracted and mapped
+  to road, bridge, culvert, silviculture, specified operations, and TOA;
+  general logging, truck haul, and EWB remain unpublished, so a full BC net
+  value is not estimable.
+- [x] v2d net-value evidence layer — validated QC reference, BC log-price
+  ranges, BCTS stumpage, and appraisal cost coverage; BC
+  `net_value_status=not_estimated` (`missing_logging_and_haul_cost`); no BC
+  partial net value and no combined national net value.
 - [ ] Model/UI wiring — only after validation; no OSeCAN change.
 
 ## Phase 1: Foundation and Model Development

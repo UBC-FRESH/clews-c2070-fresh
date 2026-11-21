@@ -2,6 +2,20 @@
 
 ## 2026-11-21
 
+- **Built the v2d net-value evidence layer with QC and BC evidence separated.**
+  Added `workflows/national/harvest/net_value_v2d.py`, which validates and
+  references the QC 2022 survey benchmark without rewriting it; builds 1,852
+  annual/period BC log-market price-range rows from 15,705 published cells,
+  keeping one-month and three-month vintages separate, excluding Interior
+  `is_aggregate=true` rows from product cells, and retaining zero/outlier flags;
+  reports 51 observed BCTS standing-timber stumpage sales separately; and
+  documents that BC appraisal allowances cover road, bridge, culvert,
+  silviculture, specified operations, and TOA but not general logging or
+  truck haul. BC `net_value_status=not_estimated` with reason
+  `missing_logging_and_haul_cost`; no BC partial net value and no combined
+  national net value are computed. Added the output bundle, planning note,
+  tests, and 29 fail-closed checks. No merged-ledger, model, UI, or OSeCAN
+  change.
 - **Built a QC net-value benchmark and sensitivity from observed 2022 survey
   aggregates and BMMB delivered sales.** Added
   `workflows/national/harvest/net_value_benchmark_v1.py`, which uses the T2
