@@ -1327,16 +1327,18 @@ def validate_results(
         ),
         "per-year rows carry per-year price_year_basis and counts",
     )
+    year_2012 = next(
+        (
+            row
+            for row in bmmb_rows
+            if row.sale_year == "2012" and row.aggregation_level == "delivered_year"
+        ),
+        None,
+    )
     add_check(
         checks,
         "bmmb_2012_no_full_rate",
-        next(
-            (row for row in bmmb_rows if row.sale_year == "2012" and row.aggregation_level == "delivered_year"),
-            None,
-        )
-        is not None
-        and next(row for row in bmmb_rows if row.sale_year == "2012" and row.aggregation_level == "delivered_year").full_rate_sale_count
-        == 0,
+        year_2012 is not None and year_2012.full_rate_sale_count == 0,
         "2012 has partial awards only; no full rate is reported",
     )
 
@@ -1919,7 +1921,8 @@ def write_report(
         "spread across different respondent samples**, not forest net value, not a "
         "mill margin, and not a policy result. The old `net_value_benchmark` artifact "
         "is retained only for audit and is marked deprecated. No QC or M CAD "
-        "volume-scaled diagnostic is produced."),
+        "volume-scaled diagnostic is produced, and the builder does not read "
+        "`provincial_allocation/`."),
         "",
         "## Definitions",
         "",
@@ -2387,7 +2390,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         survey_path=args.survey,
         bmmb_sales_path=args.bmmb_sales,
     )
-    crown = next(row for row in result.bmmb_rows if row.scope_id == "crown_public_forest")
+    crown = next(
+        (row for row in result.bmmb_rows if row.scope_id == "crown_public_forest"),
+        None,
+    )
+    if crown is None or crown.weighted_rate_cad_m3 is None:
+        raise BenchmarkError("Crown-only BMMB benchmark is missing from build result")
     print(f"wrote {len(result.provincial)} provincial rows to {args.output_dir}")
     print(f"wrote {len(result.regional)} regional rows plus min/max bounds")
     print(
