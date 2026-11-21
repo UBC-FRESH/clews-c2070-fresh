@@ -382,7 +382,7 @@ repository record. All derived reports and manifests are under
 | QC MRNF 2022 survey (corrected flags) | `e5fb044` | `2c81500` | `qc_cost_survey_2022/` |
 | BC log market (parser fix) | `1fc5165` | `107abdc` | `bc_log_market/` |
 | BC appraisal cost allowances | `1a8bd41` | `b90f00e` | `bc_appraisal_costs/` |
-| QC procurement cost benchmark | `3675bf3` | `8c8a56c` | `procurement_benchmark/` |
+| QC procurement cost benchmark | `567ed97` | `8acc794` | `procurement_benchmark/` |
 | v2d forest-economics evidence | `567ed97` | `8acc794` | `forest_economics_v2d/` |
 | Operable proxy v2 | `5181122` | `1ef587a` | `operable_proxy_v2/` |
 | 960 m slope screen | `30729b0` | `6aa01d5` | `slope_screen/` |
