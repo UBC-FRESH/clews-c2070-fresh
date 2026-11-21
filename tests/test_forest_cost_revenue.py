@@ -422,6 +422,28 @@ def test_model_input_evidence_cannot_claim_high_confidence(
         load_ledger(path)
 
 
+def test_observed_evidence_rejects_model_input_token(tmp_path: Path) -> None:
+    row = base_row(
+        notes=(
+            "currency_basis=CAD_nominal; source_table=bcts_sale_results; "
+            "base=upset; model_input=1"
+        )
+    )
+    with pytest.raises(LedgerValidationError, match="model_input=1 token requires"):
+        load_ledger(write_ledger(tmp_path, [row]))
+
+
+def test_observed_evidence_rejects_not_observed_token(tmp_path: Path) -> None:
+    row = base_row(
+        notes=(
+            "currency_basis=CAD_nominal; source_table=bcts_sale_results; "
+            "base=upset; not_observed=1"
+        )
+    )
+    with pytest.raises(LedgerValidationError, match="not_observed=1 token conflicts"):
+        load_ledger(write_ledger(tmp_path, [row]))
+
+
 def test_quality_distinguishes_previously_colliding_keys(tmp_path: Path) -> None:
     rows = [
         base_row(quality="F1"),

@@ -855,10 +855,13 @@ def validate_ledger(rows: Sequence[Mapping[str, str]]) -> dict[str, object]:
                 row.get("spatial_unit", ""),
                 row.get("species", ""),
                 row.get("product", ""),
+                row.get("quality", "") or "NA",
+                row.get("dbh_cm", ""),
                 row.get("volume_m3", ""),
                 row.get("unit", ""),
                 row.get("value_cad", ""),
                 row.get("value_basis", ""),
+                row.get("licence", ""),
                 component,
             )
             mirror_keys[key][perspective].append(row)

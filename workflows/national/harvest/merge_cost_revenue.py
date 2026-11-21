@@ -52,6 +52,7 @@ from workflows.national.harvest.cost_revenue import (
     Quality,
     Unit,
     load_ledger,
+    parse_notes,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -89,6 +90,7 @@ QC_DBH_CLASSES = 76
 QC_DBH_SERIES = 2
 QC_DBH_PROFILE_CELLS = QC_DBH_SPECIES * QC_DBH_CLASSES * QC_DBH_SERIES
 QC_CURVE_PROFILE = "Profil_2"
+QC_SERIES_SUFFIX = {"courant": "C", "tendance": "T"}
 OBSERVED_EVIDENCE = frozenset(
     {
         Evidence.OBSERVED_PAYMENT,
@@ -237,6 +239,42 @@ def coverage_key(row: Mapping[str, str]) -> tuple[str, ...]:
     )
 
 
+def validate_qc_series_non_additivity(rows: Sequence[Mapping[str, str]]) -> None:
+    """Fail closed on a missing, unknown, or suffix-inconsistent QC series.
+
+    The MERIS ``courant`` and ``tendance`` price decks are alternative model
+    scenarios.  They are stored as sibling delivered-log rows and must never be
+    summed, so every QC delivered-log row must carry an explicit series token,
+    a matching ``-C``/``-T`` licence suffix, and the machine-readable
+    ``series_non_additive=1`` marker.
+    """
+    for row in rows:
+        if row.get("source") != "prov_qc_meris":
+            continue
+        if row.get("component") != Component.DELIVERED_LOG_REVENUE.value:
+            continue
+        licence = row.get("licence", "")
+        tokens = parse_notes(row.get("notes", ""))
+        series = tokens.get("series")
+        if series not in QC_SERIES_SUFFIX:
+            raise LedgerValidationError(
+                f"QC delivered_log_revenue row {licence!r} has series "
+                f"{series!r}; expected one of {sorted(QC_SERIES_SUFFIX)}"
+            )
+        suffix = QC_SERIES_SUFFIX[series]
+        if not licence.endswith(f"-{suffix}"):
+            raise LedgerValidationError(
+                f"QC delivered_log_revenue row {licence!r} does not end with "
+                f"-{suffix} required by series {series!r}"
+            )
+        if tokens.get("series_non_additive") != "1":
+            raise LedgerValidationError(
+                f"QC delivered_log_revenue row {licence!r} is missing "
+                "series_non_additive=1; the two price series must be marked "
+                "non-additive in the ledger"
+            )
+
+
 def merge_blocks(blocks: Sequence[LedgerBlock]) -> tuple[dict[str, str], ...]:
     """Concatenate blocks in order and fail on duplicate or split sources."""
     if not blocks:
@@ -268,6 +306,7 @@ def merge_blocks(blocks: Sequence[LedgerBlock]) -> tuple[dict[str, str], ...]:
         raise LedgerValidationError(
             f"a source must not straddle jurisdictions: {split_sources}"
         )
+    validate_qc_series_non_additivity(merged)
     return tuple(merged)
 
 
@@ -665,7 +704,7 @@ def build_coverage_summary(
         {row.species for row in qc_dbh_delivered_rows}
     )
     qc_dbh_values = sorted(
-        {float(row.dbh_cm) for row in qc_dbh_delivered_rows if row.dbh_cm}
+        {float(row.dbh_cm) for row in qc_dbh_delivered_rows if row.dbh_cm is not None}
     )
     if len(qc_dbh_delivered_rows) != QC_DBH_PROFILE_CELLS:
         raise LedgerValidationError(
@@ -731,6 +770,7 @@ def build_coverage_summary(
             "model_input_not_monetised": True,
             "quality_and_dbh_preserved": True,
             "price_series_not_summed": True,
+            "series_non_additive_token": True,
             "dbh_profiles_deduplicated": True,
         },
         "row_counts": {
@@ -893,6 +933,12 @@ def build_coverage_summary(
                 "treatment_share": _share(
                     qc_treatments_covered, QC_TREATMENT_ROWS
                 ),
+                "price_deck_share": _share(
+                    len(qc_quality_delivered_rows), QC_PRICE_DECK_CELLS
+                ),
+                "dbh_curve_share": _share(
+                    len(qc_dbh_delivered_rows), QC_DBH_PROFILE_CELLS
+                ),
                 "delivered_log_revenue": {
                     "model_input_rows": len(qc_model_input_delivered_rows),
                     "observed_rows": len(qc_observed_delivered_rows),
@@ -909,8 +955,9 @@ def build_coverage_summary(
                     ),
                     "series_rule": (
                         "courant (_2) and tendance (_1) are alternative model "
-                        "scenarios, separated by licence suffix C/T; they are "
-                        "not independent observations and are not summed"
+                        "scenarios, separated by licence suffix C/T and marked "
+                        "series_non_additive=1; they are not independent "
+                        "observations and are not summed"
                     ),
                     "dbh_rule": (
                         "species x DBH curves use Profil_2 only; the three "
@@ -1108,7 +1155,7 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         f"{qc['ledger']['delivered_log_revenue_quality_rows']} rows | "
         f"{qc['sample_frame']['price_deck_cells']} price-deck cells "
         "(45 species x 7 products x 2 series) | "
-        f"{_percent(qc['ledger']['delivered_log_revenue_quality_rows'] / qc['sample_frame']['price_deck_cells'])} |"
+        f"{_percent(qc['price_deck_share']['share'])} |"
     )
     lines.append(
         f"| MERIS species/DBH curve rows | "
@@ -1117,7 +1164,7 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         f"({qc['sample_frame']['dbh_curve_species']} species x "
         f"{qc['sample_frame']['dbh_curve_classes']} DBH x "
         f"{qc['sample_frame']['dbh_curve_series']} series) | "
-        f"{_percent(qc['ledger']['delivered_log_revenue_dbh_rows'] / qc['sample_frame']['dbh_curve_cells'])} |"
+        f"{_percent(qc['dbh_curve_share']['share'])} |"
     )
     lines.append(
         f"| MERIS cost-deck tarification zones | "

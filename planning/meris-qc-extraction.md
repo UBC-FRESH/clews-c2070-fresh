@@ -269,7 +269,7 @@ The full deck contains:
 
 | Deck | Grain | Rows | Key finding |
 |---|---|---:|---|
-| `meris_price_deck.csv` | species × product × series | 630 (45 × 7 × 2) | 28 hardwood species with a positive current value; `PATE` is the 0.0100 placeholder; the 12 SEPM species are zero here and covered by the DBH curves |
+| `meris_price_deck.csv` | species × product × series | 630 (45 × 7 × 2) | 28 non-SEPM species (24 hardwoods plus `PIB`, `PIR`, `PRU`, `THO`) with a positive current value; `PATE` is the 0.0100 placeholder; the 12 SEPM species are zero here and covered by the DBH curves |
 | `meris_price_deck_wide.csv` | species | 45 | same values in source layout |
 | `meris_revenue_curves.csv` | profile × species × type × DBH | 5,472 (1,824 × 3) | 12 SEPM species; `SCIAGE=PATE` in every row; profiles 2/3/4 identical |
 | `meris_zone_values.csv` | zone × group × product | 18,718 (2,674 × 7) | `Tot=Rdv+Bnf+Rsl+Aut1+Aut2` holds exactly; $2023 |
@@ -356,8 +356,10 @@ these tables, and any such value would be excluded.
 
 ### 8.4 Coverage and remaining gaps
 
-The price deck is 251/630 usable cells (39.8%): 293 zeros and 86 `PATE`
-placeholders are retained in the deck but excluded from the ledger. The DBH
+The price deck is 251/630 usable cells (39.8%): 293 zeros and 86 `0.0100`
+placeholders (66 `PATE`, 10 poplar `DER`, 10 poplar `F3`) are retained in the
+deck but excluded from the ledger. The positive cells cover 28 non-SEPM species
+(24 hardwoods plus `PIB`, `PIR`, `PRU`, `THO`). The DBH
 curve is 1,824/1,824 cells for the canonical profile. Coverage remains
 `partial`: MERIS still has no observed delivered price, no permit-volume
 register, no zone→UA crosswalk, no full harvest equation per zone, no haul

@@ -48,6 +48,10 @@ CURVE_TABLES = (
     "tbl_essences_revenus_EssDhp_Profil_3",
     "tbl_essences_revenus_EssDhp_Profil_4",
 )
+CURVE_TABLE_BY_PROFILE = {
+    f"Profil_{index}": table
+    for index, table in enumerate(CURVE_TABLES, start=2)
+}
 ZONE_VALUE_TABLE = "tbl_Zones_RedevBenefRentSal_F1234"
 ROYALTY_TABLE = "tbl_redevances_F1234"
 COST_TABLE = "tbl_couts_zones"
@@ -90,6 +94,7 @@ ROYALTY_COLUMNS = {
     "AUTRE": "Autre",
 }
 SERIES = (("1", "tendance"), ("2", "courant"))
+SERIES_SUFFIX = {"courant": "C", "tendance": "T"}
 PROFILE_DESCRIPTIONS = {
     2: "Scieur Res",
     3: "Scieur FD et Res",
@@ -173,6 +178,27 @@ def decimal(value: float, places: int = 4) -> str:
     return f"{value:.{places}f}"
 
 
+def series_suffix(series: str, *, context: str) -> str:
+    """Map a MERIS series label to its licence suffix without a silent default."""
+    if series not in SERIES_SUFFIX:
+        raise SystemExit(
+            f"unexpected MERIS revenue series {series!r} in {context}; "
+            f"expected one of {sorted(SERIES_SUFFIX)}"
+        )
+    return SERIES_SUFFIX[series]
+
+
+def inclusion_flag(raw: str, *, context: str) -> str:
+    """Return a validated MERIS ``InclureRedev`` flag (``0`` or ``1``)."""
+    value = str(raw).strip()
+    if value not in {"0", "1"}:
+        raise SystemExit(
+            f"unexpected MERIS stumpage-inclusion flag {value!r} in {context}; "
+            "expected '0' or '1'"
+        )
+    return value
+
+
 def write_csv(
     path: Path, fields: Sequence[str], rows: Iterable[Mapping[str, object]]
 ) -> int:
@@ -213,7 +239,10 @@ def build_price_deck(
                 column = f"Prix_{PRICE_COLUMNS[product]}_{code}"
                 inclusion_column = f"Redev_{PRICE_COLUMNS[product]}_{code}_Inclus"
                 value = number(row[column])
-                included = row[inclusion_column].strip() or "0"
+                included = inclusion_flag(
+                    row[inclusion_column],
+                    context=f"{species} {product} series {series}",
+                )
                 if value == 0.0:
                     status = "not_applicable_zero"
                 elif abs(value - 0.01) < 1e-9:
@@ -261,23 +290,30 @@ def build_curves(
                     f"lose information at profile {profile}, "
                     f"{row['ESSENCE']} DHP {row['DHP']}"
                 )
+            series = row["Type"].strip()
+            series_suffix(series, context=f"profile {profile} {row['ESSENCE']}")
+            included = inclusion_flag(
+                row["InclureRedev"],
+                context=f"profile {profile} {row['ESSENCE']} DHP {row['DHP']}",
+            )
+            profile_label = f"Profil_{profile}"
             output.append(
                 {
-                    "profile": f"Profil_{profile}",
+                    "profile": profile_label,
                     "profile_description": descriptions.get(
                         profile, PROFILE_DESCRIPTIONS.get(profile, "")
                     ),
                     "species": row["ESSENCE"].strip(),
-                    "type": row["Type"].strip(),
+                    "type": series,
                     "dbh": row["DHP"].strip(),
                     "revenue": decimal(sciage),
                     "sciage": decimal(sciage),
                     "pate": decimal(pate),
                     "unit": "CAD_per_m3_log",
                     "origin": row["ORIGINE"].strip(),
-                    "stumpage_included": row["InclureRedev"].strip(),
+                    "stumpage_included": included,
                     "source": (
-                        f"{CURVE_TABLES[profile - 2]}:SCIAGE+PATE"
+                        f"{CURVE_TABLE_BY_PROFILE[profile_label]}:SCIAGE+PATE"
                     ),
                 }
             )
@@ -452,12 +488,15 @@ def build_ledger_rows(
             for code, series in SERIES:
                 column = f"Prix_{PRICE_COLUMNS[product]}_{code}"
                 value = number(row[column])
-                if value <= PRICE_PLACEHOLDER:
+                if value <= PRICE_PLACEHOLDER + 1e-9:
                     continue
-                included = row[
-                    f"Redev_{PRICE_COLUMNS[product]}_{code}_Inclus"
-                ].strip()
-                suffix = "C" if series == "courant" else "T"
+                included = inclusion_flag(
+                    row[f"Redev_{PRICE_COLUMNS[product]}_{code}_Inclus"],
+                    context=f"{species} {product} series {series}",
+                )
+                suffix = series_suffix(
+                    series, context=f"{species} {product} price deck"
+                )
                 ledger.append(
                     {
                         "jurisdiction": "QC",
@@ -486,7 +525,8 @@ def build_ledger_rows(
                                 ),
                                 ("series", series),
                                 ("qc_quality", product),
-                                ("stumpage_included", included or "0"),
+                                ("stumpage_included", included),
+                                ("series_non_additive", "1"),
                                 ("not_observed", "1"),
                                 ("model_input", "1"),
                                 ("not_a_transaction", "1"),
@@ -522,11 +562,17 @@ def build_ledger_rows(
         series = str(row["type"])
         dbh = int(str(row["dbh"]))
         value = number(str(row["revenue"]))
-        if value <= PRICE_PLACEHOLDER:
+        if value <= PRICE_PLACEHOLDER + 1e-9:
             # The release has no PATE/0.01 curve value; keep the exclusion
             # explicit so a future placeholder cannot become revenue.
             continue
-        suffix = "C" if series == "courant" else "T"
+        included = inclusion_flag(
+            str(row["stumpage_included"]),
+            context=f"{CURVE_PROFILE} {species} DHP {dbh}",
+        )
+        suffix = series_suffix(
+            series, context=f"{CURVE_PROFILE} {species} DHP {dbh}"
+        )
         ledger.append(
             {
                 "jurisdiction": "QC",
@@ -549,9 +595,11 @@ def build_ledger_rows(
                         ("currency_basis", "CAD_nominal"),
                         (
                             "source_table",
-                            f"{CURVE_TABLES[0]}:SCIAGE+PATE",
+                            f"{CURVE_TABLE_BY_PROFILE[CURVE_PROFILE]}:SCIAGE+PATE",
                         ),
                         ("series", series),
+                        ("stumpage_included", included),
+                        ("series_non_additive", "1"),
                         ("profile", CURVE_PROFILE),
                         (
                             "profile_equivalence",
@@ -680,6 +728,33 @@ def build_ledger_rows(
     return ledger
 
 
+def canonical_curve_profile(
+    curves: Sequence[Mapping[str, object]],
+) -> dict[tuple[str, str, str], tuple[str, str]]:
+    """Return the canonical profile and fail if any shipped profile differs.
+
+    The ledger ingests a single profile, so both the revenue and the
+    stumpage-inclusion provenance must be identical across profiles.  A future
+    release that changes either one would otherwise lose information silently.
+    """
+    curve_values: dict[str, dict[tuple[str, str, str], tuple[str, str]]] = {}
+    for row in curves:
+        key = (str(row["species"]), str(row["type"]), str(row["dbh"]))
+        value = (str(row["revenue"]), str(row["stumpage_included"]))
+        curve_values.setdefault(str(row["profile"]), {})[key] = value
+    if CURVE_PROFILE not in curve_values:
+        raise SystemExit(f"no {CURVE_PROFILE} rows in the revenue curves")
+    canonical = curve_values[CURVE_PROFILE]
+    for profile, values in curve_values.items():
+        if values != canonical:
+            raise SystemExit(
+                f"revenue profile {profile} differs from {CURVE_PROFILE} in "
+                "revenue or stumpage inclusion; the one-profile ledger ingest "
+                "would lose information"
+            )
+    return canonical
+
+
 def check_ledger(path: Path, expected_rows: int) -> None:
     sys.path.insert(0, str(REPO_ROOT))
     from workflows.national.harvest.cost_revenue import load_ledger
@@ -733,17 +808,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     # The three shipped SEPM profiles are byte-identical in this release.  Fail
     # closed if that changes, because the ledger ingests a single canonical
     # profile and must not silently drop a genuinely different curve.
-    curve_values: dict[str, dict[tuple[str, str, str], str]] = {}
-    for row in curves:
-        key = (str(row["species"]), str(row["type"]), str(row["dbh"]))
-        curve_values.setdefault(str(row["profile"]), {})[key] = str(row["revenue"])
-    canonical_curve = curve_values[CURVE_PROFILE]
-    for profile, values in curve_values.items():
-        if values != canonical_curve:
-            raise SystemExit(
-                f"revenue profile {profile} differs from {CURVE_PROFILE}; "
-                "the one-profile ledger ingest would lose information"
-            )
+    canonical_curve_profile(curves)
+    canonical_curve_rows = sum(
+        1 for row in curves if row["profile"] == CURVE_PROFILE
+    )
 
     ledger_rows = build_ledger_rows(
         tables[PRICE_TABLE], curves, costs, treatments
@@ -935,7 +1003,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "price_species": len({row["species"] for row in price_long}),
             "price_rows": len(price_long),
             "price_status_counts": dict(Counter(str(row["status"]) for row in price_long)),
-            "curve_rows_per_profile": 1_824,
+            "curve_rows_per_profile": canonical_curve_rows,
             "curve_profiles": sorted({str(row["profile"]) for row in curves}),
             "curve_ledger_profile": CURVE_PROFILE,
             "zone_source_rows": len(tables[ZONE_VALUE_TABLE]),

@@ -29,7 +29,9 @@ energy-policy advice, a legal AAC/THLB determination, or a supply forecast.
   landbase, not a legal THLB.
 - Provincial harvest-allocation screening for 100/119/150 Mm³.
 - Allocation-weighted residue factors and the national/BC residue supply curve.
-- BC/QC cost-revenue ledger (**940 rows**); net value remains `not_estimated`.
+- BC/QC cost-revenue ledger (**940 rows in the frozen v1.0.0 snapshot**; the
+  current working ledger has 2,888 rows after the MERIS full-deck ingest); net
+  value remains `not_estimated`.
 - Forestry UI: static Forest Ledger plus the FastAPI live runner.
 - `policy_test_v1` draft constraint family and its interface test.
 
@@ -88,9 +90,10 @@ does not replace the canonical row.
 - **Residue factors:** gross 0.09881 / 0.09918 / 0.10018 ODT/m³ log; base
   recoverable 0.05929 / 0.05951 / 0.06011; base supply 109.68 / 130.98 / 166.80
   PJ/yr for 100/119/150 Mm³.
-- **BC/QC ledger:** 940 rows (BC 200 observed, QC 740 model input); 100 Crown /
-  840 forest-sector; 100 paired mirrors; 0 observed delivered-log revenue; net
-  value `not_estimated`.
+- **BC/QC ledger (frozen v1.0.0 snapshot):** 940 rows (BC 200 observed, QC 740
+  model input); 100 Crown / 840 forest-sector; 100 paired mirrors; 0 observed
+  delivered-log revenue; net value `not_estimated`. The current working ledger
+  has 2,888 rows after the MERIS full-deck ingest.
 - **UI:** 53 scenarios, 18 families, 1 Pareto-eligible; live create/queue/SSE,
   cancel/retry, session hydration, Explore/Pareto/Compare, map drill-down/year
   playback, 13-zone table/heatmap, role badges, public/shared-analyst

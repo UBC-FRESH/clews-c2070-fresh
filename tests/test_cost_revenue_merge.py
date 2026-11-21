@@ -10,7 +10,6 @@ import pytest
 
 from workflows.national.harvest import merge_cost_revenue as merge
 from workflows.national.harvest.cost_revenue import (
-    CORE_LEDGER_FIELDS,
     Component,
     Evidence,
     LedgerValidationError,
@@ -36,13 +35,14 @@ def test_merge_conserves_every_input_row(merged: merge.MergeResult) -> None:
     input_rows = read_csv(BC_BLOCK) + read_csv(QC_BLOCK)
     output_rows = read_csv(merged.output_path)
 
-    output_core = [
-        {name: row[name] for name in CORE_LEDGER_FIELDS} for row in output_rows
+    def canonical_18(row: dict[str, str]) -> dict[str, str]:
+        canonical = {name: row.get(name, "") or "" for name in merge.LEDGER_FIELDS}
+        canonical["quality"] = canonical["quality"] or "NA"
+        return canonical
+
+    assert [canonical_18(row) for row in output_rows] == [
+        canonical_18(row) for row in input_rows
     ]
-    input_core = [
-        {name: row[name] for name in CORE_LEDGER_FIELDS} for row in input_rows
-    ]
-    assert output_core == input_core
     assert sum(row["quality"] != "NA" for row in output_rows) == 251
     assert sum(bool(row["dbh_cm"]) for row in output_rows) == 1_824
     assert len(merged.ledger) == len(input_rows) == 2_888
@@ -60,6 +60,10 @@ def test_merge_conserves_every_input_row(merged: merge.MergeResult) -> None:
         "observed": 200,
     }
     assert merged.summary["merge_rules"]["no_imputation"] is True
+    if merge.DEFAULT_OUTPUT_CSV.exists():
+        assert merge.sha256_file(merged.output_path) == merge.sha256_file(
+            merge.DEFAULT_OUTPUT_CSV
+        )
 
 
 def test_merged_ledger_has_unique_keys_and_one_additive_source(
@@ -96,6 +100,71 @@ def test_a_second_additive_source_fails_closed(tmp_path: Path) -> None:
         writer.writerows(qc_rows + [duplicate])
 
     with pytest.raises(LedgerValidationError, match="source exclusivity"):
+        merge.run_merge(
+            output_dir=tmp_path / "out",
+            block_specs=((BC_BLOCK, "BC"), (tampered, "QC")),
+        )
+    assert not (tmp_path / "out" / "forest_cost_revenue.csv").exists()
+
+
+def _write_tampered_qc(tmp_path: Path, rows: list[dict[str, str]]) -> Path:
+    path = tmp_path / "tampered_qc.csv"
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=merge.LEDGER_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
+def test_qc_series_suffix_mismatch_fails_closed(tmp_path: Path) -> None:
+    qc_rows = read_csv(QC_BLOCK)
+    row = next(
+        item
+        for item in qc_rows
+        if item["component"] == "delivered_log_revenue"
+        and "series=tendance" in item["notes"]
+    )
+    row["licence"] = row["licence"] + "0"
+    tampered = _write_tampered_qc(tmp_path, qc_rows)
+
+    with pytest.raises(LedgerValidationError, match="does not end with -T"):
+        merge.run_merge(
+            output_dir=tmp_path / "out",
+            block_specs=((BC_BLOCK, "BC"), (tampered, "QC")),
+        )
+    assert not (tmp_path / "out" / "forest_cost_revenue.csv").exists()
+
+
+def test_qc_missing_series_token_fails_closed(tmp_path: Path) -> None:
+    qc_rows = read_csv(QC_BLOCK)
+    row = next(
+        item
+        for item in qc_rows
+        if item["component"] == "delivered_log_revenue"
+        and "series=courant" in item["notes"]
+    )
+    row["notes"] = row["notes"].replace("series=courant; ", "")
+    tampered = _write_tampered_qc(tmp_path, qc_rows)
+
+    with pytest.raises(LedgerValidationError, match="has series None"):
+        merge.run_merge(
+            output_dir=tmp_path / "out",
+            block_specs=((BC_BLOCK, "BC"), (tampered, "QC")),
+        )
+    assert not (tmp_path / "out" / "forest_cost_revenue.csv").exists()
+
+
+def test_qc_missing_non_additivity_token_fails_closed(tmp_path: Path) -> None:
+    qc_rows = read_csv(QC_BLOCK)
+    row = next(
+        item
+        for item in qc_rows
+        if item["component"] == "delivered_log_revenue"
+    )
+    row["notes"] = row["notes"].replace("series_non_additive=1; ", "")
+    tampered = _write_tampered_qc(tmp_path, qc_rows)
+
+    with pytest.raises(LedgerValidationError, match="series_non_additive=1"):
         merge.run_merge(
             output_dir=tmp_path / "out",
             block_specs=((BC_BLOCK, "BC"), (tampered, "QC")),
@@ -152,6 +221,8 @@ def test_coverage_math_uses_stated_denominators(merged: merge.MergeResult) -> No
     assert qc["current_rate_row_share"]["share"] == pytest.approx(0.0)
     assert qc["zone_share"]["share"] == pytest.approx(191 / 191, abs=1e-6)
     assert qc["treatment_share"]["share"] == pytest.approx(40 / 94, abs=1e-6)
+    assert qc["price_deck_share"]["share"] == pytest.approx(251 / 630, abs=1e-6)
+    assert qc["dbh_curve_share"]["share"] == pytest.approx(1.0, abs=1e-6)
     assert qc["ledger"]["observed_volume_m3"] == 0.0
     assert qc["ledger"]["observed_rows"] == 0
     assert qc["ledger"]["model_input_rows"] == 2_688

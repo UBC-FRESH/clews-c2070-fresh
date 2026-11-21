@@ -150,6 +150,15 @@ class Evidence(StrEnum):
     FALLBACK = "fallback"
 
 
+OBSERVED_EVIDENCES = frozenset(
+    {
+        Evidence.OBSERVED_PAYMENT,
+        Evidence.OBSERVED_SALE,
+        Evidence.OBSERVED_PRICE,
+    }
+)
+
+
 class PricePoint(StrEnum):
     STANDING = "standing"
     ROADSIDE = "roadside"
@@ -759,6 +768,25 @@ def _parse_row(
                 "model_input evidence cannot use high confidence; high is "
                 "reserved for observed payments, sales, or audited actuals",
             )
+
+    if (
+        tokens.get("model_input") == "1"
+        and value_basis.evidence is not Evidence.MODEL_INPUT
+    ):
+        fail(
+            "notes",
+            "model_input=1 token requires value_basis evidence "
+            f"'model_input', got {value_basis.evidence.value!r}",
+        )
+    if (
+        tokens.get("not_observed") == "1"
+        and value_basis.evidence in OBSERVED_EVIDENCES
+    ):
+        fail(
+            "notes",
+            f"not_observed=1 token conflicts with observed value_basis "
+            f"evidence {value_basis.evidence.value!r}",
+        )
 
     if (
         component in STUMPAGE_COMPONENTS
