@@ -41,7 +41,7 @@ import math
 import statistics
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -691,8 +691,10 @@ def summarise_prices(prices: Sequence[float]) -> PriceRange:
     )
 
 
-def parse_price_cells(path: Path) -> tuple[PriceCell, ...]:
-    raw_rows = read_csv_rows(path)
+def parse_price_cells(
+    path: Path, *, rows: Sequence[Mapping[str, str]] | None = None
+) -> tuple[PriceCell, ...]:
+    raw_rows = list(rows) if rows is not None else read_csv_rows(path)
     require_columns(path, raw_rows, PRICE_CELL_COLUMNS)
     parsed: list[PriceCell] = []
     seen_keys: set[tuple[str, str, str, str]] = set()
@@ -923,7 +925,7 @@ def price_row_from_summary(summary: PriceGroupSummary) -> dict[str, Any]:
     return {
         "benchmark_id": (
             f"bc_{key.region}_{key.report_basis}_{key.log_class}_"
-            f"{key.aggregation_level}_{key.species}_{key.grade_or_end_use}"
+            f"{key.aggregation_level}_{key.period_year}_{key.species}_{key.grade_or_end_use}"
         ),
         "region": key.region,
         "report_basis": key.report_basis,
@@ -1338,7 +1340,6 @@ def build_bcts_sales(
     crown: Mapping[str, Sequence[Mapping[str, str]]],
     forest_sector: Mapping[str, Sequence[Mapping[str, str]]],
     results: Mapping[str, Mapping[str, str]],
-    ledger_path: Path,
 ) -> tuple[tuple[BctsSale, ...], StumpageStats]:
     sales: list[BctsSale] = []
     for sale_id in sorted(crown):
@@ -2063,7 +2064,7 @@ def build_summary_rows(
                 net_value_reason=HISTORICAL_NET_VALUE_REASON,
                 source_artifact=source["source_artifact"],
                 notes=(
-                    "Nominal 2011-2015 BMMB delivered-sale benchmark. "
+                    f"Nominal {source['price_year']} BMMB delivered-sale benchmark. "
                     + (
                         "Crown public forest only; primary benchmark."
                         if benchmark_id == "bmmb_crown_public_forest_2011_2015"
@@ -2335,13 +2336,22 @@ def validate_outputs(
     )
     add_check(
         checks,
+        "bc_price_benchmark_id_unique",
+        len({row["benchmark_id"] for row in price_rows}) == len(price_rows),
+        "every annual/period price row has a unique benchmark_id",
+    )
+    add_check(
+        checks,
         "bc_price_flagged_cells_excluded_from_ranges",
         all(
-            summary.price_range.minimum is None or summary.price_range.minimum > 0.0
+            summary.price_range.minimum is not None
+            and 1.0 <= summary.price_range.minimum
+            and summary.price_range.maximum is not None
+            and summary.price_range.maximum <= 1000.0
             for summary in price_summaries
             if summary.ok_cell_count
         ),
-        "no zero or negative value enters an ok range",
+        "every ok range stays within the plausible 1.0-1000.0 CAD/m3 band",
     )
     add_check(
         checks,
@@ -2601,31 +2611,14 @@ def validate_outputs(
         "QC cost, historical, BC price, stumpage, allowance, and unavailable rows are distinct",
     )
 
-    for rows, label in (
-        (summary_rows, "summary"),
-        (price_rows, "price"),
-        (qc_rows, "qc"),
-        (bmmb_rows, "bmmb"),
-    ):
-        for row in rows:
-            for value in row.values():
-                if value is None:
-                    continue
-                if str(value).strip().lower() in {"nan", "inf", "-inf"}:
-                    add_check(
-                        checks,
-                        f"no_nonfinite_{label}",
-                        False,
-                        f"non-finite text {value!r} in {row}",
-                    )
-                    break
+    cost_records = tuple(asdict(row) for row in cost_rows)
     add_check(
         checks,
         "no_nonfinite_output_text",
         all(
             value is None
-            or str(value).strip().lower() not in {"nan", "inf", "-inf"}
-            for rows in (summary_rows, price_rows, qc_rows, bmmb_rows)
+            or str(value).strip().lower() not in {"nan", "inf", "+inf", "-inf"}
+            for rows in (summary_rows, price_rows, qc_rows, bmmb_rows, cost_records)
             for row in rows
             for value in row.values()
         ),
@@ -2637,6 +2630,7 @@ def validate_outputs(
 def write_report(
     path: Path,
     *,
+    generated_utc: str,
     summary_rows: Sequence[Mapping[str, Any]],
     series_summaries: Sequence[SeriesPriceSummary],
     stumpage_stats: StumpageStats,
@@ -2846,7 +2840,7 @@ def write_report(
 | Field | Value |
 |---|---|
 | Document | `data/derived/national/harvest_basis/forest_economics_v2d/FOREST_ECONOMICS_V2D_REPORT.md` |
-| Date | 2026-11-21 |
+| Date | {generated_utc[:10]} |
 | Status | Evidence layer. No merged-ledger, model, UI, or public OSeCAN change. |
 | QC source | `data/derived/national/harvest_basis/procurement_benchmark/` |
 | BC sources | `bc_log_market/`, `bcts_bc/`, `bc_appraisal_costs/` |
@@ -2981,9 +2975,8 @@ def build(output_dir: Path = DEFAULT_OUTPUT_DIR) -> BuildResult:
 
     price_path = BC_LOG_MARKET_DIR / "bc_log_market_prices.csv"
     raw_price_rows = read_csv_rows(price_path)
-    require_columns(price_path, raw_price_rows, PRICE_CELL_COLUMNS)
     raw_price_aggregate_tokens = [row["is_aggregate"] for row in raw_price_rows]
-    price_cells = parse_price_cells(price_path)
+    price_cells = parse_price_cells(price_path, rows=raw_price_rows)
     price_summaries = build_price_groups(price_cells)
     series_summaries = build_series_summaries(price_cells)
     price_rows = tuple(price_row_from_summary(summary) for summary in price_summaries)
@@ -3020,7 +3013,6 @@ def build(output_dir: Path = DEFAULT_OUTPUT_DIR) -> BuildResult:
         crown_rows,
         forest_sector_rows,
         bcts_results,
-        BCTS_DIR / "bcts_bid_ledger.csv",
     )
 
     qc_rows, qc_summary = build_qc_reference(PROCUREMENT_DIR)
@@ -3347,6 +3339,7 @@ def build(output_dir: Path = DEFAULT_OUTPUT_DIR) -> BuildResult:
 
     write_report(
         output_dir / REPORT_MD,
+        generated_utc=summary_payload["generated_utc"],
         summary_rows=summary_rows,
         series_summaries=series_summaries,
         stumpage_stats=stumpage_stats,

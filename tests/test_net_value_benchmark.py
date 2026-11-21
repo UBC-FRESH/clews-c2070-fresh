@@ -1,4 +1,9 @@
-"""Tests for the QC 2022 net-value benchmark and BMMB historical table."""
+"""Audit-only tests for the deprecated QC 2022 net-value benchmark.
+
+The artifact and its ``benchmark_only``/M CAD sensitivity framing are withdrawn.
+These tests exist only to preserve the historical audit trail. Current evidence
+is built by ``procurement_benchmark_v1.py`` and ``forest_economics_v2d.py``.
+"""
 
 from __future__ import annotations
 
@@ -23,6 +28,22 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 def built(tmp_path_factory: pytest.TempPathFactory) -> benchmark.BuildResult:
     output_dir = tmp_path_factory.mktemp("net_value_benchmark")
     return benchmark.build(output_dir=output_dir)
+
+
+def test_builder_carries_deprecation_banner() -> None:
+    source = (
+        REPO_ROOT / "workflows/national/harvest/net_value_benchmark_v1.py"
+    ).read_text(encoding="utf-8")
+    assert source.startswith('"""DEPRECATED')
+    assert "procurement_benchmark_v1.py" in source
+    assert "forest_economics_v2d.py" in source
+
+    pointer = (
+        REPO_ROOT
+        / "data/derived/national/harvest_basis/net_value_benchmark/DEPRECATED.md"
+    )
+    assert pointer.is_file()
+    assert "procurement_benchmark" in pointer.read_text(encoding="utf-8")
 
 
 def test_build_writes_required_outputs_and_passes_checks(

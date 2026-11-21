@@ -441,10 +441,10 @@ def load_bmmb_manifest_sale_count(manifest_path: Path) -> int:
 
 def combine_confidentiality_flags(flags: Iterable[str], *, context: str) -> str:
     allowed = {"none", "three_respondents", "suppressed_lt3"}
-    unknown = set(flags) - allowed
+    flag_set = set(flags)
+    unknown = flag_set - allowed
     if unknown:
         raise BenchmarkError(f"unexpected confidentiality flags for {context}: {sorted(unknown)}")
-    flag_set = set(flags)
     if "three_respondents" in flag_set:
         return "three_respondents"
     if "suppressed_lt3" in flag_set:

@@ -1,4 +1,11 @@
-"""Build the QC 2022 net-value benchmark and sensitivity tables.
+"""DEPRECATED: build the old QC 2022 net-value benchmark and sensitivity tables.
+
+This artifact is withdrawn and retained only for audit. Its "residual" and M CAD
+net-value framing is superseded by ``procurement_benchmark_v1.py`` (QC
+procurement cost spread plus BMMB historical benchmark) and
+``forest_economics_v2d.py`` (separated forest-economics evidence layer, all net
+values ``not_estimated``). Do not publish, cite, or rebuild this dataset as
+current evidence.
 
 The benchmark is deliberately narrow:
 

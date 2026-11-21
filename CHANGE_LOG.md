@@ -2,6 +2,27 @@
 
 ## 2026-11-21
 
+- **Fixed the final v2d review findings.** Materialized the confidentiality-flag
+  iterable in `procurement_benchmark_v1.py` so `qc_2022_peupliers_trituration`
+  and `R09` retain `confidentiality_flag=three_respondents` and the
+  caution note through `procurement_benchmark/` and
+  `forest_economics_v2d/qc_procurement_reference.csv`. Added `period_year` to
+  the BC `benchmark_id` and a 37th uniqueness check in `validate_outputs`, so
+  all 1,852 annual/period price rows have distinct keys. Tightened the plausible
+  range check to `1.0 <= minimum` and `maximum <= 1000.0`; made the teaching
+  note year dynamic (`Nominal 2014-2015`); removed the unused `ledger_path`
+  parameter, the second 7.9 MB CSV read, and the redundant non-finite loop; and
+  derived the report date from the build timestamp. Added generator regression,
+  exact-copy, `benchmark_id` uniqueness, relative-path/committed-manifest, and
+  fail-closed negative tests. Added a DEPRECATED banner to
+  `net_value_benchmark_v1.py` and marked its tests audit-only. Replaced the
+  stale "Residual" framing in `planning/forest-sector-evidence-v2.md` with
+  procurement-channel cost spreads, recorded 128 three-respondent flags and the
+  BMMB Crown-only 35.7547 / teaching 50.6266 / all-in 38.2940 split with the
+  22,200 m3 re-offer caveat, and corrected the QC evidence tier/revenue basis in
+  `planning/net-value-v2d.md`. No merged-ledger, model, UI, or public OSeCAN
+  change.
+
 - **Rebuilt the v2d evidence layer as `forest_economics_v2d` and deprecated the
   old net-value artifacts.** Added
   `workflows/national/harvest/forest_economics_v2d.py`, which emits

@@ -102,6 +102,18 @@ def test_every_output_is_labelled_procurement_cost_not_net_value(
     assert "cost_spread_before_transfers_cad_m3" in provincial[0]
 
 
+def test_combine_confidentiality_flags_materializes_generator_inputs() -> None:
+    flags = (flag for flag in ("none", "three_respondents"))
+    assert (
+        benchmark.combine_confidentiality_flags(flags, context="generator")
+        == "three_respondents"
+    )
+
+    unknown = (flag for flag in ("none", "unexpected"))
+    with pytest.raises(benchmark.BenchmarkError, match="unexpected confidentiality"):
+        benchmark.combine_confidentiality_flags(unknown, context="generator")
+
+
 def test_provincial_cost_spreads_are_recomputed(
     built: benchmark.BuildResult,
 ) -> None:
@@ -128,6 +140,9 @@ def test_provincial_cost_spreads_are_recomputed(
     poplar = rows["qc_2022_peupliers_trituration"]
     assert float(poplar["cost_spread_before_transfers_cad_m3"]) == pytest.approx(-7.27)
     assert float(poplar["cost_spread_after_transfers_cad_m3"]) == pytest.approx(-9.45)
+    assert poplar["confidentiality_flag"] == "three_respondents"
+    assert poplar["three_respondent_flag"] == "true"
+    assert "Three-respondent mean" in poplar["notes"]
 
     for scope in ("pins_total", "thuyas_total", "feuillus_durs_total"):
         row = rows[f"qc_2022_{scope}"]
@@ -151,6 +166,7 @@ def test_regional_range_flags_r09_and_independent_bounds(
 
     by_region = {row["region_code"]: row for row in values}
     assert by_region["R09"]["sample_n"] == "3"
+    assert by_region["R09"]["confidentiality_flag"] == "three_respondents"
     assert by_region["R09"]["three_respondent_flag"] == "true"
     assert "Three-respondent mean" in by_region["R09"]["notes"]
     assert float(by_region["R09"]["conditional_cost_spread_after_transfers_cad_m3"]) == pytest.approx(

@@ -149,8 +149,8 @@ in this layer. BC rows carry `net_value_status=not_estimated` and
 
 | Dimension | QC 2022 survey benchmark | BC 2026 evidence | Comparability |
 |---|---|---|---|
-| Evidence tier | `survey_benchmark` | `observed_price` + `observed_stumpage` + `appraisal_allowance` | Not comparable |
-| Revenue basis | Delivered-to-mill survey purchase, nominal 2022 | Mill-delivered published averages (2019–2026); standing-timber BCTS bids (2026) | Not comparable |
+| Evidence tier | `survey_procurement_cost` + `survey_regional_procurement_cost` + `benchmark_historical` | `observed_price` + `observed_stumpage` + `appraisal_allowance` | Not comparable |
+| Revenue basis | None for 2022 survey (T2 purchase is buyer-side procurement cost, not revenue); BMMB 2011–2015 is nominal historical revenue only | Mill-delivered published averages (2019–2026); standing-timber BCTS bids (2026) | Not comparable |
 | Cost coverage | Full survey procurement stack including harvest and haul | Partial appraisal allowances; logging and general truck haul missing | Not comparable |
 | Net value | `not_estimated`; SEPM procurement cost spread 25.82 / 0.81 CAD/m3 | `not_estimated` (`missing_logging_and_haul_cost`) | Not comparable |
 | Policy grade | `false` | `false` | Neither is policy-grade |
@@ -177,7 +177,7 @@ quantity.
 The builder fails closed on unexpected row counts, missing columns, duplicate
 keys, non-finite values, negative BC prices/stumpage/costs, aggregate misuse,
 vintage mixing, volume reconciliation failures, QC hash or arithmetic
-mismatches, and any missing BC gap reason. All 36 checks pass.
+mismatches, and any missing BC gap reason. All 37 checks pass.
 
 ```bash
 .venv/bin/python -m workflows.national.harvest.forest_economics_v2d
