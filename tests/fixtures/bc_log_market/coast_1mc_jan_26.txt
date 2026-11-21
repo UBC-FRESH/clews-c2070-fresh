@@ -1,0 +1,70 @@
+                                                                                                               Coast Selling Price System
+                                                                                                           Average Log Prices - Old Growth
+                                                                                                      For the 1 month period ending: January 2026
+
+Sale Type: Old Growth
+           Domestic
+
+       Grade                                      Alder                     Birch                Cedar             Cottonwood                Cypress                  Fir              Hembal         Maple      Pine       Spruce
+ B                 AMV
+                   %
+ C                 AMV
+                   %
+ D                 AMV
+                   %
+ E                 AMV
+                   %
+ F                 AMV                                                                                                                             507.65
+                   %                                                                                                                                 0.82
+ G                 AMV
+                   %
+ H                 AMV                                                                                550.79                                       328.15               230.43               211.17                 92.85
+                   %                                                                                   16.57                                        12.88                 1.91                 9.21                  1.18
+ I                 AMV                                                                                395.85                                        315.3               189.64               143.23                 69.44
+                   %                                                                                    6.16                                          7.6                 3.67                 9.07                  1.43
+ J                 AMV                                                                                 236.8                                        85.73                94.67                 88.8                 79.28
+                   %                                                                                   34.56                                        50.19                33.52                47.97                 88.91
+ K                 AMV                                                                                696.08
+                   %                                                                                    3.68
+ L                 AMV                                                                                511.34
+                   %                                                                                    3.79
+ M                 AMV                                                                                368.86
+                   %                                                                                    2.91
+ U                 AMV                                                                                119.29                                       167.56                   73.08              69.2                 56.63
+                   %                                                                                   29.57                                        16.95                   50.28              15.5                  7.24
+ W                 AMV                                       90.56
+                   %                                         99.76
+ X                 AMV                                                                                 87.63                                       118.05                   44.48             49.51                 43.71
+                   %                                                                                    1.63                                         5.15                    6.87               7.5                  0.51
+ Y                 AMV                                       46.14                                                                                  26.65                   33.64              46.6                 42.56
+                   %                                          0.24                                                                                   6.05                    3.47             10.34                  0.73
+
+
+
+ Volume(m3)                                            1,140.61                                                                                                                                        310.323   1,395.18
+ Species %                                                 2.73                                                                                                                                           0.74       3.34
+ AMV($/m3)                                               $90.45                                                                                                                                         $41.23     $77.21
+ Total volume (m3)                                    41,778.90
+ Total value $                                     5,624,439.07
+ $/m3                                                    134.62
+
+
+
+
+Prepared by Timber Pricing Branch, Ministry of Forests, Lands, Natural Resource Operations and Rural Development
+Note (1) The old growth reported is a blend of old and mixed growth log market transactions values, in accordance with ministry policy. Reference Coast Prices Information Paper:
+Calculation of Coast Log Prices (gov.bc.ca). For the one-month data set, the average market value (AMV) for pure old growth is 140.93 $/m3 and for mixed growth 131.03 $/m3.
+The volume of pure old growth reported is 15167.509 m3 and for mixed growth is 26611.392 m3.
+Note (2) Three month totals may not equal the sum of previously published one month totals due to late or revised. Data is adjusted for Section 136 of the Forest Act.
+Note (3) April 2023, new and additional participants to the Vancouver Log Market data set.
+Copyright Statement: Copyright of this material belongs exclusively to the Province of British Columbia. This copy is intended for private study or research purposes only.
+No person or entity is permitted to reproduce this material, in whole or in part, for distribution either free of charge or for 'commercial purposes', unless that person or entity has
+a signed license agreement with the Intellectual Property Program for British Columbia. Reproduction for commercial purposes is reproduction for the purposes of sale, rent,
+trade or distribution, or posting it on the Internet or on electronic bulletin boards. Further details over these and other government-owned works can be obtained by reference to
+the Federal Copyright Act .
+
+
+
+
+Current Month is the month established by the 1 month OG report. Prior month or prior period then applies appropriately. Not all sheets are labeled due to turn around time for reporting.
+
