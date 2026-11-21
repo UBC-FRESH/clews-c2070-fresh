@@ -209,6 +209,26 @@ def test_qc_reference_is_a_validated_exact_copy(built: v2d.BuildResult) -> None:
     assert sep["residual_before_transfers_cad_m3"] == "25.8200"
     assert sep["residual_after_transfers_cad_m3"] == "0.8100"
 
+    bmmb_source = read_csv(
+        HARVEST_BASIS_DIR / "net_value_benchmark/bmmb_historical_benchmark.csv"
+    )
+    bmmb_overall = next(
+        row for row in bmmb_source if row["aggregation_level"] == "delivered_all_years"
+    )
+    bmmb_reference = next(
+        reference
+        for reference in references
+        if reference["reference_type"] == "historical_revenue_benchmark"
+    )
+    for field in (
+        "sale_count",
+        "weighted_rate_cad_m3",
+        "median_rate_cad_m3",
+        "min_rate_cad_m3",
+        "max_rate_cad_m3",
+    ):
+        assert bmmb_reference[field] == bmmb_overall[field]
+
 
 def test_bc_cost_coverage_labels_allowances_and_documents_the_gap(
     built: v2d.BuildResult,
