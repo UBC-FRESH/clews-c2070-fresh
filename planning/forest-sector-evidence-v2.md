@@ -4,10 +4,10 @@
 |---|---|
 | Document | `planning/forest-sector-evidence-v2.md` |
 | Date | 2026-11-21 |
-| Status | Evidence collection complete through landbase screening; v2d net-value benchmark pending. Documentation only; no model, UI, data, or interface change is implemented by this note. |
+| Status | Evidence collection complete; v2d forest-economics evidence layer complete. QC procurement cost and BMMB historical revenue only; BC partial appraisal coverage; all net values deliberately `not_estimated`. Documentation only; no model, UI, data, or interface change is implemented by this note. |
 | Scope | Observed and model-input evidence for BC/QC log markets, costs, and the national operable-landbase screen |
 | Audience | FRESH team; Taco Niet and the energy/OSeCAN policy team |
-| Companion documents | `planning/forest-cost-revenue-ledger.md`; `planning/forest-sector-lp-v1.md`; `planning/meris-qc-extraction.md`; `planning/module-boundaries.md`; `planning/harvest-aac-feasibility.md` |
+| Companion documents | `planning/forest-cost-revenue-ledger.md`; `planning/forest-sector-lp-v1.md`; `planning/meris-qc-extraction.md`; `planning/module-boundaries.md`; `planning/harvest-aac-feasibility.md`; `planning/procurement-benchmark.md`; `planning/net-value-v2d.md` |
 
 **Decision summary.** Forest-Sector Evidence v2 assembles the public evidence
 needed to describe BC/QC log-market and cost conditions and to screen the
@@ -29,8 +29,8 @@ limitation rather than filling it with a proxy.
   log-market reports.
 - A national operable-landbase screen with age, fire, road-proximity, and slope
   sensitivities.
-- The evidence needed to decide whether a BC benchmark and a v2d net-value
-  benchmark are ready to build.
+- The evidence needed to decide whether a BC benchmark and a v2d forest-economics
+  evidence layer are ready to publish.
 
 ### 1.2 Non-claims
 
@@ -68,13 +68,13 @@ limitation rather than filling it with a proxy.
 |---|---|---|---|
 | v2a source review | Complete | Source inventory and findings consolidated in this note and the stand-alone dataset reviews | — |
 | v2b cost/revenue ledger | Complete (ledger only) | `forest_cost_revenue.csv`, 2,888 rows | `0b4285f` / `06d3187` |
-| BMMB delivered auctions | Complete, observed benchmark | 18 delivered sales, 13 awarded | `8df3bb2` / `864e532` |
-| QC MRNF 2022 survey | Complete, observed aggregates | 660 survey observations | `1ed6fda` / `0521b99` |
-| BC log market | Complete, observed averages | 15,705 price cells from 505 PDFs | `d6905cb` / `0e46bbb` |
+| BMMB delivered auctions | Complete, observed benchmark, Crown/teaching/all-in split | 18 delivered sales, 13 awarded; Crown-only 9 full rates / 74,550 m3 / 35.7547 CAD/m3 | `5ec04fc` / `0e82310` |
+| QC MRNF 2022 survey | Complete, observed aggregates, corrected flags | 660 survey observations; 128 three-respondent values | `e5fb044` / `2c81500` |
+| BC log market | Complete, observed averages, corrected parser | 15,705 price cells from 505 PDFs | `1fc5165` / `107abdc` |
 | Operable proxy v2 | Complete, screening | core20 99.87 Mha; core30 77.05 Mha | `5181122` / `1ef587a` |
 | Slope screen | Complete, screening | 960 m MRDEM-30; >30% removes 1.51% | `30729b0` / `6aa01d5` |
 | Operable proxy v3 | Complete, screening | core20 >30% 98.39 Mha; core30 76.01 Mha | `aeac8af` / `36cedf3` |
-| v2d net-value benchmark | Pending | Blocked by BC appraisal costs and the QC cost/revenue crosswalk | — |
+| v2d forest-economics evidence | Complete, evidence only, no net value | 14 summary rows; QC procurement cost reference; BC price/stumpage/appraisal; all `not_estimated` | `567ed97` / `8acc794` |
 
 ## 3. Completed evidence
 
@@ -143,7 +143,9 @@ Key ledger facts:
 | Awarded volume | 108,750 m3 |
 | Observed sale value | 3,878,958.50 CAD nominal |
 | Value with a computable rate | 3,442,633.50 CAD over 89,900 m3 |
-| Volume-weighted computable rate | **38.2940 CAD/m3** |
+| Crown-only primary weighted rate | **35.7547 CAD/m3** (9 full rates; 74,550 m3) |
+| Teaching/research weighted rate | **50.6266 CAD/m3** (2 full rates; 15,350 m3) |
+| All-in secondary weighted rate | **38.2940 CAD/m3** (11 full rates; 89,900 m3) |
 | Individual full-rate range | 30.1042–51.3995 CAD/m3 |
 
 The dataset is stand-alone and is not merged into the ledger. The archive
@@ -155,6 +157,16 @@ are lower bounds and are excluded from the weighted rate. Values are nominal
 CAD and must not be mixed with 2023-dollar MERIS model input without a
 documented deflator.
 
+Only nine of the eleven computable sales are Crown public-forest sales; they
+cover 74,550 m3 and give the **35.7547 CAD/m3** primary benchmark. The other two
+are teaching/research forest lots (15,350 m3, **50.6266 CAD/m3**). Pooling all
+eleven gives **38.2940 CAD/m3**, which the non-Crown lots raise by
+**+2.54 CAD/m3**; the all-in figure is secondary and must not be presented as a
+Crown benchmark. The 2012 re-offer overlap is **2 sales / 22,200 m3**; it
+double-counts offered and awarded volume totals but does not change the
+full-rate numerator or denominator because both re-offer sales are excluded
+from the rate.
+
 ### 3.4 Quebec MRNF 2022 survey
 
 | Measure | Value |
@@ -164,25 +176,28 @@ documented deflator.
 | Additive reconciliations passed | 56 |
 | Known source inconsistencies | 1 (Table 14, peupliers-sciage overhead) |
 | Direct PDF spot checks passed | 8 |
-| Three-respondent means flagged | 109 |
+| Three-respondent means flagged | 128 |
 
 Provincial SEPM procurement stack, nominal 2022 CAD/m3:
 
 | Basis | CAD/m3 | Note |
 |---|---:|---|
-| Delivered wood purchase | 107.22 | Table 21 purchase series |
+| Delivered wood purchase | 107.22 | Table 21 purchase series; buyer-side procurement cost, not log-sale revenue |
 | Procurement before transfers | 81.40 | Table 20 synthesis |
 | Transfers to the State | 25.01 | Table 20 synthesis |
 | Procurement after transfers | 106.41 | Table 20 synthesis |
-| Residual before transfers | **25.82** | Derived: 107.22 − 81.40 |
-| Residual after transfers | **0.81** | Derived: 107.22 − 106.41 |
+| Procurement-channel cost spread before transfers | **25.82** | Derived: 107.22 − 81.40; not net value |
+| Procurement-channel cost spread after transfers | **0.81** | Derived: 107.22 − 106.41; not net value |
 
-The two residual values are derived arithmetically in this note; they are not
-printed source rows. The dataset is intentionally not merged into the ledger.
-The survey provides a full harvest/road/haul cost stack at
-provincial and regional aggregation, but it has no mill-level or
-respondent-level values and no observed volume register. It is a benchmark, not
-a drop-in ledger input.
+The two spreads are derived arithmetically in this note; they are not printed
+source rows. They are procurement-channel cost spreads, not forest-sector net
+value. The T2 purchase cost is a buyer-side cost, and the purchase and BGAD
+values come from different respondent samples. The survey therefore cannot
+support a QC net-value claim or a volume-scaled M CAD sensitivity. The dataset
+is intentionally not merged into the ledger. It provides a full
+harvest/road/haul cost stack at provincial and regional aggregation, but it has
+no mill-level or respondent-level values and no observed volume register. It is
+a benchmark, not a drop-in ledger input and not a revenue population.
 
 ### 3.5 BC log market
 
@@ -266,12 +281,61 @@ is the v2 reference base (118,977,339 m3/yr). These intensities are target
 volume divided by post-slope operable area; they are not growth/yield estimates
 and do not demonstrate sustainability.
 
+### 3.9 BC appraisal cost allowances
+
+The IAM/CAM and silviculture extraction publishes **879 allowance rows** (280
+Coast and 599 Interior). Every row is `appraisal_allowance`, not an observed
+contractor cost, winning bid, or payment. The rows map to six covered
+components: road, bridge, culvert, silviculture, specified operations, and
+tenure obligation (TOA). The covered components use CAD/km, CAD/each, CAD/ha,
+and CAD/m3; 67 rows are direct CAD/m3 and the rest require site quantities
+before they can be converted.
+
+General logging/tree-to-truck, general truck haul, and the estimated winning
+bid (EWB) are not published as $/m3 costs. Truck haul is represented only by
+five rail-cycle CAD/m3 rows. No total BC cost per m3 is computed, and no
+allowance is treated as an observed cost.
+
+### 3.10 v2d forest-economics evidence layer
+
+`forest_economics_v2d/` is the completed evidence layer. It emits 14 summary
+rows (5 QC and 9 BC). Every row carries `net_value_status=not_estimated`,
+`policy_grade=false`, `net_value_is_combined_national=false`, and an explicit
+`net_value_reason`; no monetary net-value column exists. All 37 builder checks
+pass.
+
+- **QC reference.** 18 exact validated copies from `procurement_benchmark/`
+  (9 provincial and 9 regional), including the restored three-respondent flags
+  on `qc_2022_peupliers_trituration` and `R09`. The purchase cost remains a
+  buyer-side procurement cost, and the 25.82 / 0.81 values remain
+  procurement-channel cost spreads.
+- **BMMB reference.** Three nominal historical scopes: Crown-only primary
+  35.7547, teaching/research 50.6266, and all-in secondary 38.2940 CAD/m3,
+  with the 22,200 m3 re-offer caveat.
+- **BC evidence.** 1,852 annual/period price range rows derived from 15,705
+  published cells; observed 2026 BCTS standing-timber stumpage; and the 879
+  appraisal allowance rows. One-month and three-month vintages stay separate,
+  Interior aggregates are not added to product cells, and blank cells are not
+  zero-filled.
+- **No net value.** QC `not_estimated`; BC `not_estimated` with reason
+  `missing_logging_and_haul_cost`; no BC partial net value and no combined
+  national net value. The layer is isolated from the merged ledger, Forest LP,
+  UI, and OSeCAN.
+
+### 3.11 Deprecated net-value artifacts
+
+The former `net_value_v2d/` and `net_value_benchmark/` outputs are retained
+only for audit with `DEPRECATED.md` pointers. `net_value_benchmark_v1.py`
+carries a deprecation banner, and its test module is audit-only. Neither the
+withdrawn "residual" framing nor the M CAD sensitivity may be cited as current
+evidence.
+
 ## 4. Evidence gaps
 
 | Gap | Consequence | Status |
 |---|---|---|
-| BC appraisal costs pending | No BC harvest/road/haul cost benchmark; v2d cannot be built | Open |
-| Full QC harvest/road/haul basis | Survey aggregates and MERIS partials are not yet crosswalked to one cost basis | Open |
+| BC general logging and truck-haul $/m3 | No full BC net value; v2d reports appraisal allowances and stamps `missing_logging_and_haul_cost` | Open |
+| QC observed revenue basis | T2 purchase is a buyer-side procurement cost, not log-sale revenue; no observed delivered-price population | Open |
 | No observed QC transaction ledger | BMMB is a small auction sample; MERIS is model input; no provincial delivered-price population | Open |
 | BC THLB restricted | No legal BC THLB; area weights are a label-point sample | Open |
 | 13.27 Mha ecoprovince gap | 3.14% of SCANFI treed area has no independent ecoprovince slope statistics | Open; nearest-ecoprovince attribution, not zero-filled |
@@ -291,16 +355,18 @@ Additional source limits:
 
 ## 5. Next steps
 
-1. **BC benchmark when appraisal costs land.** Extract the BC appraisal-manual
-   harvest, road, and haul components, label each as an allowance rather than an
-   audited actual, and build a BC benchmark against the observed BCTS stumpage
-   and the BC log-market averages.
-2. **v2d net-value benchmark.** Assemble a benchmark only after the BC and QC
-   cost/revenue components sit on a validated, non-mixed basis. Report it as a
-   benchmark with explicit component coverage, not as policy-grade net value.
-3. **Later model/UI wiring.** Wire the evidence into the model or UI only after
-   the benchmark validation passes. No interface change, no OSeCAN change, and
-   no harvest recommendation follows from this note.
+1. **Complete the BC benchmark gaps (open).** The appraisal-manual extraction is
+   complete for road, bridge, culvert, silviculture, specified operations, and
+   TOA, labeled as allowances rather than audited actuals. A full BC net value
+   still requires public general logging/tree-to-truck and general truck-haul
+   $/m3, or a documented EWB decomposition, plus site quantities.
+2. **v2d forest-economics evidence layer (complete).** The layer is published
+   with separated evidence classes and explicit `net_value_status=not_estimated`
+   on every row. QC procurement costs are not revenue; BC partial coverage has
+   no partial net value; no combined national net value exists.
+3. **Later model/UI wiring (not started).** Wire the evidence into the model or
+   UI only after a separately authorized change. No interface change, no OSeCAN
+   change, and no harvest recommendation follows from this note.
 
 ## 6. Provenance
 
@@ -312,12 +378,19 @@ repository record. All derived reports and manifests are under
 | Workstream | Data commit | Parent commit | Primary artifact |
 |---|---|---|---|
 | v2b ledger hardening | `0b4285f` | `06d3187` | `forest_cost_revenue/` |
-| BMMB delivered auctions | `8df3bb2` | `864e532` | `bmmb_delivered/` |
-| QC MRNF 2022 survey | `1ed6fda` | `0521b99` | `qc_cost_survey_2022/` |
-| BC log market | `d6905cb` | `0e46bbb` | `bc_log_market/` |
+| BMMB delivered auctions (Crown/teaching split) | `5ec04fc` | `0e82310` | `bmmb_delivered/` |
+| QC MRNF 2022 survey (corrected flags) | `e5fb044` | `2c81500` | `qc_cost_survey_2022/` |
+| BC log market (parser fix) | `1fc5165` | `107abdc` | `bc_log_market/` |
+| BC appraisal cost allowances | `1a8bd41` | `b90f00e` | `bc_appraisal_costs/` |
+| QC procurement cost benchmark | `3675bf3` | `8c8a56c` | `procurement_benchmark/` |
+| v2d forest-economics evidence | `567ed97` | `8acc794` | `forest_economics_v2d/` |
 | Operable proxy v2 | `5181122` | `1ef587a` | `operable_proxy_v2/` |
 | 960 m slope screen | `30729b0` | `6aa01d5` | `slope_screen/` |
 | Operable proxy v3 | `aeac8af` | `36cedf3` | `operable_proxy_v3/` |
+
+The v2d rebuild that fixes the confidentiality-flag, `benchmark_id`, and
+evidence-table review findings is the paired `567ed97` / `8acc794` row above.
+The preceding v2d publication is `1ed8550` / `1d165e9`.
 
 ## References
 
@@ -330,8 +403,11 @@ repository record. All derived reports and manifests are under
   inventory.
 - `data/derived/national/harvest_basis/forest_cost_revenue/FOREST_COST_REVENUE_COVERAGE.md`
 - `data/derived/national/harvest_basis/bmmb_delivered/README.md`
-- `data/derived/national/harvest_basis/qc_cost_survey_2022/README.md`
 - `data/derived/national/harvest_basis/bc_log_market/README.md`
+- `data/derived/national/harvest_basis/qc_cost_survey_2022/README.md`
+- `data/derived/national/harvest_basis/bc_appraisal_costs/README.md`
+- `data/derived/national/harvest_basis/procurement_benchmark/PROCUREMENT_BENCHMARK_REPORT.md`
+- `data/derived/national/harvest_basis/forest_economics_v2d/FOREST_ECONOMICS_V2D_REPORT.md`
 - `data/derived/national/managed_landbase/operable_proxy_v2/OPERABLE_PROXY_V2_REPORT.md`
 - `data/derived/national/managed_landbase/slope_screen/SLOPE_SCREEN_REPORT.md`
 - `data/derived/national/managed_landbase/operable_proxy_v3/OPERABLE_V3_REPORT.md`
