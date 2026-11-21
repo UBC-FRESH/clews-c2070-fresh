@@ -2,6 +2,21 @@
 
 ## 2026-11-21
 
+- **Built a QC net-value benchmark and sensitivity from observed 2022 survey
+  aggregates and BMMB delivered sales.** Added
+  `workflows/national/harvest/net_value_benchmark_v1.py`, which uses the T2
+  delivered purchase price and the T20 synthesis procurement rows to compute
+  before/after-transfer residuals for SEPM (25.82 / 0.81 CAD/m3), hardwood
+  sciage (5.69 / -14.53), and poplar trituration (-7.27 / -9.45); reports the
+  seven-region SEPM procurement range with the provincial purchase price held
+  constant; reports BMMB as a separate nominal 2011–2015 benchmark (18 sales,
+  11 full rates, weighted 38.2940, median 36.6668, no grade split); and adds a
+  three-case QC screening-volume sensitivity (572.8–880.9 M CAD before
+  transfers, 18.0–27.6 M CAD after). All rows are `evidence=survey_benchmark`
+  or `benchmark_historical`, `policy_grade=false`, and
+  `net_value_status=benchmark_only`. Added the output bundle, planning note,
+  and tests. No merged-ledger, model, UI, or public OSeCAN change; Forest LP v1
+  objective unchanged.
 - **Extended the forest cost/revenue ledger schema for quality and DBH curves.**
   Added optional `quality` (`F1`–`F4`, `DER`, `PATE`, `AUTRE`, `MIXED`, `NA`)
   and `dbh_cm` (positive finite, blank/`NA` allowed) to the ledger key and
