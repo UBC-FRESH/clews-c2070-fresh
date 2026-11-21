@@ -1,16 +1,29 @@
 # Net-value evidence v2d — QC reference and BC partial coverage
 
+> **Correction (2026-11-21): QC reference relabelled.** The v2d QC reference
+> came from the earlier `net_value_benchmark` artifact, which called the
+> T2/T20 difference a “residual” or net value and added an M CAD sensitivity.
+> That framing is withdrawn. The QC quantity is a **procurement-channel cost
+> spread** (`107.22 - 81.40 = 25.82`; `107.22 - 106.41 = 0.81`, CAD/m3), not
+> forest net value. Read `qc_reference.csv` as a cost-spread reference with
+> `net_value_status=not_estimated` and
+> `interpretation=purchased_vs_bgad_procurement_cost_spread`. Use
+> `planning/procurement-benchmark.md` and
+> `data/derived/national/harvest_basis/procurement_benchmark/` instead of the
+> deprecated artifact. This correction does not create a BC or national net
+> value; BC remains `not_estimated` (`missing_logging_and_haul_cost`).
+
 | Field | Value |
 |---|---|
 | Document | `planning/net-value-v2d.md` |
 | Date | 2026-11-21 |
 | Status | Evidence layer complete; BC net value deliberately not estimated. No merged-ledger, model, UI, or OSeCAN change. |
 | Scope | QC 2022 survey benchmark reference; BC 2019–2026 log-market prices, 2026 BCTS stumpage, and 2026 appraisal allowances |
-| Companion | `planning/net-value-benchmark.md` (QC benchmark, unchanged); `planning/forest-sector-evidence-v2.md`; `data/derived/national/harvest_basis/net_value_v2d/` |
+| Companion | `planning/procurement-benchmark.md` (corrected QC cost-spread note); `planning/net-value-benchmark.md` (deprecated framing); `planning/forest-sector-evidence-v2.md`; `data/derived/national/harvest_basis/net_value_v2d/` |
 
 **Decision summary.** The v2d layer separates five evidence classes and refuses
-to combine them. The QC 2022 survey residual is a validated reference, not a
-new estimate. BC has observed mill-delivered log-price averages, observed BCTS
+to combine them. The QC 2022 survey procurement cost spread is a validated
+reference, not a new estimate or a net value. BC has observed mill-delivered log-price averages, observed BCTS
 standing-timber stumpage, and published appraisal cost allowances for road,
 bridge, culvert, silviculture, specified operations, and tenure obligations.
 BC has **no** published general logging (tree-to-truck) or truck-haul $/m3:
@@ -22,7 +35,7 @@ No BC partial net value is computed and no combined national net value exists.
 
 | Evidence tier | What it is | What it is not |
 |---|---|---|
-| `survey_benchmark` | QC 2022 MRNF survey aggregate residual (delivered purchase minus survey procurement) | Not an observed transaction, not policy-grade, not a mill margin |
+| `survey_benchmark` | QC 2022 MRNF survey procurement cost spread (purchase cost minus BGAD cost) | Not an observed transaction, not net value, not policy-grade, not a mill margin |
 | `benchmark_historical` | BMMB 2011–2015 delivered-sale revenue, nominal | Not a 2022 price, not a cost stack, not deflated |
 | `observed_price` | BC published mill-delivered log-market average | Not a transaction record, not volume-weighted by grade |
 | `observed_stumpage` | BC BCTS winning bid for standing timber | Not delivered-log revenue, not a complete bid population |
@@ -34,21 +47,23 @@ re-keyed into one population.
 ## 2. QC reference
 
 The QC benchmark is not overwritten or re-derived. `qc_reference.csv` copies 14
-source rows after validating the QC manifest, source hashes, residual
-identities, and screening arithmetic:
+source rows after validating the QC manifest, source hashes, arithmetic
+identities, and screening arithmetic. **These are procurement-channel cost
+spreads, not residuals or net values:**
 
-- Three provincial residuals: SEPM (107.22 purchase; 25.82 before / 0.81 after
-  transfers CAD/m3), hardwood sciage (5.69 / -14.53), poplar trituration
-  (-7.27 / -9.45).
-- Seven regional SEPM conditional residuals: 10.15–48.49 before transfers and
-  -10.88–28.44 after transfers, with the provincial purchase price held
+- Three provincial cost spreads: SEPM (107.22 purchase cost; 25.82 before /
+  0.81 after transfers CAD/m3), hardwood sciage (5.69 / -14.53), poplar
+  trituration (-7.27 / -9.45).
+- Seven regional SEPM conditional cost spreads: 10.15–48.49 before transfers and
+  -10.88–28.44 after transfers, with the provincial purchase cost held
   constant.
 - Three QC screening-volume sensitivity cases.
 - One BMMB 2011–2015 historical revenue reference (18 sales; weighted 38.2940
   and median 36.6668 CAD/m3).
 
-Negative QC residuals are documented source arithmetic, not clipped or filled.
-The QC numbers remain `benchmark_only`, not policy-grade.
+Negative QC cost spreads are documented source arithmetic, not clipped or
+filled. The QC numbers remain `net_value_status=not_estimated`, not
+policy-grade.
 
 ## 3. BC revenue evidence
 
@@ -134,7 +149,7 @@ in this layer. BC rows carry `net_value_status=not_estimated` and
 | Evidence tier | `survey_benchmark` | `observed_price` + `observed_stumpage` + `appraisal_allowance` | Not comparable |
 | Revenue basis | Delivered-to-mill survey purchase, nominal 2022 | Mill-delivered published averages (2019–2026); standing-timber BCTS bids (2026) | Not comparable |
 | Cost coverage | Full survey procurement stack including harvest and haul | Partial appraisal allowances; logging and general truck haul missing | Not comparable |
-| Net value | `benchmark_only` (SEPM 25.82 / 0.81 CAD/m3) | `not_estimated` (`missing_logging_and_haul_cost`) | Not comparable |
+| Net value | `not_estimated`; SEPM procurement cost spread 25.82 / 0.81 CAD/m3 | `not_estimated` (`missing_logging_and_haul_cost`) | Not comparable |
 | Policy grade | `false` | `false` | Neither is policy-grade |
 
 The QC column is a complete survey benchmark for its own scope. The BC column is
@@ -195,7 +210,8 @@ coverage only, and labels BC net value as not estimated.
 
 ## 10. Use rules
 
-1. Use the QC residual as a benchmark or calibration target, not a ledger row.
+1. Use the QC procurement cost spread as a benchmark or calibration target,
+   not a ledger row and not a net value.
 2. Use BC log-market prices as observed average revenue evidence, not
    transactions or a complete population.
 3. Use BCTS stumpage as standing-timber evidence, never as delivered revenue.

@@ -2,6 +2,26 @@
 
 ## 2026-11-21
 
+- **Corrected the QC benchmark from “net value” to a procurement cost spread.**
+  Added `workflows/national/harvest/procurement_benchmark_v1.py`, which reads
+  T2 purchase cost and T20 BGAD synthesis rows as two different procurement
+  channels. SEPM is 107.22 purchase cost, 81.40 BGAD before, 25.01 transfers,
+  106.41 after; the 25.82 and 0.81 CAD/m3 differences are now
+  `cost_spread_before/after_transfers`, not residuals or net value. Every row is
+  `net_value_status=not_estimated`,
+  `interpretation=purchased_vs_bgad_procurement_cost_spread`, and
+  `policy_grade=false`. The QC/M CAD volume sensitivity is removed. Regional
+  rows cite REG `regional_2022`
+  (`Compilation_donnees_regionalisees_2022.pdf`), preserve the R09 `n=3` flag on
+  its row and both min/max bound rows, and state that bound columns are
+  independent extrema. BMMB reports Crown-only as primary (9 full rates /
+  74,550 m3 / 35.7547 CAD/m3), teaching/research separately (2 / 15,350 /
+  50.6266), and all-in as secondary (11 / 89,900 / 38.2940), with dynamic
+  per-year counts, per-year price bases, and the 2012 re-offer overlap caveat.
+  Added `procurement_benchmark/`, `DEPRECATED.md` in the old artifact,
+  `planning/procurement-benchmark.md`, planning correction banners, tests, and
+  fail-closed validation. No merged-ledger, model, UI, BC log-market, or public
+  OSeCAN change.
 - **Built the v2d net-value evidence layer with QC and BC evidence separated.**
   Added `workflows/national/harvest/net_value_v2d.py`, which validates and
   references the QC 2022 survey benchmark without rewriting it; builds 1,852
@@ -16,8 +36,8 @@
   national net value are computed. Added the output bundle, planning note,
   tests, and 29 fail-closed checks. No merged-ledger, model, UI, or OSeCAN
   change.
-- **Built a QC net-value benchmark and sensitivity from observed 2022 survey
-  aggregates and BMMB delivered sales.** Added
+- **Built the initial QC “net-value” benchmark and sensitivity (superseded by
+  the procurement-cost correction above).** Added
   `workflows/national/harvest/net_value_benchmark_v1.py`, which uses the T2
   delivered purchase price and the T20 synthesis procurement rows to compute
   before/after-transfer residuals for SEPM (25.82 / 0.81 CAD/m3), hardwood

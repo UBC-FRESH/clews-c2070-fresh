@@ -5,15 +5,22 @@
 Governing note: [planning/forest-sector-evidence-v2.md](planning/forest-sector-evidence-v2.md).
 
 Status: evidence collection and the v2d net-value evidence layer are complete.
-BC net value remains `not_estimated` because general logging and truck-haul
-$/m3 are not published; no combined national net value is computed.
+The QC 2022 survey is a procurement **cost spread**, not a net value; the old
+QC/M CAD net-value sensitivity is withdrawn. BC net value remains
+`not_estimated` because general logging and truck-haul $/m3 are not published;
+no combined national net value is computed.
 
 - [x] v2a source review — no public QC mill-settlement ledger; BMMB/MRNF, BC
   log-market, MRDEM, and THLB limits recorded.
 - [x] v2b cost/revenue ledger — 2,888 rows (200 observed BC + 2,688 QC model
   input); 2,075 delivered-log rows; observed/model-input separation enforced.
-- [x] BMMB delivered auctions — 18 sales, 13 awarded, 38.29 CAD/m3 weighted
-  nominal.
+- [x] QC procurement-cost correction — T2 purchase cost vs T20 BGAD is a
+  channel cost spread, not net value; `net_value_status=not_estimated`; no
+  QC/M CAD sensitivity. Regional rows cite REG `regional_2022`; BMMB primary is
+  Crown-only (9 full rates, 74,550 m3, 35.7547 CAD/m3), with teaching and
+  all-in series separate.
+- [x] BMMB delivered auctions — 18 sales, 13 awarded, 38.29 CAD/m3 all-in
+  weighted nominal; Crown-only primary 35.75 CAD/m3.
 - [x] QC MRNF 2022 survey — 660 observations; 81.40 / 25.01 / 106.41 CAD/m3
   procurement stack.
 - [x] BC log market — 15,705 rows from 505 PDFs, 2019–2026.

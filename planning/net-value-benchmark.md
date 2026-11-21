@@ -1,5 +1,17 @@
 # QC net-value benchmark — 2022 survey and BMMB historical check
 
+> **Correction (2026-11-21): superseded.** This note called the T2/T20
+> difference a “residual” or forest-sector net value and included a QC/M CAD
+> volume sensitivity. That framing is wrong. T2 `107.22` is a buyer-side
+> procurement **cost**, T20 BGAD is a different respondent sample, and
+> `107.22 - 81.40 = 25.82` / `107.22 - 106.41 = 0.81` are
+> **procurement-channel cost spreads**, not forest net value. The M CAD
+> sensitivity is withdrawn. See `planning/procurement-benchmark.md` and
+> `data/derived/national/harvest_basis/procurement_benchmark/`; the old
+> artifact is retained for audit with `DEPRECATED.md`. Every replacement row is
+> `net_value_status=not_estimated` and
+> `interpretation=purchased_vs_bgad_procurement_cost_spread`.
+
 | Field | Value |
 |---|---|
 | Document | `planning/net-value-benchmark.md` |
@@ -89,9 +101,11 @@ product-level cost and price bases are not interchangeable with the SEPM total.
 
 ### 3.2 Regional range (SEPM only, 2022)
 
-Seven published regional groups have T20 synthesis procurement rows. They do
-not publish a regional purchase price. The residual range therefore holds the
-provincial SEPM purchase price of 107.22 constant:
+Seven published regional groups have **REG `regional_2022`**
+(`Compilation_donnees_regionalisees_2022.pdf`) synthesis procurement rows, not
+T20 rows. They do not publish a regional purchase price. The conditional cost
+spread range therefore holds the provincial SEPM purchase cost of 107.22
+constant:
 
 | Region | n | Before | After | Residual before | Residual after |
 |---|---:|---:|---:|---:|---:|
@@ -125,7 +139,11 @@ if it were the same price year. The archive does not publish species, grade,
 destination, or service-bundle allocation, and the sale type is not confirmed
 as mill gate.
 
-### 3.4 QC total sensitivity (screening, M CAD)
+### 3.4 QC total sensitivity (withdrawn — do not use)
+
+**This section is withdrawn.** It multiplied a procurement cost spread by a
+screening allocation volume and called the result a “net value”. That is not a
+valid net-value estimate. No replacement M CAD diagnostic is produced.
 
 QC harvest volumes are clearly mapped from the provincial allocation screening
 files. Applying the SEPM residual gives:
@@ -175,8 +193,9 @@ used: T2 is the input, T21 is a consistency check only.
 
 ## 6. Use rules
 
-1. Use the SEPM before/after-transfer residual as a **benchmark or calibration
-   target**, not as an observed ledger row.
+1. Use the corrected SEPM procurement **cost spread** from
+   `planning/procurement-benchmark.md` as a benchmark or calibration target,
+   not as an observed ledger row and not as net value.
 2. Do not merge these rows into the merged cost/revenue ledger. The survey
    aggregate grain, sample, and price basis are different.
 3. Do not net transformation, lumber, or by-product revenue against log costs.
@@ -209,5 +228,5 @@ data/derived/national/harvest_basis/net_value_benchmark/
 ## 8. Next
 
 The BC benchmark remains blocked on observed appraisal-cost data landing. When
-BC costs arrive, build the same before/after-transfer residual with a separate
-BC source and do not apply QC values to BC or vice versa.
+BC costs arrive, build a separate BC cost stack; do not apply QC values to BC or
+vice versa. Do not describe a procurement cost spread as net value.
