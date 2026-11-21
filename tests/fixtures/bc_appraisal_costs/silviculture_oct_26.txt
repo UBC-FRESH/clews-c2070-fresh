@@ -1,0 +1,16 @@
+             Timber Pricing Branch
+
+
+      INTERIOR SILVICULTURE COSTS ($/m3)
+            EFFECTIVE: October 1, 2026
+
+
+
+         Forest Zone           All Species Average
+North Central Zone                       10.02
+North East Zone                          10.61
+North West Zone                           5.84
+North Fort Nelson Zone                   10.61
+South Central Zone                        8.40
+South East Zone                          10.65
+South West Zone                          11.23
