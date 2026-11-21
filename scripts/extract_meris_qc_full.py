@@ -8,7 +8,8 @@ The extractor is read-only against ``MERIS_BdTbl.accdb`` and publishes:
 * the 191-zone economic value decomposition (Rdv/Bnf/Rsl/Aut1/Aut2/Tot);
 * the 2,674 administered royalty rows;
 * the 191-zone supply-cost parameters and the 94-row treatment catalogue;
-* a canonical 16-field ledger block containing only model-input revenue and
+* a canonical 18-field ledger block (the 16 core fields plus optional
+  ``quality`` and ``dbh_cm``) containing only model-input revenue and
   production-cost rows (no observed transaction, no fabricated volume);
 * provenance and per-file manifests.
 
@@ -111,20 +112,29 @@ LEDGER_FIELDS = (
     "confidence",
     "licence",
     "notes",
+    "quality",
+    "dbh_cm",
 )
 
-# QC quality -> ledger product.  This script still emits the legacy 16-field
-# block, so the quality class is preserved in the licence suffix and the
-# qc_quality note.  The validator now also accepts an optional quality column;
-# a later extraction can populate it instead of encoding the class in licence.
+# QC quality -> ledger product.  The quality class is also written to the
+# dedicated ``quality`` column; the licence suffix stays for human auditability.
 QUALITY_TO_PRODUCT = {
     "DER": "peeler",
     "F1": "sawlog",
     "F2": "sawlog",
     "F3": "sawlog",
     "F4": "sawlog",
+    "PATE": "pulpwood",
     "AUTRE": "mixed_log",
 }
+
+# The species/DBH curves are composite sawing + chips + by-product values for
+# SEPM species; they are not a single grade.  ``mixed_log`` is the honest
+# product class; the curve coordinate is carried by ``dbh_cm`` and the grade is
+# explicitly absent (``quality=NA``).
+CURVE_PRODUCT = "mixed_log"
+CURVE_PROFILE = "Profil_2"
+PRICE_PLACEHOLDER = 0.01
 
 
 def sha256_file(path: Path) -> str:
@@ -423,71 +433,154 @@ def ledger_note(tokens: Sequence[tuple[str, str]]) -> str:
 
 def build_ledger_rows(
     price_rows: Sequence[Mapping[str, str]],
+    curves: Sequence[Mapping[str, object]],
     costs: Sequence[Mapping[str, object]],
     treatments: Sequence[Mapping[str, object]],
 ) -> list[dict[str, object]]:
     ledger: list[dict[str, object]] = []
-    # Revenue: the current (courant, _2) series only.  Trend values remain in
-    # the deck as a sensitivity; putting both in one ledger block would create
-    # two additive prices for the same component.
+    # Revenue, first layer: the species x product price deck.  Both shipped
+    # series (1=tendance, 2=courant) are ingested because they are alternative
+    # model scenarios; the series is part of the licence id and the notes, so
+    # the rows are distinct ledger keys and are never summed blindly.  Values
+    # at or below 0.01 are the MERIS "value not set" placeholder and are
+    # excluded, not converted to revenue.  PATE has no usable value in this
+    # release, so the pulpwood quality class is mapped but yields no row.
     for row in price_rows:
         species = row["ESSENCE"].strip()
         for product in PRODUCTS:
-            if product == "PATE":
-                # Every PATE value is 0.0100 or 0.0000 in this table.  The
-                # 0.0100 values are the MERIS placeholder for "value not set".
-                continue
-            value = number(row[f"Prix_{PRICE_COLUMNS[product]}_2"])
-            if value <= 0.01:
-                continue
             ledger_product = QUALITY_TO_PRODUCT[product]
-            included = row[f"Redev_{PRICE_COLUMNS[product]}_2_Inclus"].strip()
-            ledger.append(
-                {
-                    "jurisdiction": "QC",
-                    "source": "prov_qc_meris",
-                    "year": "2025",
-                    "spatial_unit": "QC-MERIS-PROV",
-                    "species": species,
-                    "product": ledger_product,
-                    "volume_m3": "1.0",
-                    "unit": "CAD_per_m3_log",
-                    "value_cad": decimal(value),
-                    "value_basis": "model_input:mill_gate",
-                    "perspective": "forest_sector",
-                    "component": "delivered_log_revenue",
-                    "sign": "1",
-                    "confidence": (
-                        "low" if product == "AUTRE" else "medium"
-                    ),
-                    "licence": f"QC-MERIS-{species}-{product}-C",
-                    "notes": ledger_note(
+            for code, series in SERIES:
+                column = f"Prix_{PRICE_COLUMNS[product]}_{code}"
+                value = number(row[column])
+                if value <= PRICE_PLACEHOLDER:
+                    continue
+                included = row[
+                    f"Redev_{PRICE_COLUMNS[product]}_{code}_Inclus"
+                ].strip()
+                suffix = "C" if series == "courant" else "T"
+                ledger.append(
+                    {
+                        "jurisdiction": "QC",
+                        "source": "prov_qc_meris",
+                        "year": "2025",
+                        "spatial_unit": "QC-MERIS-PROV",
+                        "species": species,
+                        "product": ledger_product,
+                        "volume_m3": "1.0",
+                        "unit": "CAD_per_m3_log",
+                        "value_cad": decimal(value),
+                        "value_basis": "model_input:mill_gate",
+                        "perspective": "forest_sector",
+                        "component": "delivered_log_revenue",
+                        "sign": "1",
+                        "confidence": (
+                            "low" if product == "AUTRE" else "medium"
+                        ),
+                        "licence": f"QC-MERIS-{species}-{product}-{suffix}",
+                        "notes": ledger_note(
+                            (
+                                ("currency_basis", "CAD_nominal"),
+                                (
+                                    "source_table",
+                                    f"{PRICE_TABLE}:{column}",
+                                ),
+                                ("series", series),
+                                ("qc_quality", product),
+                                ("stumpage_included", included or "0"),
+                                ("not_observed", "1"),
+                                ("model_input", "1"),
+                                ("not_a_transaction", "1"),
+                                ("price_point", "mill_gate"),
+                                (
+                                    "price_point_basis",
+                                    "value_net_of_processing_cost",
+                                ),
+                                ("volume_basis", "m3_solid"),
+                                ("rate_denominator", "1_m3"),
+                                ("coverage", "partial"),
+                                (
+                                    "coverage_denominator",
+                                    "45_species_x_7_products_x_2_series",
+                                ),
+                                ("price_year_basis", "db_release_2025-09-23"),
+                            )
+                        ),
+                        "quality": product,
+                        "dbh_cm": "",
+                    }
+                )
+
+    # Revenue, second layer: the SEPM species x DBH curves.  The three shipped
+    # profiles are byte-identical, so Profil_2 is the canonical representative;
+    # using all three would triple-count the same curve.  The curve coordinate
+    # is the optional ``dbh_cm`` key dimension; no quality class is attached.
+    curve_rows = [row for row in curves if row["profile"] == CURVE_PROFILE]
+    if not curve_rows:
+        raise SystemExit(f"no {CURVE_PROFILE} rows in the revenue curves")
+    for row in curve_rows:
+        species = str(row["species"])
+        series = str(row["type"])
+        dbh = int(str(row["dbh"]))
+        value = number(str(row["revenue"]))
+        if value <= PRICE_PLACEHOLDER:
+            # The release has no PATE/0.01 curve value; keep the exclusion
+            # explicit so a future placeholder cannot become revenue.
+            continue
+        suffix = "C" if series == "courant" else "T"
+        ledger.append(
+            {
+                "jurisdiction": "QC",
+                "source": "prov_qc_meris",
+                "year": "2025",
+                "spatial_unit": "QC-MERIS-PROV",
+                "species": species,
+                "product": CURVE_PRODUCT,
+                "volume_m3": "1.0",
+                "unit": "CAD_per_m3_log",
+                "value_cad": decimal(value),
+                "value_basis": "model_input:mill_gate",
+                "perspective": "forest_sector",
+                "component": "delivered_log_revenue",
+                "sign": "1",
+                "confidence": "medium",
+                "licence": f"QC-MERIS-CURVE-{species}-{dbh}-{suffix}",
+                "notes": ledger_note(
+                    (
+                        ("currency_basis", "CAD_nominal"),
                         (
-                            ("currency_basis", "CAD_nominal"),
-                            (
-                                "source_table",
-                                f"{PRICE_TABLE}:Prix_{PRICE_COLUMNS[product]}_2",
-                            ),
-                            ("series", "courant"),
-                            ("qc_quality", product),
-                            ("stumpage_included", included or "0"),
-                            ("not_observed", "1"),
-                            ("model_input", "1"),
-                            ("not_a_transaction", "1"),
-                            ("price_point", "mill_gate"),
-                            ("price_point_basis", "value_net_of_processing_cost"),
-                            ("volume_basis", "m3_solid"),
-                            ("rate_denominator", "1_m3"),
-                            ("coverage", "partial"),
-                            (
-                                "coverage_denominator",
-                                "45_species_x_7_products_x_2_series",
-                            ),
-                            ("price_year_basis", "db_release_2025-09-23"),
-                        )
-                    ),
-                }
-            )
+                            "source_table",
+                            f"{CURVE_TABLES[0]}:SCIAGE+PATE",
+                        ),
+                        ("series", series),
+                        ("profile", CURVE_PROFILE),
+                        (
+                            "profile_equivalence",
+                            "Profil_2=Profil_3=Profil_4",
+                        ),
+                        (
+                            "product_basis",
+                            "SEPM_composite_sciage_chips_byproducts",
+                        ),
+                        ("not_observed", "1"),
+                        ("model_input", "1"),
+                        ("not_a_transaction", "1"),
+                        ("price_point", "mill_gate"),
+                        ("price_point_basis", "value_net_of_processing_cost"),
+                        ("volume_basis", "m3_solid"),
+                        ("rate_denominator", "1_m3"),
+                        ("curve_coordinate", f"dbh_cm={dbh}"),
+                        ("coverage", "partial"),
+                        (
+                            "coverage_denominator",
+                            "12_species_x_76_dbh_x_2_series",
+                        ),
+                        ("price_year_basis", "db_release_2025-09-23"),
+                    )
+                ),
+                "quality": "NA",
+                "dbh_cm": str(dbh),
+            }
+        )
 
     for row in costs:
         zone = str(row["zone"]).strip()
@@ -535,6 +628,8 @@ def build_ledger_rows(
                             else ("unit", "CAD_per_m3_log"),
                         )
                     ),
+                    "quality": "NA",
+                    "dbh_cm": "",
                 }
             )
 
@@ -578,6 +673,8 @@ def build_ledger_rows(
                         ("cost_year_basis", "db_release_2025-09-23"),
                     )
                 ),
+                "quality": "NA",
+                "dbh_cm": "",
             }
         )
     return ledger
@@ -632,7 +729,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     royalties_wide, royalties_long = build_royalties(tables[ROYALTY_TABLE])
     costs = build_costs(tables[COST_TABLE])
     treatments = build_treatments(tables[TREATMENT_TABLE])
-    ledger_rows = build_ledger_rows(tables[PRICE_TABLE], costs, treatments)
+
+    # The three shipped SEPM profiles are byte-identical in this release.  Fail
+    # closed if that changes, because the ledger ingests a single canonical
+    # profile and must not silently drop a genuinely different curve.
+    curve_values: dict[str, dict[tuple[str, str, str], str]] = {}
+    for row in curves:
+        key = (str(row["species"]), str(row["type"]), str(row["dbh"]))
+        curve_values.setdefault(str(row["profile"]), {})[key] = str(row["revenue"])
+    canonical_curve = curve_values[CURVE_PROFILE]
+    for profile, values in curve_values.items():
+        if values != canonical_curve:
+            raise SystemExit(
+                f"revenue profile {profile} differs from {CURVE_PROFILE}; "
+                "the one-profile ledger ingest would lose information"
+            )
+
+    ledger_rows = build_ledger_rows(
+        tables[PRICE_TABLE], curves, costs, treatments
+    )
 
     expected_zone_long = EXPECTED_COUNTS[ZONE_VALUE_TABLE] * len(PRODUCTS)
     expected_royalty_long = EXPECTED_COUNTS[ROYALTY_TABLE] * len(PRODUCTS)
@@ -822,6 +937,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "price_status_counts": dict(Counter(str(row["status"]) for row in price_long)),
             "curve_rows_per_profile": 1_824,
             "curve_profiles": sorted({str(row["profile"]) for row in curves}),
+            "curve_ledger_profile": CURVE_PROFILE,
             "zone_source_rows": len(tables[ZONE_VALUE_TABLE]),
             "zone_long_rows": len(zone_long),
             "zone_max_identity_residual": max_zone_residual,
@@ -831,6 +947,49 @@ def main(argv: Sequence[str] | None = None) -> int:
             "ledger_rows": len(ledger_rows),
             "ledger_components": dict(
                 Counter(str(row["component"]) for row in ledger_rows)
+            ),
+            "ledger_quality_counts": dict(
+                Counter(
+                    str(row["quality"])
+                    for row in ledger_rows
+                    if str(row["quality"]) != "NA"
+                )
+            ),
+            "ledger_quality_rows": sum(
+                1 for row in ledger_rows if str(row["quality"]) != "NA"
+            ),
+            "ledger_dbh_rows": sum(
+                1 for row in ledger_rows if str(row["dbh_cm"])
+            ),
+            "ledger_dbh_species": len(
+                {
+                    str(row["species"])
+                    for row in ledger_rows
+                    if str(row["dbh_cm"])
+                }
+            ),
+            "ledger_dbh_min": min(
+                (
+                    float(str(row["dbh_cm"]))
+                    for row in ledger_rows
+                    if str(row["dbh_cm"])
+                ),
+                default=None,
+            ),
+            "ledger_dbh_max": max(
+                (
+                    float(str(row["dbh_cm"]))
+                    for row in ledger_rows
+                    if str(row["dbh_cm"])
+                ),
+                default=None,
+            ),
+            "ledger_series_counts": dict(
+                Counter(
+                    str(row["notes"]).split("series=", 1)[1].split(";", 1)[0]
+                    for row in ledger_rows
+                    if "series=" in str(row["notes"])
+                )
             ),
             "ledger_volume_weight": "1.0 rate denominator, not an actual harvest volume",
         },

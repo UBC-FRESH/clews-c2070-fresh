@@ -74,7 +74,10 @@ LHV_GJ_PER_ODT = 18.5
 ALLOCATION_TOLERANCE_M3 = 2.0
 CAP_TOLERANCE_M3 = 1.0
 RESIDUE_TOLERANCE_PJ = 1e-6
-EXPECTED_LEDGER_ROWS = 940
+EXPECTED_LEDGER_ROWS = 2_888
+EXPECTED_BC_ROWS = 200
+EXPECTED_QC_ROWS = 2_688
+EXPECTED_DELIVERED_LOG_REVENUE_ROWS = 2_075
 EXPECTED_MIRROR_PAIRS = 100
 EXPECTED_ALLOCATION_ROWS = 117
 
@@ -786,7 +789,9 @@ def validate_ledger(rows: Sequence[Mapping[str, str]]) -> dict[str, object]:
     jurisdiction_counts = Counter(
         (row.get("jurisdiction") or "").strip() for row in rows
     )
-    expected_jurisdictions = Counter({"BC": 200, "QC": 740})
+    expected_jurisdictions = Counter(
+        {"BC": EXPECTED_BC_ROWS, "QC": EXPECTED_QC_ROWS}
+    )
     if jurisdiction_counts != expected_jurisdictions:
         raise ForestLPError(
             f"{LEDGER_PATH}: expected jurisdiction counts "
@@ -891,6 +896,11 @@ def validate_ledger(rows: Sequence[Mapping[str, str]]) -> dict[str, object]:
         raise ForestLPError(
             f"{LEDGER_PATH}: every delivered_log_revenue row must be an "
             "explicit model input"
+        )
+    if len(delivered_rows) != EXPECTED_DELIVERED_LOG_REVENUE_ROWS:
+        raise ForestLPError(
+            f"{LEDGER_PATH}: expected {EXPECTED_DELIVERED_LOG_REVENUE_ROWS} "
+            f"delivered_log_revenue rows, got {len(delivered_rows)}"
         )
 
     return {
@@ -1701,9 +1711,11 @@ def _report(
                 f"{bc_cost.source_frame_share * 100:.2f}% of the same denominator. "
                 f"QC MERIS is the full model-input deck: {qc_cost.model_input_rows} "
                 f"rows, {qc_cost.source_frame_share * 100:.2f}% zone coverage, and "
-                "127 delivered-log model-input rows with 0 observed. It has no "
-                "observed permit-volume register, so rows use a 1 m3 rate "
-                "denominator and harvest-volume coverage is `not_estimable`."
+                f"{EXPECTED_DELIVERED_LOG_REVENUE_ROWS} delivered-log model-input "
+                "rows with 0 observed (251 quality-class price rows plus 1,824 "
+                "species/DBH curve rows). It has no observed permit-volume "
+                "register, so rows use a 1 m3 rate denominator and "
+                "harvest-volume coverage is `not_estimable`."
             ),
             "",
             "**Stumpage anchor status.** "

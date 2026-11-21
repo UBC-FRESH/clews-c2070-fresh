@@ -39,21 +39,24 @@ def test_merge_conserves_every_input_row(merged: merge.MergeResult) -> None:
     output_core = [
         {name: row[name] for name in CORE_LEDGER_FIELDS} for row in output_rows
     ]
-    assert output_core == input_rows
-    assert all(row["quality"] == "NA" for row in output_rows)
-    assert all(row["dbh_cm"] == "" for row in output_rows)
-    assert len(merged.ledger) == len(input_rows) == 940
-    assert merged.summary["row_counts"]["by_jurisdiction"] == {"BC": 200, "QC": 740}
+    input_core = [
+        {name: row[name] for name in CORE_LEDGER_FIELDS} for row in input_rows
+    ]
+    assert output_core == input_core
+    assert sum(row["quality"] != "NA" for row in output_rows) == 251
+    assert sum(bool(row["dbh_cm"]) for row in output_rows) == 1_824
+    assert len(merged.ledger) == len(input_rows) == 2_888
+    assert merged.summary["row_counts"]["by_jurisdiction"] == {"BC": 200, "QC": 2_688}
     assert merged.summary["row_counts"]["by_source"] == {
         "prov_bcts_auction_results": 200,
-        "prov_qc_meris": 740,
+        "prov_qc_meris": 2_688,
     }
     assert merged.summary["row_counts"]["by_perspective"] == {
         "crown": 100,
-        "forest_sector": 840,
+        "forest_sector": 2_788,
     }
     assert merged.summary["row_counts"]["by_evidence_class"] == {
-        "model_input": 740,
+        "model_input": 2_688,
         "observed": 200,
     }
     assert merged.summary["merge_rules"]["no_imputation"] is True
@@ -151,18 +154,49 @@ def test_coverage_math_uses_stated_denominators(merged: merge.MergeResult) -> No
     assert qc["treatment_share"]["share"] == pytest.approx(40 / 94, abs=1e-6)
     assert qc["ledger"]["observed_volume_m3"] == 0.0
     assert qc["ledger"]["observed_rows"] == 0
-    assert qc["ledger"]["model_input_rows"] == 740
-    assert qc["ledger"]["delivered_log_revenue_model_input_rows"] == 127
+    assert qc["ledger"]["model_input_rows"] == 2_688
+    assert qc["ledger"]["delivered_log_revenue_model_input_rows"] == 2_075
     assert qc["ledger"]["delivered_log_revenue_observed_rows"] == 0
+    assert qc["ledger"]["delivered_log_revenue_quality_rows"] == 251
+    assert qc["ledger"]["delivered_log_revenue_dbh_rows"] == 1_824
+    assert qc["ledger"]["quality_rows_by_class"] == {
+        "AUTRE": 2,
+        "DER": 38,
+        "F1": 53,
+        "F2": 53,
+        "F3": 56,
+        "F4": 49,
+    }
+    assert qc["ledger"]["dbh_species"] == [
+        "EPB",
+        "EPN",
+        "EPO",
+        "EPR",
+        "MEH",
+        "MEJ",
+        "MEL",
+        "MEU",
+        "PID",
+        "PIG",
+        "PIS",
+        "SAB",
+    ]
+    assert qc["ledger"]["dbh_min_cm"] == 10.0
+    assert qc["ledger"]["dbh_max_cm"] == 160.0
+    assert qc["ledger"]["dbh_class_count"] == 76
+    assert qc["ledger"]["delivered_log_revenue_series_counts"] == {
+        "courant": 1_039,
+        "tendance": 1_036,
+    }
     assert qc["harvest_volume_share"]["share"] is None
     assert qc["harvest_volume_share"]["status"] == "not_estimable"
 
     assert coverage["denominators"]["bc_plus_qc_share_of_national"][
         "share"
     ] == pytest.approx(64_815_624 / 118_977_339, abs=1e-6)
-    assert merged.summary["row_counts"]["total_rows"] == 940
+    assert merged.summary["row_counts"]["total_rows"] == 2_888
     assert merged.summary["evidence_classes"]["observed_rows"] == 200
-    assert merged.summary["evidence_classes"]["model_input_rows"] == 740
+    assert merged.summary["evidence_classes"]["model_input_rows"] == 2_688
 
 
 def test_no_cross_perspective_or_cross_province_summation(
@@ -211,9 +245,25 @@ def test_no_observed_delivered_log_revenue_was_fabricated(
         for row in merged.ledger
         if row.component is Component.DELIVERED_LOG_REVENUE
     ]
-    assert len(delivered) == 127
+    assert len(delivered) == 2_075
     assert {row.value_basis.evidence for row in delivered} == {Evidence.MODEL_INPUT}
     assert all(row.notes_tokens["not_observed"] == "1" for row in delivered)
+
+    quality_rows = [row for row in delivered if row.quality.value != "NA"]
+    dbh_rows = [row for row in delivered if row.dbh_cm is not None]
+    assert len(quality_rows) == 251
+    assert len(dbh_rows) == 1_824
+    assert {row.quality.value for row in quality_rows} == {
+        "AUTRE",
+        "DER",
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+    }
+    assert all(row.dbh_cm is not None for row in dbh_rows)
+    assert all(row.quality.value == "NA" for row in dbh_rows)
+    assert "PATE" not in {row.quality.value for row in delivered}
 
     bcts = [row for row in merged.ledger if row.source == "prov_bcts_auction_results"]
     qc = [row for row in merged.ledger if row.source == "prov_qc_meris"]

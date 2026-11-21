@@ -278,13 +278,14 @@ The full deck contains:
 | `meris_costs.csv` | zone | 191 | supply-cost parameters; CAD/m3 except tertiary/other fixed CAD/ha; no date |
 | `meris_silviculture.csv` | treatment | 94 | 40 `DolHa` usable; 19 per 1,000 plants and 1 per 1,000 microsites need density |
 
-The ledger block `forest_cost_revenue_qc_model.csv` has 740 rows: 127
+The original ledger block `forest_cost_revenue_qc_model.csv` had 740 rows: 127
 `delivered_log_revenue` rows (current series, positive values only), 191
 `road`, 191 `overhead`, 191 `harvest` (loading only, partial), and 40
 `silviculture` rows. Every row is `prov_qc_meris`, `forest_sector`,
 `model_input=1`, `not_observed=1`, with `volume_m3=1` as a rate denominator.
-The block is **not a net-value estimate**: actual volume, haul, full harvest,
-stumpage join, and a quality dimension are still missing.
+**Superseded 2026-11-21 by §8**: the rebuilt block has 2,688 rows and populates
+`quality` and `dbh_cm`. The block is still **not a net-value estimate**: actual
+volume, haul, full harvest, and a royalty-group crosswalk are still missing.
 
 ## References
 
@@ -296,3 +297,70 @@ stumpage join, and a quality dimension are still missing.
 - `data/derived/national/harvest_basis/meris_qc_sample/gaps.csv`
 - `planning/forest-cost-revenue-ledger.md` §3–§4 (schema, QC ingestion rules)
 - `workflows/national/harvest/cost_revenue.py` (validator)
+
+## 8. Quality/DBH ledger ingest (2026-11-21)
+
+The optional `quality` and `dbh_cm` dimensions are now populated. The QC block
+`meris_qc_full/forest_cost_revenue_qc_model.csv` grows from 740 to **2,688**
+rows; every revenue row remains `model_input:mill_gate`, `forest_sector`,
+`not_observed=1`, `model_input=1`, and uses `volume_m3=1` as a rate denominator.
+
+### 8.1 Price-deck quality rows
+
+`tbl_Essences_frm_inv_tiges` is ingested for **both series** (`Prix_*_1` =
+tendance, `Prix_*_2` = courant) with the fixed class/product map:
+
+| `quality` | Product | Rows (both series) |
+|---|---|---:|
+| `DER` | `peeler` | 38 |
+| `F1` | `sawlog` | 53 |
+| `F2` | `sawlog` | 53 |
+| `F3` | `sawlog` | 56 |
+| `F4` | `sawlog` | 49 |
+| `PATE` | `pulpwood` | 0 (all 0.0100/0.0000 placeholder) |
+| `AUTRE` | `mixed_log` | 2 |
+| **Total** | | **251** |
+
+Values at or below `0.01` are the MERIS "value not set" placeholder and are
+excluded, not converted to revenue. The two series are alternative model
+scenarios, separated by licence suffix `C`/`T`; they are not independent
+observations and must not be summed. `AUTRE` remains `low` confidence; all other
+price rows are `medium`.
+
+### 8.2 Species/DBH curve rows
+
+`tbl_essences_revenus_EssDhp_Profil_2/3/4` are ingested from the canonical
+`Profil_2` only; all three profiles are byte-identical in this release, so using
+three would triple-count the same curve. The extractor fails closed if a profile
+ever differs. Rows: **1,824** = 12 SEPM species × 76 DBH classes (10–160 cm) ×
+2 series. Each row is `component=delivered_log_revenue`, `product=mixed_log`,
+`quality=NA`, `dbh_cm=<positive>`, `value_basis=model_input:mill_gate`. The
+curve is a composite of sawing, chips, and by-products (`SCIAGE=PATE`), not a
+single grade; `quality=NA` is therefore correct. No `0.01` placeholder occurs in
+these tables, and any such value would be excluded.
+
+### 8.3 Rebuild, merge, and LP v1
+
+- Rebuilt QC block: 2,688 rows (2,075 delivered revenue + 191 road + 191
+  overhead + 191 loading-only harvest + 40 silviculture).
+- Merged BC + QC ledger: **2,888 rows** (200 observed BCTS + 2,688 model
+  input), `forest_cost_revenue/forest_cost_revenue.csv`; the old 17-row sample
+  is not merged.
+- `load_ledger` validates all 2,888 rows; 100 mirror pairs remain paired.
+- Forest LP v1 synthesis re-run: 34 checks pass; cost/revenue coverage reports
+  2,075 model-input delivered-log rows (251 quality + 1,824 DBH) and 0 observed;
+  **net value remains `not_estimated`**.
+- Tests: `tests/test_forest_cost_revenue.py`,
+  `tests/test_cost_revenue_merge.py`, and `tests/test_forest_lp_v1.py` →
+  **39 passed**.
+
+### 8.4 Coverage and remaining gaps
+
+The price deck is 251/630 usable cells (39.8%): 293 zeros and 86 `PATE`
+placeholders are retained in the deck but excluded from the ledger. The DBH
+curve is 1,824/1,824 cells for the canonical profile. Coverage remains
+`partial`: MERIS still has no observed delivered price, no permit-volume
+register, no zone→UA crosswalk, no full harvest equation per zone, no haul
+destination mix, and no royalty-group ↔ zone-value-group crosswalk. A
+volume-weighted provincial revenue or net value is therefore still
+`not_estimated`.

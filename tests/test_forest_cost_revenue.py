@@ -573,11 +573,16 @@ def test_legacy_16_field_header_loads_with_na_quality_and_no_dbh(
     assert all(row.dbh_cm is None for row in ledger)
 
 
-def test_existing_940_row_ledger_loads_without_optional_columns() -> None:
+def test_merged_ledger_loads_with_quality_and_dbh_dimensions() -> None:
     if not LEGACY_LEDGER_PATH.exists():
-        pytest.skip("legacy merged ledger is not materialized")
+        pytest.skip("merged ledger is not materialized")
     ledger = load_ledger(LEGACY_LEDGER_PATH)
 
-    assert len(ledger) == 940
-    assert all(row.quality is Quality.NA for row in ledger)
-    assert all(row.dbh_cm is None for row in ledger)
+    assert len(ledger) == 2_888
+    assert sum(1 for row in ledger if row.quality is not Quality.NA) == 251
+    assert sum(1 for row in ledger if row.dbh_cm is not None) == 1_824
+    assert all(
+        row.quality is Quality.NA
+        for row in ledger
+        if row.dbh_cm is not None
+    )

@@ -7,7 +7,9 @@ aggregation.  Each block is validated on its own before the
 merge and the merged file is validated again with
 :func:`workflows.national.harvest.cost_revenue.load_ledger`.
 
-The QC input is the 740-row full MERIS model-input deck.  The earlier 17-row
+The QC input is the full MERIS model-input deck (2,688 rows: 251
+quality-class price rows, 1,824 species/DBH curve rows, 191 road, 191
+overhead, 191 loading-only harvest, and 40 silviculture rows).  The earlier 17-row
 sample is deliberately excluded: its keys overlap the full block, so merging
 both would double-count source keys.  Observed BCTS rows and model-input MERIS
 rows are counted and reported separately, and model-input values are never
@@ -82,6 +84,11 @@ QC_STUMPAGE_RATE_ROWS = 2_674
 QC_TREATMENT_ROWS = 94
 QC_TREATMENTS_USABLE = 40
 QC_PRICE_DECK_CELLS = 630
+QC_DBH_SPECIES = 12
+QC_DBH_CLASSES = 76
+QC_DBH_SERIES = 2
+QC_DBH_PROFILE_CELLS = QC_DBH_SPECIES * QC_DBH_CLASSES * QC_DBH_SERIES
+QC_CURVE_PROFILE = "Profil_2"
 OBSERVED_EVIDENCE = frozenset(
     {
         Evidence.OBSERVED_PAYMENT,
@@ -631,6 +638,49 @@ def build_coverage_summary(
     qc_model_input_delivered_rows = [
         row for row in qc_delivered_rows if _is_model_input(row)
     ]
+    qc_quality_delivered_rows = [
+        row
+        for row in qc_model_input_delivered_rows
+        if row.quality is not Quality.NA
+    ]
+    qc_dbh_delivered_rows = [
+        row
+        for row in qc_model_input_delivered_rows
+        if row.dbh_cm is not None
+    ]
+    qc_price_deck_delivered_rows = [
+        row
+        for row in qc_model_input_delivered_rows
+        if row.dbh_cm is None
+    ]
+    qc_quality_counts: dict[str, int] = defaultdict(int)
+    for row in qc_quality_delivered_rows:
+        qc_quality_counts[row.quality.value] += 1
+    qc_series_counts: dict[str, int] = defaultdict(int)
+    for row in qc_delivered_rows:
+        series = row.notes_tokens.get("series")
+        if series is not None:
+            qc_series_counts[series] += 1
+    qc_dbh_species = sorted(
+        {row.species for row in qc_dbh_delivered_rows}
+    )
+    qc_dbh_values = sorted(
+        {float(row.dbh_cm) for row in qc_dbh_delivered_rows if row.dbh_cm}
+    )
+    if len(qc_dbh_delivered_rows) != QC_DBH_PROFILE_CELLS:
+        raise LedgerValidationError(
+            "QC DBH curve rows do not match the single-profile deck size: "
+            f"{len(qc_dbh_delivered_rows)} != {QC_DBH_PROFILE_CELLS}"
+        )
+    if len(qc_dbh_species) != QC_DBH_SPECIES:
+        raise LedgerValidationError(
+            f"QC DBH curve species count {len(qc_dbh_species)} != "
+            f"{QC_DBH_SPECIES}"
+        )
+    if len(qc_dbh_values) != QC_DBH_CLASSES:
+        raise LedgerValidationError(
+            f"QC DBH class count {len(qc_dbh_values)} != {QC_DBH_CLASSES}"
+        )
     qc_zone_ids = {
         row.spatial_unit
         for row in qc_rows
@@ -679,6 +729,9 @@ def build_coverage_summary(
             "no_observed_delivered_log_revenue_injected": True,
             "observed_and_model_input_rows_separated": True,
             "model_input_not_monetised": True,
+            "quality_and_dbh_preserved": True,
+            "price_series_not_summed": True,
+            "dbh_profiles_deduplicated": True,
         },
         "row_counts": {
             "total_rows": len(ledger),
@@ -781,6 +834,11 @@ def build_coverage_summary(
                     "treatments": QC_TREATMENT_ROWS,
                     "treatments_usable": QC_TREATMENTS_USABLE,
                     "price_deck_cells": QC_PRICE_DECK_CELLS,
+                    "dbh_curve_cells": QC_DBH_PROFILE_CELLS,
+                    "dbh_curve_species": QC_DBH_SPECIES,
+                    "dbh_curve_classes": QC_DBH_CLASSES,
+                    "dbh_curve_series": QC_DBH_SERIES,
+                    "dbh_curve_profile": QC_CURVE_PROFILE,
                     "deck": "full_model_input",
                     "source": "meris_qc_full/manifest.json and QC_MERIS_DECK_REPORT.md (MERIS 3.3.0, database release 2025-09-23)",
                 },
@@ -799,6 +857,25 @@ def build_coverage_summary(
                     "delivered_log_revenue_model_input_rows": len(
                         qc_model_input_delivered_rows
                     ),
+                    "delivered_log_revenue_quality_rows": len(
+                        qc_quality_delivered_rows
+                    ),
+                    "delivered_log_revenue_dbh_rows": len(
+                        qc_dbh_delivered_rows
+                    ),
+                    "delivered_log_revenue_price_deck_rows": len(
+                        qc_price_deck_delivered_rows
+                    ),
+                    "quality_rows_by_class": dict(
+                        sorted(qc_quality_counts.items())
+                    ),
+                    "delivered_log_revenue_series_counts": dict(
+                        sorted(qc_series_counts.items())
+                    ),
+                    "dbh_species": qc_dbh_species,
+                    "dbh_min_cm": qc_dbh_values[0],
+                    "dbh_max_cm": qc_dbh_values[-1],
+                    "dbh_class_count": len(qc_dbh_values),
                     "current_stumpage_rate_rows": len(qc_current_stumpage),
                     "stumpage_years": qc_stumpage_years,
                     "cost_components": qc_cost_components,
@@ -819,11 +896,26 @@ def build_coverage_summary(
                 "delivered_log_revenue": {
                     "model_input_rows": len(qc_model_input_delivered_rows),
                     "observed_rows": len(qc_observed_delivered_rows),
+                    "quality_rows": len(qc_quality_delivered_rows),
+                    "dbh_rows": len(qc_dbh_delivered_rows),
+                    "price_deck_rows": len(qc_price_deck_delivered_rows),
+                    "quality_classes": dict(sorted(qc_quality_counts.items())),
+                    "series_counts": dict(sorted(qc_series_counts.items())),
                     "status": "model_input_not_observed",
                     "price_point": "mill_gate",
                     "reason": (
                         "MERIS price-deck values are model inputs net of "
                         "processing cost; they are not mill settlements"
+                    ),
+                    "series_rule": (
+                        "courant (_2) and tendance (_1) are alternative model "
+                        "scenarios, separated by licence suffix C/T; they are "
+                        "not independent observations and are not summed"
+                    ),
+                    "dbh_rule": (
+                        "species x DBH curves use Profil_2 only; the three "
+                        "shipped profiles are byte-identical and are not "
+                        "independent estimates"
                     ),
                 },
                 "harvest_volume_share": {
@@ -862,6 +954,8 @@ def build_coverage_summary(
             "Crown and forest-sector rows are never summed into a combined total; only the reconciliation identity may relate them.",
             "BCTS sells standing timber: its upset and bonus are stumpage, not delivered log revenue.",
             "MERIS is a tarification/cost parameter set, not an observed harvest or delivered-price register; its delivered-log values are mill-gate model inputs, not settlements.",
+            "MERIS courant and tendance prices are alternative model scenarios, not independent observations; the ledger keeps both under distinct licences and never sums them.",
+            "MERIS species/DBH curves are ingested from the canonical Profil_2 only; Profil_3 and Profil_4 are byte-identical in this release and must not be treated as independent estimates.",
             "Missing components are missing, not zero; no value, volume, or component was imputed.",
         ],
     }
@@ -1010,6 +1104,22 @@ def render_markdown(summary: Mapping[str, object]) -> str:
         "**model input, not observed** |"
     )
     lines.append(
+        f"| MERIS quality-class price rows | "
+        f"{qc['ledger']['delivered_log_revenue_quality_rows']} rows | "
+        f"{qc['sample_frame']['price_deck_cells']} price-deck cells "
+        "(45 species x 7 products x 2 series) | "
+        f"{_percent(qc['ledger']['delivered_log_revenue_quality_rows'] / qc['sample_frame']['price_deck_cells'])} |"
+    )
+    lines.append(
+        f"| MERIS species/DBH curve rows | "
+        f"{qc['ledger']['delivered_log_revenue_dbh_rows']} rows | "
+        f"{qc['sample_frame']['dbh_curve_cells']} curve cells "
+        f"({qc['sample_frame']['dbh_curve_species']} species x "
+        f"{qc['sample_frame']['dbh_curve_classes']} DBH x "
+        f"{qc['sample_frame']['dbh_curve_series']} series) | "
+        f"{_percent(qc['ledger']['delivered_log_revenue_dbh_rows'] / qc['sample_frame']['dbh_curve_cells'])} |"
+    )
+    lines.append(
         f"| MERIS cost-deck tarification zones | "
         f"{qc['ledger']['zones_covered']} | "
         f"{qc['sample_frame']['tarification_zones']} zones | "
@@ -1071,8 +1181,34 @@ def render_markdown(summary: Mapping[str, object]) -> str:
     lines.append(
         f"- {qc['ledger']['delivered_log_revenue_rows']} "
         f"`delivered_log_revenue` rows are mill-gate model inputs "
-        f"({qc['ledger']['delivered_log_revenue_observed_rows']} observed). "
-        "They are not mill settlements and are not monetised."
+        f"({qc['ledger']['delivered_log_revenue_observed_rows']} observed): "
+        f"{qc['ledger']['delivered_log_revenue_quality_rows']} quality-class "
+        f"price-deck rows and {qc['ledger']['delivered_log_revenue_dbh_rows']} "
+        "species/DBH curve rows. They are not mill settlements and are not "
+        "monetised."
+    )
+    lines.append(
+        "- Quality classes in the price deck: "
+        + ", ".join(
+            f"`{quality}` {count}"
+            for quality, count in qc["ledger"]["quality_rows_by_class"].items()
+        )
+        + ". `PATE` is the 0.0100 placeholder and yields no pulpwood row."
+    )
+    lines.append(
+        f"- DBH curves cover {qc['sample_frame']['dbh_curve_species']} SEPM "
+        f"species, {qc['sample_frame']['dbh_curve_classes']} DBH classes "
+        f"({qc['ledger']['dbh_min_cm']:.0f}-{qc['ledger']['dbh_max_cm']:.0f} cm), "
+        f"and {qc['sample_frame']['dbh_curve_series']} series; "
+        f"`{qc['sample_frame']['dbh_curve_profile']}` is used because the three "
+        "shipped profiles are byte-identical. The curve is a composite "
+        "sciage/chips/by-product value, so it is booked as `mixed_log` with "
+        "`quality=NA`."
+    )
+    lines.append(
+        "- The two price series are alternative scenarios separated by licence "
+        "suffix `C` (courant) and `T` (tendance); they are not independent "
+        "observations and are not summed."
     )
     lines.append(
         "- `harvest` is loading-only (`partial=loading_only`), `road` excludes "

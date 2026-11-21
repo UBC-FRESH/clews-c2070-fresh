@@ -20,13 +20,13 @@ def ledger_validation(ledger_rows: list[dict[str, str]]) -> dict[str, object]:
 def test_ledger_separates_observed_and_model_input(
     ledger_validation: dict[str, object],
 ) -> None:
-    assert ledger_validation["rows"] == 940
+    assert ledger_validation["rows"] == 2_888
     assert ledger_validation["mirror_pairs"] == 100
     assert ledger_validation["unpaired_mirror_keys"] == 0
     assert ledger_validation["observed_rows"] == 200
-    assert ledger_validation["model_input_rows"] == 740
-    assert ledger_validation["delivered_log_revenue_rows"] == 127
-    assert ledger_validation["delivered_log_revenue_model_input_rows"] == 127
+    assert ledger_validation["model_input_rows"] == 2_688
+    assert ledger_validation["delivered_log_revenue_rows"] == 2_075
+    assert ledger_validation["delivered_log_revenue_model_input_rows"] == 2_075
     assert ledger_validation["delivered_log_revenue_observed_rows"] == 0
 
 
@@ -41,7 +41,7 @@ def test_cost_revenue_coverage_is_not_estimated(
     assert by_jurisdiction["BC"].observed_rows == 200
     assert by_jurisdiction["BC"].model_input_rows == 0
     assert by_jurisdiction["QC"].observed_rows == 0
-    assert by_jurisdiction["QC"].model_input_rows == 740
+    assert by_jurisdiction["QC"].model_input_rows == 2_688
     assert by_jurisdiction["QC"].observed_delivered_log_revenue_present is False
     assert by_jurisdiction["QC"].full_production_costs_present is False
     assert "delivered_log_revenue=model_input_only_not_usable" in (

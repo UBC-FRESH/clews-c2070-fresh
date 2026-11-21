@@ -11,8 +11,19 @@
   compatibility checks and restricted `dbh_cm` to model-input
   `delivered_log_revenue` species/DBH curves with `quality=NA`. Updated the
   template header, ledger planning note, merge header handling, and synthetic
-  tests. The existing **940-row** merged ledger loads unchanged. No MERIS/BCTS
+  tests. The existing 940-row merged ledger loads unchanged. No MERIS/BCTS
   ingestion, model, UI, or public OSeCAN change.
+- **Populated the QC MERIS quality and DBH dimensions and rebuilt the BC/QC
+  merge.** The MERIS extractor now writes the 18-field ledger block with
+  `quality` and `dbh_cm`, ingests both the courant and tendance price series
+  (251 quality-class rows; DER→peeler, F1–F4→sawlog, PATE→pulpwood,
+  AUTRE→mixed_log), and ingests the 12-species × 76-DBH × 2-series SEPM curves
+  (1,824 `mixed_log` rows, `quality=NA`) from the canonical `Profil_2`. The QC
+  block grows to **2,688 rows**; the merged `forest_cost_revenue.csv` grows to
+  **2,888 rows** (200 observed BCTS + 2,688 model input). `load_ledger` passes,
+  the old 17-row sample is excluded, and Forest LP v1 is re-run with all 34
+  checks passing. Net value remains `not_estimated`; no observed delivered price
+  or full cost was introduced. No public OSeCAN change.
 
 ## 2026-11-20
 
