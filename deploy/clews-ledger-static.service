@@ -1,0 +1,63 @@
+# CLEWS/C2070 Forest Ledger v1.0.0 static publication origin.
+#
+# Serves the immutable static bundle on the container network so the root-host
+# Cloudflare Tunnel can reach it. This unit exposes no application API: the
+# bundle's publication-mode.js also fails every same-origin /api request.
+#
+# Install:
+#   sudo install -m 0644 deploy/clews-ledger-static.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now clews-ledger-static.service
+#
+# The bundle path is read-only to the service and contains no secrets.
+
+[Unit]
+Description=CLEWS-C2070 Forest Ledger v1.0.0 static origin
+Documentation=file:/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/deploy/README.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=gep
+Group=gep
+WorkingDirectory=/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/v1.0.0
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m http.server 8131 --bind 0.0.0.0 --directory /srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/v1.0.0
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadOnlyPaths=/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/v1.0.0
+
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=64
+LimitNOFILE=1024
+
+[Install]
+WantedBy=multi-user.target

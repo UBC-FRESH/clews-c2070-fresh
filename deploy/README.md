@@ -364,3 +364,52 @@ availability. Deployment-level v1.2 isolation separates processes, runtimes,
 Unix users, ports, and edge policies; it does not make one instance safe for
 mutually untrusted callers. It does not make `policy_test_v1` policy-grade,
 validate a harvest or energy result, or authorize publication of any artifact.
+
+## 13. Static v1.0.0 ledger origin (port 8131)
+
+`clews-ledger-static.service` serves the immutable
+`ui_publications/v1.0.0/` bundle with Python's static HTTP server. It is not an
+application runtime: there is no runner, writable state, analyst API, or
+authentication. The bundle's `publication-mode.js` also rejects every
+same-origin `/api` request, so the UI stays in static mode even if a future
+origin happens to answer `/api`.
+
+| Item | Value |
+|---|---|
+| Unit | `deploy/clews-ledger-static.service` |
+| User / group | `gep:gep` |
+| Bundle | `/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/v1.0.0` |
+| Bind | `0.0.0.0:8131` (container network only) |
+| Root-host origin | `http://10.232.253.73:8131` |
+
+The origin binds the container interface, not loopback, because the tunnel
+runs on the root LXD host and must reach the container address. It must not be
+published outside the container bridge, and the root host must not forward the
+port directly; Cloudflare Tunnel/Access remains the edge boundary. Do not add
+an analyst route to this origin.
+
+Install and verify:
+
+```bash
+sudo install -m 0644 deploy/clews-ledger-static.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now clews-ledger-static.service
+systemctl is-active clews-ledger-static.service
+curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8131/
+curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8131/public/data/scenarios.json
+curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8131/vendor/echarts.min.js
+curl -fsS -o /dev/null -w '%{http_code}\n' http://10.232.253.73:8131/
+```
+
+The static server returns `404` for `/api/...`; that is expected. To route a
+root-host hostname to this origin, add exactly one ingress rule on the root
+host, ahead of the catch-all, and configure DNS/Access separately:
+
+```yaml
+  - hostname: REPLACE_WITH_LEDGER_HOSTNAME
+    service: http://10.232.253.73:8131
+```
+
+This repository does not modify the root-host tunnel, DNS, or Access policy.
+Rollback is `sudo systemctl disable --now clews-ledger-static.service`; the
+bundle and unit remain on disk for the next release.
