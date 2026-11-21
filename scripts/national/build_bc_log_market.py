@@ -50,16 +50,6 @@ INTERIOR_SPECIES = (
     "Other",
     "Total/Avg",
 )
-INTERIOR_CANONICAL = {
-    "SPF": "Spruce-Pine-Fir",
-    "Df-Larch": "Douglas-fir/Larch",
-    "Hem-Bal": "Hemlock/Balsam",
-    "Cedar": "Cedar",
-    "White Pine": "White pine",
-    "Yellow Pine": "Yellow pine",
-    "Deciduous": "Deciduous",
-    "Other": "Other",
-}
 COAST_GRADES = set("BCDEFGHIJKLMNOPQRSTUVWXYZ")
 MONTHS = {
     name.lower(): number for number, name in enumerate(calendar.month_name) if name
