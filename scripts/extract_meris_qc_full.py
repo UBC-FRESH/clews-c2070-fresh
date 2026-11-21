@@ -113,9 +113,10 @@ LEDGER_FIELDS = (
     "notes",
 )
 
-# QC quality -> ledger product.  The ledger has no quality field; the quality
-# class is preserved in the licence suffix and the qc_quality note so F1..F4
-# do not collapse into one 9-field key.
+# QC quality -> ledger product.  This script still emits the legacy 16-field
+# block, so the quality class is preserved in the licence suffix and the
+# qc_quality note.  The validator now also accepts an optional quality column;
+# a later extraction can populate it instead of encoding the class in licence.
 QUALITY_TO_PRODUCT = {
     "DER": "peeler",
     "F1": "sawlog",

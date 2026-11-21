@@ -1,8 +1,9 @@
 """Merge the BC BCTS and full QC MERIS cost/revenue blocks and report coverage.
 
-The two inputs are already in the canonical 16-field ledger schema.  This
-module concatenates them without re-keying, re-weighting, imputing, or
-cross-province aggregation.  Each block is validated on its own before the
+The two inputs are already in the canonical ledger schema: the original 16
+core fields plus optional ``quality`` and ``dbh_cm`` columns.  This module
+concatenates them without re-keying, re-weighting, imputing, or cross-province
+aggregation.  Each block is validated on its own before the
 merge and the merged file is validated again with
 :func:`workflows.national.harvest.cost_revenue.load_ledger`.
 

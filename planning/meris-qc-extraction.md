@@ -161,7 +161,8 @@ used for policy, calibration, or a provincial average.
 ## 4. Ledger mapping/gaps
 
 `field_mapping.csv` is the full 49-row crosswalk; `gaps.csv` is the 14-row gap
-register. The mapping follows the ledger’s 16-field schema and sign matrix:
+register. The mapping follows the ledger’s 16 core fields plus optional
+`quality`/`dbh_cm` and the sign matrix:
 
 | MERIS field | Ledger component | Unit | `value_basis` | Confidence |
 |---|---|---|---|---|
