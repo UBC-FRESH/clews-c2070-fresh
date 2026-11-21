@@ -41,11 +41,9 @@ HARVEST_BASIS_DIR = REPO_ROOT / "data/derived/national/harvest_basis"
 SURVEY_PATH = (
     HARVEST_BASIS_DIR / "qc_cost_survey_2022/qc_cost_revenue_survey.csv"
 )
-SURVEY_MANIFEST_PATH = SURVEY_PATH.with_name("manifest.json")
 BMMB_SALES_PATH = (
     HARVEST_BASIS_DIR / "bmmb_delivered/bmmb_delivered_sales.csv"
 )
-BMMB_MANIFEST_PATH = BMMB_SALES_PATH.with_name("manifest.json")
 ALLOCATION_DIR = HARVEST_BASIS_DIR / "provincial_allocation"
 
 DEFAULT_OUTPUT_DIR = HARVEST_BASIS_DIR / "net_value_benchmark"
@@ -406,7 +404,7 @@ def load_manifest_row_count(path: Path) -> int:
 def parse_survey_rows(path: Path) -> tuple[SurveyRow, ...]:
     raw_rows = read_csv_rows(path)
     require_columns(path, raw_rows, SURVEY_REQUIRED_COLUMNS)
-    expected = load_manifest_row_count(SURVEY_MANIFEST_PATH)
+    expected = load_manifest_row_count(path.with_name("manifest.json"))
     if len(raw_rows) != expected:
         raise BenchmarkError(
             f"survey row count {len(raw_rows)} does not match manifest {expected}"
@@ -2037,9 +2035,15 @@ def build(
     )
     summary["inputs"] = [
         file_record(survey_path, role="2022 QC survey aggregates"),
-        file_record(SURVEY_MANIFEST_PATH, role="2022 QC survey provenance manifest"),
+        file_record(
+            survey_path.with_name("manifest.json"),
+            role="2022 QC survey provenance manifest",
+        ),
         file_record(bmmb_sales_path, role="BMMB delivered auction sales"),
-        file_record(BMMB_MANIFEST_PATH, role="BMMB delivered provenance manifest"),
+        file_record(
+            bmmb_sales_path.with_name("manifest.json"),
+            role="BMMB delivered provenance manifest",
+        ),
         *[
             file_record(allocation_dir / f"{case_id}.csv", role="QC screening allocation volume")
             for case_id, _ in ALLOCATION_CASES
