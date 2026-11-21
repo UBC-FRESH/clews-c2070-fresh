@@ -1,0 +1,65 @@
+                                                                                                              Coast Selling Price System
+                                                                                                         Average Log Prices - Second Growth
+                                                                                                    For the 1 month period ending: September 2023
+
+Sale Type: Second Growth
+           Domestic
+
+       Grade                                      Alder                     Birch                Cedar             Cottonwood                Cypress                  Fir              Hembal        Maple   Pine   Spruce
+ B                 AMV
+                   %
+ C                 AMV                                                                                                                                                 232.93
+                   %                                                                                                                                                     1.77
+ D                 AMV
+                   %
+ E                 AMV
+                   %
+ F                 AMV
+                   %
+ G                 AMV
+                   %
+ H                 AMV                                                                               521.89                                                            228.89                96.21
+                   %                                                                                  11.79                                                              3.33                 3.15
+ I                 AMV                                                                               357.76                                                            190.24                94.53                     76.63
+                   %                                                                                   3.11                                                              3.30                 2.99                     47.20
+ J                 AMV                                                                               251.20                                                            139.90                83.48                    108.19
+                   %                                                                                  50.85                                                             77.24                86.01                     24.60
+ K                 AMV
+                   %
+ L                 AMV                                                                               345.17
+                   %                                                                                   2.11
+ M                 AMV                                                                               260.14
+                   %                                                                                   1.92
+ U                 AMV                                                                                83.75                                                              91.84               59.68                     69.55
+                   %                                                                                  28.72                                                              13.99                7.26                      0.61
+ W                 AMV
+                   %
+ X                 AMV                                                                                50.56                                                              79.60               57.32
+                   %                                                                                   0.49                                                               0.23                0.40
+ Y                 AMV                                                                                                                                                   51.83
+                   %                                                                                                                                                      0.14
+
+
+
+ Species %                                                                                                                                                        125,344.26
+ AMV($/m3)                                                                                                                                                             50.15
+ Total volume (m3)                                                                                                                                                    139.18
+ Total value $                                      249,915.95
+ $/m3                                            32,850,978.43
+                                                         131.45
+
+
+Prepared by Timber Pricing Branch, Ministry of Forests, Lands, Natural Resource Operations and Rural Development
+Note (1): Three month totals may not equal the sum of previously published one month totals due to late or revised. Data is adjusted for Section 136 of the Forest Act.
+Note (2) April 2023, new and additional participants to the Vancouver Log Market data set.
+Copyright Statement: Copyright of this material belongs exclusively to the Province of British Columbia. This copy is intended for private study or research purposes only.
+No person or entity is permitted to reproduce this material, in whole or in part, for distribution either free of charge or for 'commercial purposes', unless that person or entity has
+a signed license agreement with the Intellectual Property Program for British Columbia. Reproduction for commercial purposes is reproduction for the purposes of sale, rent,
+trade or distribution, or posting it on the Internet or on electronic bulletin boards. Further details over these and other government-owned works can be obtained by reference to
+the Federal Copyright Act .
+
+
+
+
+Current Month is the month established by the 1 month OG report. Prior month or prior period then applies appropriately. Not all sheets are labeled due to turn around time for reporting.
+

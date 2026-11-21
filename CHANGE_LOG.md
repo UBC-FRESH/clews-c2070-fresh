@@ -2,6 +2,21 @@
 
 ## 2026-11-21
 
+- **Corrected the BC log-market Coast share boundary and published the
+  log-market metadata.** The Coast table parser now stops strictly before the
+  footer row, rejects the `Species %` label as a grade share, and hard-fails if
+  any `volume_share_pct` is outside 0–100. This fixes 12 second-growth grade-Y
+  shares that had been overwritten by footer species volumes, including
+  `1m2gc_sept_23` Fir grade Y (`125,344.26` → `0.14`), and adds a TSV/text
+  regression fixture. Added `currency_basis=CAD_nominal`, explicit
+  non-additivity rules for 1-month/3-month and overlapping 3-month vintages,
+  the April 2023 Coast participant-expansion break note, lowercase
+  `is_aggregate` tokens, `volume_share_status=not_applicable` for the
+  schema-absent Interior field, LF line endings, and corrected the
+  `PROVENANCE.md` statement that Interior `weighted_average` rows are emitted.
+  Rebuilt 505 reports / 15,705 rows. No QC, BMMB, v2d output, model, UI, or
+  public OSeCAN change; `net_value_v2d.py` only accepts the new lowercase
+  `is_aggregate` token.
 - **Corrected the QC benchmark from “net value” to a procurement cost spread.**
   Added `workflows/national/harvest/procurement_benchmark_v1.py`, which reads
   T2 purchase cost and T20 BGAD synthesis rows as two different procurement

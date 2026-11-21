@@ -45,6 +45,26 @@ def coastal_fixture():
     return log_market.parse_coast(rows, text, meta)
 
 
+def coastal_shifted_footer_fixture():
+    meta = log_market.ReportMeta(
+        report_id="coast_1_month_second_growth_2023-09",
+        region="coast",
+        report_basis="1_month",
+        log_class="second_growth",
+        period_start=date(2023, 9, 1),
+        period_end=date(2023, 9, 30),
+        filename="1m2gc_sept_23.pdf",
+        url="https://example.test/1m2gc_sept_23.pdf",
+        sha256="0" * 64,
+        retrieved_utc="2026-11-21T20:31:26+00:00",
+    )
+    rows = log_market.group_rows(
+        log_market.read_tsv_words(FIXTURE_DIR / "coast_1m2gc_sept_23.tsv")
+    )
+    text = (FIXTURE_DIR / "coast_1m2gc_sept_23.txt").read_text(encoding="utf-8")
+    return log_market.parse_coast(rows, text, meta)
+
+
 def interior_fixture():
     meta = log_market.ReportMeta(
         report_id="interior_1_month_not_reported_2026-09",
@@ -86,6 +106,77 @@ def test_coast_fixture_keeps_prices_in_reported_columns() -> None:
     assert by_cell[("H", "Cedar")]["volume_share_pct"] == pytest.approx(16.57)
     assert by_cell[("H", "Pine")]["price_cad_m3"] == pytest.approx(92.85)
     assert ("H", "Spruce") not in by_cell
+
+
+def test_coast_shifted_footer_does_not_overwrite_volume_share() -> None:
+    cells, totals = coastal_shifted_footer_fixture()
+    by_cell = {(cell["grade"], cell["species"]): cell for cell in cells}
+    assert by_cell[("Y", "Fir")]["price_cad_m3"] == pytest.approx(51.83)
+    assert by_cell[("Y", "Fir")]["volume_share_pct"] == pytest.approx(0.14)
+    assert all(
+        cell["volume_share_pct"] is None or 0 <= cell["volume_share_pct"] <= 100
+        for cell in cells
+    )
+    assert totals["report_totals_status"] == "not_reported_or_unparseable"
+
+
+def test_validate_coast_totals_accepts_consistent_values() -> None:
+    totals = log_market.validate_coast_totals(
+        {
+            "report_total_volume_m3": 239219.72,
+            "report_total_value_cad": 32313291.60,
+            "report_avg_price_cad_m3": 135.08,
+        }
+    )
+    assert totals["report_totals_status"] == "consistent"
+
+
+def test_validate_coast_totals_rejects_inconsistent_values() -> None:
+    totals = log_market.validate_coast_totals(
+        {
+            "report_total_volume_m3": 100.0,
+            "report_total_value_cad": 99999.0,
+            "report_avg_price_cad_m3": 50.0,
+        }
+    )
+    assert totals["report_totals_status"] == "inconsistent"
+    assert totals["report_total_volume_m3"] is None
+
+
+def test_validate_coast_totals_drops_missing_volume() -> None:
+    totals = log_market.validate_coast_totals(
+        {"report_total_volume_m3": None, "report_avg_price_cad_m3": 135.08}
+    )
+    assert totals["report_totals_status"] == "not_reported_or_unparseable"
+    assert totals["report_avg_price_cad_m3"] is None
+
+
+def test_is_aggregate_row_only_marks_interior_weighted_average() -> None:
+    assert log_market.is_aggregate_row("interior", "weighted_average")
+    assert not log_market.is_aggregate_row("interior", "sawlog")
+    assert not log_market.is_aggregate_row("coast", "weighted_average")
+
+
+def test_format_bool_serializes_lowercase_tokens() -> None:
+    assert log_market.format_bool(True) == "true"
+    assert log_market.format_bool(False) == "false"
+
+
+def test_status_helpers_distinguish_not_applicable_fields() -> None:
+    assert log_market.volume_status_for("coast", None, None) == "not_reported_by_grade"
+    assert (
+        log_market.volume_status_for("interior", "weighted_average", None)
+        == "not_applicable"
+    )
+    assert log_market.volume_status_for("interior", "sawlog", None) == "blank_cell"
+    assert log_market.volume_share_status_for("interior", None) == "not_applicable"
+    assert log_market.volume_share_status_for("coast", None) == "blank_cell"
+
+
+def test_write_csv_uses_lf_line_endings(tmp_path: Path) -> None:
+    path = tmp_path / "rows.csv"
+    log_market.write_csv(path, [{"a": 1, "b": "x"}], ["a", "b"])
+    assert b"\r\n" not in path.read_bytes()
 
 
 def test_coast_period_accepts_month_only_and_day_forms() -> None:

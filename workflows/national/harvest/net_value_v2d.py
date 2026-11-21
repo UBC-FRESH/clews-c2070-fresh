@@ -610,7 +610,12 @@ def parse_price_cells(path: Path) -> tuple[PriceCell, ...]:
 
         grade = row["grade"].strip()
         end_use = row["end_use"].strip()
-        is_aggregate = row["is_aggregate"] == "True"
+        is_aggregate_flag = row["is_aggregate"]
+        if is_aggregate_flag not in {"true", "false"}:
+            raise NetValueV2DError(
+                f"invalid is_aggregate flag for {context}: {is_aggregate_flag!r}"
+            )
+        is_aggregate = is_aggregate_flag == "true"
         if region == "coast":
             if not grade or end_use:
                 raise NetValueV2DError(

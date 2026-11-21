@@ -128,7 +128,7 @@ def test_interior_volume_reconciliation_excludes_aggregate_rows() -> None:
             continue
         if row["report_total_volume_m3"]:
             printed[row["report_id"]] = float(row["report_total_volume_m3"])
-        if row["is_aggregate"] == "False" and row["volume_m3"]:
+        if row["is_aggregate"] == "false" and row["volume_m3"]:
             volume_by_report[row["report_id"]] = (
                 volume_by_report.get(row["report_id"], 0.0) + float(row["volume_m3"])
             )
@@ -137,7 +137,7 @@ def test_interior_volume_reconciliation_excludes_aggregate_rows() -> None:
         math.isclose(volume_by_report.get(report_id, 0.0), total, abs_tol=2.0)
         for report_id, total in printed.items()
     )
-    assert sum(1 for row in price_rows if row["is_aggregate"] == "True") == 890
+    assert sum(1 for row in price_rows if row["is_aggregate"] == "true") == 890
 
 
 def test_qc_reference_is_a_validated_exact_copy(built: v2d.BuildResult) -> None:

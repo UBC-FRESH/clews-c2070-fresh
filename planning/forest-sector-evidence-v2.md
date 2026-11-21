@@ -202,8 +202,12 @@ cells out of 54,120 possible, and 2,577 Interior product-by-species cells out of
 9,464 possible. Blank cells are not zeros and are not emitted as price rows.
 Prices are published averages with `price_basis = mill_delivered` and
 `observation_type = reported_market_average`; they are not transaction records.
-Coast old-growth values are a published blend of old and mixed growth, and
-three-month totals are not reconciled across publication vintages.
+Values are nominal CAD (`currency_basis = CAD_nominal`). One-month and
+three-month reports are independent vintages, three-month windows overlap, and
+Interior `weighted_average` rows carry `is_aggregate = true` and must not be
+added to product cells. Coast old-growth values are a published blend of old and
+mixed growth, and three-month totals are not reconciled across publication
+vintages.
 
 ### 3.6 Operable proxy v2
 

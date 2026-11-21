@@ -20,6 +20,7 @@ import calendar
 import csv
 import hashlib
 import json
+import math
 import re
 import subprocess
 from collections.abc import Sequence
@@ -84,7 +85,8 @@ PRODUCT_LABELS = {
 }
 PRICE_BASIS = "mill_delivered"
 OBSERVATION_TYPE = "reported_market_average"
-ARTIFACT_VERSION = "1.0.0"
+CURRENCY_BASIS = "CAD_nominal"
+ARTIFACT_VERSION = "1.1.0"
 
 
 @dataclass(frozen=True)
@@ -389,21 +391,31 @@ def parse_coast(
         (
             row
             for row in rows
-            if "Volume(m3)" in row.text
-            or "Volume (m3)" in row.text
-            or "Species %" in row.text
-            or "Total volume" in row.text
+            if row.top > header.top
+            and (
+                "Volume(m3)" in row.text
+                or "Volume (m3)" in row.text
+                or "Species %" in row.text
+                or "Total volume" in row.text
+            )
         ),
         None,
     )
     if volume_row is None:
         raise ParseError(f"{meta.filename}: coast table end row not found")
-    table_rows = [row for row in rows if header.top < row.top < volume_row.top + 3]
+    # The footer starts at ``volume_row``.  Many second-growth PDFs end the
+    # table at ``Species %`` rather than ``Volume(m3)``, and six 2023-24 PDFs
+    # print the footer labels one text row above their values, so the
+    # ``Species %`` label can share a row with a species volume.  Excluding
+    # ``volume_row`` itself keeps footer values out of the grade table.
+    table_rows = [row for row in rows if header.top < row.top < volume_row.top - 3]
 
     observations: list[dict[str, object]] = []
     grades_seen: set[str] = set()
     current_grade: str | None = None
     for row in table_rows:
+        label_words = [word for word in row.words if word.right < table_left - 8]
+        label = " ".join(word.text for word in label_words).strip()
         grade_letters = [
             word.text
             for word in row.words
@@ -414,13 +426,16 @@ def parse_coast(
         if grade_letters:
             current_grade = grade_letters[0]
             grades_seen.add(current_grade)
-        if "AMV" not in row.text and "%" not in row.text:
+        if "AMV" in label and "($" not in label:
+            role = "price"
+        elif label == "%":
+            role = "volume_share"
+        else:
             continue
         if current_grade is None:
             raise ParseError(
                 f"{meta.filename}: values before grade label at y={row.top}"
             )
-        role = "price" if "AMV" in row.text else "volume_share"
         values = numeric_words(row, table_left - 8)
         seen: set[str] = set()
         for value in values:
@@ -565,20 +580,7 @@ def parse_interior(
         values = numeric_words(row, table_left - 8)
         for value in values:
             if value.right >= table_right - 8:
-                if product == "weighted_average" and block == "price":
-                    totals_key = "report_avg_price_cad_m3"
-                    observations.setdefault(
-                        ("weighted_average", "ALL"),
-                        {
-                            "end_use": "weighted_average",
-                            "species": "ALL",
-                            "price_cad_m3": None,
-                            "volume_m3": None,
-                        },
-                    )
-                    observations[("weighted_average", "ALL")][totals_key] = (
-                        parse_number(value.text)
-                    )
+                # The Total/Avg column is an aggregate, not a species cell.
                 continue
             species = assign_by_right_edge(value, columns)
             key = (product, species)
@@ -704,12 +706,41 @@ def parse_report(
     return meta, cells, totals
 
 
+def format_bool(value: bool) -> str:
+    """Serialize booleans as lowercase CSV tokens."""
+    return "true" if value else "false"
+
+
+def is_aggregate_row(region: str, end_use: object) -> bool:
+    """Interior weighted averages are aggregate rows, not product cells."""
+    return region == "interior" and end_use == "weighted_average"
+
+
+def volume_status_for(region: str, end_use: object, volume: object) -> str:
+    if region == "coast":
+        return "not_reported_by_grade"
+    if end_use == "weighted_average":
+        return "not_applicable"
+    return "reported" if volume is not None else "blank_cell"
+
+
+def volume_share_status_for(region: str, share: object) -> str:
+    if region == "interior":
+        return "not_applicable"
+    return "reported" if share is not None else "blank_cell"
+
+
 def write_csv(
     path: Path, rows: Sequence[dict[str, object]], fieldnames: Sequence[str]
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -754,12 +785,12 @@ def main() -> int:
         priced = 0
         volume_reported = 0
         for cell in cells:
+            end_use = cell.get("end_use")
             price_value = cell.get("price_cad_m3")
             volume_value = cell.get("volume_m3")
+            share_value = cell.get("volume_share_pct")
             price_status = "reported" if price_value is not None else "blank_cell"
-            volume_status = "reported" if volume_value is not None else "blank_cell"
-            if region == "coast":
-                volume_status = "not_reported_by_grade"
+            volume_status = volume_status_for(region, end_use, volume_value)
             if price_value is not None:
                 priced += 1
             if volume_value is not None:
@@ -786,21 +817,17 @@ def main() -> int:
                     "grade": cell.get("grade", ""),
                     "end_use": cell.get("end_use", ""),
                     "price_cad_m3": price_value,
+                    "currency_basis": CURRENCY_BASIS,
                     "price_basis": PRICE_BASIS,
                     "observation_type": OBSERVATION_TYPE,
-                    "is_aggregate": bool(
-                        meta.region == "interior"
-                        and cell.get("end_use") == "weighted_average"
-                    ),
+                    "is_aggregate": format_bool(is_aggregate_row(meta.region, end_use)),
                     "price_status": price_status,
                     "price_plausibility": plausibility,
                     "volume_m3": volume_value,
                     "volume_status": volume_status,
-                    "volume_share_pct": cell.get("volume_share_pct"),
-                    "volume_share_status": (
-                        "reported"
-                        if cell.get("volume_share_pct") is not None
-                        else "blank_cell"
+                    "volume_share_pct": share_value,
+                    "volume_share_status": volume_share_status_for(
+                        meta.region, share_value
                     ),
                     "report_total_volume_m3": totals.get("report_total_volume_m3"),
                     "report_total_value_cad": totals.get("report_total_value_cad"),
@@ -899,6 +926,19 @@ def main() -> int:
     if bad_prices:
         raise SystemExit(f"invalid prices: {bad_prices[:3]}")
 
+    bad_shares = [
+        row
+        for row in price_rows
+        if row["volume_share_pct"] is not None
+        and (
+            not isinstance(row["volume_share_pct"], (int, float))
+            or not math.isfinite(row["volume_share_pct"])
+            or not 0 <= row["volume_share_pct"] <= 100
+        )
+    ]
+    if bad_shares:
+        raise SystemExit(f"invalid volume shares: {bad_shares[:3]}")
+
     out_dir = args.out_dir
     price_fields = [
         "report_id",
@@ -911,6 +951,7 @@ def main() -> int:
         "grade",
         "end_use",
         "price_cad_m3",
+        "currency_basis",
         "price_basis",
         "observation_type",
         "is_aggregate",
@@ -996,6 +1037,7 @@ def main() -> int:
         "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "scope": "BC Coast and Interior public log-market average prices, 2019-2026",
         "price_basis": PRICE_BASIS,
+        "currency_basis": CURRENCY_BASIS,
         "observation_type": OBSERVATION_TYPE,
         "discovery": {
             "index_and_archive_pages": discovery_pages,
@@ -1041,10 +1083,34 @@ def main() -> int:
                 if row["price_cad_m3"] is not None
             ),
         },
+        "report_totals_status_counts": {
+            status: sum(
+                1 for row in coverage_rows if row["report_totals_status"] == status
+            )
+            for status in sorted(
+                {str(row["report_totals_status"]) for row in coverage_rows}
+            )
+        },
+        "non_additivity_rules": [
+            "Do not sum or average prices across report_basis (1_month vs 3_month); the two vintages are independently published and not additive.",
+            "Do not sum or average overlapping 3_month reports; consecutive three-month windows share two months of transactions.",
+            "Do not reconstruct a 3_month report by summing 1_month reports, or a 1_month report by differencing 3_month reports; late and revised submissions are not reconciled.",
+            "Do not add Interior weighted_average rows to product rows; weighted_average is an aggregate flagged is_aggregate=true.",
+            "Do not sum Coast volume_share_pct across grades or species; each share is relative to its own grade's reported volume.",
+        ],
+        "structural_breaks": [
+            {
+                "region": "coast",
+                "effective": "2023-04",
+                "description": "Coast reports published from April 2023 onward carry Note (2): 'April 2023, new and additional participants to the Vancouver Log Market data set.' The participant expansion can shift the published average level; the dataset does not adjust for it.",
+            }
+        ],
         "validation": {
             "negative_or_nan_prices": 0,
             "duplicate_keys": 0,
             "hard_price_range_check_cad_m3": [0, 2000],
+            "hard_volume_share_range_pct": [0, 100],
+            "invalid_volume_shares": 0,
             "flags": {
                 "price_below_1_cad_m3": sum(
                     1
@@ -1072,11 +1138,14 @@ def main() -> int:
             },
         ],
         "assumptions": [
+            "All price_cad_m3 values are nominal Canadian dollars of the published report period; no inflation or deflation adjustment is applied (currency_basis=CAD_nominal).",
             "Prices are published averages (AMV) for domestic log sales, not transaction-level records.",
             "Coast old-growth reports blend old and mixed growth transactions per ministry policy.",
+            "Coast grade tables end at the first footer row (Volume(m3), Volume, Species %, or Total volume); footer species volumes and footer shares are never parsed as grade cells.",
             "Coast grade-level volume is not published; only a species volume total is published, and only for some species.",
             "Interior volume is reported by product and species group; '-' means no reported volume or price, not zero.",
             "Report period end is the published month end; three-month reports use the published exact date range.",
+            "Six Coast 1-month second-growth PDFs (2023-09, 2023-11, 2023-12, 2024-01, 2024-02, 2024-03) print footer labels one text row above their values; their report totals are deliberately not parsed rather than guessed.",
             "No price or volume is interpolated, imputed, or carried forward.",
         ],
     }
