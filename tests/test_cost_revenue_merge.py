@@ -10,6 +10,7 @@ import pytest
 
 from workflows.national.harvest import merge_cost_revenue as merge
 from workflows.national.harvest.cost_revenue import (
+    CORE_LEDGER_FIELDS,
     Component,
     Evidence,
     LedgerValidationError,
@@ -35,7 +36,12 @@ def test_merge_conserves_every_input_row(merged: merge.MergeResult) -> None:
     input_rows = read_csv(BC_BLOCK) + read_csv(QC_BLOCK)
     output_rows = read_csv(merged.output_path)
 
-    assert output_rows == input_rows
+    output_core = [
+        {name: row[name] for name in CORE_LEDGER_FIELDS} for row in output_rows
+    ]
+    assert output_core == input_rows
+    assert all(row["quality"] == "NA" for row in output_rows)
+    assert all(row["dbh_cm"] == "" for row in output_rows)
     assert len(merged.ledger) == len(input_rows) == 940
     assert merged.summary["row_counts"]["by_jurisdiction"] == {"BC": 200, "QC": 740}
     assert merged.summary["row_counts"]["by_source"] == {

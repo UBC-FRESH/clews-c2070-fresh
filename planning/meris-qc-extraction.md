@@ -181,11 +181,13 @@ register. The mapping follows the ledger’s 16-field schema and sign matrix:
    placeholder (all 0.0100). `tbl_Zones_RedevBenefRentSal_F1234` is an economic
    value decomposition; `tbl_770` is a shipped demo. No `delivered_log_revenue`
    can be booked from MERIS actuals.
-2. **No quality dimension in the ledger (G02).** MERIS has DER/F1/F2/F3/F4/
-   PATE/AUTRE per species; the ledger’s product enum has one `sawlog`. The
-   9-field key would collide. The sample uses only F1 and one F3 (different
-   species); F2/F4/AUTRE are not ingested. Add a `quality` field or product
-   variants before full extraction.
+2. **Quality dimension (G02, resolved 2026-11-21).** MERIS has
+   DER/F1/F2/F3/F4/PATE/AUTRE per species; the original 9-field key would
+   collide. The ledger now has an optional `quality` field in the key with
+   fixed class/product compatibility (`F1`–`F4`→`sawlog`, `DER`→`peeler`,
+   `PATE`→`pulpwood`, `AUTRE`/`MIXED`→`mixed_log`). The sample uses only F1 and
+   one F3 (different species); a later extraction can ingest F2/F4/AUTRE without
+   re-keying or collision.
 3. **Harvest is equation-based (G03).** `tbl_Equations_Recolte` and
    `tbl_Profil_Rentabilite_EqGraph` require m3/tige, cutting mode and stand
    type. The sample books only loading (2.80) and marks it partial.
@@ -236,8 +238,8 @@ If the team wants the full parameter export now, the smallest next step is:
 
 1. Export all 191 zones × 14 species groups from `tbl_redevances_F1234` and
    `tbl_couts_zones` (2,674 + 191 rows) as staging CSVs, not ledger rows.
-2. Add a `quality` field (or `sawlog_f1..f4` product variants) to the ledger
-   schema and validator; decide whether `AUTRE` is a product or a residual.
+2. Use the now-added optional `quality` field for DER/F1–F4/PATE/AUTRE/MIXED;
+   keep `AUTRE` as `mixed_log` with its own quality class, not a residue.
 3. Obtain BMMB auction/delivered sale results or mill settlements for
    `delivered_log_revenue`; do not use `tbl_essences_revenus_EssDhp`.
 4. Obtain the tarification-zone → UA/region crosswalk and a volume/tige

@@ -38,6 +38,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from workflows.national.harvest.cost_revenue import (
+    CORE_LEDGER_FIELDS,
     LEDGER_FIELDS,
     Component,
     Confidence,
@@ -45,6 +46,7 @@ from workflows.national.harvest.cost_revenue import (
     Ledger,
     LedgerValidationError,
     Perspective,
+    Quality,
     Unit,
     load_ledger,
 )
@@ -156,10 +158,13 @@ def read_ledger_block(path: Path, expected_jurisdiction: str) -> LedgerBlock:
         header = reader.fieldnames
         if header is None:
             raise LedgerValidationError(f"{path} is empty; expected a header")
-        if tuple(header) != LEDGER_FIELDS:
+        missing = [name for name in CORE_LEDGER_FIELDS if name not in header]
+        unknown = [name for name in header if name not in LEDGER_FIELDS]
+        if missing or unknown:
             raise LedgerValidationError(
-                f"{path} header {header!r} does not match the canonical "
-                f"16-field schema {list(LEDGER_FIELDS)!r}"
+                f"{path} header {header!r} does not match the canonical schema "
+                f"{list(LEDGER_FIELDS)!r} (missing={missing}, unknown={unknown}); "
+                "quality and dbh_cm are optional for legacy 16-field blocks"
             )
         rows: list[dict[str, str]] = []
         for line_number, record in enumerate(reader, start=2):
@@ -167,11 +172,14 @@ def read_ledger_block(path: Path, expected_jurisdiction: str) -> LedgerBlock:
             if extra is not None:
                 raise LedgerValidationError(
                     f"{path} line {line_number}: row has {len(extra)} value(s) "
-                    "beyond the 16 fields"
+                    f"beyond the {len(header)} columns"
                 )
-            row = {name: (record[name] or "").strip() for name in LEDGER_FIELDS}
+            row = {
+                name: (record.get(name) or "").strip() for name in LEDGER_FIELDS
+            }
             if not any(row.values()):
                 continue
+            row["quality"] = row["quality"] or Quality.NA.value
             if row["jurisdiction"] != expected_jurisdiction:
                 raise LedgerValidationError(
                     f"{path} line {line_number}: expected jurisdiction "
@@ -198,6 +206,8 @@ def ledger_key(row: Mapping[str, str]) -> tuple[str, ...]:
         row["spatial_unit"],
         row["species"],
         row["product"],
+        row["quality"],
+        row["dbh_cm"],
         row["perspective"],
         row["component"],
         row["licence"],
@@ -211,6 +221,8 @@ def coverage_key(row: Mapping[str, str]) -> tuple[str, ...]:
         row["spatial_unit"],
         row["species"],
         row["product"],
+        row["quality"],
+        row["dbh_cm"],
         row["licence"],
         row["perspective"],
         row["component"],
@@ -231,7 +243,7 @@ def merge_blocks(blocks: Sequence[LedgerBlock]) -> tuple[dict[str, str], ...]:
             key = ledger_key(row)
             if key in seen_keys:
                 raise LedgerValidationError(
-                    "duplicate 9-field key across blocks: "
+                    "duplicate ledger key across blocks: "
                     f"{'/'.join(key)} (first in {seen_keys[key]}, again in "
                     f"{block.path})"
                 )
@@ -262,7 +274,7 @@ def write_ledger(path: Path, rows: Iterable[Mapping[str, str]]) -> Ledger:
             )
             writer.writeheader()
             for row in rows:
-                writer.writerow({name: row[name] for name in LEDGER_FIELDS})
+                writer.writerow({name: row.get(name, "") for name in LEDGER_FIELDS})
         ledger = load_ledger(temporary)
         os.replace(temporary, path)
     finally:

@@ -278,13 +278,20 @@ for:
 
 ```text
 jurisdiction × source × year × spatial_unit × species × product
-× perspective × component × licence
+× quality × dbh_cm × perspective × component × licence
 ```
 
-That tuple is the primary key. Duplicate keys are an error. If a source reports
-an aggregate, ingest it as a single row with `licence=none` and a
-`notes=aggregated_from=N` marker; do not leave the parts and the aggregate in
-the same table.
+The first nine fields are the original ledger key; `quality` and `dbh_cm` are
+optional dimensions that complete the key when they are present. A legacy
+16-field row (no `quality`/`dbh_cm` columns) is parsed as `quality=NA` with no
+DBH curve coordinate, so the existing 940-row file loads unchanged. The
+normalized key always includes both dimensions, which prevents the old
+`DER`/`F1`–`F4`/`PATE` collision: two QC quality classes for the same species,
+product, licence, and component were previously indistinguishable.
+
+Duplicate keys are an error. If a source reports an aggregate, ingest it as a
+single row with `licence=none` and a `notes=aggregated_from=N` marker; do not
+leave the parts and the aggregate in the same table.
 
 The ledger is a **rate table**, not a transaction-total table. `value_cad` is
 CAD per unit of `unit`; a row total is `value_cad × volume_m3`. This is
@@ -303,6 +310,8 @@ original total, and `value_basis` retains the evidence type.
 | `spatial_unit` | text | yes | Stable unit id: `BC-TSA24`, `BC-TFL_XX`, `BC-BCTS_<sale>`, `QC-UA_XXXX`, `QC-REGION_XX`, `CAN`. Must resolve through a crosswalk to province and, where available, operable stratum. No coordinates and no free text. |
 | `species` | text | yes | Canonical species code (BC/QC prefixes preserved) or `all`. `spp` is allowed only for unresolved mixed species with `confidence=low`. No blanks. |
 | `product` | enum | yes | `sawlog`, `peeler`, `pulpwood`, `mixed_log`, `harvest_residue`, `mill_residue`, `hog_fuel`, `biomass`, `all`. Log and residue products must be explicit. `mill_residue` is allowed only in a separate processing ledger; it must not appear in a forest-sector net-value total. |
+| `quality` | enum | no | `F1`, `F2`, `F3`, `F4`, `DER`, `PATE`, `AUTRE`, `MIXED`, or `NA`; blank is also `NA`. It is part of the key. It is valid only on `CAD_per_m3_log` log-value rows (`delivered_log_revenue` or a `stumpage_*` component), and the class must match the product: `F1`–`F4`→`sawlog`, `DER`→`peeler`, `PATE`→`pulpwood`, `AUTRE`/`MIXED`→`mixed_log`. Do not attach a quality class to residue, area, cost, or `all`-product rows. |
+| `dbh_cm` | numeric | no | Positive finite diameter at breast height in cm; blank or `NA` means no curve coordinate. It is part of the key and is valid only on a model-input species/DBH revenue curve: `value_basis=model_input:<price_point>`, `component=delivered_log_revenue`, an explicit log product, `unit=CAD_per_m3_log`, and `quality=NA`. It is not a transaction attribute. |
 | `volume_m3` | numeric | yes | Quantity weight in the unit declared by `unit`, `> 0`. For `CAD_per_m3_log` it is merchantable m3; for `CAD_per_odt_residue` it is ODT; for `CAD_per_ha` it is ha; for `CAD_per_gj` it is GJ. The column name is fixed by the brief; `unit` is authoritative. If the schema can still change, rename this field to `quantity`. |
 | `unit` | enum | yes | `CAD_per_m3_log`, `CAD_per_odt_residue`, `CAD_per_ha`, `CAD_per_gj`. No totals, no `CAD_per_year`, no `CAD_per_km`. Annual and lump-sum values must be converted at ingest to one of these units with a documented volume; if no volume exists, the row is a coverage gap. |
 | `value_cad` | numeric | yes | CAD per unit of `unit`, always `>= 0`. `crown_credit` is also stored as a positive amount; its direction comes from `sign` (−1 under Crown, +1 under the forest sector). Do not store negative costs. |
@@ -348,6 +357,33 @@ deck (a model parameter, not a transaction);
 `model_input` rows must carry `not_observed=1` and `model_input=1` in
 `notes`, and cannot use `confidence=high`. The validator enforces this so a
 model parameter cannot be mistaken for an observed payment or sale.
+
+**`quality`.** The optional class is the QC MERIS quality dimension, retained
+rather than collapsed into `product`:
+
+```text
+quality =
+    F1 | F2 | F3 | F4     sawlog grades
+  | DER                   peeling (peeler)
+  | PATE                  pulpwood
+  | AUTRE                 other log class (mapped to mixed_log)
+  | MIXED                 mixed log lot
+  | NA                    no class recorded (default)
+```
+
+`quality` is compatible only with a log product and one of
+`delivered_log_revenue`, `stumpage_base`, `stumpage_bid_premium`, or
+`stumpage_total`, and only with `CAD_per_m3_log`. The class/product mapping is
+fixed: `F1`–`F4`→`sawlog`, `DER`→`peeler`, `PATE`→`pulpwood`,
+`AUTRE`/`MIXED`→`mixed_log`. A quality class on a residue, area, generic cost,
+or `all`-product row is an error, not an unknown class.
+
+**`dbh_cm`.** The optional curve coordinate is a positive finite DBH in cm. It
+belongs only to a model-input species/DBH revenue curve
+(`model_input:*`, `delivered_log_revenue`, log product, `CAD_per_m3_log`,
+`quality=NA`), because `tbl_essences_revenus_EssDhp` is a model deck, not an
+observed sale. A DBH on an observed payment, a cost, a stumpage row, or a
+quality-class row is an error. Blank and `NA` mean the row is not a curve row.
 
 **`confidence`.**
 
@@ -407,17 +443,17 @@ is registered, actual rows use `prov_<id>` and confidence is capped at `medium`
 even where the illustration shows `high`.
 
 ```csv
-jurisdiction,source,year,spatial_unit,species,product,volume_m3,unit,value_cad,value_basis,perspective,component,sign,confidence,licence,notes
-BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,30.00,observed_sale:standing,crown,stumpage_base,1,high,BCTS-24001,"currency_basis=CAD_nominal; base=upset"
-BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,12.50,observed_sale:standing,crown,stumpage_bid_premium,1,high,BCTS-24001,"currency_basis=CAD_nominal; premium=winning minus upset"
-BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,30.00,observed_sale:standing,forest_sector,stumpage_base,-1,high,BCTS-24001,"mirror=1"
-BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,12.50,observed_sale:standing,forest_sector,stumpage_bid_premium,-1,high,BCTS-24001,"mirror=1"
-BC,bc_appraisal_manual,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,38.10,appraisal_allowance:roadside,forest_sector,harvest,-1,medium,BCTS-24001,"currency_basis=CAD_nominal; allowance not actual; stumpage_residual=true"
-BC,bc_log_price_deck,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,98.40,published_average:mill_gate,forest_sector,delivered_log_revenue,1,medium,BCTS-24001,"currency_basis=CAD_nominal; deck average; not a transaction"
-QC,qc_tarification,2024,QC-UA-0642,SAB,sawlog,8000,CAD_per_m3_log,18.75,administered_rate:standing,crown,stumpage_base,1,high,UA0642-2024,"currency_basis=CAD_nominal; regional rate"
-QC,qc_tarification,2024,QC-UA-0642,SAB,sawlog,8000,CAD_per_m3_log,18.75,administered_rate:standing,forest_sector,stumpage_base,-1,high,UA0642-2024,"mirror=1"
-QC,qc_bmmb_sales,2024,QC-UA-0642,SAB,sawlog,8000,CAD_per_m3_log,72.00,observed_sale:mill_gate,forest_sector,delivered_log_revenue,1,medium,LOT-2024-119,"currency_basis=CAD_nominal; delivered sale; confirm haul boundary"
-BC,bc_stage_b,2020,BC-B2,all,harvest_residue,1500,CAD_per_odt_residue,31.57,model_derived:facility_gate,forest_sector,residue_recovery,-1,medium,BC-B2,"currency_basis=CAD_real_2020; transport+processing only"
+jurisdiction,source,year,spatial_unit,species,product,volume_m3,unit,value_cad,value_basis,perspective,component,sign,confidence,licence,notes,quality,dbh_cm
+BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,30.00,observed_sale:standing,crown,stumpage_base,1,high,BCTS-24001,"currency_basis=CAD_nominal; base=upset",NA,
+BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,12.50,observed_sale:standing,crown,stumpage_bid_premium,1,high,BCTS-24001,"currency_basis=CAD_nominal; premium=winning minus upset",NA,
+BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,30.00,observed_sale:standing,forest_sector,stumpage_base,-1,high,BCTS-24001,"mirror=1",NA,
+BC,bcts_auction_results,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,12.50,observed_sale:standing,forest_sector,stumpage_bid_premium,-1,high,BCTS-24001,"mirror=1",NA,
+BC,bc_appraisal_manual,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,38.10,appraisal_allowance:roadside,forest_sector,harvest,-1,medium,BCTS-24001,"currency_basis=CAD_nominal; allowance not actual; stumpage_residual=true",NA,
+BC,bc_log_price_deck,2024,BC-TSA24,SWE,sawlog,12500,CAD_per_m3_log,98.40,published_average:mill_gate,forest_sector,delivered_log_revenue,1,medium,BCTS-24001,"currency_basis=CAD_nominal; deck average; not a transaction",NA,
+QC,qc_tarification,2024,QC-UA-0642,SAB,sawlog,8000,CAD_per_m3_log,18.75,administered_rate:standing,crown,stumpage_base,1,high,UA0642-2024,"currency_basis=CAD_nominal; regional rate",NA,
+QC,qc_tarification,2024,QC-UA-0642,SAB,sawlog,8000,CAD_per_m3_log,18.75,administered_rate:standing,forest_sector,stumpage_base,-1,high,UA0642-2024,"mirror=1",NA,
+QC,qc_bmmb_sales,2024,QC-UA-0642,SAB,sawlog,8000,CAD_per_m3_log,72.00,observed_sale:mill_gate,forest_sector,delivered_log_revenue,1,medium,LOT-2024-119,"currency_basis=CAD_nominal; delivered sale; confirm haul boundary",NA,
+BC,bc_stage_b,2020,BC-B2,all,harvest_residue,1500,CAD_per_odt_residue,31.57,model_derived:facility_gate,forest_sector,residue_recovery,-1,medium,BC-B2,"currency_basis=CAD_real_2020; transport+processing only",NA,
 ```
 
 The QC delivered-sale row must **not** be accompanied by a QC tarification row
@@ -518,9 +554,11 @@ in the coverage and volume-reconciliation report.
    total sale value, convert it to a per-m3 rate using the lot volume. Do not add
    the tarification rate to the BMMB winning price unless the BMMB record
    explicitly reports a premium above the base.
-3. **Quality and grade.** Map QC quality classes to the product taxonomy through
-   a versioned crosswalk. Do not collapse grade into species; grade drives
-   value. If the class is unresolved, use `confidence=low` and say so.
+3. **Quality and grade.** Put the QC class in `quality` (`DER`, `F1`–`F4`,
+   `PATE`, `AUTRE`, or `MIXED`) and keep the product taxonomy separate. Do not
+   collapse grade into species or into `product`; grade drives value and is part
+   of the key. If the class is unresolved, use `confidence=low` and say so.
+   Never attach a quality class to a residue, area, or generic cost row.
 4. **Region.** Use the administrative region or UA; tarification rates vary by
    region. Do not use a province-wide average when a regional rate exists.
 5. **Volume basis.** Record `m3_solid` or `m3_apparent` in `notes`. Convert
@@ -757,7 +795,7 @@ more decimal places than the weakest source.
 | ID | Check | Assertion | Fail behaviour |
 |---|---|---|---|
 | FS-CRL-01 | Schema parse | Every required field present; enums valid; `year` four digits; `volume_m3 > 0`; `value_cad >= 0` | Error with row key; no default row |
-| FS-CRL-02 | Key uniqueness | The 9-field key is unique | Error; aggregate explicitly or drop the duplicate |
+| FS-CRL-02 | Key uniqueness | The normalized ledger key (the original 9 fields plus `quality` and `dbh_cm`) is unique; legacy rows normalize to `quality=NA`, `dbh_cm=null` | Error; aggregate explicitly or drop the duplicate |
 | FS-CRL-03 | Sign matrix | Every row matches §2.3 | Error; no "close enough" sign |
 | FS-CRL-04 | Perspective/component compatibility | No production component under `crown`; no `crown_other` revenue under `forest_sector` as a positive | Error |
 | FS-CRL-05 | Value non-negative | `value_cad >= 0`; `crown_credit` uses the sign field | Error |
@@ -775,8 +813,10 @@ more decimal places than the weakest source.
 | FS-CRL-17 | LP non-interference | v1 allocation with the ledger equals the allocation without it within 1 m3 | Error; the objective is contaminated |
 | FS-CRL-18 | Mirror rows | Each `mirror=1` row has an equal absolute value, the opposite sign, and the same licence/component/year | Error |
 | FS-CRL-19 | No fake precision | Reported precision does not exceed the weakest source; no six-decimal rate from a rounded source | Warning at ingest; error at publication |
-| FS-CRL-20 | Unknown enum | Any unknown source, species, product, unit, component, perspective, or value basis | Error; no fallback enum |
-| FS-CRL-21 | Source exclusivity | For one `(jurisdiction, year, spatial_unit, species, product, licence, component, perspective)`, exactly one source is additive; alternatives are `comparison_only` and volume-partitioned, never summed | Error; no overlapping coverage |
+| FS-CRL-20 | Unknown enum | Any unknown source, species, product, quality, unit, component, perspective, or value basis | Error; no fallback enum |
+| FS-CRL-21 | Source exclusivity | For one `(jurisdiction, year, spatial_unit, species, product, quality, dbh_cm, licence, component, perspective)`, exactly one source is additive; alternatives are `comparison_only` and volume-partitioned, never summed | Error; no overlapping coverage |
+| FS-CRL-22 | Quality compatibility | Non-`NA` quality uses `CAD_per_m3_log` and a log-value component (`delivered_log_revenue` or `stumpage_*`), and the class matches the product (`F1`–`F4`→`sawlog`, `DER`→`peeler`, `PATE`→`pulpwood`, `AUTRE`/`MIXED`→`mixed_log`) | Error; quality is never inferred or collapsed into `product` |
+| FS-CRL-23 | DBH curve compatibility | `dbh_cm` is positive finite and appears only on a model-input `delivered_log_revenue` log-product row with `CAD_per_m3_log` and `quality=NA` | Error; DBH on an observed sale, cost, stumpage, or quality row |
 
 ### 6.2 Sign and double-count specifics
 
@@ -1039,7 +1079,9 @@ Wrong calculations to reject:
 | `year` | Sale year | Manual edition / price year | Sale year | Tarification year |
 | `spatial_unit` | Sale location / TSA / TFL | Appraisal zone / TSA / TFL | Region / UA | Region / UA |
 | `species` | Sale species/grade | Appraisal species | Lot species/quality | Tariff species group |
-| `product` | Sawlog/pulp/peeler as sold | Appraisal sort | Lot quality class | Tariff quality class |
+| `product` | Sawlog/pulp/peeler as sold | Appraisal sort | Lot product class | Tariff product group |
+| `quality` | Species/grade if the sale reports one, else `NA` | `NA` unless the appraisal deck names a grade | `DER`/`F1`–`F4`/`PATE`/`AUTRE`; `MIXED` for a mixed lot | `NA` unless the tariff class is a quality class |
+| `dbh_cm` | `NA`; a sale is not a DBH curve | `NA` | Species/DBH model-input curve only | `NA` |
 | `volume_m3` | Sale volume | Appraised volume | Lot volume | Billed volume |
 | `unit` | `CAD_per_m3_log` | `CAD_per_m3_log` or `CAD_per_ha` | `CAD_per_m3_log` | `CAD_per_m3_log` |
 | `value_cad` | Upset or premium | Allowance | Sale price or premium | Administered rate |

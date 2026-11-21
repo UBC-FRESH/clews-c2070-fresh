@@ -1,5 +1,19 @@
 # Change Log
 
+## 2026-11-21
+
+- **Extended the forest cost/revenue ledger schema for quality and DBH curves.**
+  Added optional `quality` (`F1`–`F4`, `DER`, `PATE`, `AUTRE`, `MIXED`, `NA`)
+  and `dbh_cm` (positive finite, blank/`NA` allowed) to the ledger key and
+  fail-closed validator. The normalized key now distinguishes QC quality classes
+  that previously collided (`DER`/`F1`–`F4`/`PATE`), while a legacy 16-field CSV
+  still loads with `quality=NA` and no DBH. Added quality/product/component/unit
+  compatibility checks and restricted `dbh_cm` to model-input
+  `delivered_log_revenue` species/DBH curves with `quality=NA`. Updated the
+  template header, ledger planning note, merge header handling, and synthetic
+  tests. The existing **940-row** merged ledger loads unchanged. No MERIS/BCTS
+  ingestion, model, UI, or public OSeCAN change.
+
 ## 2026-11-20
 
 - **Added per-instance deployment isolation and committed the v1 release/handoff

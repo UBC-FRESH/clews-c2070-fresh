@@ -8,7 +8,9 @@ from pathlib import Path
 import pytest
 
 from workflows.national.harvest.cost_revenue import (
+    CORE_LEDGER_FIELDS,
     LEDGER_FIELDS,
+    OPTIONAL_LEDGER_FIELDS,
     TEMPLATE_PATH,
     Component,
     Confidence,
@@ -17,11 +19,18 @@ from workflows.national.harvest.cost_revenue import (
     LedgerValidationError,
     Perspective,
     PricePoint,
+    Quality,
     QuantityUnit,
     Sign,
     Unit,
     ValueBasis,
     load_ledger,
+)
+
+LEGACY_LEDGER_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "data/derived/national/harvest_basis/forest_cost_revenue"
+    / "forest_cost_revenue.csv"
 )
 
 
@@ -155,6 +164,17 @@ def write_ledger(tmp_path: Path, rows: list[dict[str, str]]) -> Path:
     return path
 
 
+def write_legacy_ledger(
+    tmp_path: Path, rows: list[dict[str, str]], *, name: str = "legacy.csv"
+) -> Path:
+    path = tmp_path / name
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CORE_LEDGER_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
 def test_valid_fixture_parses_and_pairs_mirrors(tmp_path: Path) -> None:
     ledger = load_ledger(write_ledger(tmp_path, valid_rows()))
 
@@ -175,11 +195,12 @@ def test_valid_fixture_parses_and_pairs_mirrors(tmp_path: Path) -> None:
     assert ledger.rows[4].confidence is Confidence.MEDIUM
 
 
-def test_template_matches_the_16_field_schema() -> None:
+def test_template_matches_the_18_field_schema() -> None:
     with TEMPLATE_PATH.open(newline="", encoding="utf-8") as handle:
         reader = csv.reader(handle)
         header = next(reader)
         assert tuple(header) == LEDGER_FIELDS
+        assert tuple(header[-2:]) == OPTIONAL_LEDGER_FIELDS
         assert list(reader) == []
     assert load_ledger(TEMPLATE_PATH).is_empty
 
@@ -192,7 +213,7 @@ def test_bad_sign_is_rejected(tmp_path: Path) -> None:
 
 def test_duplicate_key_is_rejected(tmp_path: Path) -> None:
     path = write_ledger(tmp_path, [base_row(), base_row()])
-    with pytest.raises(LedgerValidationError, match="duplicate 9-field key"):
+    with pytest.raises(LedgerValidationError, match="duplicate ledger key"):
         load_ledger(path)
 
 
@@ -399,3 +420,164 @@ def test_model_input_evidence_cannot_claim_high_confidence(
     )
     with pytest.raises(LedgerValidationError, match="model_input evidence"):
         load_ledger(path)
+
+
+def test_quality_distinguishes_previously_colliding_keys(tmp_path: Path) -> None:
+    rows = [
+        base_row(quality="F1"),
+        base_row(quality="F2"),
+        base_row(quality="F4"),
+    ]
+    ledger = load_ledger(write_ledger(tmp_path, rows))
+
+    assert len(ledger) == 3
+    assert {row.quality for row in ledger} == {
+        Quality.F1,
+        Quality.F2,
+        Quality.F4,
+    }
+    assert len({row.key for row in ledger}) == 3
+
+
+def test_duplicate_key_with_same_quality_and_dbh_is_rejected(
+    tmp_path: Path,
+) -> None:
+    row = model_input_row(quality="NA", dbh_cm="20")
+    with pytest.raises(LedgerValidationError, match="duplicate ledger key"):
+        load_ledger(write_ledger(tmp_path, [row, dict(row)]))
+
+
+def test_quality_is_valid_for_log_value_rows(tmp_path: Path) -> None:
+    ledger = load_ledger(
+        write_ledger(
+            tmp_path,
+            [
+                base_row(quality="F1"),
+                delivered_row(
+                    jurisdiction="QC",
+                    source="prov_qc_meris",
+                    spatial_unit="QC-MERIS-PROV",
+                    species="BOJ",
+                    quality="F1",
+                    value_basis="model_input:mill_gate",
+                    confidence="medium",
+                    licence="QC-MERIS-BOJ-F1-C",
+                    notes=(
+                        "currency_basis=CAD_nominal; "
+                        "source_table=tbl_Essences_frm_inv_tiges; "
+                        "not_observed=1; model_input=1"
+                    ),
+                ),
+                base_row(
+                    jurisdiction="QC",
+                    source="prov_qc_meris",
+                    product="mixed_log",
+                    quality="AUTRE",
+                    value_basis="model_input:standing",
+                    confidence="medium",
+                    licence="QC-MERIS-BOJ-AUTRE-C",
+                    notes=(
+                        "currency_basis=CAD_nominal; "
+                        "source_table=tbl_redevances_F1234; "
+                        "not_observed=1; model_input=1"
+                    ),
+                ),
+            ],
+        )
+    )
+
+    assert {row.quality for row in ledger} == {
+        Quality.F1,
+        Quality.AUTRE,
+    }
+
+
+def test_quality_requires_a_compatible_product_and_component(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(LedgerValidationError, match="requires product sawlog"):
+        load_ledger(
+            write_ledger(tmp_path, [base_row(quality="F1", product="pulpwood")])
+        )
+    with pytest.raises(LedgerValidationError, match="log value components"):
+        load_ledger(
+            write_ledger(
+                tmp_path,
+                [harvest_row(quality="F1", product="sawlog")],
+            )
+        )
+    with pytest.raises(LedgerValidationError, match="requires product peeler"):
+        load_ledger(
+            write_ledger(tmp_path, [base_row(quality="DER", product="sawlog")])
+        )
+
+
+def test_quality_requires_a_log_unit(tmp_path: Path) -> None:
+    row = base_row(
+        product="harvest_residue",
+        component="residue_recovery",
+        sign="-1",
+        perspective="forest_sector",
+        value_basis="model_derived:facility_gate",
+        unit="CAD_per_odt_residue",
+        quality="F1",
+        notes="currency_basis=CAD_nominal; source_table=residue_ledger",
+    )
+    with pytest.raises(LedgerValidationError, match="CAD_per_m3_log"):
+        load_ledger(write_ledger(tmp_path, [row]))
+
+
+def test_dbh_is_valid_only_for_model_input_revenue_curves(
+    tmp_path: Path,
+) -> None:
+    ledger = load_ledger(write_ledger(tmp_path, [model_input_row(dbh_cm="20")]))
+    assert ledger.rows[0].dbh_cm == 20.0
+
+    with pytest.raises(LedgerValidationError, match="model-input species/DBH"):
+        load_ledger(write_ledger(tmp_path, [base_row(dbh_cm="20")]))
+    with pytest.raises(LedgerValidationError, match="delivered_log_revenue curve"):
+        load_ledger(
+            write_ledger(
+                tmp_path,
+                [
+                    model_input_row(
+                        component="harvest",
+                        sign="-1",
+                        dbh_cm="20",
+                    )
+                ],
+            )
+        )
+    with pytest.raises(LedgerValidationError, match="cannot also carry a quality"):
+        load_ledger(
+            write_ledger(
+                tmp_path,
+                [model_input_row(quality="F1", dbh_cm="20")],
+            )
+        )
+    with pytest.raises(LedgerValidationError, match="must be > 0"):
+        load_ledger(write_ledger(tmp_path, [model_input_row(dbh_cm="0")]))
+    with pytest.raises(LedgerValidationError, match="must be finite"):
+        load_ledger(
+            write_ledger(tmp_path, [model_input_row(dbh_cm="NaN")])
+        )
+
+
+def test_legacy_16_field_header_loads_with_na_quality_and_no_dbh(
+    tmp_path: Path,
+) -> None:
+    ledger = load_ledger(write_legacy_ledger(tmp_path, valid_rows()))
+
+    assert len(ledger) == len(valid_rows())
+    assert all(row.quality is Quality.NA for row in ledger)
+    assert all(row.dbh_cm is None for row in ledger)
+
+
+def test_existing_940_row_ledger_loads_without_optional_columns() -> None:
+    if not LEGACY_LEDGER_PATH.exists():
+        pytest.skip("legacy merged ledger is not materialized")
+    ledger = load_ledger(LEGACY_LEDGER_PATH)
+
+    assert len(ledger) == 940
+    assert all(row.quality is Quality.NA for row in ledger)
+    assert all(row.dbh_cm is None for row in ledger)

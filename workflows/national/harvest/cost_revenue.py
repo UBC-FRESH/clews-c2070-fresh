@@ -30,7 +30,7 @@ TEMPLATE_PATH = (
     / "data/derived/national/harvest_basis/forest_cost_revenue_template.csv"
 )
 
-LEDGER_FIELDS: tuple[str, ...] = (
+CORE_LEDGER_FIELDS: tuple[str, ...] = (
     "jurisdiction",
     "source",
     "year",
@@ -48,6 +48,13 @@ LEDGER_FIELDS: tuple[str, ...] = (
     "licence",
     "notes",
 )
+
+# ``quality`` and ``dbh_cm`` were added after the initial 16-field ledger.
+# They are optional so a legacy 16-field CSV still loads: a missing header
+# column means ``quality=NA`` and no DBH curve coordinate.  The canonical
+# template and newly written ledgers carry both columns.
+OPTIONAL_LEDGER_FIELDS: tuple[str, ...] = ("quality", "dbh_cm")
+LEDGER_FIELDS: tuple[str, ...] = CORE_LEDGER_FIELDS + OPTIONAL_LEDGER_FIELDS
 
 
 class Jurisdiction(StrEnum):
@@ -169,6 +176,20 @@ class Product(StrEnum):
     ALL = "all"
 
 
+class Quality(StrEnum):
+    """QC/BC log quality class; ``NA`` means no class is recorded."""
+
+    F1 = "F1"
+    F2 = "F2"
+    F3 = "F3"
+    F4 = "F4"
+    DER = "DER"
+    PATE = "PATE"
+    AUTRE = "AUTRE"
+    MIXED = "MIXED"
+    NA = "NA"
+
+
 SIGN_MATRIX: dict[Perspective, dict[Component, Sign]] = {
     Perspective.CROWN: {
         Component.STUMPAGE_BASE: Sign.POSITIVE,
@@ -227,6 +248,29 @@ LOG_PRODUCTS = frozenset(
 RESIDUE_PRODUCTS = frozenset(
     {Product.HARVEST_RESIDUE, Product.HOG_FUEL, Product.BIOMASS}
 )
+
+# Quality classes differentiate log value.  They do not attach to residue,
+# area, or generic all-product cost rows.  The class-to-product map preserves
+# the QC MERIS meaning: DER is peeling (peeler), F1-F4 are sawlog grades,
+# PATE is pulpwood, AUTRE is other/mixed, and MIXED is a mixed log lot.
+LOG_VALUE_COMPONENTS = frozenset(
+    {
+        Component.DELIVERED_LOG_REVENUE,
+        Component.STUMPAGE_BASE,
+        Component.STUMPAGE_BID_PREMIUM,
+        Component.STUMPAGE_TOTAL,
+    }
+)
+QUALITY_PRODUCTS: dict[Quality, frozenset[Product]] = {
+    Quality.F1: frozenset({Product.SAWLOG}),
+    Quality.F2: frozenset({Product.SAWLOG}),
+    Quality.F3: frozenset({Product.SAWLOG}),
+    Quality.F4: frozenset({Product.SAWLOG}),
+    Quality.DER: frozenset({Product.PEELER}),
+    Quality.PATE: frozenset({Product.PULPWOOD}),
+    Quality.AUTRE: frozenset({Product.MIXED_LOG}),
+    Quality.MIXED: frozenset({Product.MIXED_LOG}),
+}
 
 # These source pairs must never be additive for the same component/sale.
 SOURCE_PAIR_RULES: tuple[tuple[frozenset[str], str], ...] = (
@@ -383,6 +427,8 @@ class CostRevenueRow:
     confidence: Confidence
     licence: Licence
     notes: str
+    quality: Quality = Quality.NA
+    dbh_cm: float | None = None
     line_number: int | None = field(default=None, compare=False, repr=False)
 
     @property
@@ -394,6 +440,8 @@ class CostRevenueRow:
             self.spatial_unit,
             self.species,
             self.product,
+            self.quality.value,
+            self.dbh_cm,
             self.perspective,
             self.component,
             self.licence.value,
@@ -407,6 +455,8 @@ class CostRevenueRow:
             self.spatial_unit,
             self.species,
             self.product,
+            self.quality.value,
+            self.dbh_cm,
             self.licence.value,
             self.perspective,
             self.component,
@@ -467,6 +517,10 @@ def _parse_row(
             fail(field_name, "required field is missing or blank")
         return raw.strip()
 
+    def optional_text(field_name: str) -> str:
+        raw = record.get(field_name)
+        return raw.strip() if raw is not None else ""
+
     def number(
         field_name: str, *, positive: bool = False, nonnegative: bool = False
     ) -> float:
@@ -522,6 +576,17 @@ def _parse_row(
     volume_m3 = number("volume_m3", positive=True)
     unit = enum(Unit, "unit", text("unit"))
     value_cad = number("value_cad", nonnegative=True)
+
+    quality_raw = optional_text("quality")
+    quality = (
+        Quality.NA if not quality_raw else enum(Quality, "quality", quality_raw)
+    )
+    dbh_raw = optional_text("dbh_cm")
+    dbh_cm = (
+        None
+        if not dbh_raw or dbh_raw == Quality.NA.value
+        else number("dbh_cm", positive=True)
+    )
 
     value_basis_raw = text("value_basis")
     try:
@@ -615,6 +680,54 @@ def _parse_row(
             fail(
                 "notes",
                 "CAD_per_gj requires a registered conversion_source=... token",
+            )
+
+    if quality is not Quality.NA:
+        if unit is not Unit.CAD_PER_M3_LOG:
+            fail(
+                "unit",
+                f"quality {quality.value!r} is valid only for CAD_per_m3_log",
+            )
+        if component not in LOG_VALUE_COMPONENTS:
+            fail(
+                "component",
+                f"quality {quality.value!r} is valid only for log value "
+                "components (delivered_log_revenue, stumpage_base, "
+                "stumpage_bid_premium, stumpage_total)",
+            )
+        allowed_products = QUALITY_PRODUCTS[quality]
+        if product not in allowed_products:
+            fail(
+                "quality",
+                f"quality {quality.value!r} requires product "
+                f"{', '.join(item.value for item in sorted(allowed_products, key=str))}; "
+                f"got {product.value!r}",
+            )
+
+    if dbh_cm is not None:
+        if value_basis.evidence is not Evidence.MODEL_INPUT:
+            fail(
+                "dbh_cm",
+                "dbh_cm is valid only for model-input species/DBH revenue "
+                "curves, not observed sales or costs",
+            )
+        if component is not Component.DELIVERED_LOG_REVENUE:
+            fail(
+                "dbh_cm",
+                "dbh_cm is valid only for a delivered_log_revenue curve row",
+            )
+        if product not in LOG_PRODUCTS:
+            fail(
+                "dbh_cm",
+                "dbh_cm requires an explicit log product (not 'all' or residue)",
+            )
+        if unit is not Unit.CAD_PER_M3_LOG:
+            fail("dbh_cm", "dbh_cm requires CAD_per_m3_log")
+        if quality is not Quality.NA:
+            fail(
+                "dbh_cm",
+                "a species/DBH curve row cannot also carry a quality class; "
+                "store the curve coordinate without a quality",
             )
 
     if source.startswith("prov_") and confidence is Confidence.HIGH:
@@ -810,6 +923,8 @@ def _parse_row(
         confidence=confidence,
         licence=licence,
         notes=notes,
+        quality=quality,
+        dbh_cm=dbh_cm,
         line_number=line_number,
     )
 
@@ -830,6 +945,8 @@ def _mirror_counterparts(
         if other.spatial_unit != row.spatial_unit or other.species != row.species:
             continue
         if other.product is not row.product or other.unit is not row.unit:
+            continue
+        if other.quality is not row.quality or other.dbh_cm != row.dbh_cm:
             continue
         if other.licence.value != row.licence.value:
             continue
@@ -857,7 +974,7 @@ def validate_rows(rows: Sequence[CostRevenueRow]) -> None:
                 LedgerIssue(
                     group[0].line_number,
                     "key",
-                    f"duplicate 9-field key {_format_key(key)} on lines {lines}",
+                    f"duplicate ledger key {_format_key(key)} on lines {lines}",
                 )
             )
 
@@ -871,6 +988,8 @@ def validate_rows(rows: Sequence[CostRevenueRow]) -> None:
             row.spatial_unit,
             row.species,
             row.product,
+            row.quality.value,
+            row.dbh_cm,
             row.licence.value,
         )
         stumpage_groups[key].add(row.component)
@@ -900,6 +1019,8 @@ def validate_rows(rows: Sequence[CostRevenueRow]) -> None:
             row.spatial_unit,
             row.species,
             row.product,
+            row.quality.value,
+            row.dbh_cm,
             row.licence.value,
             row.component,
         )
@@ -976,6 +1097,8 @@ def validate_rows(rows: Sequence[CostRevenueRow]) -> None:
             row.spatial_unit,
             row.species,
             row.product,
+            row.quality.value,
+            row.dbh_cm,
             row.licence.value,
             row.perspective,
         )
@@ -1016,6 +1139,8 @@ def validate_rows(rows: Sequence[CostRevenueRow]) -> None:
             row.spatial_unit,
             row.species,
             row.product,
+            row.quality.value,
+            row.dbh_cm,
             row.licence.value,
             row.component,
             row.unit,
@@ -1074,7 +1199,7 @@ def load_ledger(path: str | Path, *, validate: bool = True) -> Ledger:
                 LedgerIssue(None, "header", f"{path} is empty; expected a header")
             )
         issues: list[LedgerIssue] = []
-        missing = [name for name in LEDGER_FIELDS if name not in header]
+        missing = [name for name in CORE_LEDGER_FIELDS if name not in header]
         unknown = [name for name in header if name not in LEDGER_FIELDS]
         duplicates = sorted({name for name in header if header.count(name) > 1})
         if missing:
@@ -1100,7 +1225,8 @@ def load_ledger(path: str | Path, *, validate: bool = True) -> Ledger:
                     LedgerIssue(
                         line_number,
                         "row",
-                        f"row has {len(extra)} value(s) beyond the 16 fields",
+                        f"row has {len(extra)} value(s) beyond the "
+                        f"{len(header)} columns",
                     )
                 )
                 continue
