@@ -1,5 +1,29 @@
 # Roadmap
 
+## Active Task: Forest-Sector Evidence v2
+
+Governing note: [planning/forest-sector-evidence-v2.md](planning/forest-sector-evidence-v2.md).
+
+Status: evidence collection complete through landbase screening; the BC
+benchmark and v2d net-value benchmark remain pending.
+
+- [x] v2a source review — no public QC mill-settlement ledger; BMMB/MRNF, BC
+  log-market, MRDEM, and THLB limits recorded.
+- [x] v2b cost/revenue ledger — 2,888 rows (200 observed BC + 2,688 QC model
+  input); 2,075 delivered-log rows; observed/model-input separation enforced.
+- [x] BMMB delivered auctions — 18 sales, 13 awarded, 38.29 CAD/m3 weighted
+  nominal.
+- [x] QC MRNF 2022 survey — 660 observations; 81.40 / 25.01 / 106.41 CAD/m3
+  procurement stack.
+- [x] BC log market — 15,705 rows from 505 PDFs, 2019–2026.
+- [x] Operable proxy v2 — core20 99.87 Mha, core30 77.05 Mha; road binding.
+- [x] Slope screen — 960 m MRDEM-30; >30% removes 1.51%; core20 98.39 Mha.
+- [x] Operable proxy v3 — core20 >30% 98.39 Mha, 150M 1.525 m3/ha/yr; core30
+  76.01 Mha, 150M 1.973 m3/ha/yr.
+- [ ] BC benchmark — pending appraisal-cost extraction.
+- [ ] v2d net-value benchmark — pending a validated BC/QC cost/revenue basis.
+- [ ] Model/UI wiring — only after validation; no OSeCAN change.
+
 ## Phase 1: Foundation and Model Development
 
 Target window: May 2026 to March 2027.
