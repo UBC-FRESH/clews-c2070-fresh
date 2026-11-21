@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 import sys
@@ -13,6 +14,12 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "scripts/national/extract_qc_cost_survey_2022.py"
 FIXTURE_PATH = REPO_ROOT / "tests/fixtures/qc_cost_survey/regional_2022_rows.json"
+SURVEY_CSV = (
+    REPO_ROOT
+    / "data/derived/national/harvest_basis/qc_cost_survey_2022"
+    / "qc_cost_revenue_survey.csv"
+)
+MANIFEST_JSON = SURVEY_CSV.with_name("manifest.json")
 
 
 def load_module():
@@ -111,6 +118,11 @@ def test_regional_fixture_emits_all_published_values():
     assert {row.region_code for row in rows} == set(qc.REGIONAL_CODES)
     assert all(row.observation_type == "survey_aggregate" for row in rows)
     assert all(row.aggregation_level in {"regional", "provincial"} for row in rows)
+    assert all(
+        row.confidentiality_flag == "three_respondents"
+        for row in rows
+        if row.region_code == "R09"
+    )
 
     r09_total = next(
         row
@@ -142,7 +154,7 @@ def test_red_cell_sets_three_respondent_flag():
                 qc.REGIONAL_TABLE.columns, qc.REGIONAL_CODES, strict=True
             )
         },
-        sample_n_by_region={"R09": 3},
+        sample_n_by_region={"R09": 4},
     )
     flagged = next(
         row
@@ -151,6 +163,15 @@ def test_red_cell_sets_three_respondent_flag():
     )
     assert flagged.confidentiality_flag == "three_respondents"
     assert flagged_coverage.values_flagged_three_respondents == 1
+
+
+def test_sample_n_three_flags_every_r09_row():
+    rows, _ = regional_rows()
+    r09 = [row for row in rows if row.region_code == "R09"]
+    assert len(r09) == 11
+    assert all(row.sample_n == 3 for row in r09)
+    assert all(row.confidentiality_flag == "three_respondents" for row in r09)
+    assert all("three respondents" in row.notes.lower() for row in r09)
 
 
 def test_validate_rejects_unexpected_negative_value():
@@ -177,3 +198,139 @@ def test_a2_respondent_counts_are_explicit():
     assert qc.A2_SAMPLE_N[("sepm", 2022)] == 37
     assert qc.A2_SAMPLE_N[("feuillus_durs", 2022)] == 11
     assert qc.A2_SAMPLE_N[("peupliers", 2022)] == 9
+
+
+def test_t20_peupliers_trituration_inherits_three_respondent_flag():
+    t20 = next(spec for spec in qc.TABLE_SPECS if spec.key == "T20")
+    raw_rows = [["Recolte", None, "31,42", None, "31,95", "26,30"]]
+    rows, coverage = qc.rows_from_extracted_table(raw_rows, t20)
+    poplar = next(
+        row
+        for row in rows
+        if row.species_group == "peupliers" and row.product_or_grade == "trituration"
+    )
+    assert poplar.confidentiality_flag == "three_respondents"
+    assert "three-respondent" in poplar.notes
+    assert coverage.values_flagged_three_respondents == 1
+    assert poplar.value == pytest.approx(26.30)
+
+
+def test_t21_purchase_is_a_synthesis_row_and_t2_stays_component():
+    t2 = next(spec for spec in qc.TABLE_SPECS if spec.key == "T2")
+    t21 = next(spec for spec in qc.TABLE_SPECS if spec.key == "T21")
+    assert t2.row_map["Achat de bois"].observation_kind == "component"
+    purchase = t21.row_map["Achats de bois (livre)"]
+    assert purchase.observation_kind == "synthesis"
+    assert "procurement cost" in purchase.notes
+
+
+def test_row_spec_notes_survive_cell_parsing():
+    t10 = next(spec for spec in qc.TABLE_SPECS if spec.key == "T10")
+    raw_rows = [["Encheres", None, "32,96"]]
+    rows, _ = qc.rows_from_extracted_table(raw_rows, t10)
+    assert len(rows) == 1
+    assert rows[0].component == "auction_price"
+    assert "Auction price shown as a reference" in rows[0].notes
+
+
+def test_validate_enforces_sign_conventions():
+    rows, _ = regional_rows()
+    valid_physical = replace(
+        rows[0], unit=qc.PERCENT, sign_convention=qc.PHYSICAL_QUANTITY, value=50.0
+    )
+    valid_revenue = replace(
+        rows[0],
+        component_group=qc.REVENUE,
+        component="gross_revenue",
+        unit=qc.CAD_M3,
+        sign_convention=qc.POSITIVE_REVENUE,
+        value=50.0,
+    )
+    assert qc.validate_rows([valid_physical])["row_count"] == 1
+    assert qc.validate_rows([valid_revenue])["row_count"] == 1
+
+    bad_physical = replace(
+        rows[0], unit=qc.PERCENT, sign_convention="positive_cost", value=50.0
+    )
+    bad_revenue = replace(
+        rows[0],
+        component_group=qc.REVENUE,
+        component="gross_revenue",
+        unit=qc.CAD_M3,
+        sign_convention="positive_cost",
+        value=50.0,
+    )
+    with pytest.raises(ValueError, match="unexpected sign conventions"):
+        qc.validate_rows([bad_physical])
+    with pytest.raises(ValueError, match="unexpected sign conventions"):
+        qc.validate_rows([bad_revenue])
+
+
+def test_published_csv_component_keys_are_unique_and_notes_are_preserved():
+    assert SURVEY_CSV.exists()
+    with SURVEY_CSV.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 660
+    assert all("\n" not in row["source_label_fr"] for row in rows)
+
+    key = (
+        "survey_year",
+        "region_code",
+        "species_group",
+        "product_or_grade",
+        "component_group",
+        "component",
+        "subcomponent",
+        "unit",
+        "observation_kind",
+    )
+    component_keys = [
+        tuple(row[column] for column in key)
+        for row in rows
+        if row["observation_kind"] == "component"
+    ]
+    assert len(component_keys) == len(set(component_keys))
+
+    t21_purchases = [
+        row
+        for row in rows
+        if row["source_table"] == "T21" and row["component"] == "wood_purchase_delivered"
+    ]
+    assert t21_purchases
+    assert all(row["observation_kind"] == "synthesis" for row in t21_purchases)
+
+    auction_rows = [
+        row
+        for row in rows
+        if row["source_table"] == "T10" and row["component"] == "auction_price"
+    ]
+    assert auction_rows
+    assert all(
+        "Auction price shown as a reference" in row["notes"] for row in auction_rows
+    )
+    assert sum(
+        1 for row in rows if row["confidentiality_flag"] == "three_respondents"
+    ) == 128
+
+
+def test_manifest_records_accounting_caveats_and_t1_metadata():
+    manifest = json.loads(MANIFEST_JSON.read_text(encoding="utf-8"))
+    assert manifest["price_year"] == "survey_year"
+    assert manifest["currency_basis"] == "CAD_nominal"
+    assert manifest["coverage"]["questionnaire_counts"]["peupliers"] == 12
+    assert manifest["validation"]["three_respondent_value_count"] == 128
+    assert manifest["validation"]["spot_check_count"] == 8
+    assert len(manifest["validation"]["reconciliation_skipped_suppressed"]) == 2
+    assert {caveat["id"] for caveat in manifest["accounting_caveats"]} == {
+        "t2_t21_purchased_wood_procurement_cost",
+        "t20_bgad_is_a_parallel_supply_channel",
+        "prccm_rebates_are_inside_transfers_total",
+        "t20_excludes_species_gain_loss",
+    }
+    t1 = next(
+        item
+        for item in manifest["coverage"]["tables_not_parsed"]
+        if item["source_table"] == "T1"
+    )
+    assert t1["source_page"] == "7"
+    assert "peupliers 12" in t1["notes"]

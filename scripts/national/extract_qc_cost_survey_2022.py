@@ -178,6 +178,9 @@ SPECIES_LABELS = {
     "thuyas": "Thuyas",
 }
 
+POSITIVE_REVENUE = "positive_revenue"
+PHYSICAL_QUANTITY = "physical_quantity"
+
 NEGATIVE_SIGN_CONVENTIONS = {
     "negative_credit_or_loss",
     "signed_gain_loss",
@@ -230,6 +233,8 @@ class TableSpec:
     keep_footnote_suffix: bool = False
     notes: str = ""
     pdf_page: int = 0
+    three_respondents_columns: frozenset[tuple[str, str]] = frozenset()
+    three_respondents_note: str = ""
 
 
 def _row(
@@ -275,6 +280,12 @@ SYNTHESIS = "synthesis_procurement"
 SYNTH_REVENUE = "synthesis_revenue"
 COMPARISON = "historical_comparison"
 
+PHYSICAL_UNITS = frozenset({M3_HA, M3_MPMP, PERCENT, KM})
+REVENUE_COMPONENT_GROUPS = frozenset({REVENUE, BYPRODUCT, SYNTH_REVENUE})
+SIGN_CONVENTIONS = frozenset(
+    {"positive_cost", POSITIVE_REVENUE, PHYSICAL_QUANTITY}
+) | NEGATIVE_SIGN_CONVENTIONS
+
 TABLE_SPECS: tuple[TableSpec, ...] = (
     TableSpec(
         key="T2",
@@ -296,7 +307,15 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         ),
         row_map={
             "Achat de bois": _row(
-                PURCHASE, "wood_purchase_delivered", CAD_M3, "delivered_to_mill"
+                PURCHASE,
+                "wood_purchase_delivered",
+                CAD_M3,
+                "delivered_to_mill",
+                note=(
+                    "Purchased-wood procurement cost including purchase, "
+                    "transfers to the State, transport/unloading and road costs "
+                    "where applicable; not observed log-sale revenue."
+                ),
             ),
         },
         default_unit=CAD_M3,
@@ -351,10 +370,18 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         ),
         row_map={
             "Volume moyen recolte (m3/ha)": _row(
-                HARVEST, "mean_volume_harvested", M3_HA, "physical_ratio"
+                HARVEST,
+                "mean_volume_harvested",
+                M3_HA,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
             "Coupe partielle (%)": _row(
-                HARVEST, "partial_cut_share", PERCENT, "physical_ratio"
+                HARVEST,
+                "partial_cut_share",
+                PERCENT,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
         },
         default_unit=M3_HA,
@@ -428,7 +455,11 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
                 ROAD, "road_total_after_prccm", CAD_M3, "access_cost_net"
             ),
             "Pourcentage extrait sur chemins d'ete (%)": _row(
-                ROAD, "summer_road_share", PERCENT, "physical_ratio"
+                ROAD,
+                "summer_road_share",
+                PERCENT,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
         },
         default_unit=CAD_M3,
@@ -479,10 +510,18 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         },
         section_value_rows={
             "Proportion (%)": _row(
-                HAUL, "transport_mode_share", PERCENT, "physical_ratio"
+                HAUL,
+                "transport_mode_share",
+                PERCENT,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
             "Distance moyenne (km)": _row(
-                HAUL, "transport_distance", KM, "physical_ratio"
+                HAUL,
+                "transport_distance",
+                KM,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
         },
     ),
@@ -798,10 +837,18 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         ),
         row_map={
             "Rendement du sciage (m3/Mpmp)": _row(
-                TRANSFORM, "sawmill_recovery", M3_MPMP, "physical_ratio"
+                TRANSFORM,
+                "sawmill_recovery",
+                M3_MPMP,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
             "Volume non marchand (%)": _row(
-                TRANSFORM, "non_merchant_volume", PERCENT, "physical_ratio"
+                TRANSFORM,
+                "non_merchant_volume",
+                PERCENT,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
             "Mise en copeaux directe ($/m3)": _row(
                 TRANSFORM, "direct_chipping", CAD_M3, "per_m3_input_mill"
@@ -831,7 +878,11 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
                 FINISHED, "co_product_transport", CAD_M3, "delivered_to_market"
             ),
             "Distance moyenne (km)": _row(
-                FINISHED, "market_distance", KM, "physical_ratio"
+                FINISHED,
+                "market_distance",
+                KM,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
         },
         default_unit=CAD_M3,
@@ -897,11 +948,25 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         ),
         row_map={
             "$/MPMP": _row(
-                REVENUE, "gross_revenue", CAD_MPMP, "gross_revenue"
+                REVENUE,
+                "gross_revenue",
+                CAD_MPMP,
+                "gross_revenue",
+                POSITIVE_REVENUE,
             ),
-            "$/m3": _row(REVENUE, "gross_revenue", CAD_M3, "gross_revenue"),
+            "$/m3": _row(
+                REVENUE,
+                "gross_revenue",
+                CAD_M3,
+                "gross_revenue",
+                POSITIVE_REVENUE,
+            ),
             "% E.-U.": _row(
-                REVENUE, "us_export_share", PERCENT, "physical_ratio"
+                REVENUE,
+                "us_export_share",
+                PERCENT,
+                "physical_ratio",
+                PHYSICAL_QUANTITY,
             ),
         },
         default_unit=CAD_MPMP,
@@ -919,8 +984,20 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
             ColumnSpec(3, "sepm", "lumber", unit=CAD_M3),
         ),
         row_map={
-            "Revenus bruts": _row(REVENUE, "gross_revenue", CAD_MPMP, "gross_revenue"),
-            "Revenus nets": _row(REVENUE, "net_revenue", CAD_MPMP, "net_revenue"),
+            "Revenus bruts": _row(
+                REVENUE,
+                "gross_revenue",
+                CAD_MPMP,
+                "gross_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Revenus nets": _row(
+                REVENUE,
+                "net_revenue",
+                CAD_MPMP,
+                "net_revenue",
+                POSITIVE_REVENUE,
+            ),
         },
         default_unit=CAD_MPMP,
         default_price_basis="gross_revenue",
@@ -939,8 +1016,20 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
             ColumnSpec(7, "pins", "lumber", unit=CAD_M3),
         ),
         row_map={
-            "Revenus bruts": _row(REVENUE, "gross_revenue", CAD_MPMP, "gross_revenue"),
-            "Revenus nets": _row(REVENUE, "net_revenue", CAD_MPMP, "net_revenue"),
+            "Revenus bruts": _row(
+                REVENUE,
+                "gross_revenue",
+                CAD_MPMP,
+                "gross_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Revenus nets": _row(
+                REVENUE,
+                "net_revenue",
+                CAD_MPMP,
+                "net_revenue",
+                POSITIVE_REVENUE,
+            ),
         },
         default_unit=CAD_MPMP,
         default_price_basis="gross_revenue",
@@ -957,12 +1046,40 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
             (3, "feuillus_durs", "byproduct"),
         ),
         row_map={
-            "Copeaux": _row(BYPRODUCT, "chips", CAD_TMA, "gross_byproduct_revenue"),
-            "Sciures": _row(BYPRODUCT, "sawdust", CAD_TMA, "gross_byproduct_revenue"),
-            "Rabotures": _row(BYPRODUCT, "shavings", CAD_TMA, "gross_byproduct_revenue"),
-            "Ecorces": _row(BYPRODUCT, "bark", CAD_TMV, "gross_byproduct_revenue"),
+            "Copeaux": _row(
+                BYPRODUCT,
+                "chips",
+                CAD_TMA,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Sciures": _row(
+                BYPRODUCT,
+                "sawdust",
+                CAD_TMA,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Rabotures": _row(
+                BYPRODUCT,
+                "shavings",
+                CAD_TMA,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Ecorces": _row(
+                BYPRODUCT,
+                "bark",
+                CAD_TMV,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
             "Residus de bois": _row(
-                BYPRODUCT, "wood_residues", CAD_TMA, "gross_byproduct_revenue"
+                BYPRODUCT,
+                "wood_residues",
+                CAD_TMA,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
             ),
         },
         default_unit=CAD_TMA,
@@ -980,15 +1097,47 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
             (4, "feuillus_durs", "byproduct"),
         ),
         row_map={
-            "Copeaux": _row(BYPRODUCT, "chips", CAD_M3, "gross_byproduct_revenue"),
-            "Sciures": _row(BYPRODUCT, "sawdust", CAD_M3, "gross_byproduct_revenue"),
-            "Rabotures": _row(BYPRODUCT, "shavings", CAD_M3, "gross_byproduct_revenue"),
-            "Ecorces": _row(BYPRODUCT, "bark", CAD_M3, "gross_byproduct_revenue"),
+            "Copeaux": _row(
+                BYPRODUCT,
+                "chips",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Sciures": _row(
+                BYPRODUCT,
+                "sawdust",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Rabotures": _row(
+                BYPRODUCT,
+                "shavings",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
+            "Ecorces": _row(
+                BYPRODUCT,
+                "bark",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+            ),
             "Residus de bois": _row(
-                BYPRODUCT, "wood_residues", CAD_M3, "gross_byproduct_revenue"
+                BYPRODUCT,
+                "wood_residues",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
             ),
             "Total": _row(
-                BYPRODUCT, "byproduct_total", CAD_M3, "gross_byproduct_revenue"
+                BYPRODUCT,
+                "byproduct_total",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
             ),
         },
         default_unit=CAD_M3,
@@ -1011,7 +1160,11 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
                 SYNTHESIS, "harvest", CAD_M3, "roadside", kind="synthesis"
             ),
             "Chemins": _row(
-                SYNTHESIS, "road", CAD_M3, "access_cost", kind="synthesis"
+                SYNTHESIS,
+                "road",
+                CAD_M3,
+                "access_cost_gross",
+                kind="synthesis",
             ),
             "Transport": _row(
                 SYNTHESIS, "haul", CAD_M3, "hauled_to_mill", kind="synthesis"
@@ -1038,6 +1191,12 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         },
         default_unit=CAD_M3,
         default_price_basis="delivered_to_mill",
+        three_respondents_columns=frozenset({("peupliers", "trituration")}),
+        three_respondents_note=(
+            "T20 prints this cell in black, but the peupliers-trituration "
+            "supply-cost basis is the three-respondent sample already red-flagged "
+            "in T3/T5/T10/T21; interpret with caution."
+        ),
     ),
     TableSpec(
         key="T21",
@@ -1058,7 +1217,16 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         ),
         row_map={
             "Achats de bois (livre)": _row(
-                PURCHASE, "wood_purchase_delivered", CAD_M3, "delivered_to_mill"
+                PURCHASE,
+                "wood_purchase_delivered",
+                CAD_M3,
+                "delivered_to_mill",
+                kind="synthesis",
+                note=(
+                    "Purchased-wood procurement cost channel (purchase, transfers "
+                    "to the State, transport/unloading and road costs where "
+                    "applicable); not observed log-sale revenue."
+                ),
             ),
             "Approvisionnement (BGAD)": _row(
                 PURCHASE, "bgad_supply_cost", CAD_M3, "delivered_to_mill",
@@ -1085,19 +1253,31 @@ TABLE_SPECS: tuple[TableSpec, ...] = (
         ),
         row_map={
             "Revenus nets": _row(
-                SYNTH_REVENUE, "net_revenue", CAD_M3, "net_revenue",
+                SYNTH_REVENUE,
+                "net_revenue",
+                CAD_M3,
+                "net_revenue",
+                POSITIVE_REVENUE,
                 kind="synthesis",
             ),
             "Revenus des sous-produits": _row(
-                SYNTH_REVENUE, "byproduct_revenue", CAD_M3,
-                "gross_byproduct_revenue", kind="synthesis",
+                SYNTH_REVENUE,
+                "byproduct_revenue",
+                CAD_M3,
+                "gross_byproduct_revenue",
+                POSITIVE_REVENUE,
+                kind="synthesis",
             ),
             "Gains/pertes": _row(
                 SYNTH_REVENUE, "species_gain_loss", CAD_M3, "roadside",
                 "signed_gain_loss", kind="synthesis",
             ),
             "Total": _row(
-                SYNTH_REVENUE, "total_revenue", CAD_M3, "net_revenue",
+                SYNTH_REVENUE,
+                "total_revenue",
+                CAD_M3,
+                "net_revenue",
+                POSITIVE_REVENUE,
                 kind="synthesis",
             ),
         },
@@ -1226,7 +1406,10 @@ REGIONAL_TABLE = TableSpec(
             SYNTHESIS, "harvest", CAD_M3, "roadside", kind="regional_survey_aggregate"
         ),
         "Chemins (PRCM non inclus)": _row(
-            SYNTHESIS, "road", CAD_M3, "access_cost",
+            SYNTHESIS,
+            "road",
+            CAD_M3,
+            "access_cost_gross",
             kind="regional_survey_aggregate",
         ),
         "Transport": _row(
@@ -1526,6 +1709,55 @@ def _context(spec: TableSpec, label: str, column: ColumnSpec) -> str:
     return f"{spec.key} p.{spec.page} {label} [{column.species_group}/{column.product_or_grade}]"
 
 
+def _combine_notes(*notes: str) -> str:
+    """Join non-empty notes with a single space."""
+    return " ".join(note.strip() for note in notes if note and note.strip())
+
+
+def _region_context(
+    column: ColumnSpec,
+    region_by_column: dict[int, str] | None,
+    sample_n_by_region: dict[str, int] | None,
+) -> tuple[str, str, int | None]:
+    if region_by_column is None:
+        return "QC", "provincial", None
+    region_code = region_by_column[column.index]
+    aggregation = "provincial" if region_code == "QC" else "regional"
+    sample_n = sample_n_by_region.get(region_code) if sample_n_by_region else None
+    return region_code, aggregation, sample_n
+
+
+def _three_respondent_basis(
+    spec: TableSpec,
+    column: ColumnSpec,
+    row_index: int,
+    red_cells: set[tuple[int, int]],
+    sample_n: int | None,
+) -> bool:
+    """Return whether a cell is a three-respondent mean.
+
+    Red PDF text is the direct signal.  Two derived signals are also treated as
+    the same confidentiality basis: a published respondent count of exactly
+    three, and a table/column combination whose source components are already
+    red-flagged even though the synthesis table prints the cell in black.
+    """
+    if (row_index, column.index) in red_cells:
+        return True
+    if sample_n == 3:
+        return True
+    return (column.species_group, column.product_or_grade) in spec.three_respondents_columns
+
+
+def _three_respondent_note(spec: TableSpec, column: ColumnSpec) -> str:
+    if (
+        (column.species_group, column.product_or_grade)
+        in spec.three_respondents_columns
+        and spec.three_respondents_note
+    ):
+        return spec.three_respondents_note
+    return "Mean for three respondents; interpret with caution."
+
+
 def rows_from_extracted_table(
     raw_rows: list[list[str | None]],
     spec: TableSpec,
@@ -1617,23 +1849,15 @@ def rows_from_extracted_table(
                 else:
                     coverage.values_suppressed += 1
                 continue
-            if (row_index, column.index) in red_cells:
+            region_code, aggregation, sample_n = _region_context(
+                column, region_by_column, sample_n_by_region
+            )
+            if _three_respondent_basis(spec, column, row_index, red_cells, sample_n):
                 flag = "three_respondents"
                 coverage.values_flagged_three_respondents += 1
-            if flag == "three_respondents" and cell_note:
-                cell_note = f"{cell_note} Three respondents."
-            elif flag == "three_respondents":
-                cell_note = "Mean for three respondents; interpret with caution."
-            if region_by_column is None:
-                region_code = "QC"
-                aggregation = "provincial"
-                sample_n = None
-            else:
-                region_code = region_by_column[column.index]
-                aggregation = "provincial" if region_code == "QC" else "regional"
-                sample_n = None
-                if sample_n_by_region:
-                    sample_n = sample_n_by_region.get(region_code)
+                cell_note = _combine_notes(
+                    cell_note, _three_respondent_note(spec, column)
+                )
             emitted.append(
                 EmittedRow(
                     source_id=spec.source_id,
@@ -1650,7 +1874,7 @@ def rows_from_extracted_table(
                     component_group=row_spec.component_group,
                     component=row_spec.component,
                     subcomponent=row_spec.subcomponent or column.period,
-                    source_label_fr=label_fr.strip(),
+                    source_label_fr=re.sub(r"\s+", " ", label_fr).strip(),
                     value=value,
                     unit=unit,
                     price_basis=row_spec.price_basis,
@@ -1659,7 +1883,7 @@ def rows_from_extracted_table(
                     observation_kind=row_spec.observation_kind,
                     confidentiality_flag=flag,
                     sign_convention=row_spec.sign_convention,
-                    notes=cell_note,
+                    notes=_combine_notes(row_spec.notes, cell_note),
                 )
             )
             coverage.rows_emitted += 1
@@ -1763,8 +1987,8 @@ def extract_a2(
             if (row_index, column.index) in red_cells:
                 flag = "three_respondents"
                 coverage.values_flagged_three_respondents += 1
-                cell_note = (
-                    f"{cell_note} Three respondents.".strip()
+                cell_note = _combine_notes(
+                    cell_note, "Mean for three respondents; interpret with caution."
                 )
             emitted.append(
                 EmittedRow(
@@ -1784,7 +2008,7 @@ def extract_a2(
                     component_group=row_spec.component_group,
                     component=row_spec.component,
                     subcomponent="",
-                    source_label_fr=label_fr.strip(),
+                    source_label_fr=re.sub(r"\s+", " ", label_fr).strip(),
                     value=value,
                     unit=unit,
                     price_basis=row_spec.price_basis,
@@ -1793,7 +2017,7 @@ def extract_a2(
                     observation_kind=row_spec.observation_kind,
                     confidentiality_flag=flag,
                     sign_convention=row_spec.sign_convention,
-                    notes=cell_note,
+                    notes=_combine_notes(row_spec.notes, cell_note),
                 )
             )
             coverage.rows_emitted += 1
@@ -2015,7 +2239,24 @@ def reconcile_rows(rows: Iterable[EmittedRow]) -> list[dict[str, Any]]:
                 )
         if table in {"T19"} and "byproduct_total" in values:
             components = ["chips", "sawdust", "shavings", "bark", "wood_residues"]
-            if all(name in values for name in components):
+            missing = [name for name in components if name not in values]
+            if missing:
+                checks.append(
+                    {
+                        "check": f"{label} byproduct components -> total",
+                        "computed": None,
+                        "reported": round(values["byproduct_total"], 4),
+                        "difference": None,
+                        "status": "skipped_suppressed_component",
+                        "note": (
+                            "Source suppresses "
+                            + ", ".join(missing)
+                            + "; the printed total is retained without "
+                            "reconciliation over a partial component set."
+                        ),
+                    }
+                )
+            else:
                 checks.append(
                     _check_close(
                         sum(values[name] for name in components),
@@ -2054,7 +2295,7 @@ def reconcile_rows(rows: Iterable[EmittedRow]) -> list[dict[str, Any]]:
                     )
                 )
     for check in checks:
-        if check["status"] == "pass":
+        if check["status"] in {"pass", "skipped_suppressed_component"}:
             continue
         note = KNOWN_RECONCILIATION_ISSUES.get(check["check"])
         if note is None:
@@ -2073,6 +2314,7 @@ def validate_rows(rows: list[EmittedRow]) -> dict[str, Any]:
     bad_values = 0
     bad_negatives: list[str] = []
     bad_units: list[str] = []
+    bad_signs: list[str] = []
     allowed_units = {
         CAD_M3,
         CAD_HA,
@@ -2089,6 +2331,43 @@ def validate_rows(rows: list[EmittedRow]) -> dict[str, Any]:
             bad_values += 1
         if row.unit not in allowed_units:
             bad_units.append(f"{row.source_table}:{row.component}:{row.unit}")
+        if row.sign_convention not in SIGN_CONVENTIONS:
+            bad_signs.append(
+                f"{row.source_table}:{row.component}:{row.sign_convention}"
+            )
+        is_physical = row.unit in PHYSICAL_UNITS
+        is_revenue = (
+            row.unit not in PHYSICAL_UNITS
+            and row.component_group in REVENUE_COMPONENT_GROUPS
+            and row.component != "species_gain_loss"
+        )
+        if is_physical and row.sign_convention != PHYSICAL_QUANTITY:
+            bad_signs.append(
+                f"{row.source_table}:{row.component}:{row.unit}:"
+                f"{row.sign_convention}:expected_{PHYSICAL_QUANTITY}"
+            )
+        if not is_physical and row.sign_convention == PHYSICAL_QUANTITY:
+            bad_signs.append(
+                f"{row.source_table}:{row.component}:{row.unit}:"
+                f"{row.sign_convention}:non_physical_unit"
+            )
+        if is_revenue and row.sign_convention != POSITIVE_REVENUE:
+            bad_signs.append(
+                f"{row.source_table}:{row.component}:"
+                f"{row.sign_convention}:expected_{POSITIVE_REVENUE}"
+            )
+        if not is_revenue and row.sign_convention == POSITIVE_REVENUE:
+            bad_signs.append(
+                f"{row.source_table}:{row.component}:"
+                f"{row.sign_convention}:non_revenue_component"
+            )
+        if row.component == "species_gain_loss" and row.sign_convention != (
+            "signed_gain_loss"
+        ):
+            bad_signs.append(
+                f"{row.source_table}:{row.component}:"
+                f"{row.sign_convention}:expected_signed_gain_loss"
+            )
         if row.value < 0 and row.sign_convention not in NEGATIVE_SIGN_CONVENTIONS:
             bad_negatives.append(
                 f"{row.source_table}:{row.component}:{row.value}"
@@ -2097,6 +2376,8 @@ def validate_rows(rows: list[EmittedRow]) -> dict[str, Any]:
         raise ValueError(f"{bad_values} non-finite values")
     if bad_units:
         raise ValueError(f"unexpected units: {sorted(set(bad_units))}")
+    if bad_signs:
+        raise ValueError(f"unexpected sign conventions: {bad_signs[:10]}")
     if bad_negatives:
         raise ValueError(f"unexpected negative values: {bad_negatives[:10]}")
     return {
@@ -2104,10 +2385,17 @@ def validate_rows(rows: list[EmittedRow]) -> dict[str, Any]:
         "non_finite_values": 0,
         "unexpected_negative_values": 0,
         "unexpected_units": 0,
+        "unexpected_sign_conventions": 0,
         "negative_value_count": sum(1 for row in rows if row.value < 0),
         "three_respondent_value_count": sum(
             1 for row in rows if row.confidentiality_flag == "three_respondents"
         ),
+        "sign_convention_counts": {
+            convention: sum(
+                1 for row in rows if row.sign_convention == convention
+            )
+            for convention in sorted(SIGN_CONVENTIONS)
+        },
     }
 
 
@@ -2118,14 +2406,18 @@ def spot_checks(rows: list[EmittedRow]) -> list[dict[str, Any]]:
             row.source_table,
             row.region_code,
             row.species_group,
-            row.component,
+            row.survey_year,
             row.product_or_grade,
+            row.component,
+            row.subcomponent,
             row.unit,
         ): row.value
         for row in rows
     }
 
-    def expect(key: tuple[str, str, str, str, str, str], value: float) -> dict[str, Any]:
+    def expect(
+        key: tuple[str, str, str, int, str, str, str, str], value: float
+    ) -> dict[str, Any]:
         actual = index.get(key)
         if actual is None:
             raise ValueError(f"spot-check target missing: {key}")
@@ -2135,23 +2427,77 @@ def spot_checks(rows: list[EmittedRow]) -> list[dict[str, Any]]:
             "source_table": key[0],
             "region_code": key[1],
             "species_group": key[2],
-            "component": key[3],
+            "survey_year": key[3],
             "product_or_grade": key[4],
-            "unit": key[5],
+            "component": key[5],
+            "subcomponent": key[6],
+            "unit": key[7],
             "pdf_value": value,
             "parsed_value": actual,
             "status": "pass",
         }
 
     return [
-        expect(("REG", "R09", "sepm", "procurement_total_after_transfers", "total", CAD_M3), 118.10),
-        expect(("REG", "QC", "sepm", "procurement_total_before_transfers", "total", CAD_M3), 81.40),
-        expect(("T3", "QC", "sepm", "harvest_total", "total", CAD_M3), 31.42),
-        expect(("T5", "QC", "sepm", "road_total_after_prccm", "total", CAD_M3), 15.52),
-        expect(("T16", "QC", "sepm", "net_revenue", "lumber", CAD_M3), 183.74),
-        expect(("T19", "QC", "sepm", "byproduct_total", "byproduct", CAD_M3), 20.23),
-        expect(("T22", "QC", "sepm", "total_revenue", "total", CAD_M3), 201.22),
-        expect(("A2", "QC", "sepm", "harvest", "total", CAD_M3), 31.42),
+        expect(
+            (
+                "REG",
+                "R09",
+                "sepm",
+                2022,
+                "total",
+                "procurement_total_after_transfers",
+                "",
+                CAD_M3,
+            ),
+            118.10,
+        ),
+        expect(
+            (
+                "REG",
+                "QC",
+                "sepm",
+                2022,
+                "total",
+                "procurement_total_before_transfers",
+                "",
+                CAD_M3,
+            ),
+            81.40,
+        ),
+        expect(("T3", "QC", "sepm", 2022, "total", "harvest_total", "", CAD_M3), 31.42),
+        expect(
+            (
+                "T5",
+                "QC",
+                "sepm",
+                2022,
+                "total",
+                "road_total_after_prccm",
+                "",
+                CAD_M3,
+            ),
+            15.52,
+        ),
+        expect(
+            ("T16", "QC", "sepm", 2022, "lumber", "net_revenue", "", CAD_M3), 183.74
+        ),
+        expect(
+            (
+                "T19",
+                "QC",
+                "sepm",
+                2022,
+                "byproduct",
+                "byproduct_total",
+                "",
+                CAD_M3,
+            ),
+            20.23,
+        ),
+        expect(
+            ("T22", "QC", "sepm", 2022, "total", "total_revenue", "", CAD_M3), 201.22
+        ),
+        expect(("A2", "QC", "sepm", 2022, "total", "harvest", "", CAD_M3), 31.42),
     ]
 
 
@@ -2166,12 +2512,12 @@ def coverage_for_unparsed_sources() -> list[TableCoverage]:
         TableCoverage(
             source_id="main_2022",
             source_table="T1",
-            source_page=13,
+            source_page=7,
             title_fr="Profil des repondants et volumes de GA",
             parsed_status="not_parsed_context_only",
             notes=(
                 "Sampling profile, not a cost/revenue table. Questionnaire "
-                "counts (SEPM 37, feuillus durs 18, peupliers 9, thuyas 4, "
+                "counts (SEPM 37, feuillus durs 18, peupliers 12, thuyas 4, "
                 "pins 3, total 70) are recorded in the manifest."
             ),
         ),
@@ -2331,6 +2677,11 @@ def build_dataset(raw_dir: Path) -> tuple[list[EmittedRow], list[TableCoverage],
         for check in validation["reconciliations"]
         if check["status"] == "fail"
     ]
+    validation["reconciliation_skipped_suppressed"] = [
+        check
+        for check in validation["reconciliations"]
+        if check["status"] == "skipped_suppressed_component"
+    ]
     checks = spot_checks(rows)
     validation["spot_checks"] = checks
     validation["spot_check_count"] = len(checks)
@@ -2412,8 +2763,13 @@ def write_manifest(
         "geography": "Quebec",
         "survey_year": SURVEY_YEAR,
         "reference_period": REFERENCE_PERIOD,
-        "price_year": 2022,
+        "price_year": "survey_year",
+        "price_year_detail": (
+            "Nominal CAD of the survey year: 2022 for the main and regional "
+            "tables; 2014, 2019, or 2022 for Table A2 comparison rows."
+        ),
         "currency": "CAD",
+        "currency_basis": "CAD_nominal",
         "parser": {
             "script": "scripts/national/extract_qc_cost_survey_2022.py",
             "engine": "pdfplumber table extraction plus pdftotext layout inspection",
@@ -2447,7 +2803,7 @@ def write_manifest(
             "grade_level_data": False,
             "questionnaire_counts": {
                 "sepm": 37,
-                "peupliers": 9,
+                "peupliers": 12,
                 "feuillus_durs": 18,
                 "thuyas": 4,
                 "pins": 3,
@@ -2467,6 +2823,11 @@ def write_manifest(
             "The 2021-22 silviculture surveys are downloaded for provenance only; they are a separate treatment-cost dataset and are not merged here.",
             "Table 10 compensation sub-lines are not a complete decomposition of the compensations total; do not replace the total with their sum.",
             "Forest-road component rows include PRCCM rebates. The after-PRCCM total equals their sum; the before-PRCCM total adds the rebates back.",
+            "PRCCM rebates sit inside T10/T20 transfers_total; do not add T5 road_total_after_prccm to T10 transfers_total (double count). T20/REG road is gross.",
+            "T2/T21 Achats de bois (livre) is purchased-wood procurement cost, not observed log-sale revenue; T2 minus T20 is a procurement-channel cost spread, not forest-sector net value.",
+            "T20 excludes species gain/loss (SEPM -2.75 CAD/m3, hardwood sawlog -1.85, poplar trituration -6.80); compare it with T22 only when this exclusion is flagged.",
+            "Table 19 by-product totals are not reconciled over a partial component set because the source suppresses at least one component; the skipped checks are recorded in validation.reconciliation_skipped_suppressed.",
+            "Three-respondent flags include red PDF cells, all regional R09 rows (sample_n=3), and T20 peupliers-trituration rows whose basis is red-flagged in T3/T5/T10/T21 even though T20 prints them in black.",
             "Annex 1 repeats Tables 2-22 and is not emitted separately; it is used only as a cross-check.",
         ],
         "merge_policy": {
@@ -2482,6 +2843,56 @@ def write_manifest(
                 "direct row-level model input."
             ),
         },
+        "accounting_caveats": [
+            {
+                "id": "t2_t21_purchased_wood_procurement_cost",
+                "tables": ["T2", "T21"],
+                "statement": (
+                    "T2/T21 Achats de bois (livre) is the buyer-side purchased-wood "
+                    "procurement cost. It includes the wood purchase, transfers to "
+                    "the State, transport/unloading, and road costs where applicable. "
+                    "The 107.22 CAD/m3 SEPM value is therefore not observed log-sale "
+                    "revenue and must not be treated as stumpage or forest-sector "
+                    "revenue."
+                ),
+            },
+            {
+                "id": "t20_bgad_is_a_parallel_supply_channel",
+                "tables": ["T20", "T21"],
+                "statement": (
+                    "T20's 106.41 CAD/m3 SEPM value is the parallel BGAD supply "
+                    "channel (harvest, road, haul, hosting, other costs, plus "
+                    "transfers). The 107.22 - 106.41 = 0.81 CAD/m3 difference is a "
+                    "procurement-channel cost spread between different respondent "
+                    "samples, not forest-sector net value. The same caution applies "
+                    "to hardwood sawlog (-14.53) and poplar trituration (-9.45)."
+                ),
+            },
+            {
+                "id": "prccm_rebates_are_inside_transfers_total",
+                "tables": ["T5", "T10", "T20", "REG"],
+                "statement": (
+                    "PRCCM road rebates are included in T10/T20 transfers_total "
+                    "(SEPM -1.06 = -0.69 - 0.33 - 0.04), not in T20 road. T5 "
+                    "road_total_after_prccm (15.52 SEPM) is already net of PRCCM and "
+                    "must not be combined with T10 transfers_total (25.01), which "
+                    "would double count the rebate. T20/REG road is gross "
+                    "(access_cost_gross, 16.58 SEPM)."
+                ),
+            },
+            {
+                "id": "t20_excludes_species_gain_loss",
+                "tables": ["T3", "T20", "T22"],
+                "statement": (
+                    "T20 excludes species gain/loss by design: SEPM -2.75, hardwood "
+                    "sawlog -1.85, and poplar trituration -6.80 CAD/m3. Those values "
+                    "appear in T3 and in the T22 revenue synthesis. Any comparison of "
+                    "delivered wood value with T20 procurement costs must flag this "
+                    "exclusion; the SEPM item is larger than the entire 0.81 CAD/m3 "
+                    "purchased-vs-BGAD spread."
+                ),
+            },
+        ],
     }
     (out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
