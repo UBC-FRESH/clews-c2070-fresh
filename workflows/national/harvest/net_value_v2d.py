@@ -1,4 +1,13 @@
-"""Build the v2d net-value evidence layer.
+"""DEPRECATED: build the old v2d net-value evidence layer.
+
+This module is retained for audit only. Its output directory
+``data/derived/national/harvest_basis/net_value_v2d/`` is deprecated. Use
+``workflows.national.harvest.forest_economics_v2d`` and the
+``forest_economics_v2d/`` layer instead: every summary row there is
+``net_value_status=not_estimated``, ``policy_grade=false``, and
+``net_value_is_combined_national=false``.
+
+Original description follows.
 
 The layer keeps evidence classes separate:
 

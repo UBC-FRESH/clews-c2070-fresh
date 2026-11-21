@@ -1,31 +1,30 @@
-# Net-value evidence v2d — QC reference and BC partial coverage
+# Forest-economics evidence v2d — QC procurement cost and BC partial coverage
 
-> **Correction (2026-11-21): QC reference relabelled.** The v2d QC reference
-> came from the earlier `net_value_benchmark` artifact, which called the
-> T2/T20 difference a “residual” or net value and added an M CAD sensitivity.
-> That framing is withdrawn. The QC quantity is a **procurement-channel cost
-> spread** (`107.22 - 81.40 = 25.82`; `107.22 - 106.41 = 0.81`, CAD/m3), not
-> forest net value. Read `qc_reference.csv` as a cost-spread reference with
-> `net_value_status=not_estimated` and
-> `interpretation=purchased_vs_bgad_procurement_cost_spread`. Use
-> `planning/procurement-benchmark.md` and
-> `data/derived/national/harvest_basis/procurement_benchmark/` instead of the
-> deprecated artifact. This correction does not create a BC or national net
-> value; BC remains `not_estimated` (`missing_logging_and_haul_cost`).
+> **Correction (2026-11-21): output layer renamed and QC semantics fixed.**
+> The v2d layer is now `forest_economics_v2d/`, built by
+> `workflows/national/harvest/forest_economics_v2d.py`. The old
+> `net_value_v2d/` directory is deprecated. The QC reference is an exact
+> validated copy of `procurement_benchmark/`: `107.22` is a buyer-side
+> procurement cost, not revenue, and `25.82/0.81` are procurement-channel cost
+> spreads. Every summary row is `net_value_status=not_estimated`,
+> `policy_grade=false`, and `net_value_is_combined_national=false`. There is no
+> net value for QC, no BC partial net value, and no combined national net value.
+> Read `qc_procurement_reference.csv` and `planning/procurement-benchmark.md`.
 
 | Field | Value |
 |---|---|
 | Document | `planning/net-value-v2d.md` |
 | Date | 2026-11-21 |
-| Status | Evidence layer complete; BC net value deliberately not estimated. No merged-ledger, model, UI, or OSeCAN change. |
-| Scope | QC 2022 survey benchmark reference; BC 2019–2026 log-market prices, 2026 BCTS stumpage, and 2026 appraisal allowances |
-| Companion | `planning/procurement-benchmark.md` (corrected QC cost-spread note); `planning/net-value-benchmark.md` (deprecated framing); `planning/forest-sector-evidence-v2.md`; `data/derived/national/harvest_basis/net_value_v2d/` |
+| Status | Evidence layer complete; all net values deliberately not estimated. No merged-ledger, model, UI, or OSeCAN change. |
+| Scope | QC 2022 survey procurement cost benchmark; BC 2019–2026 log-market prices, 2026 BCTS stumpage, and 2026 appraisal allowances |
+| Companion | `planning/procurement-benchmark.md` (corrected QC cost-spread note); `planning/net-value-benchmark.md` (deprecated framing); `planning/forest-sector-evidence-v2.md`; `data/derived/national/harvest_basis/forest_economics_v2d/` |
 
-**Decision summary.** The v2d layer separates five evidence classes and refuses
-to combine them. The QC 2022 survey procurement cost spread is a validated
-reference, not a new estimate or a net value. BC has observed mill-delivered log-price averages, observed BCTS
-standing-timber stumpage, and published appraisal cost allowances for road,
-bridge, culvert, silviculture, specified operations, and tenure obligations.
+**Decision summary.** The v2d layer separates seven evidence classes and refuses
+to combine them. The QC 2022 T2/T20 quantities are procurement costs and cost
+spreads, not revenue, not a new estimate, and not net value. BC has observed
+mill-delivered log-price averages, observed BCTS standing-timber stumpage, and
+published appraisal cost allowances for road, bridge, culvert, silviculture,
+specified operations, and tenure obligations.
 BC has **no** published general logging (tree-to-truck) or truck-haul $/m3:
 both are embedded in the estimated winning bid (EWB). BC
 `net_value_status=not_estimated` with reason `missing_logging_and_haul_cost`.
@@ -35,31 +34,35 @@ No BC partial net value is computed and no combined national net value exists.
 
 | Evidence tier | What it is | What it is not |
 |---|---|---|
-| `survey_benchmark` | QC 2022 MRNF survey procurement cost spread (purchase cost minus BGAD cost) | Not an observed transaction, not net value, not policy-grade, not a mill margin |
+| `survey_procurement_cost` | QC 2022 T2 purchase cost vs T20 BGAD cost | Not revenue, not an observed transaction, not net value, not policy-grade |
+| `survey_regional_procurement_cost` | QC 2022 regional conditional cost spread | Not an observed regional price or net value |
 | `benchmark_historical` | BMMB 2011–2015 delivered-sale revenue, nominal | Not a 2022 price, not a cost stack, not deflated |
 | `observed_price` | BC published mill-delivered log-market average | Not a transaction record, not volume-weighted by grade |
 | `observed_stumpage` | BC BCTS winning bid for standing timber | Not delivered-log revenue, not a complete bid population |
 | `appraisal_allowance` | BC IAM/CAM tabular cost allowance | Not an observed contractor cost, winning bid, or payment |
+| `not_available` | Missing logging, truck haul, or full net value | Not zero |
 
-Every generated row is `policy_grade=false`. The five tiers are never summed or
-re-keyed into one population.
+Every generated row is `policy_grade=false`. The evidence classes are never
+summed or re-keyed into one population.
 
-## 2. QC reference
+## 2. QC procurement reference
 
-The QC benchmark is not overwritten or re-derived. `qc_reference.csv` copies 14
-source rows after validating the QC manifest, source hashes, arithmetic
-identities, and screening arithmetic. **These are procurement-channel cost
-spreads, not residuals or net values:**
+The QC benchmark is not overwritten or re-derived. `qc_procurement_reference.csv`
+copies 18 source rows (9 provincial and 9 regional) after validating the
+procurement manifest, source hashes, arithmetic identities, and conditional
+regional arithmetic. `bmmb_reference.csv` copies the three BMMB all-year
+scopes. **These are procurement-channel cost spreads and historical revenue,
+not net values:**
 
 - Three provincial cost spreads: SEPM (107.22 purchase cost; 25.82 before /
   0.81 after transfers CAD/m3), hardwood sciage (5.69 / -14.53), poplar
   trituration (-7.27 / -9.45).
 - Seven regional SEPM conditional cost spreads: 10.15–48.49 before transfers and
   -10.88–28.44 after transfers, with the provincial purchase cost held
-  constant.
-- Three QC screening-volume sensitivity cases.
-- One BMMB 2011–2015 historical revenue reference (18 sales; weighted 38.2940
-  and median 36.6668 CAD/m3).
+  constant. The min/max bound rows are independent column-wise extrema.
+- Three BMMB all-year scopes: Crown-only primary (9 full rates / 74,550 m3 /
+  35.7547), teaching/research (2 / 15,350 / 50.6266), and all-in secondary
+  (11 / 89,900 / 38.2940 CAD/m3).
 
 Negative QC cost spreads are documented source arithmetic, not clipped or
 filled. The QC numbers remain `net_value_status=not_estimated`, not
@@ -174,24 +177,24 @@ quantity.
 The builder fails closed on unexpected row counts, missing columns, duplicate
 keys, non-finite values, negative BC prices/stumpage/costs, aggregate misuse,
 vintage mixing, volume reconciliation failures, QC hash or arithmetic
-mismatches, and any missing BC gap reason. All 29 checks pass.
+mismatches, and any missing BC gap reason. All 36 checks pass.
 
 ```bash
-.venv/bin/python -m workflows.national.harvest.net_value_v2d
-.venv/bin/python -m pytest tests/test_net_value_v2d.py -q
-.venv/bin/ruff check workflows/national/harvest/net_value_v2d.py tests/test_net_value_v2d.py
+.venv/bin/python -m workflows.national.harvest.forest_economics_v2d
+.venv/bin/python -m pytest tests/test_forest_economics_v2d.py -q
+.venv/bin/ruff check workflows/national/harvest/forest_economics_v2d.py tests/test_forest_economics_v2d.py
 ```
 
-Outputs under `data/derived/national/harvest_basis/net_value_v2d/`:
+Outputs under `data/derived/national/harvest_basis/forest_economics_v2d/`:
 
 ```text
-v2d_net_value_summary.csv
+forest_economics_v2d_summary.csv
+qc_procurement_reference.csv
 bc_revenue_benchmark.csv
-bc_observed_stumpage.csv
 bc_cost_coverage.csv
-qc_reference.csv
+bmmb_reference.csv
 summary.json
-NET_VALUE_V2D_REPORT.md
+FOREST_ECONOMICS_V2D_REPORT.md
 manifest.json
 ```
 

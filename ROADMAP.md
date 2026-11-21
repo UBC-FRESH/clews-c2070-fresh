@@ -4,9 +4,9 @@
 
 Governing note: [planning/forest-sector-evidence-v2.md](planning/forest-sector-evidence-v2.md).
 
-Status: evidence collection and the v2d net-value evidence layer are complete.
-The QC 2022 survey is a procurement **cost spread**, not a net value; the old
-QC/M CAD net-value sensitivity is withdrawn. BC net value remains
+Status: evidence collection and the v2d forest-economics evidence layer are
+complete. The QC 2022 survey is a procurement **cost spread**, not a net value;
+the old QC/M CAD net-value sensitivity is withdrawn. BC net value remains
 `not_estimated` because general logging and truck-haul $/m3 are not published;
 no combined national net value is computed.
 
@@ -32,10 +32,13 @@ no combined national net value is computed.
   to road, bridge, culvert, silviculture, specified operations, and TOA;
   general logging, truck haul, and EWB remain unpublished, so a full BC net
   value is not estimable.
-- [x] v2d net-value evidence layer — validated QC reference, BC log-price
-  ranges, BCTS stumpage, and appraisal cost coverage; BC
-  `net_value_status=not_estimated` (`missing_logging_and_haul_cost`); no BC
-  partial net value and no combined national net value.
+- [x] v2d forest-economics evidence layer — exact validated QC procurement
+  cost reference, BC log-price ranges, BCTS stumpage, BMMB historical
+  reference, and appraisal cost coverage. All summary rows
+  `net_value_status=not_estimated`, `policy_grade=false`, and
+  `net_value_is_combined_national=false`; no BC partial net value and no
+  combined national net value. Old `net_value_v2d/` and
+  `net_value_benchmark/` are deprecated.
 - [ ] Model/UI wiring — only after validation; no OSeCAN change.
 
 ## Phase 1: Foundation and Model Development

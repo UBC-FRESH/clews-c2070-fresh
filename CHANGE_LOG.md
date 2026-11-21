@@ -2,6 +2,30 @@
 
 ## 2026-11-21
 
+- **Rebuilt the v2d evidence layer as `forest_economics_v2d` and deprecated the
+  old net-value artifacts.** Added
+  `workflows/national/harvest/forest_economics_v2d.py`, which emits
+  `data/derived/national/harvest_basis/forest_economics_v2d/` with
+  `forest_economics_v2d_summary.csv`, `qc_procurement_reference.csv`,
+  `bc_revenue_benchmark.csv`, `bc_cost_coverage.csv`, `bmmb_reference.csv`,
+  `summary.json`, `FOREST_ECONOMICS_V2D_REPORT.md`, and `manifest.json`. The QC
+  reference is an exact validated copy of `procurement_benchmark/` (SEPM 107.22
+  purchase cost, 81.40/25.01/106.41 BGAD before/transfers/after, 25.82/0.81
+  cost spreads); it is not revenue and is never presented as a net value. BC
+  price ranges keep 1-month and 3-month vintages separate, exclude Interior
+  `is_aggregate=true` rows from product sums, and retain 16 zero / 7 below-1 /
+  17 above-1,000 flags. BMMB reports Crown-only primary (35.7547), teaching
+  (50.6266), and all-in secondary (38.2940) nominal historical rates. BC cost
+  coverage records road, bridge, culvert, silviculture, specified operations,
+  and TOA allowances as partial, with general logging, truck haul, and EWB
+  missing. Every summary row is `net_value_status=not_estimated`,
+  `policy_grade=false`, and `net_value_is_combined_national=false`; no BC
+  partial net value and no combined QC+BC monetary total are computed. Marked
+  `net_value_v2d/` and `net_value_benchmark/` deprecated with pointers, updated
+  `planning/net-value-v2d.md`, and replaced the old test with deprecation checks.
+  Added 36 fail-closed checks. No merged-ledger, model, UI, or public OSeCAN
+  change.
+
 - **Corrected the BC log-market Coast share boundary and published the
   log-market metadata.** The Coast table parser now stops strictly before the
   footer row, rejects the `Species %` label as a grade share, and hard-fails if
