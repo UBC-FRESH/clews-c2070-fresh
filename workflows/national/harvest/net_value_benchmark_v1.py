@@ -603,8 +603,8 @@ def build_provincial_benchmarks(
         procurement = synthesis.get(key)
         if procurement is None:
             note_parts = [
-                "Purchase price only; no matching T20 synthesis procurement row exists, "
-                "so no residual is computable. Do not substitute component-table rows."
+                ("Purchase price only; no matching T20 synthesis procurement row exists, "
+                "so no residual is computable. Do not substitute component-table rows.")
             ]
             if purchase.confidentiality_flag == "three_respondents":
                 note_parts.append("Three-respondent mean; interpret with caution.")
@@ -1652,14 +1652,14 @@ def write_report(
     lines = [
         "# QC net-value benchmark — 2022 survey and BMMB historical check",
         "",
-        f"**Status:** benchmark only. Generated {generated_utc}. "
+        (f"**Status:** benchmark only. Generated {generated_utc}. "
         "`evidence=survey_benchmark` or `benchmark_historical`; "
-        "`policy_grade=false`; `net_value_status=benchmark_only`.",
+        "`policy_grade=false`; `net_value_status=benchmark_only`."),
         "",
-        "This note reports a **forest-sector residual** at the mill gate, using the "
+        ("This note reports a **forest-sector residual** at the mill gate, using the "
         "2022 Quebec MRNF survey synthesis rows. It is not an observed transaction "
         "net value and not a policy result. It does not touch the merged ledger, "
-        "the Forest LP objective, or the UI.",
+        "the Forest LP objective, or the UI."),
         "",
         "## Definitions",
         "",
@@ -1672,12 +1672,12 @@ def write_report(
         "| Residual before transfers | `delivered purchase - procurement before transfers` (pre-Crown surplus). |",
         "| Residual after transfers | `delivered purchase - procurement after transfers` (forest-sector residual). |",
         "",
-        "The two residuals are linked by `residual_before = residual_after + transfers`. "
+        ("The two residuals are linked by `residual_before = residual_after + transfers`. "
         "This is the ledger identity `pre-Crown surplus = forest-sector net value + Crown revenue` "
-        "on the survey's 2022 basis.",
+        "on the survey's 2022 basis."),
         "",
-        "Transformation, lumber, and by-product revenue are **not** netted against log "
-        "costs. That would produce a mill margin, not forest net value.",
+        ("Transformation, lumber, and by-product revenue are **not** netted against log "
+        "costs. That would produce a mill margin, not forest net value."),
         "",
         "## Provincial benchmark (2022, CAD/m3 nominal)",
         "",
@@ -1693,46 +1693,36 @@ def write_report(
     }
     for row in provincial:
         lines.append(
-            "| {species} | {product} | {purchase} | {before} | {transfers} | {after} | {rb} | {ra} | {status} |".format(
-                species=labels.get(row.scope.species_group, row.scope.species_group),
-                product=row.scope.product_or_grade,
-                purchase=fmt(row.delivered_purchase),
-                before=fmt(row.procurement_before_transfers),
-                transfers=fmt(row.transfers_total),
-                after=fmt(row.procurement_after_transfers),
-                rb=fmt(row.residual_before_transfers),
-                ra=fmt(row.residual_after_transfers),
-                status=row.residual_status,
-            )
+            f"| {labels.get(row.scope.species_group, row.scope.species_group)} | {row.scope.product_or_grade} | {fmt(row.delivered_purchase)} | {fmt(row.procurement_before_transfers)} | {fmt(row.transfers_total)} | {fmt(row.procurement_after_transfers)} | {fmt(row.residual_before_transfers)} | {fmt(row.residual_after_transfers)} | {row.residual_status} |"
         )
     lines.extend(
         [
             "",
-            "Pine and cedar have a purchase price but no matching T20 synthesis row, so "
+            ("Pine and cedar have a purchase price but no matching T20 synthesis row, so "
             "their residual is not computable. Hardwood and poplar totals are purchase-only "
             "for the same reason. Product rows are not additive to a species total without "
-            "published volumes.",
+            "published volumes."),
             "",
-            "**Headline SEPM.** Delivered purchase **107.22**, procurement before transfers "
+            ("**Headline SEPM.** Delivered purchase **107.22**, procurement before transfers "
             f"**81.40**, transfers **25.01**, procurement after transfers **106.41**. "
             f"Residual before transfers **{fmt(sep.residual_before_transfers)}**; residual "
             f"after transfers **{fmt(sep.residual_after_transfers)}** CAD/m3. The after-transfer "
-            "residual is small because nearly all of the pre-Crown surplus is transferred to the State.",
+            "residual is small because nearly all of the pre-Crown surplus is transferred to the State."),
             "",
-            "**Product-level exceptions.** Hardwood sciage residual before transfers "
+            ("**Product-level exceptions.** Hardwood sciage residual before transfers "
             f"**{fmt(hardwood.residual_before_transfers)}**, after transfers "
             f"**{fmt(hardwood.residual_after_transfers)}** CAD/m3 (negative after transfers). "
             "Poplar trituration residual before transfers "
             f"**{fmt(poplar.residual_before_transfers)}**, after transfers "
             f"**{fmt(poplar.residual_after_transfers)}** CAD/m3 (negative on both definitions). "
-            "Negative values are reported as published arithmetic, not clipped.",
+            "Negative values are reported as published arithmetic, not clipped."),
             "",
             "## Regional range (SEPM only, 2022)",
             "",
-            "Seven published regional groups have T20 synthesis procurement rows. They do "
+            ("Seven published regional groups have T20 synthesis procurement rows. They do "
             "not publish a regional purchase price, so the residual range below holds the "
             "provincial SEPM purchase price of **107.22** constant. It is a conditional "
-            "procurement-cost range, not an observed regional net value.",
+            "procurement-cost range, not an observed regional net value."),
             "",
             "| Region | n | Procurement before | Transfers | Procurement after | Residual before | Residual after |",
             "|---|---:|---:|---:|---:|---:|---:|",
@@ -1748,7 +1738,7 @@ def write_report(
     lines.extend(
         [
             "",
-            f"Range: procurement before **{fmt(before_min)}–{fmt(before_max)}**, after "
+            (f"Range: procurement before **{fmt(before_min)}–{fmt(before_max)}**, after "
             f"**{fmt(after_min)}–{fmt(after_max)}**; residual before "
             f"**{fmt(residual_before_min)}–{fmt(residual_before_max)}**, after "
             f"**{fmt(residual_after_min)}–{fmt(residual_after_max)}** CAD/m3. "
@@ -1756,12 +1746,12 @@ def write_report(
             f"Five regions have a negative after-transfer residual under the constant "
             f"provincial purchase price: {', '.join(negative_after_regions)}. "
             "This does not mean their costs are wrong; it means the reported procurement "
-            "total exceeds the provincial reference price for those groups.",
+            "total exceeds the provincial reference price for those groups."),
             "",
             "## BMMB historical benchmark (nominal 2011–2015)",
             "",
-            "BMMB delivered auction results are a separate historical benchmark. They are "
-            "**not** a 2022 price, **not** stumpage, and **not** a confirmed mill-gate price.",
+            ("BMMB delivered auction results are a separate historical benchmark. They are "
+            "**not** a 2022 price, **not** stumpage, and **not** a confirmed mill-gate price."),
             "",
             "| Scope | Sales | Awarded | Full rates | Partial awards | Volume (m3) | Value (CAD) | Weighted (CAD/m3) | Median (CAD/m3) |",
             "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
@@ -1778,20 +1768,20 @@ def write_report(
     lines.extend(
         [
             "",
-            "**Caveat:** nominal, 18 sales, no grade split. Eleven full rates cover "
+            ("**Caveat:** nominal, 18 sales, no grade split. Eleven full rates cover "
             "89,900 m3 and CAD 3,442,633.50; two 2012 partial awards (CAD 436,325) are "
             "excluded from the rate and retained only as lower bounds. No deflation is "
             "applied, so this table must not be compared with the 2022 survey as if it "
             "were the same price year. The archive does not publish species, grade, "
-            "destination, or service-bundle allocation.",
+            "destination, or service-bundle allocation."),
             "",
             "## QC total sensitivity (screening, M CAD)",
             "",
-            "QC allocation volumes are clearly mapped from the provincial allocation "
+            ("QC allocation volumes are clearly mapped from the provincial allocation "
             "screening files. The survey SEPM residual is applied to each candidate total. "
             "This is a **sensitivity**, not an observed provincial total: it assumes all "
             "QC volume is SEPM, uses no species mix, and is not volume-weighted to the "
-            "survey population.",
+            "survey population."),
             "",
             "| Case | QC volume (Mm3) | Volume source | Before transfers (M CAD) | After transfers (M CAD) |",
             "|---|---:|---|---:|---:|",
@@ -1808,19 +1798,19 @@ def write_report(
     lines.extend(
         [
             "",
-            f"Sensitivity range: **{min(before_values):.1f}–{max(before_values):.1f} M CAD** "
+            (f"Sensitivity range: **{min(before_values):.1f}–{max(before_values):.1f} M CAD** "
             f"before transfers and **{min(after_values):.1f}–{max(after_values):.1f} M CAD** "
             "after transfers. The after-transfer range is narrow because the SEPM "
-            "after-transfer residual is only 0.81 CAD/m3.",
+            "after-transfer residual is only 0.81 CAD/m3."),
             "",
             "## Validation",
             "",
-            f"All **{len(checks)}** checks pass. The builder recomputes the T20 component "
+            (f"All **{len(checks)}** checks pass. The builder recomputes the T20 component "
             "identity, the transfer identity, every residual, the regional range, the BMMB "
             "weighted/median rate, and the sensitivity arithmetic. It fails closed on a "
             "missing row, duplicate key, unexpected unit, non-finite value, or arithmetic "
             "mismatch. T2 purchase rows are used once; the overlapping T21 purchase rows "
-            "are used only as a cross-check.",
+            "are used only as a cross-check."),
             "",
             "## Non-claims and limitations",
             "",
