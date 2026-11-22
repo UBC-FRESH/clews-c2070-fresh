@@ -474,47 +474,45 @@
           <section class="section-block national-economics" id="national-economics" aria-labelledby="national-economics-title">
             <div class="section-heading national-heading">
               <div>
-                <p class="kicker">13 jurisdictions · v2.1 base / sensitivity · read-only</p>
-                <h3 id="national-economics-title">National volume-weighted diagnostic</h3>
-                <p>Base <span class="mono">donor_flat</span> plus sensitivity <span class="mono">stumpage_scaled</span>. Every value is a model estimate, not an observed transaction or a policy-grade national total.</p>
+                <p class="kicker">Evidence coverage · 13 jurisdictions · read-only</p>
+                <h3 id="national-economics-title">National economics evidence coverage</h3>
+                <p>Where the 119 Mm³ economics actually rests: direct/reported provincial evidence, open proxy models, and donor fill. Margins are secondary diagnostics, not the headline.</p>
               </div>
-              <label class="select-field national-scenario-field">Scenario
-                <select id="national-scenario" aria-label="National economics scenario">
-                  <option value="donor_flat">Base · donor_flat</option>
-                  <option value="stumpage_scaled">Sensitivity · stumpage_scaled</option>
-                </select>
-              </label>
             </div>
             <div class="economics-badges masthead-flags" id="national-badges" aria-label="National evidence and role labels"></div>
+            <div class="national-decision-warning" id="national-warning" role="alert">Not decision-grade — loading national evidence coverage…</div>
+            <div class="national-coverage" id="national-coverage" aria-live="polite"></div>
             <div class="economics-provenance national-provenance">
               <p class="method-note" id="national-source-note">Loading national economics bundle…</p>
               <p class="method-note mono small" id="national-generated"></p>
             </div>
 
-            <div class="national-diagnostics" id="national-diagnostics" aria-live="polite"></div>
-
-            <div class="national-layout">
-              <section class="economics-chart-card national-chart-card" aria-labelledby="national-chart-title">
-                <div class="section-heading">
-                  <h3 id="national-chart-title">Provincial margin · base vs sensitivity</h3>
-                  <p id="national-chart-note">Modeled central margin by jurisdiction, CAD/m³. The selected scenario is opaque; the other is ghosted.</p>
-                </div>
-                <div class="chart-frame chart-frame--national">
-                  <div class="chart" id="national-chart" role="img" aria-label="Bar chart of modeled central margin by jurisdiction for the base and sensitivity scenarios"></div>
-                </div>
-                <p class="method-note">Zero is drawn explicitly. Negative margins are not clipped. Both series are model estimates; the toggle changes emphasis, not the data.</p>
-              </section>
-              <aside class="national-tier-card" id="national-tier-coverage" aria-label="National evidence-tier coverage"></aside>
-            </div>
-
             <section class="section-block" aria-labelledby="national-table-title">
               <div class="section-heading">
-                <h3 id="national-table-title">13-jurisdiction ledger</h3>
-                <p>Low / base / high are model scenarios. Base is <span class="mono">donor_flat</span>; sensitivity is <span class="mono">stumpage_scaled</span>. Price tiers are shown as badges; the delta is a method change, not an observed market move.</p>
+                <h3 id="national-table-title">Province evidence ledger</h3>
+                <p>13 jurisdictions in canonical order. Donor-only provinces are flagged <strong>provisional donor</strong> and are not ranked as comparable results. Price and cost tiers are evidence tiers, not quality scores.</p>
               </div>
               <div class="table-wrap national-table-wrap">
                 <table class="data-table economics-table national-table" id="national-table"></table>
               </div>
+            </section>
+
+            <section class="section-block" aria-labelledby="national-drilldown-title">
+              <div class="section-heading">
+                <h3 id="national-drilldown-title">Province drill-down</h3>
+                <p>Open a province for its price source, component tiers, assumptions, margins and replacement priority. Every value remains <span class="mono">model_estimate</span> with <span class="mono">observed=false</span> and <span class="mono">policy_grade=false</span>.</p>
+              </div>
+              <div class="national-drilldown" id="national-drilldown"></div>
+            </section>
+
+            <section class="section-block national-diagnostic-block" id="national-margin-diagnostic" aria-labelledby="national-diagnostic-title">
+              <div class="section-heading">
+                <p class="kicker">Diagnostic only · shown last</p>
+                <h3 id="national-diagnostic-title">National margin diagnostic</h3>
+                <p>Volume-weighted model diagnostics. This is not a combined national net value, not observed, not policy grade, and not the first thing to read.</p>
+              </div>
+              <div class="national-diagnostic-warning" id="national-diagnostic-warning" role="note"></div>
+              <div class="national-diagnostic-values" id="national-diagnostic-values" aria-live="polite"></div>
             </section>
 
             <div class="harvest-caveat economics-caveat national-caveat" id="national-caveat" role="note"></div>
@@ -522,7 +520,7 @@
             <section class="section-block" aria-labelledby="national-downloads-title">
               <div class="section-heading">
                 <h3 id="national-downloads-title">National data &amp; manifest</h3>
-                <p>Static JSON generated from the committed v2.1 CSVs. The manifest records the payload hash and source hashes; no numbers are hand-coded in the UI.</p>
+                <p>Static JSON generated from the committed v2.1 CSVs, tier coverage, replacement queue, stumpage references and provincial allocation. The manifest records the payload hash and every source hash; no numbers are hand-coded in the UI.</p>
               </div>
               <div class="economics-downloads national-downloads" id="national-downloads"></div>
             </section>

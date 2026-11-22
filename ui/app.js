@@ -103,14 +103,17 @@
 
   var TIER_COLORS = { T1: '#d98a2b', T2: '#c17832', T3: '#9f5a32', T4: '#7e3823' };
   var ECONOMICS_SYSTEMS = ['ground', 'cable', 'heli'];
-  var NATIONAL_SCHEMA = 'economics/national/1';
-  var NATIONAL_MANIFEST_SCHEMA = 'economics/national-manifest/1';
+  var NATIONAL_SCHEMA = 'economics/national/2';
+  var NATIONAL_MANIFEST_SCHEMA = 'economics/national-manifest/2';
   var NATIONAL_TIERS = [
     { id: 'reported_average', label: 'Reported average', color: '#2c5746' },
     { id: 'proxy_model', label: 'Proxy model', color: '#d98a2b' },
     { id: 'donor_proxy', label: 'Donor proxy', color: '#a94f31' },
     { id: 'assumption', label: 'Assumption', color: '#9d8b6c' }
   ];
+  var NATIONAL_TIER_BY_ID = {};
+  NATIONAL_TIERS.forEach(function (tier) { NATIONAL_TIER_BY_ID[tier.id] = tier; });
+  var NATIONAL_EVIDENCE_ORDER = ['direct_reported', 'proxy', 'donor', 'assumption'];
   var SESSION_FAMILY = 'session_live';
   var LIVE_MODEL_COMMIT = '40d5b43';
   var FALLBACK_DEFAULTS = {
@@ -179,8 +182,6 @@
     economicsChart: null,
     national: null,
     nationalManifest: null,
-    nationalChart: null,
-    nationalScenario: 'donor_flat',
     outputs: new Map(),
     outputPromises: new Map(),
     warnings: [],
@@ -606,7 +607,6 @@
     bindOsecanControls();
     bindRunControls();
     bindAllocationControls();
-    bindNationalControls();
     renderOsecanStatic();
     renderInputsStatic();
     renderEconomics();
@@ -1074,7 +1074,6 @@
       }
       if (state.tab === 'inputs' && state.harvestChart) state.harvestChart.resize();
       if (state.tab === 'economics' && state.economicsChart) state.economicsChart.resize();
-      if (state.tab === 'economics' && state.nationalChart) state.nationalChart.resize();
       if (state.tab === 'map' && state.mapState.map) state.mapState.map.resize();
     });
     if (!opts.silent) {
@@ -2400,20 +2399,6 @@
       var button = event.target.closest('button[data-allocation-scenario]');
       if (!button) return;
       selectScenario(button.getAttribute('data-allocation-scenario'));
-    });
-  }
-
-  function bindNationalControls() {
-    var select = $('national-scenario');
-    if (!select || select.getAttribute('data-bound') === 'true') return;
-    select.setAttribute('data-bound', 'true');
-    select.value = state.nationalScenario;
-    select.addEventListener('change', function () {
-      var scenario = select.value;
-      if (!state.national || !nationalScenarioById(scenario)) return;
-      state.nationalScenario = scenario;
-      renderNational();
-      announce('National economics scenario: ' + nationalScenarioById(scenario).label + '.');
     });
   }
 
@@ -6404,9 +6389,14 @@
   function validateNational(national, manifest) {
     requireTrue(national && national.schema_version === NATIONAL_SCHEMA, 'national economics schema mismatch');
     requireTrue(national.model_id === 'national_economics_v2_1', 'national economics model id mismatch');
+    requireTrue(national.default_view === 'evidence_coverage', 'national economics must default to evidence coverage');
+    requireTrue(national.role === 'evidence_coverage_with_national_diagnostic',
+      'national economics role must be evidence coverage');
     var labels = national.labels || {};
     requireTrue(labels.evidence === 'model_estimate' && labels.observed === false &&
       labels.policy_grade === false, 'national evidence labels mismatch');
+    requireTrue(labels.not_decision_grade === true && labels.ranking_performed === false,
+      'national evidence must declare not-decision-grade and no ranking');
     requireTrue(labels.combined_national_net_value === false,
       'national economics must not claim a combined national net value');
     requireTrue(labels.forest_lp_input === false && labels.public_osecan_input === false,
@@ -6430,7 +6420,6 @@
       'national scenario list must declare exactly one base');
 
     var diagnostic = national.national_diagnostic || {};
-    var expectedNational = { donor_flat: 33.1365, stumpage_scaled: -16.1220 };
     ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
       var values = diagnostic[scenario];
       requireTrue(values && Number.isFinite(values.low_cad_m3) &&
@@ -6438,17 +6427,59 @@
         'national diagnostic is incomplete for ' + scenario);
       requireTrue(values.low_cad_m3 <= values.base_cad_m3 && values.base_cad_m3 <= values.high_cad_m3,
         'national diagnostic is unordered for ' + scenario);
-      requireTrue(Math.abs(values.base_cad_m3 - expectedNational[scenario]) < 1e-6,
-        'stale national diagnostic for ' + scenario);
     });
+    requireTrue(diagnostic.not_decision_grade === true && diagnostic.display_role === 'diagnostic_not_headline',
+      'national diagnostic must be quiet and labelled');
+
+    var coverage = national.evidence_coverage || {};
+    requireTrue(coverage.default_view === 'evidence_coverage' && coverage.not_decision_grade === true,
+      'national evidence coverage is not evidence-first');
+    requireTrue(coverage.jurisdiction_count === 13 && coverage.cell_count === 65 &&
+      coverage.component_count === 5, 'national evidence coverage counts mismatch');
+    var shares = coverage.volume_weighted || {};
+    requireTrue(shares.direct_reported && Number.isFinite(shares.direct_reported.share) &&
+      shares.direct_reported.share >= 0, 'direct/reported coverage share is missing');
+    requireTrue(shares.proxy && Number.isFinite(shares.proxy.share) &&
+      shares.proxy.share >= 0, 'proxy coverage share is missing');
+    requireTrue(shares.donor && Number.isFinite(shares.donor.share) &&
+      shares.donor.share >= 0, 'donor coverage share is missing');
+    requireTrue(Math.abs(shares.direct_reported.share + shares.proxy.share + shares.donor.share +
+      (shares.assumption ? shares.assumption.share : 0) - 1) < 1e-6,
+      'national coverage shares do not sum to one');
+    requireTrue(shares.direct_reported.cells === coverage.direct_cell_count &&
+      shares.proxy.cells === coverage.proxy_cell_count &&
+      shares.donor.cells === coverage.donor_cell_count,
+      'national coverage cell counts diverge from the share cards');
+    requireTrue(coverage.direct_cell_count === 3 && coverage.proxy_cell_count === 2 &&
+      coverage.donor_cell_count === 60, 'national evidence cell counts mismatch');
+    requireTrue(coverage.direct_jurisdiction_count === 2 && coverage.donor_only_count === 11 &&
+      coverage.donor_price_count === 12, 'national evidence jurisdiction counts mismatch');
+    requireTrue(Array.isArray(coverage.direct_jurisdictions) &&
+      coverage.direct_jurisdictions.join(',') === 'BC,QC',
+      'direct/reported jurisdictions mismatch');
+    requireTrue(Array.isArray(coverage.donor_only_jurisdictions) &&
+      coverage.donor_only_jurisdictions.length === 11,
+      'provisional donor jurisdiction list is incomplete');
+    requireTrue(typeof coverage.warning === 'string' && coverage.warning.length > 20,
+      'not-decision-grade warning is missing');
+
+    var ranking = national.ranking || {};
+    requireTrue(ranking.performed === false && ranking.donor_only_excluded === true,
+      'national economics must not rank donor-only margins');
 
     requireTrue(Array.isArray(national.jurisdictions) && national.jurisdictions.length === 13,
       'national jurisdiction count mismatch');
     var provinces = new Set();
+    var rateCount = 0;
+    var fallbackCount = 0;
     national.jurisdictions.forEach(function (row) {
       requireTrue(row && typeof row.province === 'string' && !provinces.has(row.province),
         'national jurisdiction is duplicated or missing');
       provinces.add(row.province);
+      requireTrue(typeof row.province_name === 'string' && row.province_name.length > 0,
+        'national jurisdiction ' + row.province + ' is missing its name');
+      requireTrue(Number.isFinite(row.allocation_volume_m3) && Number.isFinite(row.volume_share),
+        'national jurisdiction ' + row.province + ' is missing its allocation');
       ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
         var values = row[scenario];
         requireTrue(values && Number.isFinite(values.low_cad_m3) &&
@@ -6459,53 +6490,85 @@
         requireTrue(typeof values.price_tier === 'string' && typeof values.cost_tier === 'string',
           'national jurisdiction ' + row.province + ' is missing tier labels');
       });
-      requireTrue(Number.isFinite(row.scaled_minus_donor_flat_cad_m3),
-        'national jurisdiction ' + row.province + ' is missing its delta');
+      requireTrue(row.price_tier === row.donor_flat.price_tier && row.cost_tier === row.donor_flat.cost_tier,
+        'national jurisdiction ' + row.province + ' tier labels diverge from the base margin');
+      requireTrue(row.price_source && typeof row.price_source.is_direct === 'boolean' &&
+        typeof row.price_source.title === 'string',
+        'national jurisdiction ' + row.province + ' is missing its price source');
+      requireTrue(row.price_source.is_direct === (row.price_tier === 'reported_average'),
+        'national jurisdiction ' + row.province + ' price-source direct flag mismatch');
+      var mix = row.evidence_mix || {};
+      requireTrue(Number.isInteger(mix.reported_average) && Number.isInteger(mix.proxy_model) &&
+        Number.isInteger(mix.donor_proxy) && Number.isInteger(mix.assumption),
+        'national jurisdiction ' + row.province + ' is missing its evidence mix');
+      requireTrue(typeof row.donor_only === 'boolean' &&
+        row.donor_only === (mix.reported_average === 0 && mix.proxy_model === 0),
+        'national jurisdiction ' + row.province + ' donor-only flag mismatch');
+      requireTrue(row.ranked === false && typeof row.comparison_status === 'string',
+        'national jurisdiction ' + row.province + ' must not be ranked');
+      requireTrue(Array.isArray(row.components) && row.components.length === 5,
+        'national jurisdiction ' + row.province + ' is missing component drill-down');
+      var stumpage = row.stumpage_reference || {};
+      requireTrue(typeof stumpage.has_rate === 'boolean' && stumpage.is_delivered_price === false,
+        'national jurisdiction ' + row.province + ' stumpage reference is invalid');
+      if (stumpage.has_rate) {
+        rateCount += 1;
+        requireTrue(Number.isFinite(stumpage.rate_low_cad_m3) &&
+          Number.isFinite(stumpage.rate_base_cad_m3) && Number.isFinite(stumpage.rate_high_cad_m3),
+          'national jurisdiction ' + row.province + ' stumpage rate is missing');
+        requireTrue(stumpage.rate_low_cad_m3 <= stumpage.rate_base_cad_m3 &&
+          stumpage.rate_base_cad_m3 <= stumpage.rate_high_cad_m3,
+          'national jurisdiction ' + row.province + ' stumpage rate is unordered');
+        requireTrue(typeof stumpage.source_title === 'string' && stumpage.source_title.length > 0 &&
+          typeof stumpage.year === 'string' && stumpage.year.length > 0,
+          'national jurisdiction ' + row.province + ' stumpage source/year is missing');
+      } else {
+        fallbackCount += 1;
+        requireTrue(stumpage.fallback_donor === 'BC',
+          'national jurisdiction ' + row.province + ' fallback donor must be BC');
+      }
+      var replacement = row.replacement || {};
+      requireTrue(/^P[1-4]$/.test(replacement.priority || '') &&
+        Number.isInteger(replacement.open_cell_count) && replacement.open_cell_count > 0,
+        'national jurisdiction ' + row.province + ' replacement priority is invalid');
+      requireTrue(Array.isArray(replacement.cells) &&
+        replacement.cells.length === replacement.open_cell_count,
+        'national jurisdiction ' + row.province + ' replacement queue is incomplete');
     });
+    requireTrue(rateCount === 8 && fallbackCount === 5,
+      'national stumpage reference counts must be 8 rates and 5 explicit fallbacks');
 
-    var tiers = national.tier_coverage || {};
-    requireTrue(tiers.cell_count === 65 && tiers.province_count === 13 && tiers.component_count === 5,
-      'national tier coverage cell count mismatch');
-    var shares = tiers.volume_weighted_shares || {};
-    requireTrue(Math.abs((shares.reported_average || 0) - 0.17924672) < 1e-6,
-      'stale reported-average coverage share');
-    requireTrue(Math.abs((shares.proxy_model || 0) - 0.13440737) < 1e-6,
-      'stale proxy-model coverage share');
-    requireTrue(Math.abs((shares.donor_proxy || 0) - 0.68634592) < 1e-6,
-      'stale donor-proxy coverage share');
+    var tierCoverage = national.tier_coverage || {};
+    requireTrue(tierCoverage.cell_count === 65 && tierCoverage.province_count === 13 &&
+      tierCoverage.component_count === 5, 'national tier coverage cell count mismatch');
 
     requireTrue(manifest && manifest.schema_version === NATIONAL_MANIFEST_SCHEMA,
       'national manifest schema mismatch');
+    requireTrue(manifest.validation && manifest.validation.ok === true &&
+      manifest.validation.default_view === 'evidence_coverage' &&
+      manifest.validation.not_decision_grade === true &&
+      manifest.validation.ranking_performed === false,
+      'national manifest validation labels mismatch');
     requireTrue(Array.isArray(manifest.generated) && manifest.generated.length === 1 &&
       manifest.generated[0].path === 'economics/national.json' &&
       typeof manifest.generated[0].sha256 === 'string' &&
       manifest.generated[0].sha256.length === 64,
       'national manifest payload hash is missing');
-    requireTrue(Array.isArray(manifest.sources) && manifest.sources.length >= 5,
+    requireTrue(Array.isArray(manifest.sources) && manifest.sources.length >= 10,
       'national manifest source hashes are missing');
-  }
-
-  function nationalScenarioById(id) {
-    if (!state.national) return null;
-    var found = null;
-    state.national.scenarios.forEach(function (scenario) {
-      if (scenario.id === id) found = scenario;
+    manifest.sources.forEach(function (source) {
+      requireTrue(source && typeof source.path === 'string' &&
+        typeof source.sha256 === 'string' && source.sha256.length === 64 &&
+        Number.isFinite(source.bytes), 'national manifest source hash is invalid');
     });
-    return found;
-  }
-
-  function nationalSelectedScenario() {
-    var selected = nationalScenarioById(state.nationalScenario);
-    if (selected) return selected;
-    return nationalScenarioById('donor_flat');
   }
 
   function nationalTierMeta(id) {
-    var meta = { id: id, label: String(id).replace(/_/g, ' '), color: '#9d8b6c' };
-    NATIONAL_TIERS.forEach(function (tier) {
-      if (tier.id === id) meta = tier;
-    });
-    return meta;
+    return NATIONAL_TIER_BY_ID[id] || {
+      id: id,
+      label: String(id).replace(/_/g, ' '),
+      color: '#9d8b6c'
+    };
   }
 
   function nationalTierBadge(id, suffix) {
@@ -6520,208 +6583,294 @@
     return value > 0 ? '+' + text : text;
   }
 
-  function nationalScale() {
-    var values = [0];
-    var national = state.national;
-    ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
-      var diagnostic = national.national_diagnostic[scenario];
-      values.push(diagnostic.low_cad_m3, diagnostic.base_cad_m3, diagnostic.high_cad_m3);
-    });
-    national.jurisdictions.forEach(function (row) {
-      ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
-        values.push(row[scenario].low_cad_m3, row[scenario].base_cad_m3, row[scenario].high_cad_m3);
-      });
-    });
-    var low = Math.min.apply(null, values);
-    var high = Math.max.apply(null, values);
-    var padding = Math.max(5, (high - low) * 0.04);
-    return { min: Math.floor(low - padding), max: Math.ceil(high + padding) };
+  function nationalRange(values) {
+    return fmt(values.low_cad_m3, 2) + ' – ' + fmt(values.high_cad_m3, 2);
   }
 
-  function nationalPct(value, scale) {
-    return ((value - scale.min) / (scale.max - scale.min)) * 100;
+  function nationalSourceName(source) {
+    var title = source && (source.title || source.source_key);
+    return title ? esc(title) : 'source not asserted';
   }
 
-  function nationalRangeBar(diagnostic, scale) {
-    var low = nationalPct(diagnostic.low_cad_m3, scale);
-    var high = nationalPct(diagnostic.high_cad_m3, scale);
-    var base = nationalPct(diagnostic.base_cad_m3, scale);
-    var zero = nationalPct(0, scale);
-    var negativeWidth = Math.max(0, Math.min(high, zero) - low);
-    return '<div class="economics-range-track national-range-track" aria-hidden="true">' +
-        '<span class="economics-range-band" style="left:' + low + '%;width:' +
-          Math.max(0, high - low) + '%"></span>' +
-        '<span class="economics-range-negative" style="left:' + low + '%;width:' +
-          negativeWidth + '%"></span>' +
-        '<span class="economics-range-zero" style="left:' + zero + '%"></span>' +
-        '<span class="economics-range-median" style="left:' + base + '%"></span>' +
-      '</div>' +
-      '<div class="economics-range-labels">' +
-        '<span>' + fmt(diagnostic.low_cad_m3, 4) + '</span>' +
-        '<span>base <strong>' + nationalSigned(diagnostic.base_cad_m3, 4) + '</strong></span>' +
-        '<span>' + fmt(diagnostic.high_cad_m3, 4) + '</span>' +
-      '</div>';
-  }
-
-  function nationalDiagnosticCard(scenarioId) {
-    var national = state.national;
-    var scenario = nationalScenarioById(scenarioId);
-    var diagnostic = national.national_diagnostic[scenarioId];
-    var selected = state.nationalScenario === scenarioId;
-    var isSensitivity = scenarioId === national.decision.sensitivity_scenario;
-    return '<article class="national-diagnostic-card' + (selected ? ' is-selected' : '') +
-        (isSensitivity ? ' is-sensitivity' : ' is-base') + '">' +
-      '<div class="national-diagnostic-head">' +
-        '<span class="kicker">' + esc(scenario.label) + '</span>' +
-        '<span class="badge badge--econ-readonly">volume-weighted</span>' +
-      '</div>' +
-      '<div class="national-diagnostic-value' + (diagnostic.base_cad_m3 < 0 ? ' is-negative' : '') + '">' +
-        nationalSigned(diagnostic.base_cad_m3, 4) + '</div>' +
-      '<span class="national-diagnostic-unit">CAD/m³ central model diagnostic</span>' +
-      nationalRangeBar(diagnostic, nationalScale()) +
-      '<dl class="national-diagnostic-stats">' +
-        '<div><dt>Low</dt><dd>' + fmt(diagnostic.low_cad_m3, 4) + '</dd></div>' +
-        '<div><dt>Base</dt><dd>' + fmt(diagnostic.base_cad_m3, 4) + '</dd></div>' +
-        '<div><dt>High</dt><dd>' + fmt(diagnostic.high_cad_m3, 4) + '</dd></div>' +
-      '</dl>' +
-      '<p class="method-note">' +
-        (isSensitivity
-          ? 'Method sensitivity · not the base scenario · not observed · not policy grade.'
-          : 'Base scenario · the consistent donor-flat case.') +
-      '</p>' +
-    '</article>';
+  function nationalSourceLink(source) {
+    var title = nationalSourceName(source);
+    if (source && source.source_url && /^https?:\/\//i.test(source.source_url)) {
+      return '<a class="national-source-link" href="' + esc(source.source_url) +
+        '" target="_blank" rel="noopener noreferrer">' + title + '</a>';
+    }
+    return title;
   }
 
   function renderNationalBadges() {
     $('national-badges').innerHTML =
-      '<span class="badge badge--econ-public">national_diagnostic</span>' +
+      '<span class="badge badge--econ-model">evidence coverage first</span>' +
       '<span class="badge badge--econ-model">model_estimate</span>' +
       '<span class="badge badge--econ-policy">observed=false</span>' +
       '<span class="badge badge--econ-policy">policy_grade=false</span>' +
-      '<span class="badge badge--econ-readonly">no combined national net value</span>' +
+      '<span class="badge badge--econ-readonly">not decision-grade</span>' +
+      '<span class="badge badge--econ-readonly">no margin ranking</span>' +
       '<span class="badge badge--econ-readonly">not Forest LP/OSeCAN input</span>' +
       '<span class="badge badge--econ-readonly">read-only</span>';
   }
 
-  function renderNationalDiagnostics() {
-    var allocation = state.national.national_diagnostic.allocation_volume_m3;
-    $('national-diagnostics').innerHTML =
-      nationalDiagnosticCard('donor_flat') + nationalDiagnosticCard('stumpage_scaled') +
-      '<p class="national-diagnostic-basis method-note">Allocation basis: ' +
-        fmt(allocation / 1e6, 1) + ' Mm³ · 13 jurisdictions · volume-weighted model diagnostic. ' +
-        'Not a legal AAC and not a combined national net value.</p>';
+  function renderNationalWarning() {
+    var coverage = state.national.evidence_coverage;
+    var direct = coverage.volume_weighted.direct_reported;
+    var donor = coverage.volume_weighted.donor;
+    $('national-warning').innerHTML =
+      '<span class="national-decision-mark">!</span>' +
+      '<div><strong>Not decision-grade.</strong> ' + esc(coverage.warning) +
+      ' Only ' + fmtPct(direct.share, 1) + ' of volume-weighted evidence is direct/reported; ' +
+      fmtPct(donor.share, 1) + ' is donor proxy. ' +
+      '<span class="mono">observed=false · policy_grade=false · no combined national net value</span></div>';
   }
 
-  function renderNationalTierCoverage() {
-    var national = state.national;
-    var coverage = national.tier_coverage;
-    var shares = coverage.volume_weighted_shares || {};
-    var cellCounts = coverage.cell_counts || {};
-    var selected = nationalSelectedScenario();
-    var stack = NATIONAL_TIERS.map(function (tier) {
-      var share = shares[tier.id] || 0;
-      if (share <= 0) return '';
-      return '<span class="national-tier-segment" style="width:' + (share * 100) +
-        '%;background:' + tier.color + '" title="' + esc(tier.label + ' ' + fmtPct(share, 1)) + '"></span>';
-    }).join('');
-    var rows = NATIONAL_TIERS.map(function (tier) {
-      var share = shares[tier.id] || 0;
-      var count = cellCounts[tier.id] || 0;
-      return '<li class="national-tier-row">' +
-        '<span class="national-tier-dot" style="background:' + tier.color + '"></span>' +
-        '<span class="national-tier-name">' + esc(tier.label) + '</span>' +
-        '<strong>' + fmtPct(share, 1) + '</strong>' +
-        '<span class="mono">' + fmt(count, 0) + ' / ' + fmt(coverage.cell_count, 0) + ' cells</span>' +
-      '</li>';
-    }).join('');
-    var priceCounts = (coverage.scenario_price_tiers || {})[selected.id] || {};
-    var priceBadges = Object.keys(priceCounts).sort().map(function (tier) {
-      return nationalTierBadge(tier, fmt(priceCounts[tier], 0) + ' jurisdictions');
-    }).join('');
-    var costCounts = (coverage.scenario_cost_tiers || {})[selected.id] || {};
-    var costBadges = Object.keys(costCounts).sort().map(function (tier) {
-      return nationalTierBadge(tier, fmt(costCounts[tier], 0));
-    }).join('');
-    $('national-tier-coverage').innerHTML =
-      '<p class="kicker">Evidence tiers · volume-weighted</p>' +
-      '<h3>Coverage shares</h3>' +
-      '<div class="national-tier-stack" role="img" aria-label="Volume-weighted tier coverage: reported average ' +
-        fmtPct(shares.reported_average || 0, 1) + ', proxy model ' +
-        fmtPct(shares.proxy_model || 0, 1) + ', donor proxy ' +
-        fmtPct(shares.donor_proxy || 0, 1) + '">' + stack + '</div>' +
-      '<ul class="national-tier-rows">' + rows + '</ul>' +
-      '<p class="method-note">Five components per jurisdiction (price, logging, haul, road, silviculture), ' +
-        'equally weighted. Shares describe evidence coverage, not margin confidence.</p>' +
-      '<h4>Selected scenario · price tiers</h4>' +
-      '<div class="national-tier-badges">' + priceBadges + '</div>' +
-      '<details class="national-cost-details"><summary>Cost tiers · ' + esc(selected.label) + '</summary>' +
-        '<div class="national-tier-badges">' + costBadges + '</div></details>';
+  function nationalCoverageCard(kind, share, cells, label, note) {
+    return '<article class="national-coverage-card national-coverage-card--' + kind + '">' +
+      '<span class="national-coverage-label">' + esc(label) + '</span>' +
+      '<span class="national-coverage-share">' + fmtPct(share, 1) + '</span>' +
+      '<span class="national-coverage-cells mono">' + fmt(cells, 0) + ' / ' +
+        fmt(state.national.evidence_coverage.cell_count, 0) + ' cells</span>' +
+      '<span class="national-coverage-note">' + esc(note) + '</span>' +
+    '</article>';
   }
 
-  function nationalValueCell(value, extraClass) {
-    return '<td class="num' + (extraClass ? ' ' + extraClass : '') +
-      (value < 0 ? ' is-negative-value' : '') + '">' + fmt(value, 2) + '</td>';
+  function renderNationalCoverage() {
+    var coverage = state.national.evidence_coverage;
+    var shares = coverage.volume_weighted;
+    var segments = [
+      { key: 'direct_reported', label: 'direct / reported', share: shares.direct_reported.share, color: '#2c5746' },
+      { key: 'proxy', label: 'proxy model', share: shares.proxy.share, color: '#d98a2b' },
+      { key: 'donor', label: 'donor proxy', share: shares.donor.share, color: '#a94f31' },
+      { key: 'assumption', label: 'assumption', share: shares.assumption.share, color: '#9d8b6c' }
+    ].filter(function (segment) { return segment.share > 0; });
+    var bar = segments.map(function (segment) {
+      return '<span class="national-evidence-segment" style="width:' + (segment.share * 100) +
+        '%;background:' + segment.color + '" title="' + esc(segment.label + ' ' + fmtPct(segment.share, 1)) + '"></span>';
+    }).join('');
+    var directProvinces = coverage.direct_jurisdictions.join(', ');
+    var donorOnly = coverage.donor_only_count;
+    var donorPrice = coverage.donor_price_count;
+    $('national-coverage').innerHTML =
+      '<div class="national-coverage-head">' +
+        '<div><p class="kicker">Direct / reported vs proxy vs donor</p>' +
+        '<h4>13 jurisdictions · 65 evidence cells · volume-weighted</h4></div>' +
+        '<div class="national-coverage-count"><strong>' + fmt(coverage.jurisdiction_count, 0) + '</strong><span>jurisdictions</span></div>' +
+      '</div>' +
+      '<div class="national-coverage-grid">' +
+        nationalCoverageCard('direct', shares.direct_reported.share, shares.direct_reported.cells,
+          'Direct / reported', 'Provincial reported source: ' + directProvinces + '.') +
+        nationalCoverageCard('proxy', shares.proxy.share, shares.proxy.cells,
+          'Proxy model', 'Open model, not a direct provincial observation.') +
+        nationalCoverageCard('donor', shares.donor.share, shares.donor.cells,
+          'Donor proxy', donorOnly + ' donor-only jurisdictions are provisional donor.') +
+      '</div>' +
+      '<div class="national-evidence-bar" role="img" aria-label="Volume-weighted evidence mix: direct ' +
+        fmtPct(shares.direct_reported.share, 1) + ', proxy ' + fmtPct(shares.proxy.share, 1) +
+        ', donor ' + fmtPct(shares.donor.share, 1) + '">' + bar + '</div>' +
+      '<p class="national-coverage-foot"><strong>' + donorPrice + ' of 13</strong> jurisdictions use a donor price; ' +
+        '<strong>' + donorOnly + ' of 13</strong> are donor-only and flagged provisional donor. ' +
+        'Margins are not ranked. Coverage is volume-weighted across five components per jurisdiction.</p>';
   }
 
   function renderNationalTable() {
     var national = state.national;
-    var selected = state.nationalScenario;
-    var baseSelected = selected === 'donor_flat';
-    var sensitivitySelected = selected === 'stumpage_scaled';
     var header =
-      '<caption>13 jurisdictions · model_estimate · observed=false · policy_grade=false · no combined national net value · ' +
-        'low/base/high CAD/m³ · base=donor_flat · sensitivity=stumpage_scaled</caption>' +
-      '<thead>' +
-        '<tr>' +
-          '<th rowspan="2">Jurisdiction</th>' +
-          '<th rowspan="2" class="num">Volume (Mm³)</th>' +
-          '<th rowspan="2" class="num">Share</th>' +
-          '<th colspan="4" class="national-group-base' + (baseSelected ? ' is-selected-scenario' : '') + '">Base · donor_flat</th>' +
-          '<th colspan="4" class="national-group-sensitivity' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Sensitivity · stumpage_scaled</th>' +
-          '<th rowspan="2" class="num">Δ base (CAD/m³)</th>' +
-        '</tr>' +
-        '<tr>' +
-          '<th class="num national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">Low</th>' +
-          '<th class="num national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">Base</th>' +
-          '<th class="num national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">High</th>' +
-          '<th class="national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">Price tier</th>' +
-          '<th class="num national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Low</th>' +
-          '<th class="num national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Base</th>' +
-          '<th class="num national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">High</th>' +
-          '<th class="national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Price tier</th>' +
-        '</tr>' +
-      '</thead>';
+      '<caption>13 jurisdictions · model_estimate · observed=false · policy_grade=false · not decision-grade · no margin ranking · ' +
+        'donor-only rows are provisional donor and not comparable results</caption>' +
+      '<thead><tr>' +
+        '<th>Province</th>' +
+        '<th>Price tier</th>' +
+        '<th>Cost tier</th>' +
+        '<th>Direct source</th>' +
+        '<th>Stumpage / dues reference</th>' +
+        '<th class="num">Base margin<br><span class="national-th-sub">CAD/m³ · donor_flat</span></th>' +
+        '<th class="num">Sensitivity margin<br><span class="national-th-sub">CAD/m³ · stumpage_scaled</span></th>' +
+        '<th>Replacement priority</th>' +
+      '</tr></thead>';
     var rows = national.jurisdictions.map(function (row) {
-      return '<tr>' +
-        '<td class="national-jurisdiction-cell"><strong>' + esc(row.province) + '</strong><span>' +
-          esc(row.province_name) + '</span></td>' +
-        '<td class="num">' + fmt(row.allocation_volume_m3 / 1e6, 2) + '</td>' +
-        '<td class="num mono">' + fmtPct(row.volume_share, 1) + '</td>' +
-        nationalValueCell(row.donor_flat.low_cad_m3, 'national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '')) +
-        nationalValueCell(row.donor_flat.base_cad_m3, 'national-scenario-col is-base-value' + (baseSelected ? ' is-selected-scenario' : '')) +
-        nationalValueCell(row.donor_flat.high_cad_m3, 'national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '')) +
-        '<td class="national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">' +
-          nationalTierBadge(row.donor_flat.price_tier) + '</td>' +
-        nationalValueCell(row.stumpage_scaled.low_cad_m3, 'national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '')) +
-        nationalValueCell(row.stumpage_scaled.base_cad_m3, 'national-scenario-col is-sensitivity-value' + (sensitivitySelected ? ' is-selected-scenario' : '')) +
-        nationalValueCell(row.stumpage_scaled.high_cad_m3, 'national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '')) +
-        '<td class="national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">' +
-          nationalTierBadge(row.stumpage_scaled.price_tier) + '</td>' +
-        '<td class="num' + (row.scaled_minus_donor_flat_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
-          nationalSigned(row.scaled_minus_donor_flat_cad_m3, 2) + '</td>' +
+      var source = row.price_source;
+      var sourceText = source.is_direct
+        ? '<span class="national-source-kind is-direct">direct / reported</span>'
+        : '<span class="national-source-kind is-donor">donor' +
+            (source.donor_province ? ' · ' + esc(source.donor_province) : '') + '</span>';
+      var stumpage = row.stumpage_reference;
+      var stumpageText = stumpage.has_rate
+        ? '<strong>' + fmt(stumpage.rate_base_cad_m3, 2) + ' CAD/m³</strong>' +
+          '<span class="national-cell-note">' +
+            (stumpage.rate_low_cad_m3 !== stumpage.rate_high_cad_m3
+              ? 'range ' + fmt(stumpage.rate_low_cad_m3, 2) + '–' + fmt(stumpage.rate_high_cad_m3, 2) + ' · '
+              : '') +
+            esc(stumpage.year) + ' · ' + esc(stumpage.rate_type.replace(/_/g, ' ')) + '</span>' +
+          '<span class="national-cell-source">' + esc(stumpage.source_title) + '</span>'
+        : '<strong>No provincial rate</strong><span class="national-cell-note">' +
+          esc(stumpage.rate_type.replace(/_/g, ' ')) + '</span>' +
+          '<span class="national-cell-source">' + esc(stumpage.fallback_donor) + ' fallback donor · not asserted</span>';
+      return '<tr class="national-province-row' + (row.donor_only ? ' national-province-row--donor' : '') + '">' +
+        '<td class="national-jurisdiction-cell"><strong>' + esc(row.province) + '</strong>' +
+          '<span>' + esc(row.province_name) + '</span>' +
+          '<span class="badge national-status-badge ' + (row.donor_only ? 'national-status-badge--donor' : 'national-status-badge--partial') + '">' +
+            esc(row.status_label) + '</span></td>' +
+        '<td>' + nationalTierBadge(row.price_tier) + '</td>' +
+        '<td>' + nationalTierBadge(row.cost_tier) + '</td>' +
+        '<td class="national-source-cell">' + sourceText +
+          '<span class="national-cell-source">' + esc(source.title) + '</span>' +
+          '<span class="national-cell-note">' + esc(source.publication_date || 'date not asserted') + '</span></td>' +
+        '<td class="national-stumpage-cell">' + stumpageText + '</td>' +
+        '<td class="num national-margin-cell' + (row.donor_flat.base_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
+          '<strong>' + fmt(row.donor_flat.base_cad_m3, 2) + '</strong>' +
+          '<span class="national-cell-note">' + nationalRange(row.donor_flat) + '</span></td>' +
+        '<td class="num national-margin-cell' + (row.stumpage_scaled.base_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
+          '<strong>' + fmt(row.stumpage_scaled.base_cad_m3, 2) + '</strong>' +
+          '<span class="national-cell-note">' + nationalRange(row.stumpage_scaled) + '</span></td>' +
+        '<td class="national-priority-cell"><span class="badge badge--priority badge--priority-' +
+          esc(String(row.replacement.priority).toLowerCase()) + '">' + esc(row.replacement.priority) + '</span>' +
+          '<span class="national-cell-note">' + fmt(row.replacement.open_cell_count, 0) + ' open cells</span>' +
+          '<span class="national-cell-source">' + esc(row.replacement.first_action) + '</span></td>' +
       '</tr>';
     }).join('');
     $('national-table').innerHTML = header + '<tbody>' + rows + '</tbody>';
+  }
+
+  function nationalComponentRows(row) {
+    return row.components.map(function (component) {
+      var donor = component.donor_province ? ' · donor ' + esc(component.donor_province) : '';
+      var assumptions = component.assumption_ids.length
+        ? '<span class="national-cell-note">assumptions: ' + esc(component.assumption_ids.join(', ')) + '</span>'
+        : '';
+      return '<li class="national-component-row">' +
+        '<span class="national-component-name">' + esc(component.component) + '</span>' +
+        nationalTierBadge(component.tier) +
+        '<span class="national-component-source">' + esc(component.source_title) + donor + assumptions + '</span>' +
+      '</li>';
+    }).join('');
+  }
+
+  function nationalStumpageDetail(row) {
+    var stumpage = row.stumpage_reference;
+    if (!stumpage.has_rate) {
+      return '<p><strong>No provincial stumpage/dues series materialised.</strong> ' +
+        'The ' + esc(stumpage.fallback_donor) + ' fallback donor applies; no numeric rate is asserted.</p>' +
+        '<p class="method-note">' + esc(stumpage.notes) + '</p>';
+    }
+    return '<p><strong>' + fmt(stumpage.rate_base_cad_m3, 2) + ' CAD/m³</strong> base · ' +
+      fmt(stumpage.rate_low_cad_m3, 2) + '–' + fmt(stumpage.rate_high_cad_m3, 2) + ' range · ' +
+      esc(stumpage.year) + ' · ' + esc(stumpage.rate_type.replace(/_/g, ' ')) + '</p>' +
+      '<p class="national-detail-line">Basis: ' + esc(stumpage.rate_basis) + '</p>' +
+      '<p class="national-detail-line">Source: ' + nationalSourceLink(stumpage) + ' <span class="mono">(' + esc(stumpage.source_key) + ')</span></p>' +
+      '<p class="national-detail-line">Published range: ' + esc(stumpage.published_range) + '</p>' +
+      '<p class="method-note">Stumpage/dues are charges on standing timber, not delivered log prices. ' + esc(stumpage.notes) + '</p>';
+  }
+
+  function nationalAssumptionList(row) {
+    if (!row.assumption_ids.length) return '<p class="method-note">No cell-level assumption labels.</p>';
+    return '<div class="national-assumption-tags">' + row.assumption_ids.map(function (id) {
+      return '<span class="badge badge--assumption-tag">' + esc(String(id).replace(/_/g, ' ')) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function nationalReplacementDetail(row) {
+    var replacement = row.replacement;
+    return '<p><span class="badge badge--priority badge--priority-' + esc(replacement.priority.toLowerCase()) + '">' +
+      esc(replacement.priority) + '</span> ' + fmt(replacement.open_cell_count, 0) + ' open cell(s) · ' +
+      esc(replacement.queue_status.replace(/_/g, ' ')) + '</p>' +
+      '<ul class="national-queue-list">' + replacement.cells.map(function (cell) {
+        return '<li><strong>' + esc(cell.component) + '</strong> · ' + esc(cell.priority) + ' · ' +
+          esc(cell.replacement_action) + ' <span class="mono">(' + esc(cell.required_source_category) + ')</span></li>';
+      }).join('') + '</ul>';
+  }
+
+  function renderNationalDrilldown() {
+    var national = state.national;
+    var cards = national.jurisdictions.map(function (row) {
+      return '<details class="national-province-card' + (row.donor_only ? ' national-province-card--donor' : '') + '">' +
+        '<summary>' +
+          '<span class="national-province-code">' + esc(row.province) + '</span>' +
+          '<span class="national-province-name">' + esc(row.province_name) + '</span>' +
+          '<span class="national-province-flags">' +
+            nationalTierBadge(row.price_tier) +
+            '<span class="badge national-status-badge ' + (row.donor_only ? 'national-status-badge--donor' : 'national-status-badge--partial') + '">' +
+              esc(row.status_label) + '</span>' +
+          '</span>' +
+          '<span class="national-province-priority badge badge--priority badge--priority-' +
+            esc(row.replacement.priority.toLowerCase()) + '">' + esc(row.replacement.priority) + '</span>' +
+        '</summary>' +
+        '<div class="national-detail-grid">' +
+          '<section class="national-detail-section" aria-label="' + esc(row.province) + ' evidence tiers and sources">' +
+            '<h4>Source and tiers</h4>' +
+            '<p class="national-detail-line">Price source: ' + nationalSourceLink(row.price_source) +
+              ' <span class="mono">(' + esc(row.price_source.publication_date || 'date not asserted') + ')</span></p>' +
+            '<p class="national-detail-line">Price tier: ' + nationalTierBadge(row.price_tier) +
+              ' · Cost tier: ' + nationalTierBadge(row.cost_tier) + '</p>' +
+            '<ul class="national-component-list">' + nationalComponentRows(row) + '</ul>' +
+          '</section>' +
+          '<section class="national-detail-section" aria-label="' + esc(row.province) + ' stumpage or dues reference">' +
+            '<h4>Provincial stumpage / dues reference</h4>' + nationalStumpageDetail(row) +
+          '</section>' +
+          '<section class="national-detail-section" aria-label="' + esc(row.province) + ' assumptions">' +
+            '<h4>Assumptions</h4>' + nationalAssumptionList(row) +
+            '<p class="method-note">All rows are model estimates. The base is donor_flat; stumpage_scaled is a method sensitivity, not observed and not policy grade.</p>' +
+          '</section>' +
+          '<section class="national-detail-section" aria-label="' + esc(row.province) + ' margins">' +
+            '<h4>Margins</h4>' +
+            '<dl class="national-margin-list">' +
+              '<div><dt>Base · donor_flat</dt><dd>' + fmt(row.donor_flat.base_cad_m3, 2) + ' <span>CAD/m³</span></dd><dd class="mono">' + nationalRange(row.donor_flat) + '</dd></div>' +
+              '<div><dt>Sensitivity · stumpage_scaled</dt><dd>' + fmt(row.stumpage_scaled.base_cad_m3, 2) + ' <span>CAD/m³</span></dd><dd class="mono">' + nationalRange(row.stumpage_scaled) + '</dd></div>' +
+              '<div><dt>Scaled minus donor_flat</dt><dd class="' + (row.scaled_minus_donor_flat_cad_m3 < 0 ? 'is-negative-value' : '') + '">' + nationalSigned(row.scaled_minus_donor_flat_cad_m3, 2) + '</dd><dd class="mono">method change, not observed</dd></div>' +
+            '</dl>' +
+            '<p class="method-note">No margin ranking. Donor-only rows are provisional donor evidence, not comparable provincial results.</p>' +
+          '</section>' +
+          '<section class="national-detail-section" aria-label="' + esc(row.province) + ' replacement priority">' +
+            '<h4>Replacement priority</h4>' + nationalReplacementDetail(row) +
+          '</section>' +
+        '</div>' +
+      '</details>';
+    }).join('');
+    var assumptions = national.model_assumptions || [];
+    var register = assumptions.length
+      ? '<details class="national-assumption-register"><summary>Model assumption register · ' + fmt(assumptions.length, 0) + ' rules</summary><ul>' +
+        assumptions.map(function (item) {
+          return '<li><strong>' + esc(item.id.replace(/_/g, ' ')) + '</strong> · ' +
+            esc(item.rule) + ' <span class="mono">(' + esc(item.category) + ')</span></li>';
+        }).join('') + '</ul></details>'
+      : '';
+    $('national-drilldown').innerHTML = cards + register;
+  }
+
+  function renderNationalDiagnostic() {
+    var national = state.national;
+    var diagnostic = national.national_diagnostic;
+    $('national-diagnostic-warning').innerHTML =
+      '<strong>Warning:</strong> ' + esc(diagnostic.warning) +
+      ' <span class="mono">combined_national_net_value=false</span>';
+    $('national-diagnostic-values').innerHTML =
+      '<div class="national-diagnostic-mini">' +
+        '<span class="kicker">Base · donor_flat</span>' +
+        '<strong>' + nationalSigned(diagnostic.donor_flat.base_cad_m3, 2) + '</strong>' +
+        '<span class="mono">CAD/m³ · low ' + fmt(diagnostic.donor_flat.low_cad_m3, 2) + ' · high ' + fmt(diagnostic.donor_flat.high_cad_m3, 2) + '</span>' +
+      '</div>' +
+      '<div class="national-diagnostic-mini is-sensitivity">' +
+        '<span class="kicker">Sensitivity · stumpage_scaled</span>' +
+        '<strong>' + nationalSigned(diagnostic.stumpage_scaled.base_cad_m3, 2) + '</strong>' +
+        '<span class="mono">CAD/m³ · low ' + fmt(diagnostic.stumpage_scaled.low_cad_m3, 2) + ' · high ' + fmt(diagnostic.stumpage_scaled.high_cad_m3, 2) + '</span>' +
+      '</div>' +
+      '<div class="national-diagnostic-mini is-quiet">' +
+        '<span class="kicker">Delta · method change</span>' +
+        '<strong>' + nationalSigned(national.national_comparison.scaled_minus_donor_flat_cad_m3, 2) + '</strong>' +
+        '<span class="mono">CAD/m³ · not observed</span>' +
+      '</div>' +
+      '<p class="national-diagnostic-basis method-note">Allocation basis: ' +
+        fmt(diagnostic.allocation_volume_m3 / 1e6, 1) + ' Mm³ · 13 jurisdictions · volume-weighted model diagnostic. ' +
+        'Not a legal AAC and not a combined national net value.</p>';
   }
 
   function renderNationalCaveat() {
     var national = state.national;
     var caveats = national.caveats || [];
     $('national-caveat').innerHTML =
-      '<strong>National diagnostic · model_estimate · observed=false · policy_grade=false · no combined national net value</strong>' +
-      '<p>13 jurisdictions, volume-weighted. Not a Forest LP input. Not a public OSeCAN input. ' +
-        'The sensitivity is not the base scenario, not observed and not policy grade. ' +
-        'Low/base/high are model scenarios, not observed transactions.</p>' +
+      '<strong>Evidence-first national panel · model_estimate · observed=false · policy_grade=false · not decision-grade</strong>' +
+      '<p>13 jurisdictions, volume-weighted. Donor-only provinces are provisional donor and are not ranked. ' +
+        'Not a Forest LP input. Not a public OSeCAN input. National margins are a trailing diagnostic, not a headline.</p>' +
       '<ul>' + caveats.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
       '<p class="economics-nonclaims">Non-claims: ' + esc((national.non_claims || []).join(' · ')) + '</p>';
   }
@@ -6736,7 +6885,7 @@
       '<a class="economics-download" href="' + esc(DATA_ROOT + json.path) + '" download>' +
         '<span class="economics-download-label">' + esc(json.label) + '</span>' +
         '<span class="economics-download-meta">' + fmt(payload.bytes, 0) + ' bytes · static JSON · ' +
-          fmt(national.coverage.jurisdiction_rows, 0) + ' jurisdictions</span>' +
+          fmt(national.coverage.jurisdiction_rows, 0) + ' jurisdictions · evidence coverage first</span>' +
         '<span class="economics-download-hash mono">sha256 ' + esc(String(payload.sha256).slice(0, 16)) + '…</span>' +
       '</a>' +
       '<a class="economics-download" href="' + esc(DATA_ROOT + manifestRef.path) + '" download>' +
@@ -6746,148 +6895,33 @@
       '</a>';
   }
 
-  function renderNationalChart() {
-    if (!state.national) return;
-    var container = $('national-chart');
-    if (!container) return;
-    if (!window.echarts) {
-      container.innerHTML = '<div class="empty-state" style="display:grid">ECharts failed to load. Check vendor/echarts.min.js.</div>';
-      return;
-    }
-    var national = state.national;
-    var selected = nationalSelectedScenario();
-    var selectedId = selected.id;
-    var baseData = [];
-    var sensitivityData = [];
-    national.jurisdictions.forEach(function (row) {
-      baseData.push({ value: row.donor_flat.base_cad_m3, row: row, scenarioId: 'donor_flat' });
-      sensitivityData.push({ value: row.stumpage_scaled.base_cad_m3, row: row, scenarioId: 'stumpage_scaled' });
-    });
-    if (!state.nationalChart) {
-      state.nationalChart = window.echarts.init(container, null, { renderer: 'canvas' });
-    }
-    state.nationalChart.setOption({
-      animationDuration: 520,
-      textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
-      grid: { left: 96, right: 60, top: 44, bottom: 38, containLabel: false },
-      legend: {
-        top: 2,
-        right: 8,
-        itemWidth: 14,
-        itemHeight: 8,
-        textStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#435347' },
-        data: ['Base · donor_flat', 'Sensitivity · stumpage_scaled']
-      },
-      tooltip: {
-        trigger: 'item',
-        confine: true,
-        backgroundColor: '#0c1f19',
-        borderColor: '#d98a2b',
-        borderWidth: 1,
-        textStyle: { color: '#f3ead7', fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 12 },
-        formatter: function (params) {
-          var row = params.data && params.data.row;
-          if (!row) return '';
-          var values = params.seriesId === 'base' ? row.donor_flat : row.stumpage_scaled;
-          return '<strong>' + esc(row.province_name) + '</strong><br>' +
-            esc(params.seriesName) + ': ' + nationalSigned(values.base_cad_m3, 2) + ' CAD/m³<br>' +
-            'Low / high: ' + fmt(values.low_cad_m3, 2) + ' / ' + fmt(values.high_cad_m3, 2) + '<br>' +
-            'Price tier: ' + esc(nationalTierMeta(values.price_tier).label) + '<br>' +
-            'Volume: ' + fmt(row.allocation_volume_m3 / 1e6, 2) + ' Mm³';
-        }
-      },
-      xAxis: {
-        type: 'value',
-        name: 'CAD/m³',
-        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c' },
-        axisTick: { show: false },
-        axisLine: { lineStyle: { color: '#b8a57e' } },
-        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c' },
-        splitLine: { lineStyle: { color: 'rgba(184,165,126,0.3)', type: 'dashed' } }
-      },
-      yAxis: {
-        type: 'category',
-        inverse: true,
-        data: national.jurisdictions.map(function (row) { return row.province; }),
-        axisTick: { show: false },
-        axisLine: { lineStyle: { color: '#b8a57e' } },
-        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#435347' }
-      },
-      series: [
-        {
-          id: 'base',
-          name: 'Base · donor_flat',
-          type: 'bar',
-          data: baseData,
-          barWidth: 7,
-          barGap: '25%',
-          itemStyle: { color: selectedId === 'donor_flat' ? '#2c5746' : 'rgba(44,87,70,0.25)' },
-          emphasis: { itemStyle: { color: '#2c5746' } },
-          label: {
-            show: selectedId === 'donor_flat',
-            position: 'right',
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 8,
-            color: '#17382c',
-            formatter: function (params) { return fmt(params.value, 1); }
-          },
-          markLine: {
-            silent: true,
-            symbol: 'none',
-            lineStyle: { color: '#0c1f19', width: 1.2 },
-            label: { show: false },
-            data: [{ xAxis: 0 }]
-          }
-        },
-        {
-          id: 'sensitivity',
-          name: 'Sensitivity · stumpage_scaled',
-          type: 'bar',
-          data: sensitivityData,
-          barWidth: 7,
-          itemStyle: { color: selectedId === 'stumpage_scaled' ? '#a94f31' : 'rgba(169,79,49,0.22)' },
-          emphasis: { itemStyle: { color: '#a94f31' } },
-          label: {
-            show: selectedId === 'stumpage_scaled',
-            position: 'right',
-            fontFamily: 'IBM Plex Mono, monospace',
-            fontSize: 8,
-            color: '#7e3823',
-            formatter: function (params) { return fmt(params.value, 1); }
-          }
-        }
-      ]
-    }, true);
-    $('national-chart-note').textContent = 'Selected: ' + selected.label +
-      '. Central modeled margin by jurisdiction, CAD/m³. The selected series is opaque; the other is ghosted. Negative values are not clipped.';
-  }
-
   function renderNational() {
     if (!state.national) return;
     var national = state.national;
-    var select = $('national-scenario');
-    if (select && select.value !== state.nationalScenario) select.value = state.nationalScenario;
-    renderNationalBadges();
     var sources = national.source_files || [];
     var summarySource = '';
     var tierSource = '';
+    var stumpageSource = '';
     sources.forEach(function (source) {
       if (/national_margin_summary\.csv$/.test(source.path)) summarySource = source.path;
       if (/national_tier_coverage\.csv$/.test(source.path)) tierSource = source.path;
+      if (/provincial_stumpage_references\.csv$/.test(source.path)) stumpageSource = source.path;
     });
-    $('national-source-note').innerHTML = 'Display: <span class="mono">' +
-      esc(summarySource || 'national_economics_v2_1/national_margin_summary.csv') +
-      '</span> · comparisons: <span class="mono">scenario_comparison.csv</span> · tier shares: <span class="mono">' +
-      esc(tierSource || 'national_tier_coverage.csv') + '</span>.';
+    $('national-source-note').innerHTML = 'Evidence: <span class="mono">' +
+      esc(tierSource || 'national_tier_coverage.csv') + '</span> · margins: <span class="mono">' +
+      esc(summarySource || 'national_margin_summary.csv') + '</span> · stumpage: <span class="mono">' +
+      esc(stumpageSource || 'provincial_stumpage_references.csv') + '</span> · queue: <span class="mono">source_replacement_queue.csv</span>.';
     $('national-generated').textContent = 'National v' + (national.artifact_version || '2.1.0') +
-      ' · 13 jurisdictions · base donor_flat · sensitivity stumpage_scaled · generated ' +
+      ' · 13 jurisdictions · default evidence coverage · base donor_flat · sensitivity stumpage_scaled · generated ' +
       fmtDate(national.generated_utc) + ' · schema ' + national.schema_version;
-    renderNationalDiagnostics();
-    renderNationalTierCoverage();
+    renderNationalBadges();
+    renderNationalWarning();
+    renderNationalCoverage();
     renderNationalTable();
+    renderNationalDrilldown();
+    renderNationalDiagnostic();
     renderNationalCaveat();
     renderNationalDownloads();
-    if (state.tab === 'economics') renderNationalChart();
   }
 
   /* ---------------- Inputs ---------------- */
@@ -7076,7 +7110,6 @@
     if (state.tradeoffChart) state.tradeoffChart.resize();
     if (state.harvestChart) state.harvestChart.resize();
     if (state.economicsChart) state.economicsChart.resize();
-    if (state.nationalChart) state.nationalChart.resize();
     if (state.mapState.map) state.mapState.map.resize();
     if (state.tab === 'explore') {
       if (state.paretoChart) state.paretoChart.resize();

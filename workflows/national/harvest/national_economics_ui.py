@@ -1,8 +1,9 @@
 """Export national economics v2.1 into the read-only live UI bundle.
 
-The export is derived only from committed CSVs and ``summary.json``.  It never
-invents a national total: the two national rows are volume-weighted diagnostic
-values and stay ``model_estimate_not_policy``.
+The export is evidence-first: the default view is provincial evidence coverage,
+not a national margin headline.  It is derived only from committed CSVs and
+``summary.json``.  It never invents a national total: the two national rows are
+volume-weighted diagnostic values and stay ``model_estimate_not_policy``.
 
 Run from the repository root::
 
@@ -41,11 +42,30 @@ TIER_SOURCE = (
     / "data/derived/national/harvest_basis/national_tier_coverage"
     / "national_tier_coverage.csv"
 )
+TIER_SUMMARY_JSON = (
+    REPO_ROOT
+    / "data/derived/national/harvest_basis/national_tier_coverage"
+    / "national_tier_summary.json"
+)
+QUEUE_SOURCE = (
+    REPO_ROOT
+    / "data/derived/national/harvest_basis/national_tier_coverage"
+    / "source_replacement_queue.csv"
+)
+STUMPAGE_SOURCE = (
+    REPO_ROOT
+    / "data/derived/national/harvest_basis/national_economics_v2"
+    / "provincial_stumpage_references.csv"
+)
+ALLOCATION_SOURCE = (
+    REPO_ROOT
+    / "data/derived/national/harvest_basis/provincial_allocation/119m.csv"
+)
 OUT_JSON = REPO_ROOT / "ui/public/data/economics/national.json"
 OUT_MANIFEST = REPO_ROOT / "ui/public/data/economics/national.manifest.json"
 
-SCHEMA_VERSION = "economics/national/1"
-MANIFEST_SCHEMA_VERSION = "economics/national-manifest/1"
+SCHEMA_VERSION = "economics/national/2"
+MANIFEST_SCHEMA_VERSION = "economics/national-manifest/2"
 MODEL_ID = "national_economics_v2_1"
 
 COMPONENTS = ("price", "logging", "haul", "road", "silviculture")
@@ -150,6 +170,15 @@ def _number(row: dict[str, str], field: str, label: str) -> float:
     if not math.isfinite(value):
         _fail(f"{label}: non-finite {field}")
     return value
+
+
+def _optional_number(
+    row: dict[str, str], field: str, label: str
+) -> float | None:
+    raw = row.get(field, "").strip()
+    if not raw:
+        return None
+    return _number(row, field, label)
 
 
 def _text(row: dict[str, str], field: str, label: str) -> str:
@@ -262,6 +291,299 @@ def _tier_coverage_audit(path: Path) -> dict[str, Any]:
     }
 
 
+def _source_map(path: Path) -> dict[str, dict[str, str]]:
+    rows = _read_csv(path)
+    source_map: dict[str, dict[str, str]] = {}
+    for row in rows:
+        source_key = _text(row, "source_key", "sources")
+        if source_key in source_map:
+            _fail(f"duplicate source key: {source_key}")
+        source_map[source_key] = row
+    return source_map
+
+
+def _tier_cells(
+    rows: list[dict[str, str]],
+    sources: dict[str, dict[str, str]],
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Any]]:
+    """Build one evidence record per province x component cell."""
+    by_province: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        province = _text(row, "province", "tier cell")
+        component = _text(row, "component", "tier cell")
+        tier = _text(row, "tier", "tier cell")
+        if component not in COMPONENTS:
+            _fail(f"tier cell {province}: unknown component {component!r}")
+        if tier not in TIERS:
+            _fail(f"tier cell {province}/{component}: unknown tier {tier!r}")
+        key = (province, component)
+        if key in seen:
+            _fail(f"duplicate tier cell: {province}/{component}")
+        seen.add(key)
+        source_id = _text(row, "source_id", f"tier cell {province}/{component}")
+        source = sources.get(source_id) or {}
+        assumption_ids = [
+            value.strip()
+            for value in row.get("assumption_ids", "").split(";")
+            if value.strip()
+        ]
+        by_province[province].append(
+            {
+                "component": component,
+                "tier": tier,
+                "tier_score": int(
+                    _number(row, "tier_score", f"tier cell {province}/{component}")
+                ),
+                "basis": _text(
+                    row, "component_basis", f"tier cell {province}/{component}"
+                ),
+                "source_key": source_id,
+                "source_title": source.get("title") or source_id,
+                "source_publication_date": source.get("publication_date") or "",
+                "source_url": source.get("url") or "",
+                "evidence_tier": row.get("source_evidence_tier", "").strip(),
+                "donor_province": row.get("donor_province", "").strip(),
+                "assumption_ids": assumption_ids,
+                "direct_evidence": _boolean(
+                    row, "direct_evidence", f"tier cell {province}/{component}"
+                ),
+                "proxy_model": _boolean(
+                    row, "proxy_model", f"tier cell {province}/{component}"
+                ),
+                "donor_or_assumption": _boolean(
+                    row, "donor_or_assumption", f"tier cell {province}/{component}"
+                ),
+                "notes": row.get("notes", "").strip(),
+            }
+        )
+    for province, cells in by_province.items():
+        components = [cell["component"] for cell in cells]
+        if sorted(components) != sorted(COMPONENTS):
+            _fail(f"tier cells for {province} do not cover all five components")
+        cells.sort(key=lambda item: item["component"])
+    return dict(by_province), {"cell_count": len(rows)}
+
+
+def _stumpage_references(
+    path: Path,
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """Parse the eight provincial rates and five explicit BC fallbacks."""
+    rows = _read_csv(path)
+    if len(rows) != 13:
+        _fail(f"stumpage references cover {len(rows)} jurisdictions, expected 13")
+    references: dict[str, dict[str, Any]] = {}
+    rate_count = 0
+    fallback_count = 0
+    for row in rows:
+        province = _text(row, "province", "stumpage reference")
+        if province in references:
+            _fail(f"duplicate stumpage reference for {province}")
+        is_rate = _boolean(
+            row, "is_stumpage_or_dues_rate", f"stumpage reference {province}"
+        )
+        if _boolean(
+            row, "is_delivered_price", f"stumpage reference {province}"
+        ):
+            _fail(f"stumpage reference {province} claims a delivered price")
+        if _boolean(
+            row, "is_observed_revenue", f"stumpage reference {province}"
+        ):
+            _fail(f"stumpage reference {province} claims observed revenue")
+        if is_rate:
+            rate_count += 1
+            low = _number(row, "rate_low_cad_m3", f"stumpage reference {province}")
+            base = _number(
+                row, "rate_base_cad_m3", f"stumpage reference {province}"
+            )
+            high = _number(
+                row, "rate_high_cad_m3", f"stumpage reference {province}"
+            )
+            if not low <= base <= high:
+                _fail(
+                    f"stumpage reference {province}: low/base/high are unordered"
+                )
+            if row.get("fallback_donor", "").strip().lower() not in {
+                "",
+                "false",
+            }:
+                _fail(f"stumpage reference {province} mixes a rate and a fallback")
+            reference = {
+                "has_rate": True,
+                "rate_low_cad_m3": _round(low, 4),
+                "rate_base_cad_m3": _round(base, 4),
+                "rate_high_cad_m3": _round(high, 4),
+                "unit": _text(row, "unit", f"stumpage reference {province}"),
+                "rate_type": _text(
+                    row, "rate_type", f"stumpage reference {province}"
+                ),
+                "rate_basis": _text(
+                    row, "rate_basis", f"stumpage reference {province}"
+                ),
+                "published_range": row.get("published_range", "").strip(),
+                "year": _text(
+                    row,
+                    "source_publication_date",
+                    f"stumpage reference {province}",
+                ),
+                "source_key": _text(
+                    row, "source_key", f"stumpage reference {province}"
+                ),
+                "source_title": _text(
+                    row, "source_title", f"stumpage reference {province}"
+                ),
+                "source_url": row.get("source_url", "").strip(),
+                "fallback_donor": "",
+                "notes": row.get("notes", "").strip(),
+                "is_stumpage_or_dues_rate": True,
+                "is_delivered_price": False,
+                "is_observed_revenue": False,
+            }
+        else:
+            fallback_count += 1
+            if any(
+                row.get(field, "").strip()
+                for field in (
+                    "rate_low_cad_m3",
+                    "rate_base_cad_m3",
+                    "rate_high_cad_m3",
+                )
+            ):
+                _fail(f"stumpage fallback {province} asserts a numeric rate")
+            fallback_donor = _text(
+                row, "fallback_donor", f"stumpage reference {province}"
+            )
+            reference = {
+                "has_rate": False,
+                "rate_low_cad_m3": None,
+                "rate_base_cad_m3": None,
+                "rate_high_cad_m3": None,
+                "unit": row.get("unit", "").strip(),
+                "rate_type": _text(
+                    row, "rate_type", f"stumpage reference {province}"
+                ),
+                "rate_basis": _text(
+                    row, "rate_basis", f"stumpage reference {province}"
+                ),
+                "published_range": row.get("published_range", "").strip(),
+                "year": "",
+                "source_key": "",
+                "source_title": "",
+                "source_url": "",
+                "fallback_donor": fallback_donor,
+                "notes": row.get("notes", "").strip(),
+                "is_stumpage_or_dues_rate": False,
+                "is_delivered_price": False,
+                "is_observed_revenue": False,
+            }
+        references[province] = reference
+    if (rate_count, fallback_count) != (8, 5):
+        _fail(
+            "stumpage references must contain 8 provincial rates and 5 "
+            f"fallbacks, got {rate_count}/{fallback_count}"
+        )
+    return references, {
+        "row_count": len(rows),
+        "rate_count": rate_count,
+        "fallback_count": fallback_count,
+    }
+
+
+def _replacement_queue(
+    path: Path, provinces: list[str]
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    """Attach a replacement priority to each province without ranking margins."""
+    rows = _read_csv(path)
+    if len(rows) != 60:
+        _fail(f"replacement queue has {len(rows)} rows, expected 60")
+    seen_cells: set[str] = set()
+    by_province: dict[str, list[dict[str, str]]] = defaultdict(list)
+    priority_counts: Counter[str] = Counter()
+    queue_status: str | None = None
+    for row in rows:
+        province = _text(row, "province", "replacement queue")
+        cell_id = _text(row, "coverage_cell_id", "replacement queue")
+        priority = _text(row, "priority", "replacement queue")
+        if cell_id in seen_cells:
+            _fail(f"duplicate replacement queue cell: {cell_id}")
+        seen_cells.add(cell_id)
+        if priority not in {"P1", "P2", "P3", "P4"}:
+            _fail(f"replacement queue {cell_id}: unknown priority {priority!r}")
+        status = _text(row, "queue_status", "replacement queue")
+        if queue_status is None:
+            queue_status = status
+        elif status != queue_status:
+            _fail("replacement queue mixes queue statuses")
+        priority_counts[priority] += 1
+        by_province[province].append(row)
+    if set(by_province) != set(provinces):
+        _fail("replacement queue jurisdictions do not match the 13 provinces")
+    quoted_status = queue_status or "open_required_source_not_invented"
+
+    payload: dict[str, dict[str, Any]] = {}
+    for province in provinces:
+        province_rows = sorted(
+            by_province[province],
+            key=lambda row: _number(row, "queue_rank", f"replacement queue {province}"),
+        )
+        priorities = [row["priority"] for row in province_rows]
+        top_priority = min(priorities, key=lambda value: int(value[1:]))
+        components: list[str] = []
+        cells: list[dict[str, Any]] = []
+        for row in province_rows:
+            component = _text(row, "component", f"replacement queue {province}")
+            if component not in components:
+                components.append(component)
+            cells.append(
+                {
+                    "component": component,
+                    "priority": row["priority"],
+                    "required_source_category": _text(
+                        row, "required_source_category", "replacement queue"
+                    ),
+                    "replacement_action": _text(
+                        row, "replacement_action", "replacement queue"
+                    ),
+                    "current_source_id": row.get("current_source_id", "").strip(),
+                    "donor_province": row.get("donor_province", "").strip(),
+                    "coverage_cell_id": row["coverage_cell_id"],
+                }
+            )
+        first = cells[0]
+        payload[province] = {
+            "priority": top_priority,
+            "open_cell_count": len(cells),
+            "components": components,
+            "first_action": first["replacement_action"],
+            "first_component": first["component"],
+            "queue_status": quoted_status,
+            "cells": cells,
+        }
+    return payload, {
+        "row_count": len(rows),
+        "province_count": len(by_province),
+        "priority_counts": dict(sorted(priority_counts.items())),
+        "queue_status": quoted_status,
+    }
+
+
+def _assumptions(path: Path) -> dict[str, dict[str, Any]]:
+    rows = _read_csv(path)
+    result: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        assumption_id = _text(row, "assumption_id", "assumptions")
+        if assumption_id in result:
+            _fail(f"duplicate assumption id: {assumption_id}")
+        result[assumption_id] = {
+            "id": assumption_id,
+            "category": _text(row, "category", f"assumption {assumption_id}"),
+            "applies_to": row.get("applies_to", "").strip(),
+            "rule": _text(row, "rule", f"assumption {assumption_id}"),
+            "notes": row.get("notes", "").strip(),
+        }
+    return result
+
+
 def _validate_labels(rows: list[dict[str, str]], label: str) -> None:
     for row in rows:
         evidence = row.get("evidence", "").strip()
@@ -287,6 +609,13 @@ def build_export(
     summary_rows = _read_csv(source_dir / SUMMARY_CSV)
     comparison_rows = _read_csv(source_dir / COMPARISON_CSV)
     tier_rows = _read_csv(source_dir / TIER_CSV)
+    tier_cell_rows = _read_csv(tier_source)
+    assumptions_rows = _read_csv(source_dir / "assumptions_donor_register.csv")
+    source_rows = _read_csv(source_dir / "sources.csv")
+    stumpage_rows = _read_csv(STUMPAGE_SOURCE)
+    queue_rows = _read_csv(QUEUE_SOURCE)
+    allocation_rows = _read_csv(ALLOCATION_SOURCE)
+    tier_summary = _read_json(TIER_SUMMARY_JSON)
 
     if summary.get("model_id") != MODEL_ID:
         _fail(f"unexpected model_id {summary.get('model_id')!r}")
@@ -318,6 +647,34 @@ def build_export(
     _validate_labels(summary_rows, "margin summary")
     _validate_labels(comparison_rows, "scenario comparison")
     _validate_labels(tier_rows, "tier coverage")
+    _validate_labels(tier_cell_rows, "tier coverage audit")
+    _validate_labels(stumpage_rows, "stumpage references")
+    _validate_labels(queue_rows, "replacement queue")
+    _validate_labels(allocation_rows, "provincial allocation")
+    _validate_labels(assumptions_rows, "assumptions")
+    _validate_labels(source_rows, "sources")
+
+    sources_by_key = _source_map(source_dir / "sources.csv")
+    tier_cells_by_province, tier_cell_meta = _tier_cells(
+        tier_cell_rows, sources_by_key
+    )
+    stumpage_by_province, stumpage_meta = _stumpage_references(STUMPAGE_SOURCE)
+    queue_by_province, queue_meta = _replacement_queue(
+        QUEUE_SOURCE, provinces
+    )
+    assumptions_by_id = _assumptions(
+        source_dir / "assumptions_donor_register.csv"
+    )
+    allocation_by_province: dict[str, float] = {}
+    for row in allocation_rows:
+        province = _text(row, "province", "provincial allocation")
+        if province in allocation_by_province:
+            _fail(f"duplicate provincial allocation for {province}")
+        allocation_by_province[province] = _number(
+            row, "harvest_m3", f"provincial allocation {province}"
+        )
+    if set(allocation_by_province) != set(provinces):
+        _fail("provincial allocation does not match the 13 summary provinces")
 
     estimates = {
         (row["price_scenario"], row["province"], row["scenario_id"]): row
@@ -461,6 +818,87 @@ def build_export(
     if len(jurisdictions) != 13:
         _fail("jurisdiction table is incomplete")
 
+    direct_jurisdictions: list[str] = []
+    donor_only_jurisdictions: list[str] = []
+    donor_price_jurisdictions: list[str] = []
+    for jurisdiction in jurisdictions:
+        province = jurisdiction["province"]
+        cells = tier_cells_by_province.get(province)
+        if not cells or len(cells) != len(COMPONENTS):
+            _fail(f"tier cells are incomplete for {province}")
+        mix = Counter(cell["tier"] for cell in cells)
+        direct_cell_count = mix.get("reported_average", 0)
+        proxy_cell_count = mix.get("proxy_model", 0)
+        donor_cell_count = mix.get("donor_proxy", 0)
+        assumption_cell_count = mix.get("assumption", 0)
+        donor_only = direct_cell_count == 0 and proxy_cell_count == 0
+        price_cell = next(
+            cell for cell in cells if cell["component"] == "price"
+        )
+        price_source = sources_by_key.get(price_cell["source_key"]) or {}
+        assumption_ids: list[str] = []
+        for cell in cells:
+            for assumption_id in cell["assumption_ids"]:
+                if assumption_id not in assumption_ids:
+                    assumption_ids.append(assumption_id)
+        allocated = allocation_by_province[province]
+        if abs(allocated - jurisdiction["allocation_volume_m3"]) > 0.2:
+            _fail(f"allocation volume mismatch for {province}")
+        jurisdiction.update(
+            {
+                "price_tier": jurisdiction["donor_flat"]["price_tier"],
+                "cost_tier": jurisdiction["donor_flat"]["cost_tier"],
+                "price_source": {
+                    "source_key": price_cell["source_key"],
+                    "title": price_source.get("title")
+                    or price_cell["source_title"],
+                    "publication_date": price_source.get("publication_date")
+                    or "",
+                    "evidence_tier": price_cell["tier"],
+                    "is_direct": price_cell["tier"] == "reported_average",
+                    "donor_province": price_cell["donor_province"],
+                    "source_url": price_source.get("url") or "",
+                },
+                "evidence_mix": {
+                    tier: mix.get(tier, 0) for tier in TIERS
+                },
+                "direct_cell_count": direct_cell_count,
+                "proxy_cell_count": proxy_cell_count,
+                "donor_cell_count": donor_cell_count,
+                "assumption_cell_count": assumption_cell_count,
+                "donor_only": donor_only,
+                "status": (
+                    "provisional_donor" if donor_only else "partial_direct"
+                ),
+                "status_label": (
+                    "provisional donor" if donor_only else "partial direct"
+                ),
+                "comparison_status": (
+                    "not_ranked_donor_only"
+                    if donor_only
+                    else "not_ranked_partial_direct"
+                ),
+                "ranked": False,
+                "stumpage_reference": stumpage_by_province[province],
+                "replacement": queue_by_province[province],
+                "components": cells,
+                "assumption_ids": assumption_ids,
+            }
+        )
+        if direct_cell_count:
+            direct_jurisdictions.append(province)
+        if donor_only:
+            donor_only_jurisdictions.append(province)
+        if jurisdiction["price_tier"] == "donor_proxy":
+            donor_price_jurisdictions.append(province)
+
+    if len(direct_jurisdictions) != 2:
+        _fail("expected exactly two jurisdictions with direct/reported cells")
+    if len(donor_only_jurisdictions) != 11:
+        _fail("expected exactly eleven donor-only jurisdictions")
+    if len(donor_price_jurisdictions) != 12:
+        _fail("expected exactly twelve donor-price jurisdictions")
+
     national_rows = [
         row for row in summary_rows if row.get("row_type") == "national"
     ]
@@ -485,6 +923,15 @@ def build_export(
         ),
         "label": diagnostic["label"],
         "combined_national_net_value": False,
+        "not_decision_grade": True,
+        "display_role": "diagnostic_not_headline",
+        "display_position": "after_evidence_coverage_and_province_ledgers",
+        "ranking_performed": False,
+        "warning": (
+            "National margins are volume-weighted model diagnostics shown last. "
+            "They are not observed, not policy grade, not a combined national "
+            "net value, and not a comparable jurisdictional ranking."
+        ),
         "volume_weighted": True,
     }
     for scenario in SCENARIO_KEYS:
@@ -553,6 +1000,86 @@ def build_export(
     tier_audit["scenario_price_tiers"] = price_tier_counts
     tier_audit["scenario_cost_tiers"] = cost_tier_counts
 
+    shares = tier_audit["volume_weighted_shares"]
+    direct_share = shares["reported_average"]
+    proxy_share = shares["proxy_model"]
+    donor_share = shares["donor_proxy"]
+    assumption_share = shares["assumption"]
+    tier_summary_shares = (tier_summary.get("volume_weighted") or {}).get(
+        "tier_share"
+    ) or {}
+    for tier, share in shares.items():
+        source_share = tier_summary_shares.get(tier)
+        if source_share is None or abs(float(source_share) - share) > 1e-8:
+            _fail(f"tier coverage source diverges for {tier}")
+
+    donor_only_pct = _round(donor_share * 100, 1)
+    evidence_coverage = {
+        "default_view": "evidence_coverage",
+        "basis": "volume_weighted_five_component_cells",
+        "weighting": (
+            "allocation harvest volume from provincial_allocation/119m.csv; "
+            "each province has five equally weighted components"
+        ),
+        "jurisdiction_count": len(jurisdictions),
+        "cell_count": tier_audit["cell_count"],
+        "component_count": len(COMPONENTS),
+        "volume_weighted": {
+            "direct_reported": {
+                "share": direct_share,
+                "pct": _round(direct_share * 100, 4),
+                "cells": tier_audit["cell_counts"]["reported_average"],
+                "label": "direct / reported",
+            },
+            "proxy": {
+                "share": proxy_share,
+                "pct": _round(proxy_share * 100, 4),
+                "cells": tier_audit["cell_counts"]["proxy_model"],
+                "label": "proxy model",
+            },
+            "donor": {
+                "share": donor_share,
+                "pct": _round(donor_share * 100, 4),
+                "cells": tier_audit["cell_counts"]["donor_proxy"],
+                "label": "donor proxy",
+            },
+            "assumption": {
+                "share": assumption_share,
+                "pct": _round(assumption_share * 100, 4),
+                "cells": tier_audit["cell_counts"]["assumption"],
+                "label": "assumption",
+            },
+        },
+        "direct_jurisdictions": direct_jurisdictions,
+        "donor_only_jurisdictions": donor_only_jurisdictions,
+        "donor_price_jurisdictions": donor_price_jurisdictions,
+        "direct_cell_count": tier_audit["cell_counts"]["reported_average"],
+        "proxy_cell_count": tier_audit["cell_counts"]["proxy_model"],
+        "donor_cell_count": tier_audit["cell_counts"]["donor_proxy"],
+        "assumption_cell_count": tier_audit["cell_counts"]["assumption"],
+        "direct_jurisdiction_count": len(direct_jurisdictions),
+        "donor_only_count": len(donor_only_jurisdictions),
+        "donor_price_count": len(donor_price_jurisdictions),
+        "not_decision_grade": True,
+        "warning": (
+            f"{donor_only_pct:.1f}% of volume-weighted evidence is a donor "
+            f"proxy. {len(donor_only_jurisdictions)} of 13 jurisdictions are "
+            "donor-only and flagged provisional donor; "
+            f"{len(donor_price_jurisdictions)} of 13 use a donor price. "
+            "These margins are not decision-grade and are not ranked as "
+            "comparable results."
+        ),
+    }
+    ranking = {
+        "performed": False,
+        "ordering": "canonical_jurisdiction_order",
+        "donor_only_excluded": True,
+        "reason": (
+            "Donor-only jurisdictions are provisional evidence rows. The UI "
+            "does not sort or rank margins across jurisdictions."
+        ),
+    }
+
     labels = summary.get("labels") or {}
     if labels.get("evidence") != "model_estimate":
         _fail("summary evidence label changed")
@@ -586,6 +1113,30 @@ def build_export(
             "path": _display_path(tier_source),
             "rows": tier_audit["cell_count"],
         },
+        {
+            "path": _display_path(source_dir / "assumptions_donor_register.csv"),
+            "rows": len(assumptions_rows),
+        },
+        {
+            "path": _display_path(source_dir / "sources.csv"),
+            "rows": len(source_rows),
+        },
+        {
+            "path": _display_path(STUMPAGE_SOURCE),
+            "rows": len(stumpage_rows),
+        },
+        {
+            "path": _display_path(QUEUE_SOURCE),
+            "rows": len(queue_rows),
+        },
+        {
+            "path": _display_path(ALLOCATION_SOURCE),
+            "rows": len(allocation_rows),
+        },
+        {
+            "path": _display_path(TIER_SUMMARY_JSON),
+            "rows": None,
+        },
     ]
 
     payload: dict[str, Any] = {
@@ -594,7 +1145,15 @@ def build_export(
         "artifact_version": summary.get("artifact_version"),
         "generated_utc": summary.get("generated_utc"),
         "status": summary.get("status"),
-        "role": "national_model_estimate_diagnostic",
+        "role": "evidence_coverage_with_national_diagnostic",
+        "default_view": "evidence_coverage",
+        "section_order": [
+            "evidence_coverage",
+            "province_ledger",
+            "province_drilldown",
+            "national_margin_diagnostic",
+            "downloads",
+        ],
         "base_scenario": base_scenario,
         "sensitivity_scenario": sensitivity_scenario,
         "jurisdiction_count": len(jurisdictions),
@@ -609,6 +1168,8 @@ def build_export(
             "evidence": "model_estimate",
             "observed": False,
             "policy_grade": False,
+            "not_decision_grade": True,
+            "ranking_performed": False,
             "combined_national_net_value": False,
             "national_diagnostic_label": "model_estimate_not_policy",
             "strict_open": False,
@@ -622,6 +1183,29 @@ def build_export(
             "jurisdiction_rows": len(jurisdictions),
             "scenario_rows": len(margin_rows),
         },
+        "evidence_coverage": evidence_coverage,
+        "ranking": ranking,
+        "replacement_queue": queue_meta,
+        "stumpage_references": {
+            "path": _display_path(STUMPAGE_SOURCE),
+            "row_count": stumpage_meta["row_count"],
+            "rate_count": stumpage_meta["rate_count"],
+            "fallback_count": stumpage_meta["fallback_count"],
+            "rate_provinces": [
+                province
+                for province in provinces
+                if stumpage_by_province[province]["has_rate"]
+            ],
+            "fallback_provinces": [
+                province
+                for province in provinces
+                if not stumpage_by_province[province]["has_rate"]
+            ],
+            "rates_are_charges_not_delivered_prices": True,
+        },
+        "model_assumptions": [
+            assumptions_by_id[key] for key in sorted(assumptions_by_id)
+        ],
         "national_diagnostic": national_payload,
         "scenarios": [
             {
@@ -652,8 +1236,17 @@ def build_export(
         },
         "caveats": [
             (
-                "National values are volume-weighted model diagnostics, not a "
-                "combined national net value."
+                "Evidence coverage comes first. The default view is the "
+                "direct/reported, proxy and donor mix, not a national margin."
+            ),
+            (
+                "Donor-only jurisdictions are flagged provisional donor. Their "
+                "margins are placeholders, not comparable provincial results, "
+                "and the UI does not rank margins."
+            ),
+            (
+                "National values are volume-weighted model diagnostics shown "
+                "last, not a combined national net value."
             ),
             (
                 "donor_flat is the base scenario. stumpage_scaled is the method "
@@ -720,7 +1313,22 @@ def build_export(
         ],
         "validation": {
             "ok": True,
+            "default_view": payload["default_view"],
             "jurisdiction_count": len(jurisdictions),
+            "direct_reported_share": direct_share,
+            "proxy_share": proxy_share,
+            "donor_share": donor_share,
+            "direct_cell_count": evidence_coverage["direct_cell_count"],
+            "proxy_cell_count": evidence_coverage["proxy_cell_count"],
+            "donor_cell_count": evidence_coverage["donor_cell_count"],
+            "direct_jurisdiction_count": len(direct_jurisdictions),
+            "donor_only_count": len(donor_only_jurisdictions),
+            "donor_price_count": len(donor_price_jurisdictions),
+            "stumpage_rate_count": stumpage_meta["rate_count"],
+            "stumpage_fallback_count": stumpage_meta["fallback_count"],
+            "replacement_queue_rows": queue_meta["row_count"],
+            "ranking_performed": False,
+            "not_decision_grade": True,
             "base_national_margin_cad_m3": national_payload[base_scenario][
                 "base_cad_m3"
             ],
@@ -791,12 +1399,14 @@ def main(argv: list[str] | None = None) -> int:
 
     payload, manifest = build_export(args.source_dir, args.tier_source)
     write_export(payload, manifest, args.out, args.manifest)
-    diagnostic = payload["national_diagnostic"]
+    coverage = payload["evidence_coverage"]["volume_weighted"]
     print(
         "national economics export: "
         f"{payload['coverage']['jurisdiction_rows']} jurisdictions, "
-        f"base={diagnostic['donor_flat']['base_cad_m3']:.4f}, "
-        f"sensitivity={diagnostic['stumpage_scaled']['base_cad_m3']:.4f}, "
+        f"direct={coverage['direct_reported']['pct']:.4f}% "
+        f"proxy={coverage['proxy']['pct']:.4f}% "
+        f"donor={coverage['donor']['pct']:.4f}%, "
+        f"donor_only={payload['evidence_coverage']['donor_only_count']}, "
         f"sha256={manifest['generated'][0]['sha256'][:16]}"
     )
     return 0

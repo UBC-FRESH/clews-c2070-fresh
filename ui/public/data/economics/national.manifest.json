@@ -1,24 +1,24 @@
 {
-  "schema_version": "economics/national-manifest/1",
+  "schema_version": "economics/national-manifest/2",
   "model_id": "national_economics_v2_1",
   "artifact_version": "2.1.0",
   "generated_utc": "2026-11-22T06:53:23+00:00",
-  "parent_commit": "3454ef96a0fdc71b64c055958756febd885f9873",
-  "data_commit": "fb443347df5a11e0df25a42834d37beac2315d99",
+  "parent_commit": "d3bcac93fb7dbc29a6b1c2b269ca476ab82e651b",
+  "data_commit": "6644fa4e95504dc95c5368990da2e71229b63f1b",
   "files": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 20668,
-      "sha256": "e76485fb22307478435474c4b9eb8c87a894b2656b4cbcf4e2b90d551bdb7233"
+      "bytes": 139939,
+      "sha256": "1ebd414c49690e1d528e5a7621283c0c13c3e19fba12e46c7db5b6710bea97a2"
     }
   ],
   "generated": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 20668,
-      "sha256": "e76485fb22307478435474c4b9eb8c87a894b2656b4cbcf4e2b90d551bdb7233"
+      "bytes": 139939,
+      "sha256": "1ebd414c49690e1d528e5a7621283c0c13c3e19fba12e46c7db5b6710bea97a2"
     }
   ],
   "sources": [
@@ -57,11 +57,62 @@
       "rows": 65,
       "bytes": 32427,
       "sha256": "d497b3db3c35640df78d7264db404a0aa4bf0015ab3d8283fd1730631135cb49"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/assumptions_donor_register.csv",
+      "rows": 14,
+      "bytes": 4604,
+      "sha256": "fe837e0a898fb13dcf33f1a8ae073e969bab916a76888a75b362e83cc1fccfb0"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/sources.csv",
+      "rows": 12,
+      "bytes": 6012,
+      "sha256": "9dd6ec092144daa0051fce8fc69165eddbbb4c592f8632236e4ef334b5c0a929"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
+      "rows": 13,
+      "bytes": 8127,
+      "sha256": "187e8d6addbd979259ec2159fe77284f70b3784a30332e9e460d5ac21b7ed168"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/source_replacement_queue.csv",
+      "rows": 60,
+      "bytes": 15223,
+      "sha256": "7ffe824a2c971ac8dac4fdb12178d449f1984b4372eb2264167e78182b18acb6"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/provincial_allocation/119m.csv",
+      "rows": 13,
+      "bytes": 2845,
+      "sha256": "979cda6b5c4b56b593cecc9faf3bd0483db26e821738c8da0f19d5646b5c9a42"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_summary.json",
+      "rows": null,
+      "bytes": 6543,
+      "sha256": "0708c44a2c65b97bf998d928d895f85a60d993465e1445407c4885481659be75"
     }
   ],
   "validation": {
     "ok": true,
+    "default_view": "evidence_coverage",
     "jurisdiction_count": 13,
+    "direct_reported_share": 0.17924672,
+    "proxy_share": 0.13440737,
+    "donor_share": 0.68634592,
+    "direct_cell_count": 3,
+    "proxy_cell_count": 2,
+    "donor_cell_count": 60,
+    "direct_jurisdiction_count": 2,
+    "donor_only_count": 11,
+    "donor_price_count": 12,
+    "stumpage_rate_count": 8,
+    "stumpage_fallback_count": 5,
+    "replacement_queue_rows": 60,
+    "ranking_performed": false,
+    "not_decision_grade": true,
     "base_national_margin_cad_m3": 33.1365,
     "sensitivity_national_margin_cad_m3": -16.122,
     "tier_cell_count": 65,
