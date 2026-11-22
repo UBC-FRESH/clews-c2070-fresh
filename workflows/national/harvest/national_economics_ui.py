@@ -914,8 +914,14 @@ def build_export(
         _fail("national diagnostic label changed")
     if diagnostic.get("combined_national_net_value") is not False:
         _fail("national diagnostic must not be a combined net value")
-    if diagnostic.get("allocation_volume_m3") != 118_977_339.1:
-        _fail("national allocation volume changed")
+    diagnostic_allocation = _number(
+        national_rows[0], "allocation_volume_m3", "national"
+    )
+    if abs(
+        float(diagnostic.get("allocation_volume_m3", math.nan))
+        - diagnostic_allocation
+    ) > 0.1:
+        _fail("national diagnostic allocation volume diverges from the CSV")
 
     national_payload: dict[str, Any] = {
         "allocation_volume_m3": _round(

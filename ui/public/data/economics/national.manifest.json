@@ -3,7 +3,7 @@
   "model_id": "national_economics_v2_1",
   "artifact_version": "2.1.0",
   "generated_utc": "2026-11-22T06:53:23+00:00",
-  "parent_commit": "d3bcac93fb7dbc29a6b1c2b269ca476ab82e651b",
+  "parent_commit": "f853dfde8c7c80fc2abecf708b3f8e0fc7c0ce60",
   "data_commit": "6644fa4e95504dc95c5368990da2e71229b63f1b",
   "files": [
     {
