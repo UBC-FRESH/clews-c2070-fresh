@@ -1,0 +1,306 @@
+{
+  "schema_version": "clews.ui_publication.v1",
+  "release": {
+    "label": "clews-c2070-fresh-forest-economics-v2.1",
+    "tag": "ui-economics-v2.1",
+    "tag_type": "annotated",
+    "date": "2026-11-22",
+    "generated_utc": "2026-11-22T05:38:35Z",
+    "source_branch": "feature/osecan-zonal-bc-supply",
+    "source_commit": "1c028db0ec3b768e25cd7e8523febff8d8658faa"
+  },
+  "publication": {
+    "path": "ui_publications/forest-economics-v2.1",
+    "type": "static_demo",
+    "static_only": true,
+    "backend": "none",
+    "live_solver": false,
+    "official_c2070": false,
+    "energy_policy_advice": false,
+    "entrypoint": "index.html",
+    "publication_guard": "publication-mode.js"
+  },
+  "counts": {
+    "scenarios": 53,
+    "families": 18,
+    "pareto_eligible": 1,
+    "dispatch_outputs": 53,
+    "data_manifest_files": 63,
+    "data_directory_files": 68,
+    "economics_rows": 945,
+    "payload_manifest_files": 88
+  },
+  "economics": {
+    "headline": {
+      "rows": 945,
+      "zone_system_groups": 21,
+      "median_base_net_model_cad_m3": 48.84,
+      "min_base_net_model_cad_m3": -23.38,
+      "max_base_net_model_cad_m3": 86.85,
+      "negative_net_base_rows": 168,
+      "negative_net_base_share": 0.177778
+    },
+    "qc_reference": {
+      "reference_id": "qc_2022_sepm_purchased_wood_channel",
+      "geography": "QC",
+      "cost_spread_after_transfers_cad_m3": 0.81,
+      "net_value_status": "separate_reference_not_net_value",
+      "policy_grade": false
+    },
+    "labels": {
+      "evidence": "model_estimate",
+      "observed": false,
+      "policy_grade": false,
+      "price_basis": "mill_delivered_reported_average",
+      "cost_basis": "open_proxy_model",
+      "net_value_status": "model_estimate",
+      "qc_net_value_status": "separate_reference_not_net_value",
+      "source_licensing": "public_reference_copyrighted",
+      "combined_bc_qc_national_total": false,
+      "forest_lp_input": false,
+      "public_osecan_input": false
+    },
+    "downloads": {
+      "detail_csv": {
+        "label": "Full 945-row BC detail CSV",
+        "path": "economics/detail.csv",
+        "bytes": 816632,
+        "sha256": "1e1da49aa36be34218c942bffb66af4b2f3ce8d37e30bc9dc475d49744999dc7",
+        "rows": 945,
+        "media_type": "text/csv"
+      },
+      "model_inputs_zip": {
+        "label": "Model-input bundle (ZIP)",
+        "path": "economics/model_inputs.zip",
+        "bytes": 52828,
+        "sha256": "e933292a4d59161f996a4e2905db2bddcbc91efe35d3cfcc709e036ecbf482db",
+        "media_type": "application/zip",
+        "files": [
+          {
+            "path": "README.md",
+            "bytes": 3003,
+            "sha256": "dbde220cc833b794b4e3a2f8ef1fd674853fe5946ca90c9e5a617b56ea2ae5ac"
+          },
+          {
+            "path": "RUN.md",
+            "bytes": 1184,
+            "sha256": "2c345b3a1132a94745d3fbc7e07beabbd8615afd8b92501e705a9e59dd15f728"
+          },
+          {
+            "path": "bc_cost_inputs_used.csv",
+            "bytes": 1219305,
+            "sha256": "86b53a837935d8c45660fbc9b7f5f43bda5a535c57ae9376df0748ebb884b0d1"
+          },
+          {
+            "path": "bc_cost_parameters_used.csv",
+            "bytes": 22885,
+            "sha256": "2cfada94ce3f546083c9f7c15491a3a5ae824f77a6e41e3c43c4af91ee39f152"
+          },
+          {
+            "path": "bc_price_panel_used.csv",
+            "bytes": 113340,
+            "sha256": "cfd5b66720628296499e000c9167b69d3b26e9b127f1bdeac58478aa7833fd24"
+          },
+          {
+            "path": "input_manifest.json",
+            "bytes": 7249,
+            "sha256": "51124400f802f4264873e321fbef547e209381106ee41cf086bb3acd4ce5816e"
+          },
+          {
+            "path": "qc_reference_used.csv",
+            "bytes": 2204,
+            "sha256": "24d3811a8491b8f0af2ec34c5519db5093ebcaa6e323b183c3b23e5fc722de5c"
+          },
+          {
+            "path": "silviculture_inputs_used.csv",
+            "bytes": 13383,
+            "sha256": "debf394a33d04453d29a96adb607a36d2b45e53673d8d95e5b1a43f63507e27c"
+          },
+          {
+            "path": "sources.csv",
+            "bytes": 15605,
+            "sha256": "e2da1375d645862d0331727aad0384521f428b4f72e2adb0792541a4c6997b4b"
+          },
+          {
+            "path": "zone_region_mapping.csv",
+            "bytes": 1893,
+            "sha256": "14f39767bf9659ea591425aa14cfd2e4c157fc201ac63d4583f3b3e75af2c617"
+          }
+        ]
+      },
+      "manifest": {
+        "label": "Economics export manifest",
+        "path": "economics/manifest.json",
+        "media_type": "application/json"
+      }
+    }
+  },
+  "data_bundle": {
+    "manifest_path": "public/data/manifest.json",
+    "manifest_sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102",
+    "manifest_bytes": 31855,
+    "files": 63,
+    "bytes": 8732120,
+    "bundle_sha256": "dc4a8933ab12b79d73479e6667539821ec3d925cc00e9978fad656f677b81676",
+    "algorithm": "sha256 of sorted \"<sha256>  <path>\" lines over data-manifest files"
+  },
+  "economics_bundle": {
+    "manifest_path": "public/data/economics/manifest.json",
+    "manifest_sha256": "b12dc9626a6f951ec39c8f12074756084f93a3414c95499884a0b3c24bf047bf",
+    "files": 3,
+    "bytes": 900394,
+    "bundle_sha256": "e3df2ad342b2df1b4e201f0a41d2ff4593650f92667ac7057a9e6bb7b772c702",
+    "algorithm": "sha256 of sorted \"<sha256>  <path>\" lines over economics-manifest files"
+  },
+  "manifest": {
+    "path": "manifest.json",
+    "bytes": 16251,
+    "sha256": "7715b2a9bd33cfe40ba979fa4f19169f774a4ac6d1ecffa23ec96cff33eeb771",
+    "files": 88,
+    "total_bytes": 12300308,
+    "excluded": [
+      "PUBLICATION.json",
+      "manifest.json"
+    ]
+  },
+  "static_mode": {
+    "guard": "publication-mode.js",
+    "guard_loaded_before": [
+      "api.js",
+      "app.js"
+    ],
+    "badge": "Static mode \u00b7 no backend",
+    "api_requests_blocked": true,
+    "exports_available": true,
+    "create_disabled": true,
+    "queue_disabled": true
+  },
+  "artifacts": {
+    "index_html": {
+      "path": "index.html",
+      "bytes": 46756,
+      "sha256": "d5b46bbbac4c040258ac27fb6a67617295bfe67bda2a40c0b69984d671f6922a"
+    },
+    "app_js": {
+      "path": "app.js",
+      "bytes": 316714,
+      "sha256": "e869e6dc0243724c51a7f7f000005ca350d3e018c28c6d0e404db707550eeb45"
+    },
+    "api_js": {
+      "path": "api.js",
+      "bytes": 6347,
+      "sha256": "9f8483ad22ae8d5694331c3345795ab5765cd5ddf88945f868397ae45c52592e"
+    },
+    "styles_css": {
+      "path": "styles.css",
+      "bytes": 97441,
+      "sha256": "4344162c882469580bb55a134be7a739cfb510b0461397c1b150f4ae3e4c7786"
+    },
+    "publication_mode_js": {
+      "path": "publication-mode.js",
+      "bytes": 1159,
+      "sha256": "d6ffc07b8ff138f66cb154238276e475626ad1c55333d35c3777c9f460e1aeff"
+    },
+    "data_manifest": {
+      "path": "public/data/manifest.json",
+      "bytes": 31855,
+      "sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102"
+    },
+    "economics_manifest": {
+      "path": "public/data/economics/manifest.json",
+      "bytes": 5712,
+      "sha256": "b12dc9626a6f951ec39c8f12074756084f93a3414c95499884a0b3c24bf047bf"
+    }
+  },
+  "validation": {
+    "http": {
+      "server": "python3 -m http.server --bind 127.0.0.1",
+      "index_200": true,
+      "payload_urls": 88,
+      "payload_files_verified": 88,
+      "payload_bytes_verified": 12300308,
+      "hash_mismatches": 0,
+      "economics_summary_200": true,
+      "economics_detail_csv_200": true,
+      "economics_model_inputs_zip_200": true,
+      "economics_manifest_200": true,
+      "api_path_status": 404,
+      "retired_headline_values_absent": {
+        "45.81": true,
+        "-32.28": true,
+        "bare_182": true
+      },
+      "result": "pass"
+    },
+    "chromium": {
+      "engine": "Chromium (Playwright 1.65.1, headless)",
+      "viewport": "1600x1200",
+      "page_errors": 0,
+      "console_errors": 0,
+      "http_errors": 0,
+      "api_network_requests": 0,
+      "static_probe": "rejected:static publication: live API disabled",
+      "badge": "Static mode \u00b7 no backend",
+      "role_badge": "Role \u00b7 static \u00b7 no role",
+      "tabs_rendered": [
+        "overview",
+        "dispatch",
+        "tradeoff",
+        "explore",
+        "map",
+        "zones",
+        "economics",
+        "osecan",
+        "run",
+        "inputs"
+      ],
+      "economics_tab_present": true,
+      "economics_panel_read_only": true,
+      "economics_panel_buttons": 0,
+      "economics_panel_inputs": 0,
+      "economics_table_rows": 21,
+      "economics_chart_canvas": 1,
+      "headline_median_cad_m3": 48.84,
+      "headline_range_cad_m3": [
+        -23.38,
+        86.85
+      ],
+      "headline_negative_rows": 168,
+      "headline_rows": 945,
+      "qc_spread_cad_m3": 0.81,
+      "qc_net_value_status": "separate_reference_not_net_value",
+      "result": "pass"
+    },
+    "source_parity": {
+      "files_compared": 86,
+      "byte_mismatches": 0,
+      "index_difference": "one added publication-mode.js script tag",
+      "result": "pass"
+    }
+  },
+  "deployment": {
+    "unit": "deploy/clews-ledger-static.service",
+    "bundle_path": "/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/forest-economics-v2.1",
+    "bind": "0.0.0.0:8131",
+    "host_origin": "http://10.232.253.73:8131",
+    "service_name": "clews-ledger-static.service",
+    "service_active": true,
+    "service_sub_state": "running",
+    "service_main_pid": 1888079,
+    "working_directory_verified": true,
+    "read_only_paths_verified": true,
+    "loopback_index_200": true,
+    "host_index_200": true,
+    "loopback_economics_summary_200": true,
+    "host_economics_summary_200": true,
+    "economics_detail_csv_200": true,
+    "economics_model_inputs_zip_200": true,
+    "api_path_status": 404,
+    "app_sha256_loopback_equals_host": true,
+    "rollback": {
+      "bundle": "ui_publications/v1.0.0",
+      "command": "git show de5ec15:deploy/clews-ledger-static.service | sudo tee /etc/systemd/system/clews-ledger-static.service >/dev/null && sudo systemctl daemon-reload && sudo systemctl restart clews-ledger-static.service",
+      "note": "v1.0.0 bundle and unit remain on disk unmodified."
+    }
+  }
+}
