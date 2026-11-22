@@ -493,3 +493,37 @@ def test_summary_manifest_labels_and_report(built):
 
 def test_no_unexpected_deletions_gate():
     supply.assert_no_unexpected_deletions()
+
+
+def test_fallback_and_cross_border_shares(facility_rows, national_rows, built):
+    summary, _ = built
+    total = math.fsum(float(value) for value in facility_rows["residue_odt"])
+    fallback = math.fsum(
+        float(value)
+        for value in facility_rows.loc[
+            facility_rows["allocation_scope"] == "national_class_fallback",
+            "residue_odt",
+        ]
+    )
+    cross_border = math.fsum(
+        float(value)
+        for value in facility_rows.loc[
+            facility_rows["cross_border"] == "true", "residue_odt"
+        ]
+    )
+    assert fallback / total == pytest.approx(
+        summary["national_totals"]["fallback_residue_share"], rel=1e-12
+    )
+    assert cross_border / total == pytest.approx(
+        summary["national_totals"]["cross_border_residue_share"], rel=1e-12
+    )
+    total_lookup = dict(zip(national_rows["metric"], national_rows["value"]))
+    assert total_lookup["fallback_residue_share"] == pytest.approx(
+        fallback / total, rel=1e-12
+    )
+    assert total_lookup["cross_border_residue_share"] == pytest.approx(
+        cross_border / total, rel=1e-12
+    )
+    assert summary["assignment_v3"]["cross_border_share"] < (
+        summary["national_totals"]["cross_border_residue_share"]
+    )

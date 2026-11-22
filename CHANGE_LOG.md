@@ -22,10 +22,12 @@
   shown. Process residue is never added to the RSYC stream without an explicit
   `combined` label (34.89 M odt / 645.40 PJ). Proxy and scaled-proxy capacity
   carry 64.00% of process residue (33.30% scaled); published capacity carries
-  36.00%. All rows are `model_estimate`, `observed=false`,
-  `policy_grade=false`; proxy capacity remains a BC class-median screening
-  fill. The builder/tests fail closed on unexpected `D`; none was present.
-  No UI or public OSeCAN change.
+  36.00%. The explicit national class fallback carries 4.81% of process
+  residue, and 4.81% is generated in a province different from the origin,
+  while assignment v3 cross-border volume is 0.03%. All rows are
+  `model_estimate`, `observed=false`, `policy_grade=false`; proxy capacity
+  remains a BC class-median screening fill. The builder/tests fail closed on
+  unexpected `D`; none was present. No UI or public OSeCAN change.
 
 - **Added the provincial capacity-floor sensitivity and assignment v3.**
   Added `workflows/national/facilities/national_facility_assignment_v3.py` and

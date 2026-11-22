@@ -1275,12 +1275,28 @@ def _national_totals(
         rsyc_status = "model_above_rsyc"
     else:
         rsyc_status = "within_rsyc_range"
+    fallback_odt = math.fsum(
+        item.residue_odt
+        for item in allocations
+        if item.allocation_scope == "national_class_fallback"
+    )
+    cross_border_odt = math.fsum(
+        item.residue_odt for item in allocations if item.cross_border
+    )
     totals = {
         "total_feedstock_m3": math.fsum(
             item.feedstock_m3 for item in allocations
         ),
         "process_residue_odt": process_odt,
         "process_residue_pj": process_pj,
+        "fallback_residue_odt": fallback_odt,
+        "fallback_residue_share": (
+            fallback_odt / process_odt if process_odt > 0.0 else 0.0
+        ),
+        "cross_border_residue_odt": cross_border_odt,
+        "cross_border_residue_share": (
+            cross_border_odt / process_odt if process_odt > 0.0 else 0.0
+        ),
         "harvest_residue_gross_odt": harvest_gross_odt,
         "harvest_residue_gross_pj": (
             harvest_gross_odt * rsvc.lhv_gj_per_odt / PJ_GJ
@@ -1543,6 +1559,38 @@ def _national_summary_rows(
             totals["combined_process_plus_harvest_gross_pj"],
             False,
             "Combined process plus gross harvest energy; explicitly not the RSYC comparison.",
+        ),
+        (
+            "fallback_residue_odt",
+            "process_residue",
+            "odt",
+            totals["fallback_residue_odt"],
+            False,
+            "Process residue from origin class streams routed to the national class fallback.",
+        ),
+        (
+            "fallback_residue_share",
+            "process_residue",
+            "fraction",
+            totals["fallback_residue_share"],
+            False,
+            "National class fallback share of process residue.",
+        ),
+        (
+            "cross_border_residue_odt",
+            "process_residue",
+            "odt",
+            totals["cross_border_residue_odt"],
+            False,
+            "Process residue generated in a province different from the origin province.",
+        ),
+        (
+            "cross_border_residue_share",
+            "process_residue",
+            "fraction",
+            totals["cross_border_residue_share"],
+            False,
+            "Cross-border share of process residue; class fallback can exceed assignment cross-border volume.",
         ),
         (
             "facilities_used",
@@ -2205,6 +2253,19 @@ def _report(
                 f"{concentration['proxy_residue_share']:.2%} "
                 f"(scaled proxy: "
                 f"{concentration['scaled_proxy_residue_share']:.2%})."
+            ),
+            (
+                f"- National class fallback share of process residue: "
+                f"{totals['fallback_residue_share']:.2%} "
+                f"({_format_number(totals['fallback_residue_odt'])} odt)."
+            ),
+            (
+                f"- Cross-border process residue (facility province differs "
+                f"from origin): {totals['cross_border_residue_share']:.2%} "
+                f"({_format_number(totals['cross_border_residue_odt'])} odt). "
+                "Assignment v3 cross-border volume is 0.03%, but the class "
+                "fallback routes some origin class streams to facilities in "
+                "other provinces."
             ),
             "",
             "### Top facilities by process residue",
