@@ -2,6 +2,31 @@
 
 ## 2026-11-22
 
+- **Added multi-scenario national facility chain v1 for 100/119/150 Mm3.**
+  Added `national_facility_chain_scenarios.py` and
+  `tests/test_national_facility_chain_scenarios.py`; published
+  `data/derived/national/facilities/national_facility_chain_scenarios_v1/`
+  with scenario assignment, product/residue, summary, comparison, JSON
+  summary, report and SHA-256 manifest. Runs assignment v4
+  `published_plus_proxy` with capacity v2 for each documented ceiling:
+  assigned volumes are 100.000 / 118.977 / 150.000 Mm3, all fully placed with
+  no unbounded sink and no overflow. Cross-border is 16.637 / 23.689 /
+  40.136 Mm3 (16.64% / 19.91% / 26.76%); proxy share is 57.91% / 58.46% /
+  59.32%; max facility share is 2.16% / 1.82% / 2.33%; HHI is 0.00859 /
+  0.00737 / 0.00700. Product-chain-v1 province/class coefficients are applied
+  to assigned class feedstock: process residue is 442.11 / 526.01 /
+  663.16 PJ, harvest residue is 141.02 / 167.78 / 211.53 PJ gross and
+  100.35 / 119.40 / 150.53 PJ recoverable, and total gross residue is 583.12 /
+  693.78 / 874.68 PJ. Capacity utilization on eligible assignment capacity is
+  52.0% / 61.8% / 78.0%; local capacity binds in AB, SK, MB, ON and NT, while
+  global capacity does not bind. The 150m documented ceiling is reported
+  separately from the 1.0/1.2 m3/ha/yr operable-proxy intensity screens, which
+  remain infeasible at 150 Mm3 (16.296 / 4.492 Mm3 deficits) and are not
+  conflated with it. All rows are `model_estimate`, `observed=false`,
+  `policy_grade=false`; proxy capacity is a caveat and no legal/AAC claim is
+  made. The builder/tests fail closed on unexpected `D`; none was present. No
+  restricted data, UI or public OSeCAN change.
+
 - **Upgraded national facility capacity evidence and reran assignment v4.**
   Added `pellet_map_2025.py`, `national_facility_inventory_v1.py`,
   `national_facility_capacity_v2.py`, `national_facility_assignment_v4.py`, and
