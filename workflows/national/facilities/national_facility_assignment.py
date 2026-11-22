@@ -86,10 +86,18 @@ SCENARIOS = ("known_only", "unbounded_unknown")
 RELEVANT_CLASSES = ("SAW", "PULP", "PANEL", "PELLET", "BIO")
 CLASS_ORDER = ("SAW", "PULP", "PANEL", "PELLET", "BIO", "OTHER")
 ALLOWED_OPERATING_STATUSES = frozenset(
-    {"unknown", "operating", "disused", "abandoned", "construction", "proposed"}
+    {
+        "unknown",
+        "operating",
+        "temporarily_closed",
+        "disused",
+        "abandoned",
+        "construction",
+        "proposed",
+    }
 )
 NON_OPERATING_STATUSES = frozenset(
-    {"disused", "abandoned", "construction", "proposed"}
+    {"temporarily_closed", "disused", "abandoned", "construction", "proposed"}
 )
 
 EXPECTED_TOTAL_M3 = 118_977_339.1

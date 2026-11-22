@@ -2,6 +2,31 @@
 
 ## 2026-11-22
 
+- **Upgraded national facility capacity evidence and reran assignment v4.**
+  Added `pellet_map_2025.py`, `national_facility_inventory_v1.py`,
+  `national_facility_capacity_v2.py`, `national_facility_assignment_v4.py`, and
+  four regression test modules; published
+  `canadian_biomass_pellet_map_2025/`,
+  `national_facility_inventory_v1/`, `national_facility_capacity_v2/`, and
+  `national_facility_assignment_v4/`. The public Canadian Biomass 2025 Pellet
+  Mill Map current-producer table contributes 43 plants (4 proposed plants
+  excluded), of which 10 match existing same-province PELLET records and 33 are
+  new. Reported finished-pellet tonnes are converted at 650 kg/m3, inside the
+  NRCan / CAN-CSA-ISO 17225-2 bulk-density range of 600-750 kg/m3, and labelled
+  `published_capacity_converted`; 31 new records carry capacity, while Skeena
+  Bioenergy is temporarily closed with no reported capacity. Converted values
+  are finished-pellet bulk volume, not infeed-equivalent, and are excluded from
+  the BC class-median anchor. Existing published BC infeed capacities are
+  preserved. Inventory v1 has 519 records (212 published, 15 not published);
+  capacity v2 has 292 class-median proxies. Primary assignment v4
+  (`published_plus_proxy`) assigns 118.977 Mm3, with cross-border 23.689 Mm3
+  (19.91%), proxy share 58.46%, max facility share 1.82%, and HHI 0.007373,
+  versus v3 25.318 Mm3 (21.28%), 61.23%, 1.82%, and 0.007571. The 1.2x floor
+  sensitivity retains the 43,651 m3 NT residual and raises published assignment
+  from 39.98 to 44.21 Mm3. All rows are `model_estimate`, `observed=false`,
+  `policy_grade=false`; no legal/AAC claim is made. No restricted data, UI, or
+  public OSeCAN change; the builder and tests fail closed on unexpected `D`.
+
 - **Added the national residue supply-curve sensitivity v1.** Added
   `workflows/national/facilities/national_residue_curve.py` and
   `tests/test_national_residue_curve.py`; published
