@@ -2,6 +2,28 @@
 
 ## 2026-11-22
 
+- **Added the provincial capacity-floor sensitivity and assignment v3.**
+  Added `workflows/national/facilities/national_facility_assignment_v3.py` and
+  `tests/test_national_facility_assignment_v3.py`; published
+  `data/derived/national/facilities/national_facility_assignment_v3/` with
+  assignment/utilization/province/class/concentration CSVs, floor CSVs,
+  v2-v3 comparison, summary, report and SHA-256 manifest. The floor is
+  provincial harvest x 1.2 on relevant-class finite capacity. Four provinces
+  are below it on published plus proxy capacity: AB, SK, MB and ON. Their 49
+  proxy records are scaled by one province-wide factor each, with
+  `capacity_status=proxy_harvest_scaled` and
+  `capacity_evidence=class_median_proxy_scaled_to_harvest_floor`; all 179
+  published values are unchanged. Floor shortfall falls from 33.70 Mm3/yr
+  across five provinces to 43,651 m3/yr in NT, which has no eligible facility
+  capacity. Assignment remains 118.98 Mm3 (zero unassigned); cross-border
+  volume falls from 25.32 Mm3 (21.28%) in v2 to 36,376 m3 (0.03%) because
+  local scaled capacity satisfies every province with facilities. Proxy share
+  of assigned rises from 61.23% to 66.40%, maximum facility share from 1.82%
+  to 7.11%, and HHI from 0.007571 to 0.013508. All rows are `model_estimate`,
+  `observed=false`, `policy_grade=false`; capacity remains caveated. The
+  builder/tests fail closed on unexpected `D`; none was present. No UI or
+  public OSeCAN change.
+
 - **Added the facility-level product/residue chain v1.** Added
   `workflows/national/facilities/facility_product_chain.py` and
   `tests/test_facility_product_chain.py`; published
