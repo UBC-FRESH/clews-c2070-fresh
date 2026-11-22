@@ -2,7 +2,8 @@
 
 The base scenario is the v1 flat BC donor price (``donor_flat``).  The
 stumpage-scaled v2 price proxies are retained only as a sensitivity
-(``stumpage_scaled``).  The scaled scenario is neither preferred nor observed.
+(``stumpage_scaled``).  The scaled scenario is a sensitivity, not the base, and
+is not observed.
 
 Run from the repository root::
 
@@ -177,7 +178,8 @@ def _price_rows(prices: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
             note = (
                 "Stumpage/dues/standing-value rate multiplied by the BC "
                 "delivered-price/BCTS-stumpage ratio. Sensitivity only: not "
-                "preferred, not a delivered price and not observed revenue."
+                "the base scenario, not a delivered price and not observed "
+                "revenue."
             )
         else:
             note = (
@@ -481,7 +483,7 @@ def _summary_rows(
                 "price_base_cad_m3": _fmt(_weighted(price_base, allocation)),
                 "price_high_cad_m3": _fmt(_weighted(price_high, allocation)),
                 "price_basis": (
-                    "flat_BC_donor_delivered_proxy"
+                    "flat_BC_donor_price_proxy"
                     if scenario == BASE_SCENARIO
                     else "mixed_reported_average_and_stumpage_scaled_proxy"
                 ),
@@ -748,8 +750,9 @@ def _assumption_rows(ratio: tuple[float, float, float]) -> list[dict[str, Any]]:
             "source": "v2.1 decision",
             "tier": "documented_constraint",
             "notes": (
-                "The scaled scenario is not preferred, not observed and not policy "
-                "grade. It is retained only to show the effect of the v2 method."
+                "donor_flat is the base and stumpage_scaled is the sensitivity. "
+                "The scaled scenario is not observed and not policy grade. It is "
+                "retained only to show the effect of the v2 method."
             ),
         },
         {
@@ -808,7 +811,7 @@ def _assumption_rows(ratio: tuple[float, float, float]) -> list[dict[str, Any]]:
             "tier": "model_estimate",
             "notes": (
                 "Sensitivity only; labelled stumpage_scaled_proxy; not observed "
-                "and not preferred."
+                "and not the base scenario."
             ),
         },
         {
@@ -1107,9 +1110,9 @@ def _write_report(
             f"{sensitivity_national['margin_high_cad_m3']})."
         ),
         (
-            "The stumpage-scaled scenario is **not preferred, not observed and "
-            "not policy grade**. It is a synthetic method sensitivity, not a "
-            "delivered price series and not a mill margin."
+            "The stumpage-scaled scenario is the **sensitivity, not the base**. "
+            "It is not observed and not policy grade. It is a synthetic method "
+            "sensitivity, not a delivered price series and not a mill margin."
         ),
         "",
         "## Coverage and evidence tiers",
@@ -1198,7 +1201,7 @@ def _write_report(
         (
             "The `scaled_minus_donor_flat_cad_m3` column is therefore a method "
             "delta. It must not be read as an observed market change, a "
-            "provincial stumpage effect, or a preferred estimate."
+            "provincial stumpage effect, or a base-scenario estimate."
         ),
         "",
         "## Negative margins and labels",
@@ -1226,7 +1229,7 @@ def _write_report(
         "",
         "- Not observed profit, not a mill margin and not official net value.",
         "- Not a stumpage rate and not policy grade.",
-        "- The stumpage-scaled sensitivity is not preferred and not observed.",
+        "- The stumpage-scaled sensitivity is not the base scenario and is not observed.",
         "- No combined national net value is computed.",
         "- No strict-open licence claim is made; source documents are not redistributed.",
         "- No restricted, confidential or microdata input is used.",
@@ -1270,7 +1273,6 @@ def _write_manifest(out_dir: Path, outputs: Sequence[Path], summary: Mapping[str
         "observation_type": EVIDENCE,
         "base_scenario": BASE_SCENARIO,
         "sensitivity_scenario": SENSITIVITY_SCENARIO,
-        "stumpage_scaled_preferred": False,
         "stumpage_scaled_observed": False,
         "combined_national_net_value": False,
         "restricted_inputs_used": [],
@@ -1419,12 +1421,11 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
         "status": "model_estimate_base_donor_flat_sensitivity_stumpage_scaled",
         "description": (
             "13-jurisdiction margins with donor_flat as the base scenario and "
-            "stumpage_scaled as a non-preferred sensitivity."
+            "stumpage_scaled as the sensitivity."
         ),
         "decision": {
             "base_scenario": BASE_SCENARIO,
             "sensitivity_scenario": SENSITIVITY_SCENARIO,
-            "stumpage_scaled_preferred": False,
             "stumpage_scaled_observed": False,
             "stumpage_scaled_policy_grade": False,
             "reason": (
@@ -1452,7 +1453,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
         "price_scenarios": {
             BASE_SCENARIO: {
                 "role": "base",
-                "price_basis": "flat_BC_donor_delivered_proxy_not_observed",
+                "price_basis": "flat_BC_donor_price_proxy_not_observed",
                 "price_tier_counts": price_tier_counts[BASE_SCENARIO],
             },
             SENSITIVITY_SCENARIO: {

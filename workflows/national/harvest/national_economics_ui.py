@@ -308,7 +308,6 @@ def build_export(
             f"got {base_scenario!r}/{sensitivity_scenario!r}"
         )
     for key in (
-        "stumpage_scaled_preferred",
         "stumpage_scaled_observed",
         "stumpage_scaled_policy_grade",
     ):
@@ -602,7 +601,6 @@ def build_export(
         "decision": {
             "base_scenario": base_scenario,
             "sensitivity_scenario": sensitivity_scenario,
-            "stumpage_scaled_preferred": False,
             "stumpage_scaled_observed": False,
             "stumpage_scaled_policy_grade": False,
             "reason": decision.get("reason"),
@@ -658,8 +656,9 @@ def build_export(
                 "combined national net value."
             ),
             (
-                "donor_flat is the base scenario. stumpage_scaled is a method "
-                "sensitivity: not preferred, not observed and not policy grade."
+                "donor_flat is the base scenario. stumpage_scaled is the method "
+                "sensitivity: the sensitivity, not the base; not observed and "
+                "not policy grade."
             ),
             (
                 "Stumpage, dues, royalty and standing-value rates are charges on "

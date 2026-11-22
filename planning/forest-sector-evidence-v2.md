@@ -328,8 +328,8 @@ pass.
 scenario is `donor_flat`: the v1 BC 2025-12 blended mill-delivered donor applied
 to all 13 jurisdictions. The sensitivity is `stumpage_scaled`: the v2
 provincial stumpage/dues/royalty/standing-value proxies multiplied by the BC
-delivered-price/BCTS-stumpage ratio. The scaled scenario is not preferred, not
-observed and not policy grade.
+delivered-price/BCTS-stumpage ratio. The scaled scenario is the sensitivity,
+not the base; it is not observed and not policy grade.
 
 - 78 margin rows: 13 jurisdictions x 2 scenarios x low/base/high.
 - 28 summary rows: 26 province-scenario rows plus two national diagnostics.

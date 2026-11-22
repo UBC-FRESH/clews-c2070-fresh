@@ -2,7 +2,7 @@
   "schema_version": "economics/national/1",
   "model_id": "national_economics_v2_1",
   "artifact_version": "2.1.0",
-  "generated_utc": "2026-11-22T06:26:14+00:00",
+  "generated_utc": "2026-11-22T06:53:23+00:00",
   "status": "model_estimate_base_donor_flat_sensitivity_stumpage_scaled",
   "role": "national_model_estimate_diagnostic",
   "base_scenario": "donor_flat",
@@ -11,7 +11,6 @@
   "decision": {
     "base_scenario": "donor_flat",
     "sensitivity_scenario": "stumpage_scaled",
-    "stumpage_scaled_preferred": false,
     "stumpage_scaled_observed": false,
     "stumpage_scaled_policy_grade": false,
     "reason": "v1 flat BC donor is the consistent base. The v2 stumpage-scaled proxy is a method sensitivity because dues/royalties are not delivered prices and are not comparable to the donor."
@@ -71,7 +70,7 @@
       "role": "base",
       "label": "Base · donor_flat",
       "is_base": true,
-      "price_basis": "flat_BC_donor_delivered_proxy_not_observed",
+      "price_basis": "flat_BC_donor_price_proxy_not_observed",
       "price_tier_counts": {
         "donor_proxy": 12,
         "reported_average": 1
@@ -132,7 +131,7 @@
         "high_cad_m3": 82.2909,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "timber_dues_rate"
       },
       "stumpage_scaled": {
@@ -141,7 +140,7 @@
         "high_cad_m3": -0.4042,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "timber_dues_rate"
       },
       "scaled_minus_donor_flat_cad_m3": -97.1673,
@@ -161,7 +160,7 @@
         "high_cad_m3": 81.8957,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "timber_dues_rate"
       },
       "stumpage_scaled": {
@@ -170,7 +169,7 @@
         "high_cad_m3": 10.5475,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "timber_dues_rate"
       },
       "scaled_minus_donor_flat_cad_m3": -63.0179,
@@ -190,7 +189,7 @@
         "high_cad_m3": 81.4492,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "timber_dues_rate"
       },
       "stumpage_scaled": {
@@ -199,7 +198,7 @@
         "high_cad_m3": -24.5511,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "timber_dues_rate"
       },
       "scaled_minus_donor_flat_cad_m3": -93.6241,
@@ -219,7 +218,7 @@
         "high_cad_m3": 82.3757,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "crown_timber_charges_rate"
       },
       "stumpage_scaled": {
@@ -228,7 +227,7 @@
         "high_cad_m3": -22.9751,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "crown_timber_charges_rate"
       },
       "scaled_minus_donor_flat_cad_m3": -93.0505,
@@ -248,7 +247,7 @@
         "high_cad_m3": 80.9107,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy_with_reported_road",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "standing_value_rate"
       },
       "stumpage_scaled": {
@@ -257,7 +256,7 @@
         "high_cad_m3": 35.6949,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy_with_reported_road",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "standing_value_rate"
       },
       "scaled_minus_donor_flat_cad_m3": -68.3157,
@@ -277,7 +276,7 @@
         "high_cad_m3": 83.2596,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "timber_royalty_rate"
       },
       "stumpage_scaled": {
@@ -286,7 +285,7 @@
         "high_cad_m3": 55.5035,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "timber_royalty_rate"
       },
       "scaled_minus_donor_flat_cad_m3": -31.298,
@@ -306,7 +305,7 @@
         "high_cad_m3": 83.2577,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "standing_timber_value_survey"
       },
       "stumpage_scaled": {
@@ -315,7 +314,7 @@
         "high_cad_m3": 91.1853,
         "price_tier": "stumpage_scaled_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
         "stumpage_rate_type": "standing_timber_value_survey"
       },
       "scaled_minus_donor_flat_cad_m3": 7.002,
@@ -335,7 +334,7 @@
         "high_cad_m3": 80.9183,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "stumpage_scaled": {
@@ -344,7 +343,7 @@
         "high_cad_m3": 80.9183,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "scaled_minus_donor_flat_cad_m3": 0.0,
@@ -364,7 +363,7 @@
         "high_cad_m3": 83.2597,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "stumpage_scaled": {
@@ -373,7 +372,7 @@
         "high_cad_m3": 83.2597,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "scaled_minus_donor_flat_cad_m3": 0.0,
@@ -393,7 +392,7 @@
         "high_cad_m3": 80.1021,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "stumpage_scaled": {
@@ -402,7 +401,7 @@
         "high_cad_m3": 80.1021,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "scaled_minus_donor_flat_cad_m3": 0.0,
@@ -422,7 +421,7 @@
         "high_cad_m3": 79.9555,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "stumpage_scaled": {
@@ -431,7 +430,7 @@
         "high_cad_m3": 79.9555,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "scaled_minus_donor_flat_cad_m3": 0.0,
@@ -451,7 +450,7 @@
         "high_cad_m3": 79.139,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "stumpage_scaled": {
@@ -460,7 +459,7 @@
         "high_cad_m3": 79.139,
         "price_tier": "donor_proxy",
         "cost_tier": "donor_proxy",
-        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "price_basis": "donor_flat_price_proxy_not_observed",
         "stumpage_rate_type": "no_provincial_rate_fallback_donor"
       },
       "scaled_minus_donor_flat_cad_m3": 0.0,
@@ -537,7 +536,7 @@
   },
   "caveats": [
     "National values are volume-weighted model diagnostics, not a combined national net value.",
-    "donor_flat is the base scenario. stumpage_scaled is a method sensitivity: not preferred, not observed and not policy grade.",
+    "donor_flat is the base scenario. stumpage_scaled is the method sensitivity: the sensitivity, not the base; not observed and not policy grade.",
     "Stumpage, dues, royalty and standing-value rates are charges on standing timber, not delivered log prices. The scaled-minus-donor-flat delta is a method change, not an observed market change.",
     "No jurisdiction row is an observed transaction, policy-grade value, Forest LP input or public OSeCAN input."
   ],

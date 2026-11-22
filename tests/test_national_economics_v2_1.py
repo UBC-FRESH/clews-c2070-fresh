@@ -41,9 +41,9 @@ def test_coverage_and_fixed_scenario_decision(built):
     ]
     assert summary["decision"]["base_scenario"] == "donor_flat"
     assert summary["decision"]["sensitivity_scenario"] == "stumpage_scaled"
-    assert summary["decision"]["stumpage_scaled_preferred"] is False
     assert summary["decision"]["stumpage_scaled_observed"] is False
     assert summary["decision"]["stumpage_scaled_policy_grade"] is False
+    assert "preferred" not in summary["description"].lower()
 
 
 def test_all_rows_declare_base_scenario_and_labels(built):
@@ -163,6 +163,7 @@ def test_national_diagnostics_are_expected_and_labelled(built):
     assert diagnostic["stumpage_scaled_sensitivity"][
         "margin_high_cad_m3"
     ] == pytest.approx(38.4085, abs=1e-3)
+    assert summary["stumpage_ratio"]["base"] == pytest.approx(3.3745, abs=1e-4)
     assert float(diagnostic["allocation_volume_m3"]) == pytest.approx(
         118_977_339.1, abs=1.0
     )
@@ -261,6 +262,36 @@ def test_price_notes_do_not_label_donor_flat_as_sensitivity(built):
             assert "sensitivity" in note or row["province"] == "BC"
 
 
+def test_price_proxy_basis_labels_and_rate_vintages(built):
+    out_dir, summary = built
+    rows = _read_csv(out_dir / model.PRICE_CSV)
+    by_key = {(row["province"], row["price_scenario"]): row for row in rows}
+    for row in rows:
+        assert row["stumpage_rate_unit"] == "CAD_nominal_per_m3"
+        assert row["rate_basis"]
+        if "proxy" in row["price_basis"]:
+            assert "delivered" not in row["price_basis"]
+        if row["stumpage_source_key"]:
+            assert row["source_publication_date"]
+        else:
+            assert row["source_publication_date"] == ""
+    assert by_key[("BC", "donor_flat")]["source_publication_date"] == "2025"
+    assert by_key[("BC", "donor_flat")]["price_basis"] == (
+        "mill_delivered_observed_report_average"
+    )
+    assert by_key[("NS", "stumpage_scaled")]["source_publication_date"] == "2024-07"
+    assert by_key[("NS", "stumpage_scaled")]["price_basis"] == (
+        "stumpage_scaled_price_proxy_not_observed"
+    )
+    assert by_key[("AB", "donor_flat")]["price_basis"] == (
+        "donor_flat_price_proxy_not_observed"
+    )
+    for scenario in summary["price_scenarios"].values():
+        basis = scenario["price_basis"]
+        if "proxy" in basis:
+            assert "delivered" not in basis
+
+
 def test_scenario_comparison_declares_dues_not_comparable(built):
     out_dir, _ = built
     rows = _read_csv(out_dir / model.COMPARISON_CSV)
@@ -292,8 +323,8 @@ def test_manifest_hashes_outputs_and_no_restricted_inputs(built):
     assert manifest["artifact_version"] == "2.1.0"
     assert manifest["base_scenario"] == "donor_flat"
     assert manifest["sensitivity_scenario"] == "stumpage_scaled"
-    assert manifest["stumpage_scaled_preferred"] is False
     assert manifest["stumpage_scaled_observed"] is False
+    assert "stumpage_scaled_preferred" not in manifest
     assert manifest["combined_national_net_value"] is False
     assert manifest["restricted_inputs_used"] == []
     assert manifest["observation_type"] == "model_estimate"
@@ -320,8 +351,8 @@ def test_report_does_not_present_scaled_as_preferred_or_observed(built):
     report = (out_dir / model.REPORT_MD).read_text(encoding="utf-8")
     assert "Base scenario: `donor_flat`" in report
     assert "Sensitivity: `stumpage_scaled`" in report
-    assert "not preferred, not observed and not policy grade" in report
-    assert "preferred scenario produces" not in report.lower()
+    assert "sensitivity, not the base" in report
+    assert "preferred" not in report.lower()
     assert "Why dues are not comparable" in report
     assert "model_estimate_not_policy" in report
     assert "unclipped" in report.lower()

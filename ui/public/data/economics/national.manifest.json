@@ -2,37 +2,37 @@
   "schema_version": "economics/national-manifest/1",
   "model_id": "national_economics_v2_1",
   "artifact_version": "2.1.0",
-  "generated_utc": "2026-11-22T06:26:14+00:00",
-  "parent_commit": "71e91b4d264f7d36ec097a94e3b7e56a73551d17",
+  "generated_utc": "2026-11-22T06:53:23+00:00",
+  "parent_commit": "3454ef96a0fdc71b64c055958756febd885f9873",
   "data_commit": "fb443347df5a11e0df25a42834d37beac2315d99",
   "files": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 20832,
-      "sha256": "8e19110f12536050cf2ef73f0b3f7e8333e4c8187dc447cb36864f4e43870ab3"
+      "bytes": 20668,
+      "sha256": "e76485fb22307478435474c4b9eb8c87a894b2656b4cbcf4e2b90d551bdb7233"
     }
   ],
   "generated": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 20832,
-      "sha256": "8e19110f12536050cf2ef73f0b3f7e8333e4c8187dc447cb36864f4e43870ab3"
+      "bytes": 20668,
+      "sha256": "e76485fb22307478435474c4b9eb8c87a894b2656b4cbcf4e2b90d551bdb7233"
     }
   ],
   "sources": [
     {
       "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_estimates.csv",
       "rows": 78,
-      "bytes": 89582,
-      "sha256": "946fd7ee1f88face619cefb9551825cf1d077b3de5d7a0db4973c13070502833"
+      "bytes": 89168,
+      "sha256": "98714dbc2c3025077a73ea82c7224699e76e8050ad6e93de7d058154f80b4f3b"
     },
     {
       "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_summary.csv",
       "rows": 28,
-      "bytes": 24556,
-      "sha256": "631b17ff1cf75a8b0eb16d983f89c770487501b21a9fc8676d279dbefc22090c"
+      "bytes": 24414,
+      "sha256": "ddf2af25c56327b0f4c9efb92c04ce1d8f9f9fe9b39ce1b15e52274353acdf8e"
     },
     {
       "path": "data/derived/national/harvest_basis/national_economics_v2_1/scenario_comparison.csv",
@@ -49,8 +49,8 @@
     {
       "path": "data/derived/national/harvest_basis/national_economics_v2_1/summary.json",
       "rows": null,
-      "bytes": 56229,
-      "sha256": "eec8eab21e921e77ae2c75576080fa611c4179202f958dc64ed917c440e96712"
+      "bytes": 56031,
+      "sha256": "5c9181316dfbc6ba17ea884944aca0ee33d3d012e9ff1c4afe8502abf8f877d9"
     },
     {
       "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_coverage.csv",

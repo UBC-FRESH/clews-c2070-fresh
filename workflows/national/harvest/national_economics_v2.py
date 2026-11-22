@@ -439,7 +439,7 @@ def build_prices(
                 tier = PRICE_TIER_SCALED
                 donor = ""
                 method = "stumpage_rate_times_bc_delivered_bcts_ratio"
-                basis = "stumpage_scaled_delivered_price_proxy_not_observed"
+                basis = "stumpage_scaled_price_proxy_not_observed"
                 note = (
                     "Stumpage/dues/standing-value rate multiplied by the BC "
                     "delivered-price/BCTS-stumpage ratio. This is a synthetic "
@@ -454,7 +454,7 @@ def build_prices(
                 tier = PRICE_TIER_DONOR
                 donor = "BC"
                 method = "bc_flat_donor"
-                basis = "donor_flat_delivered_proxy_not_observed"
+                basis = "donor_flat_price_proxy_not_observed"
                 note = (
                     "Flat BC donor price for sensitivity or because no current "
                     "provincial stumpage rate is materialised. Not observed revenue."
@@ -491,8 +491,14 @@ def build_prices(
                         if reference.rate_high_cad_m3 is not None
                         else ""
                     ),
-                    "stumpage_rate_unit": "CAD_nominal_2026_per_m3",
+                    "stumpage_rate_unit": "CAD_nominal_per_m3",
                     "stumpage_rate_type": reference.rate_type,
+                    "rate_basis": reference.rate_basis,
+                    "source_publication_date": (
+                        SOURCES[reference.source_key].publication_date
+                        if reference.source_key
+                        else ""
+                    ),
                     "stumpage_source_key": reference.source_key,
                     "stumpage_source_url": (
                         SOURCES[reference.source_key].url
@@ -896,7 +902,7 @@ def build_assumptions(ratio: tuple[float, float, float]) -> list[dict[str, Any]]
             "assumption_id": "stumpage_scaled_price_proxy",
             "category": "price",
             "applies_to": "BC,AB,SK,MB,ON,QC,NB,NS",
-            "rule": "preferred base scenario price proxy",
+            "rule": "base scenario price proxy",
             "value": "stumpage_scaled",
             "unit": "scenario",
             "source": "this model",
@@ -1238,7 +1244,7 @@ def _write_report(
             f"{summary['stumpage_ratio']['high']:.4f}."
         ),
         (
-            f"The preferred scenario produces **{len(scaled)} stumpage-scaled "
+            f"The base scenario produces **{len(scaled)} stumpage-scaled "
             "price proxies**; BC itself keeps its reported average and five "
             "jurisdictions use the flat donor."
         ),

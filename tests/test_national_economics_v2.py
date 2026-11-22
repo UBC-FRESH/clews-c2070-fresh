@@ -107,6 +107,7 @@ def test_price_proxies_use_scaled_rates_and_flat_donor(built):
     rows = _read_csv(out_dir / model.PRICE_CSV)
     assert len(rows) == 26
     ratio = summary["stumpage_ratio"]["base"]
+    assert ratio == pytest.approx(3.3745, abs=1e-4)
     by_key = {(row["province"], row["price_scenario"]): row for row in rows}
     for province in model.PROVINCES:
         scaled = by_key[(province, "stumpage_scaled")]
@@ -121,23 +122,37 @@ def test_price_proxies_use_scaled_rates_and_flat_donor(built):
             assert row["policy_grade"] == "false"
             assert row["combined_national_net_value"] == "false"
             assert row["strict_open"] == "false"
+            assert row["stumpage_rate_unit"] == "CAD_nominal_per_m3"
+            assert row["rate_basis"]
+            if row["stumpage_source_key"]:
+                assert row["source_publication_date"]
+            else:
+                assert row["source_publication_date"] == ""
+            if "proxy" in row["price_basis"]:
+                assert "delivered" not in row["price_basis"]
         if province == "BC":
             assert scaled["price_tier"] == "reported_average"
             assert flat["price_tier"] == "reported_average"
+            assert scaled["source_publication_date"] == "2025"
             assert float(scaled["price_base_cad_m3"]) == pytest.approx(
                 summary["bc_price_blend"]["base_cad_m3"], abs=1e-3
             )
         elif province in summary["stumpage_references"]["extracted"]:
             assert scaled["price_tier"] == "stumpage_scaled_proxy"
-            assert scaled["price_basis"].startswith("stumpage_scaled")
+            assert scaled["price_basis"] == (
+                "stumpage_scaled_price_proxy_not_observed"
+            )
             expected = float(scaled["stumpage_rate_base_cad_m3"]) * ratio
             assert float(scaled["price_base_cad_m3"]) == pytest.approx(
                 expected, abs=1e-3
             )
         else:
             assert scaled["price_tier"] == "donor_proxy"
+            assert scaled["price_basis"] == "donor_flat_price_proxy_not_observed"
             assert scaled["proxy_method"] == "bc_flat_donor"
         assert flat["price_tier"] in {"reported_average", "donor_proxy"}
+        if flat["price_tier"] == "donor_proxy":
+            assert flat["price_basis"] == "donor_flat_price_proxy_not_observed"
 
 
 def test_margins_are_unclipped_and_labelled(built):
@@ -190,6 +205,10 @@ def test_summary_has_national_diagnostic_on_119mt_allocation(built):
     assert float(national["donor_flat_margin_base_cad_m3"]) == pytest.approx(
         33.1365, abs=0.5
     )
+    assert summary["national_diagnostic"][
+        "stumpage_scaled_margin_base_cad_m3"
+    ] == pytest.approx(-16.1220, abs=1e-3)
+    assert summary["stumpage_ratio"]["base"] == pytest.approx(3.3745, abs=1e-4)
     assert summary["national_diagnostic"]["label"] == "model_estimate_not_policy"
 
 
@@ -256,3 +275,4 @@ def test_report_states_non_claims(built):
     assert "No strict-open licence claim" in report
     assert "model_estimate_not_policy" in report
     assert "unclipped" in report.lower()
+    assert "preferred" not in report.lower()

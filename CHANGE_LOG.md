@@ -2,13 +2,29 @@
 
 ## 2026-11-22
 
+- **Applied the national-economics v2 review label fixes.** Proxy
+  `price_basis` values no longer contain `delivered`
+  (`stumpage_scaled_price_proxy_not_observed`,
+  `donor_flat_price_proxy_not_observed`,
+  `flat_BC_donor_price_proxy_not_observed`); BC's observed reported average
+  keeps its `mill_delivered_observed_report_average` basis. Removed the
+  `preferred` framing from v2/v2.1 code, reports, assumptions and the UI;
+  `donor_flat` is base and `stumpage_scaled` is sensitivity. Provincial price
+  rows now use `stumpage_rate_unit=CAD_nominal_per_m3` and carry per-province
+  `source_publication_date` and `rate_basis`, so BC (2025) and NS (2024-07)
+  are not labelled 2026. Rebuilt v2 and v2.1 artifacts and re-exported the live
+  UI bundle; national diagnostics are unchanged at +33.1365 (base) and
+  -16.1220 (sensitivity). Added ratio-3.3745, national -16.1220 and
+  proxy-basis label tests. No tagged static bundle, Forest LP or public OSeCAN
+  change.
+
 - **Fixed the national-economics base/sensitivity framing as v2.1.** Added
   `workflows/national/harvest/national_economics_v2_1.py` and
   `tests/test_national_economics_v2_1.py`, publishing
   `data/derived/national/harvest_basis/national_economics_v2_1/` with
   `base_scenario=donor_flat` and `sensitivity_scenario=stumpage_scaled`.
   The v1 flat BC donor is the base; the v2 provincial stumpage-scaled proxies
-  are a non-preferred, non-observed sensitivity. Outputs: 78 margin rows
+  are a non-observed sensitivity. Outputs: 78 margin rows
   (13 jurisdictions x 2 scenarios x low/base/high), 28 summary rows, 14
   scenario-comparison rows, 39 tier-coverage rows, report, summary and
   manifest. National volume-weighted donor-flat diagnostic 33.1365 CAD/m3

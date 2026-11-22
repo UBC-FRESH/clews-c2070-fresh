@@ -60,7 +60,20 @@ def test_export_has_13_jurisdictions_and_both_national_diagnostics() -> None:
     assert diagnostic["combined_national_net_value"] is False
     assert payload["decision"]["base_scenario"] == "donor_flat"
     assert payload["decision"]["sensitivity_scenario"] == "stumpage_scaled"
-    assert payload["decision"]["stumpage_scaled_preferred"] is False
+    assert "stumpage_scaled_preferred" not in payload["decision"]
+
+
+def test_proxy_price_bases_do_not_claim_delivered() -> None:
+    payload = _load_national()
+    for scenario in payload["scenarios"]:
+        basis = scenario["price_basis"]
+        if "proxy" in basis:
+            assert "delivered" not in basis
+    for jurisdiction in payload["jurisdictions"]:
+        for scenario in ("donor_flat", "stumpage_scaled"):
+            basis = jurisdiction[scenario]["price_basis"]
+            if "proxy" in basis:
+                assert "delivered" not in basis
 
 
 def test_export_recomputes_every_margin_from_the_committed_csvs() -> None:
@@ -163,10 +176,10 @@ def test_labels_are_explicit_and_never_claim_observation_or_policy_grade() -> No
     assert '"observed": true' not in text
     assert '"policy_grade": true' not in text
     assert '"combined_national_net_value": true' not in text
-    assert '"stumpage_scaled_preferred": true' not in text
+    assert '"stumpage_scaled_preferred"' not in text
     assert '"stumpage_scaled_observed": true' not in text
     assert '"stumpage_scaled_policy_grade": true' not in text
-    assert "preferred scenario produces" not in text.lower()
+    assert "preferred" not in text.lower()
 
 
 def test_no_base_sensitivity_value_swap_or_stale_national_value() -> None:

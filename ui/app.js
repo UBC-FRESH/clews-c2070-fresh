@@ -6417,10 +6417,9 @@
     var decision = national.decision || {};
     requireTrue(decision.base_scenario === 'donor_flat' && decision.sensitivity_scenario === 'stumpage_scaled',
       'national base/sensitivity decision mismatch');
-    requireTrue(decision.stumpage_scaled_preferred === false &&
-      decision.stumpage_scaled_observed === false &&
+    requireTrue(decision.stumpage_scaled_observed === false &&
       decision.stumpage_scaled_policy_grade === false,
-      'national sensitivity must not be preferred, observed or policy grade');
+      'national sensitivity must not be observed or policy grade');
 
     requireTrue(Array.isArray(national.scenarios) && national.scenarios.length === 2,
       'national scenario list is incomplete');
@@ -6587,7 +6586,7 @@
       '</dl>' +
       '<p class="method-note">' +
         (isSensitivity
-          ? 'Method sensitivity · not preferred · not observed · not policy grade.'
+          ? 'Method sensitivity · not the base scenario · not observed · not policy grade.'
           : 'Base scenario · the consistent donor-flat case.') +
       '</p>' +
     '</article>';
@@ -6721,7 +6720,7 @@
     $('national-caveat').innerHTML =
       '<strong>National diagnostic · model_estimate · observed=false · policy_grade=false · no combined national net value</strong>' +
       '<p>13 jurisdictions, volume-weighted. Not a Forest LP input. Not a public OSeCAN input. ' +
-        'The sensitivity is not preferred, not observed and not policy grade. ' +
+        'The sensitivity is not the base scenario, not observed and not policy grade. ' +
         'Low/base/high are model scenarios, not observed transactions.</p>' +
       '<ul>' + caveats.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
       '<p class="economics-nonclaims">Non-claims: ' + esc((national.non_claims || []).join(' · ')) + '</p>';
