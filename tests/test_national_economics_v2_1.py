@@ -238,6 +238,17 @@ def test_tier_coverage_counts_match_price_rows(built):
             assert row["tier_count"] == "13"
 
 
+def test_primary_tables_have_explicit_source_column(built):
+    out_dir, _ = built
+    for filename in (
+        model.MARGIN_CSV,
+        model.SUMMARY_CSV,
+        model.COMPARISON_CSV,
+    ):
+        for row in _read_csv(out_dir / filename):
+            assert row["source"].strip()
+
+
 def test_price_notes_do_not_label_donor_flat_as_sensitivity(built):
     out_dir, _ = built
     rows = _read_csv(out_dir / model.PRICE_CSV)

@@ -126,6 +126,20 @@ def _price_source_keys(
     return ("national_economics_v1", "bc_log_market_2025_12")
 
 
+def _comparison_source_keys(
+    province: str,
+    reference: v2.StumpageReference,
+) -> str:
+    if province == "BC":
+        return "bc_log_market_2025_12;national_economics_v1"
+    if reference.extracted:
+        return (
+            f"{reference.source_key};bcts_annual_2024_25;"
+            "bc_log_market_2025_12;national_economics_v1"
+        )
+    return "national_economics_v1;bc_log_market_2025_12"
+
+
 def _source_urls(keys: Iterable[str]) -> str:
     urls = []
     for key in keys:
@@ -229,6 +243,7 @@ def _margin_rows(
                 "source_keys": ";".join(
                     dict.fromkeys((*keys, COST_SOURCE_KEYS))
                 ),
+                "source": ";".join(dict.fromkeys((*keys, COST_SOURCE_KEYS))),
                 "source_urls": _source_urls((*keys, COST_SOURCE_KEYS)),
                 "evidence": EVIDENCE,
                 "observed": OBSERVED,
@@ -379,6 +394,7 @@ def _summary_rows(
                     "source_keys": ";".join(
                         dict.fromkeys((*keys, COST_SOURCE_KEYS))
                     ),
+                    "source": ";".join(dict.fromkeys((*keys, COST_SOURCE_KEYS))),
                     "source_urls": _source_urls((*keys, COST_SOURCE_KEYS)),
                     "national_diagnostic_label": "",
                     "combined_national_net_value": COMBINED_NATIONAL_NET_VALUE,
@@ -479,6 +495,7 @@ def _summary_rows(
                 "margin_status": NATIONAL_DIAGNOSTIC_LABEL,
                 "cost_tier": "mixed_proxy",
                 "source_keys": "national_economics_v1;bc_log_market_2025_12;bcts_annual_2024_25",
+                "source": "national_economics_v1;bc_log_market_2025_12;bcts_annual_2024_25",
                 "source_urls": _source_urls(
                     (
                         "national_economics_v1",
@@ -536,6 +553,10 @@ def _comparison_rows(
             rate_type = "mixed"
             extracted = "mixed"
             province_name = "Canada"
+            source_keys = (
+                "national_economics_v1;bc_log_market_2025_12;"
+                "bcts_annual_2024_25"
+            )
             note = (
                 "Volume-weighted diagnostic. A dues rate is not a delivered log "
                 "price; the scaled-minus-donor-flat delta is a method effect, "
@@ -549,6 +570,11 @@ def _comparison_rows(
             rate_type = refs[province].rate_type
             extracted = str(refs[province].extracted).lower()
             province_name = PROVINCE_NAMES[province]
+            source_keys = (
+                "bc_log_market_2025_12;national_economics_v1"
+                if province == "BC"
+                else _comparison_source_keys(province, refs[province])
+            )
             if province == "BC":
                 note = (
                     "BC keeps the reported average in both scenarios; there is "
@@ -585,6 +611,8 @@ def _comparison_rows(
                 "scaled_minus_v1_flat_cad_m3": _fmt(scaled - v1_flat),
                 "dues_comparable_to_delivered_price": "false",
                 "comparison_status": "method_change_not_observed_market_change",
+                "source_keys": source_keys,
+                "source": source_keys,
                 "combined_national_net_value": COMBINED_NATIONAL_NET_VALUE,
                 "evidence": EVIDENCE,
                 "observed": OBSERVED,
