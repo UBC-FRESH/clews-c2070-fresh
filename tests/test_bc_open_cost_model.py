@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import math
 from pathlib import Path
 
@@ -17,7 +18,7 @@ def make_scenario(**overrides):
     base = model.Scenario(
         zone="South Central Zone",
         rate_group=model.RATE_GROUP_INTERIOR,
-        region="Interior",
+        appraisal_region="Interior",
         slope_class="moderate",
         slope_pct=28.0,
         system="ground",
@@ -114,12 +115,80 @@ def test_full_grid_has_expected_coverage():
         model.RATE_GROUP_COAST,
         model.RATE_GROUP_INTERIOR,
     }
+    assert {scenario.appraisal_region for scenario in scenarios} == {"Coast", "Interior"}
     assert {scenario.system for scenario in scenarios} == {"ground", "cable", "heli"}
+    assert {
+        (scenario.zone, scenario.appraisal_region) for scenario in scenarios
+    } == {(zone, region) for zone, _, region in model.ZONES}
+
+
+def test_north_west_is_interior_for_haul_and_ground_extraction():
+    northwest = make_scenario(
+        zone="North West Zone",
+        rate_group=model.RATE_GROUP_COAST,
+        appraisal_region="Interior",
+    )
+    assert model.system_phases("Interior", "ground") == (
+        "feller_buncher",
+        "grapple_skidder",
+        "processor",
+        "loader",
+    )
+    assert "grapple_skidder" in model.system_phases(
+        northwest.appraisal_region, northwest.system
+    )
+    expected = math.sqrt(
+        model.published_interior_haul(100.0)
+        * model.engineering_haul(model.RATE_GROUP_COAST, 100.0)
+    )
+    assert model.haul_cost(northwest).base == pytest.approx(expected, abs=0.01)
+    assert model.haul_cost(northwest).base < model.engineering_haul(
+        model.RATE_GROUP_COAST, 100.0
+    )
+
+
+def test_coast_ground_uses_forwarder_not_skidder():
+    assert model.system_phases("Coast", "ground") == (
+        "feller_buncher",
+        "forwarder",
+        "processor",
+        "loader",
+    )
+    coast = make_scenario(
+        zone="South West Zone",
+        rate_group=model.RATE_GROUP_COAST,
+        appraisal_region="Coast",
+    )
+    assert model.haul_cost(coast).base == pytest.approx(
+        model.engineering_haul(model.RATE_GROUP_COAST, 100.0), abs=0.01
+    )
 
 
 def test_unknown_system_fails_loudly():
     with pytest.raises(model.BcOpenCostModelError):
-        model.system_phases(model.RATE_GROUP_INTERIOR, "balloon")
+        model.system_phases("Interior", "balloon")
+    for adjustment in (
+        lambda: model.slope_adjustment(28.0, "balloon"),
+        lambda: model.piece_adjustment(0.60, "balloon"),
+        lambda: model.volume_adjustment(20_000.0, "balloon"),
+    ):
+        with pytest.raises(model.BcOpenCostModelError):
+            adjustment()
+
+
+def test_invalid_scenario_and_cost_range_fail_loudly():
+    with pytest.raises(model.BcOpenCostModelError):
+        make_scenario(appraisal_region="Prairie")
+    with pytest.raises(model.BcOpenCostModelError):
+        make_scenario(system="balloon")
+    with pytest.raises(model.BcOpenCostModelError):
+        make_scenario(rate_group="unknown")
+    with pytest.raises(model.BcOpenCostModelError):
+        model.CostRange(low=2.0, base=1.0, high=3.0)
+    with pytest.raises(model.BcOpenCostModelError):
+        model.CostRange(low=-1.0, base=1.0, high=3.0)
+    with pytest.raises(model.BcOpenCostModelError):
+        model.CostRange(low=1.0, base=math.nan, high=3.0)
 
 
 def test_invalid_phase_inputs_fail_loudly():
@@ -152,6 +221,19 @@ def test_build_writes_all_artifacts(tmp_path):
         <= float(row["total_high_cad_m3"])
         for row in rows
     )
+    assert {row["appraisal_region"] for row in rows} == {"Coast", "Interior"}
+    northwest = [row for row in rows if row["zone"] == "North West Zone"]
+    assert northwest and all(row["appraisal_region"] == "Interior" for row in northwest)
+    assert all(
+        row["haul_basis"] == "iam_cycle_equation_geometric_mean_engineering"
+        for row in northwest
+    )
+    southwest = [row for row in rows if row["zone"] == "South West Zone"]
+    assert southwest and all(row["appraisal_region"] == "Coast" for row in southwest)
+    assert all(
+        row["haul_basis"] == "engineering_all_found_truck_cycle"
+        for row in southwest
+    )
 
     with parameters_path.open(encoding="utf-8") as handle:
         parameters = list(csv.DictReader(handle))
@@ -171,6 +253,13 @@ def test_build_writes_all_artifacts(tmp_path):
     assert manifest["validation"]["total_low_base_high_ordered"] is True
     assert manifest["validation"]["all_zones_present"] is True
     assert manifest["validation"]["all_systems_present"] is True
+    assert manifest["validation"]["appraisal_region_matches_zone"] is True
+    assert manifest["validation"]["coast_ground_uses_forwarder"] is True
+    assert manifest["validation"]["interior_ground_uses_grapple_skidder"] is True
+    assert manifest["scenario_grid"]["appraisal_regions"]["Coast"] == [
+        "South West Zone"
+    ]
+    assert "North West Zone" in manifest["scenario_grid"]["appraisal_regions"]["Interior"]
 
 
 def test_parameter_rows_cite_every_source_used_in_the_model():
@@ -182,3 +271,53 @@ def test_parameter_rows_cite_every_source_used_in_the_model():
     assert "bc_iam_2026" in source_keys
     assert all(row["licence"] for row in rows)
     assert all(row["source_url"] for row in rows)
+
+
+def test_source_hash_verification_fails_closed(tmp_path):
+    pdf_dir = tmp_path / "pdfs"
+    pdf_dir.mkdir()
+    with pytest.raises(model.BcOpenCostModelError):
+        model.verify_source_hashes(pdf_dir)
+
+    for source_key, filename in {
+        "tla_rate_guide_2026_08": "tla_rate_guide_2026_08.pdf",
+        "fpinnovations_adv2n54": "adv2n54.pdf",
+        "fpinnovations_adv5n19": "adv5n19.pdf",
+        "fpinnovations_adv3n19": "adv3n19.pdf",
+        "fpinnovations_adv11n27": "adv11n27.pdf",
+        "bc_cvse_logging_truck_configurations": "cvse_logging_truck_configurations.pdf",
+        "fpinnovations_9axle_2021": "fpinnovations_9axle_2021.pdf",
+    }.items():
+        path = pdf_dir / filename
+        path.write_bytes(
+            model.SOURCE_BY_KEY[source_key]["sha256"].encode("ascii")
+            if source_key == "tla_rate_guide_2026_08"
+            else b"not-the-published-pdf"
+        )
+    with pytest.raises(model.BcOpenCostModelError):
+        model.verify_source_hashes(pdf_dir)
+
+
+def test_appraisal_manifest_verification_fails_closed(tmp_path):
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        json.dumps(
+            {
+                "sources": [
+                    {"key": "iam", "file": "iam.pdf", "sha256": "wrong"},
+                    {
+                        "key": "cam",
+                        "file": "cam.pdf",
+                        "sha256": model.SOURCE_BY_KEY["bc_cam_2026"]["sha256"],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(model.BcOpenCostModelError):
+        model.verify_appraisal_manifest(path)
+
+    path.write_text(json.dumps({"sources": []}), encoding="utf-8")
+    with pytest.raises(model.BcOpenCostModelError):
+        model.verify_appraisal_manifest(path)

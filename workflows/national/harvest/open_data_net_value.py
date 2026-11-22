@@ -9,7 +9,11 @@ The model combines three public layers:
 It produces a **modeled margin**:
 
     gross_margin = mill_delivered_price - logging_cost - haul_cost
-    net_model    = gross_margin - road_silviculture_allowance_if_available
+    net_model    = gross_margin - Interior_basic_silviculture_CAD_m3_if_available
+
+The silviculture deduction is Interior-only.  Coast basic silviculture is
+published in CAD/ha by BEC unit and is not converted to CAD/m3, so Coast
+``net_model`` equals ``gross_margin``.
 
 Every row is ``evidence=model_estimate``, ``observed=false`` and
 ``policy_grade=false``.  The result is not an observed transaction, a mill
@@ -53,7 +57,7 @@ APPRAISAL_MANIFEST_JSON = APPRAISAL_DIR / "manifest.json"
 PROCUREMENT_CSV = PROCUREMENT_DIR / "qc_procurement_cost_benchmark.csv"
 PROCUREMENT_MANIFEST_JSON = PROCUREMENT_DIR / "manifest.json"
 
-MODEL_VERSION = "1.0.0"
+MODEL_VERSION = "1.1.0"
 PRIMARY_PRICE_BASIS = "3_month"
 PRIMARY_PRICE_PERIOD_END = "2025-12-31"
 SENSITIVITY_PRICE_BASIS = "1_month"
@@ -62,6 +66,9 @@ SENSITIVITY_PRICE_PERIOD_END = "2025-12-31"
 SILVICULTURE_SERIES = "Interior Basic Silviculture 2026-10"
 SILVICULTURE_EFFECTIVE_DATE = "2026-10-01"
 SILVICULTURE_COMPONENT = "basic_silviculture"
+SILVICULTURE_PRICE_REGION = "Interior"
+COAST_SILVICULTURE_COMPONENT = "not_published_cad_m3_for_coast"
+COAST_SILVICULTURE_BASIS = "cam_table_5_6_cad_per_ha_only_not_converted"
 
 EXPECTED_COST_ROWS = 945
 EXPECTED_ZONES = (
@@ -77,11 +84,11 @@ EXPECTED_SYSTEMS = ("ground", "cable", "heli")
 EXPECTED_ZONE_SYSTEM_GROUPS = len(EXPECTED_ZONES) * len(EXPECTED_SYSTEMS)
 
 # The cost model publishes two rate groups for seven forest zones.  Its
-# ``region`` label is the intended price crosswalk.  South West Zone is the
-# only zone labelled exactly ``Coast``.  North West Zone is labelled
-# ``Coast/Northwest Interior``; it is assigned the Interior price here because
-# the zone is an Interior forest zone and the published silviculture allowance
-# is the Interior table.  That boundary case is documented in the caveats.
+# ``appraisal_region`` is the IAM/CAM jurisdiction and the only valid price
+# crosswalk.  South West Zone is the Coast zone.  North West Zone is an
+# Interior forest zone: the TLA rate guide files it under the
+# coastal/northwest group for hourly rates, but it is priced and costed as
+# Interior.  The published CAD/m3 silviculture table is Interior-only.
 ZONE_PRICE_REGION: dict[str, str] = {
     "South West Zone": "Coast",
     "North West Zone": "Interior",
@@ -99,9 +106,47 @@ PRICE_BASIS = "mill_delivered_reported_average"
 COST_BASIS = "open_proxy_model"
 NET_VALUE_STATUS = "model_estimate"
 QC_NET_VALUE_STATUS = "separate_reference_not_net_value"
-QC_EVIDENCE = "survey_benchmark"
+QC_EVIDENCE = "survey_procurement_cost"
+
+LICENSING: dict[str, Any] = {
+    "classification": "public_reference_copyrighted",
+    "strict_open_licence": False,
+    "strict_open_licence_sources": [],
+    "public_reference_source_families": [
+        "BC Government appraisal manuals and silviculture tables (BC Crown copyright)",
+        "BC log-market reports (BC Crown copyright; private study/research use)",
+        "TLA/ILA/NWLA/MNP 2026 rate guide (industry publisher copyright)",
+        "FPInnovations/FERIC case studies (publisher copyright)",
+        "BC CVSE / Commercial Transport Regulations (BC Crown copyright)",
+        "Gouvernement du Québec MRNF 2022 procurement survey (public-reference report)",
+    ],
+    "source_pdfs_redistributed": False,
+    "commercial_reuse": "requires_permission_from_rights_holder",
+    "statement": (
+        "All inputs are public-reference copyrighted sources. None is released "
+        "under a strict Open Government Licence, CC-BY, or Statistics Canada "
+        "open licence. Source PDFs are not redistributed in this repository. "
+        "Commercial reuse or redistribution requires permission from the "
+        "rights holder."
+    ),
+}
 
 PRICE_OUTLIER_CSV = "bc_open_price_outliers.csv"
+OUTLIER_FIELDS: tuple[str, ...] = (
+    "report_id",
+    "region",
+    "report_basis",
+    "period_end",
+    "log_class",
+    "species",
+    "grade",
+    "end_use",
+    "price_cad_m3",
+    "price_plausibility",
+    "is_aggregate",
+    "used_in_model",
+    "notes",
+)
 NET_VALUE_CSV = "bc_open_net_value.csv"
 SUMMARY_CSV = "bc_open_net_value_summary.csv"
 SENSITIVITY_CSV = "bc_open_net_value_sensitivity.csv"
@@ -127,6 +172,9 @@ class PricePanel:
     report_ids: tuple[str, ...]
     log_classes: tuple[str, ...]
     cells_used: int
+    report_classes_used: int
+    average_basis: str
+    report_totals_status: str
     aggregates_excluded: int
     outliers_excluded: int
 
@@ -180,6 +228,19 @@ def _is_true(raw: str) -> bool:
     return raw.strip().lower() == "true"
 
 
+def _silviculture_value(row: Mapping[str, str]) -> float:
+    """Return 0 for a Coast row that explicitly excludes silviculture."""
+    included = row["road_silviculture_included"] == "true"
+    raw = row["road_silviculture_allowance_cad_m3"]
+    if not included:
+        if raw != "":
+            raise OpenDataNetValueError(
+                f"excluded silviculture allowance is not blank in {row['scenario_id']}"
+            )
+        return 0.0
+    return _number(row, "road_silviculture_allowance_cad_m3", row["scenario_id"])
+
+
 def _fmt(value: float) -> str:
     return f"{value:.2f}"
 
@@ -197,7 +258,7 @@ def load_cost_estimates(path: Path = COST_ESTIMATES_CSV) -> list[dict[str, str]]
             "scenario_id",
             "zone",
             "rate_group",
-            "region",
+            "appraisal_region",
             "slope_class",
             "slope_pct",
             "system",
@@ -234,6 +295,12 @@ def load_cost_estimates(path: Path = COST_ESTIMATES_CSV) -> list[dict[str, str]]
         if scenario_id in seen:
             raise OpenDataNetValueError(f"duplicate scenario_id: {scenario_id}")
         seen.add(scenario_id)
+        expected_region = ZONE_PRICE_REGION.get(row["zone"])
+        if row["appraisal_region"] != expected_region:
+            raise OpenDataNetValueError(
+                f"appraisal region mismatch in {scenario_id}: "
+                f"{row['appraisal_region']!r} vs {expected_region!r}"
+            )
         for prefix in ("logging", "haul", "total"):
             low = _number(row, f"{prefix}_low_cad_m3", scenario_id)
             base = _number(row, f"{prefix}_base_cad_m3", scenario_id)
@@ -304,10 +371,20 @@ def _coast_price_panel(
     outliers = len(rows) - len(plausible)
     if not plausible:
         raise OpenDataNetValueError("no plausible Coast price cells")
+    if outliers:
+        raise OpenDataNetValueError(
+            "Coast panel uses PDF report-footer averages and cannot include "
+            f"flagged cells: {outliers} outlier(s)"
+        )
     by_class: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in plausible:
         if _is_true(row["is_aggregate"]):
             raise OpenDataNetValueError("Coast price row unexpectedly marked aggregate")
+        if row["report_totals_status"] != "consistent":
+            raise OpenDataNetValueError(
+                "Coast report totals are not consistent for "
+                f"{row['report_id']}: {row['report_totals_status']!r}"
+            )
         by_class[row["log_class"]].append(row)
     if set(by_class) != {"old_growth", "second_growth"}:
         raise OpenDataNetValueError(
@@ -351,6 +428,9 @@ def _coast_price_panel(
         report_ids=tuple(sorted(report_ids)),
         log_classes=tuple(sorted(by_class)),
         cells_used=len(plausible),
+        report_classes_used=len(by_class),
+        average_basis="pdf_report_footer_average_and_volume",
+        report_totals_status="consistent",
         aggregates_excluded=0,
         outliers_excluded=outliers,
     )
@@ -404,6 +484,9 @@ def _interior_price_panel(
         report_ids=(report_id,),
         log_classes=("not_reported",),
         cells_used=len(products),
+        report_classes_used=1,
+        average_basis="product_cell_volume_weighted_mean",
+        report_totals_status="not_applicable",
         aggregates_excluded=len(aggregates),
         outliers_excluded=outliers,
     )
@@ -431,10 +514,22 @@ def load_price_panels(
             "is_aggregate",
             "price_status",
             "price_plausibility",
+            "report_total_volume_m3",
+            "report_avg_price_cad_m3",
+            "report_totals_status",
         ),
         path,
     )
     selected = _select_price_rows(rows, report_basis, period_end)
+    for row in selected:
+        if row["price_basis"] != "mill_delivered":
+            raise OpenDataNetValueError(
+                f"unexpected price basis for {row['report_id']}: {row['price_basis']!r}"
+            )
+        if row["price_status"] != "reported":
+            raise OpenDataNetValueError(
+                f"unexpected price status for {row['report_id']}: {row['price_status']!r}"
+            )
     coast = _coast_price_panel(
         [row for row in selected if row["region"] == "coast"],
         report_basis,
@@ -492,6 +587,10 @@ def load_silviculture_allowances(
         zone = row["zone"]
         if zone in allowances:
             raise OpenDataNetValueError(f"duplicate silviculture zone: {zone}")
+        if row["region"] != SILVICULTURE_PRICE_REGION:
+            raise OpenDataNetValueError(
+                f"silviculture row for {zone} is not Interior: {row['region']!r}"
+            )
         if row["effective_date"] != SILVICULTURE_EFFECTIVE_DATE:
             raise OpenDataNetValueError(
                 f"unexpected silviculture effective date for {zone}: "
@@ -523,14 +622,24 @@ def build_net_value_rows(
     price_panels: Mapping[str, PricePanel],
     allowances: Mapping[str, ZoneAllowance],
 ) -> list[dict[str, str]]:
-    """Combine one price panel, one cost row and one allowance into a row."""
+    """Combine one price panel, one cost row and one allowance into a row.
+
+    The published Interior basic-silviculture CAD/m3 allowance is applied only
+    to Interior appraisal rows.  Coast net_model equals gross margin: the CAM
+    publishes Coast basic silviculture in CAD/ha only, so no CAD/m3 value is
+    invented and the allowance cell stays blank.
+    """
     rows: list[dict[str, str]] = []
     for cost in cost_rows:
         scenario_id = cost["scenario_id"]
         zone = cost["zone"]
         price_region = price_region_for_zone(zone)
+        if cost["appraisal_region"] != price_region:
+            raise OpenDataNetValueError(
+                f"appraisal-region mismatch for {scenario_id}: "
+                f"{cost['appraisal_region']} vs {price_region}"
+            )
         panel = price_panels[price_region]
-        allowance = allowances[zone]
 
         logging_low = _number(cost, "logging_low_cad_m3", scenario_id)
         logging_base = _number(cost, "logging_base_cad_m3", scenario_id)
@@ -546,9 +655,25 @@ def build_net_value_rows(
         gross_low = panel.low_cad_m3 - cost_high
         gross_base = panel.base_cad_m3 - cost_base
         gross_high = panel.high_cad_m3 - cost_low
-        net_low = gross_low - allowance.value_cad_m3
-        net_base = gross_base - allowance.value_cad_m3
-        net_high = gross_high - allowance.value_cad_m3
+        includes_silviculture = price_region == SILVICULTURE_PRICE_REGION
+        if includes_silviculture:
+            allowance = allowances[zone]
+            allowance_value = allowance.value_cad_m3
+            allowance_cell = _fmt(allowance_value)
+            component = "interior_basic_silviculture"
+            source_series = allowance.source_series
+            effective_date = allowance.effective_date
+            basis = "published_CAD_m3_all_species_average_by_forest_zone"
+        else:
+            allowance_value = 0.0
+            allowance_cell = ""
+            component = COAST_SILVICULTURE_COMPONENT
+            source_series = ""
+            effective_date = ""
+            basis = COAST_SILVICULTURE_BASIS
+        net_low = gross_low - allowance_value
+        net_base = gross_base - allowance_value
+        net_high = gross_high - allowance_value
 
         rows.append(
             {
@@ -563,7 +688,7 @@ def build_net_value_rows(
                 "sale_volume_m3": cost["sale_volume_m3"],
                 "distance_class": cost["distance_class"],
                 "haul_distance_km": cost["haul_distance_km"],
-                "cost_region": cost["region"],
+                "cost_appraisal_region": cost["appraisal_region"],
                 "price_region": price_region,
                 "price_low_cad_m3": _fmt(panel.low_cad_m3),
                 "price_base_cad_m3": _fmt(panel.base_cad_m3),
@@ -574,7 +699,7 @@ def build_net_value_rows(
                 "haul_low_cad_m3": _fmt(haul_low),
                 "haul_base_cad_m3": _fmt(haul_base),
                 "haul_high_cad_m3": _fmt(haul_high),
-                "road_silviculture_allowance_cad_m3": _fmt(allowance.value_cad_m3),
+                "road_silviculture_allowance_cad_m3": allowance_cell,
                 "gross_margin_low_cad_m3": _fmt(gross_low),
                 "gross_margin_base_cad_m3": _fmt(gross_base),
                 "gross_margin_high_cad_m3": _fmt(gross_high),
@@ -585,11 +710,11 @@ def build_net_value_rows(
                     "low=price_low-cost_high; base=price_base-cost_base; "
                     "high=price_high-cost_low"
                 ),
-                "road_silviculture_included": "true",
-                "road_silviculture_component": "interior_basic_silviculture",
-                "road_silviculture_source_series": allowance.source_series,
-                "road_silviculture_effective_date": allowance.effective_date,
-                "road_silviculture_basis": "published_CAD_m3_all_species_average_by_forest_zone",
+                "road_silviculture_included": "true" if includes_silviculture else "false",
+                "road_silviculture_component": component,
+                "road_silviculture_source_series": source_series,
+                "road_silviculture_effective_date": effective_date,
+                "road_silviculture_basis": basis,
                 "price_basis": PRICE_BASIS,
                 "price_report_basis": panel.report_basis,
                 "price_period_end": panel.period_end,
@@ -602,8 +727,14 @@ def build_net_value_rows(
                 "net_value_status": NET_VALUE_STATUS,
                 "notes": (
                     "Modeled margin, not observed profit. Published price average "
-                    "minus proxy logging/haul cost minus a published silviculture "
-                    "allowance. No legal, AAC, tenure or policy claim."
+                    "minus proxy logging/haul cost"
+                    + (
+                        " minus a published Interior silviculture allowance."
+                        if includes_silviculture
+                        else "; Coast silviculture is not deducted because CAM "
+                        "publishes CAD/ha only."
+                    )
+                    + " No legal, AAC, tenure or policy claim."
                 ),
             }
         )
@@ -644,6 +775,13 @@ def summarize_by_zone_system(
                 "haul_base_median_cad_m3": _fmt(
                     statistics.median(float(row["haul_base_cad_m3"]) for row in group)
                 ),
+                "logging_plus_haul_base_median_cad_m3": _fmt(
+                    statistics.median(
+                        float(row["logging_base_cad_m3"])
+                        + float(row["haul_base_cad_m3"])
+                        for row in group
+                    )
+                ),
                 "road_silviculture_allowance_cad_m3": group[0][
                     "road_silviculture_allowance_cad_m3"
                 ],
@@ -659,7 +797,13 @@ def summarize_by_zone_system(
                 "net_model_envelope_max_cad_m3": _fmt(max(net_high)),
                 "negative_net_base_count": str(negative),
                 "negative_net_base_share": _fmt(negative / len(group)),
-                "road_silviculture_included": "true",
+                "road_silviculture_included": group[0]["road_silviculture_included"],
+                "price_basis": group[0]["price_basis"],
+                "cost_basis": group[0]["cost_basis"],
+                "evidence": group[0]["evidence"],
+                "observed": group[0]["observed"],
+                "policy_grade": group[0]["policy_grade"],
+                "net_value_status": group[0]["net_value_status"],
                 "interpretation": "model_estimate_not_observed_profit",
             }
         )
@@ -706,7 +850,7 @@ def build_sensitivity(
     one_month_high: list[float] = []
 
     for row in rows:
-        allowance = float(row["road_silviculture_allowance_cad_m3"])
+        allowance = _silviculture_value(row)
         logging_low = float(row["logging_low_cad_m3"])
         logging_base = float(row["logging_base_cad_m3"])
         logging_high = float(row["logging_high_cad_m3"])
@@ -735,9 +879,9 @@ def build_sensitivity(
         _case_row(
             "base",
             "base",
-            "3-month 2025-12 price, base logging and haul, silviculture included",
+            "3-month 2025-12 price, base logging and haul, published Interior silviculture where applicable",
             base,
-            "Primary model case.",
+            "Primary model case; Coast rows exclude silviculture because CAM publishes CAD/ha only.",
         ),
         _case_row(
             "price_low",
@@ -779,7 +923,7 @@ def build_sensitivity(
         _case_row(
             "net_model_road_silviculture_included",
             "road_silviculture",
-            "base case with published Interior basic silviculture allowance",
+            "base case with published Interior basic silviculture allowance where applicable",
             base,
             "Same arithmetic as the primary base case; shown separately for the "
             "included/excluded comparison.",
@@ -841,6 +985,7 @@ def load_qc_reference(path: Path = PROCUREMENT_CSV) -> dict[str, str]:
             "spread_status",
             "price_year",
             "currency_basis",
+            "evidence",
             "interpretation",
         ),
         path,
@@ -867,6 +1012,10 @@ def load_qc_reference(path: Path = PROCUREMENT_CSV) -> dict[str, str]:
             )
     if source["spread_status"] != "computed":
         raise OpenDataNetValueError("QC SEPM spread is not computed")
+    if source["evidence"] != QC_EVIDENCE:
+        raise OpenDataNetValueError(
+            f"QC evidence changed: expected {QC_EVIDENCE!r}, found {source['evidence']!r}"
+        )
     return {
         "reference_id": "qc_2022_sepm_purchased_wood_channel",
         "geography": "QC",
@@ -885,10 +1034,10 @@ def load_qc_reference(path: Path = PROCUREMENT_CSV) -> dict[str, str]:
         "cost_spread_before_transfers_cad_m3": source[
             "cost_spread_before_transfers_cad_m3"
         ],
-        "qc_channel_margin_after_transfers_cad_m3": source[
+        "cost_spread_after_transfers_cad_m3": source[
             "cost_spread_after_transfers_cad_m3"
         ],
-        "evidence": QC_EVIDENCE,
+        "evidence": source["evidence"],
         "observed": "false",
         "policy_grade": "false",
         "net_value_status": QC_NET_VALUE_STATUS,
@@ -972,9 +1121,22 @@ def render_report(
         ],
     )
     allowance_table = _md_table(
-        ("Forest zone", "CAD/m3", "Source"),
+        ("Forest zone", "CAD/m3", "Applied in model", "Source"),
         [
-            (zone, _fmt(allowance.value_cad_m3), allowance.source_series)
+            (
+                zone,
+                _fmt(allowance.value_cad_m3),
+                (
+                    "Interior-priced rows"
+                    if any(
+                        row["zone"] == zone
+                        and row["price_region"] == SILVICULTURE_PRICE_REGION
+                        for row in rows
+                    )
+                    else "not applied (Coast-priced; CAM publishes CAD/ha only)"
+                ),
+                allowance.source_series,
+            )
             for zone, allowance in sorted(allowances.items())
         ],
     )
@@ -996,11 +1158,8 @@ def render_report(
                 row["system"],
                 row["price_region"],
                 row["price_base_cad_m3"],
-                _fmt(
-                    float(row["logging_base_median_cad_m3"])
-                    + float(row["haul_base_median_cad_m3"])
-                ),
-                row["road_silviculture_allowance_cad_m3"],
+                row["logging_plus_haul_base_median_cad_m3"],
+                row["road_silviculture_allowance_cad_m3"] or "excluded",
                 row["net_model_base_median_cad_m3"],
                 f"{row['net_model_base_min_cad_m3']} to {row['net_model_base_max_cad_m3']}",
                 f"{row['negative_net_base_count']}/{row['n_rows']}",
@@ -1044,12 +1203,12 @@ tenure, or policy result. Generated from public data only.
 
 ## Headline
 
-- Rows: **{len(rows)}** (7 forest zones x 3 systems x 5 slopes x 3 piece sizes x 3 sale volumes x 3 haul distances).
+- Rows: **{len(rows)}** (7 forest zones x 5 slope-system scenarios [2 ground, 2 cable, 1 heli] x 3 piece sizes x 3 sale volumes x 3 haul distances).
 - Zone-system groups: **{len(summary_rows)}**.
 - Median base `net_model`: **{_fmt(statistics.median(net_base))} CAD/m3**.
 - Base `net_model` range: **{_fmt(min(net_base))} to {_fmt(max(net_base))} CAD/m3**.
 - Rows with a negative base `net_model`: **{negative} / {len(rows)}**. Negative values are reported modeled losses, not errors or NaN.
-- `road_silviculture_included=true` on every row using the published Interior basic silviculture CAD/m3 allowance.
+- `road_silviculture_included=true` only on Interior-priced rows using the published Interior basic silviculture CAD/m3 allowance. Coast rows are `false` because CAM publishes Coast basic silviculture in CAD/ha only.
 - No BC+QC combined national total exists in this artifact.
 
 ## Price/cost mapping
@@ -1062,15 +1221,20 @@ sensitivity and is never pooled with the primary panel.
 
 Coast base is the volume-weighted average of the published old-growth and
 second-growth report averages. Coast low/high are those two published class
-averages. Interior base is the volume-weighted mean of plausible product cells;
-low/high are the volume-weighted P10/P90 product prices. Interior
-`is_aggregate=true` weighted-average rows are excluded from all product sums.
-Flagged price cells are not used and are written separately to
+averages. The two report classes come from the PDF report footers; `cells_used`
+counts the 79 plausible underlying cells used for the outlier audit, not 79
+independent panel observations. Interior base is the volume-weighted mean of
+plausible product cells; low/high are the volume-weighted P10/P90 product
+prices. Interior `is_aggregate=true` weighted-average rows are excluded from all
+product sums. Flagged price cells are not used and are written separately to
 `bc_open_price_outliers.csv`.
 
 The cost layer is `open_proxy_model`: published 2026 BC machine rates divided by
 public case-study productivity for logging, plus a published-appraisal/engineering
-truck-cycle haul model. It is not an observed contractor cost.
+truck-cycle haul model. It is not an observed contractor cost. Haul and ground
+extraction follow the cost model's `appraisal_region`: North West Zone is
+appraisal-Interior and uses the IAM-derived Interior haul method and a grapple
+skidder, even though its hourly rates come from the coastal/northwest rate group.
 
 {allowance_table}
 
@@ -1079,14 +1243,18 @@ allowances are CAD/km or CAD/each, and converting them to CAD/m3 without site
 quantities would invent data. Road maintenance is also excluded because no
 zone-to-road-group mapping exists. The included allowance is the published
 Interior basic silviculture all-species average, CAD/m3, by forest zone,
-effective {SILVICULTURE_EFFECTIVE_DATE}.
+effective {SILVICULTURE_EFFECTIVE_DATE}. It is applied **only** to
+Interior-priced rows. The Interior table's `South West Zone` value is therefore
+not applied to the Coast-priced South West Zone: CAM Table 5-6 publishes Coast
+basic silviculture only in CAD/ha, and that value is not converted here.
 
 ## BC margin results by zone and system
 
 Base `net_model` = price base - logging base - haul base - silviculture
-allowance. The range columns are the min/max of the scenario rows in each
-zone-system group (27 helicopter rows, 54 ground or cable rows). The low/high
-envelope is conservative/optimistic:
+allowance where an Interior CAD/m3 allowance exists; on Coast rows net_model
+equals gross margin. The range columns are the min/max of the scenario rows in
+each zone-system group (27 helicopter rows, 54 ground or cable rows). The
+low/high envelope is conservative/optimistic:
 low uses price low and cost high; high uses price high and cost low.
 
 {summary_table}
@@ -1113,10 +1281,11 @@ not a mill margin, and not combined with BC.
 | Transfers (CAD/m3) | {qc['transfers_total_cad_m3']} |
 | BGAD after transfers (CAD/m3) | {qc['bgad_after_transfers_cad_m3']} |
 | Cost spread before transfers (CAD/m3) | {qc['cost_spread_before_transfers_cad_m3']} |
-| QC channel margin after transfers (CAD/m3) | **{qc['qc_channel_margin_after_transfers_cad_m3']}** |
+| Cost spread after transfers (CAD/m3) | **{qc['cost_spread_after_transfers_cad_m3']}** |
 
 The 0.81 CAD/m3 figure is the published SEPM purchased-versus-BGAD procurement
 cost spread after transfers. It is a channel cost spread, not forest net value.
+The upstream `survey_procurement_cost` evidence label is preserved.
 
 ## Sensitivity
 
@@ -1124,28 +1293,45 @@ cost spread after transfers. It is a channel cost spread, not forest net value.
 
 Price low/high is the published price distribution within the single primary
 vintage. Cost low/high is the open cost model's published-rate/productivity
-range. The combined envelope multiplies the conservative ends together. The
-1-month price cases are a separate vintage and are not pooled with the 3-month
-primary panel. Road/silviculture excluded versus included is the gross-margin
-versus net-model comparison.
+range. The combined envelope combines the conservative price and cost ends
+(low price minus high cost, high price minus low cost); it does not multiply
+them. The 1-month price cases are a separate vintage and are not pooled with the
+3-month primary panel. Road/silviculture excluded versus included is the
+gross-margin versus net-model comparison; Coast rows have no CAD/m3
+silviculture deduction in either case.
+
+## Licensing
+
+All inputs are **public-reference copyrighted sources**, not strict
+OGL/CC-BY/Statistics Canada open-licence data. The BC appraisal manuals,
+silviculture table, log-market reports, and CVSE material are BC Crown
+copyright; the rate guide is TLA/ILA/NWLA/MNP copyright; FPInnovations/FERIC
+case studies are publisher copyright; the QC survey is a Government of Québec
+public-reference report. Source PDFs are not redistributed in this repository.
+Commercial reuse or redistribution requires permission from the rights holder.
 
 ## Caveats and non-claims
 
 - Published averages, not observed transactions. The price is a reported
   mill-delivered market average, not a transaction record or a mill settlement.
 - Proxy productivity and proxy system assignment. The public cost model uses
-  case-study productivity and maps seven forest zones to two rate groups.
-- North West Zone is a boundary case: the cost model labels it
-  `Coast/Northwest Interior`; this artifact prices it as Interior because it is
-  an Interior forest zone and the published silviculture allowance is Interior.
-  South West Zone is the only zone priced from the Coast panel.
+  case-study productivity and maps seven forest zones to two rate groups, with
+  an explicit appraisal region that selects haul and ground-extraction method.
+- North West Zone is appraisal-Interior: it is priced Interior and uses the
+  Interior haul method and a grapple skidder, while its hourly machine rates
+  come from the coastal/northwest rate group. South West Zone is the only
+  Coast-priced zone.
+- Coast basic silviculture is not deducted: CAM Table 5-6 publishes CAD/ha by
+  BEC unit, not a CAD/m3 allowance, and that value is not converted.
 - Slope, piece-size and sale-volume adjustments are published IAM estimated-
   winning-bid coefficients used as **cost proxies**, not measured cost elasticities.
 - Helicopter logging uses a published IAM specified-operation allowance as a
   total cost proxy.
 - Logging and haul are model estimates, not observed contractor costs.
 - The silviculture allowance is an appraisal/policy allowance, not an observed
-  reforestation invoice.
+  reforestation invoice. It is applied only to Interior-priced rows.
+- Public-reference copyrighted sources, not strict open-licence data; source
+  PDFs are not redistributed and commercial reuse needs rights-holder permission.
 - Nominal CAD. Prices are nominal dollars of their report period; no deflator is applied.
 - No grade, species, end-use, or mill-specific matching is possible. Prices are
   regional averages applied uniformly within a price region.
@@ -1161,7 +1347,9 @@ versus net-model comparison.
 - Ordered low <= base <= high on all cost, gross-margin, and net-model rows: {validation['ranges_ordered']}.
 - No NaN or infinite values in numeric outputs: {validation['finite_outputs']}.
 - Primary price panels use one report basis and one period: {validation['single_price_vintage']}.
+- Coast report totals are consistent and price basis/status are mill_delivered/reported: {validation['coast_price_contract']}.
 - Interior aggregate rows excluded from product sums: {validation['interior_aggregates_excluded']}.
+- `road_silviculture_included=true` on Interior rows only, `false` and blank allowance on Coast rows: {validation['silviculture_interior_only']}.
 - All rows carry `evidence=model_estimate`, `observed=false`, `policy_grade=false`, `net_value_status=model_estimate`: {validation['labels_complete']}.
 - Unexpected `D` (deleted paths) check is performed before commit; see the task report.
 """
@@ -1210,6 +1398,15 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
     )
     for row in rows:
         for column in numeric_columns:
+            if column == "road_silviculture_allowance_cad_m3" and (
+                row["road_silviculture_included"] == "false"
+            ):
+                if row[column] != "":
+                    raise OpenDataNetValueError(
+                        f"excluded silviculture allowance is not blank in "
+                        f"{row['scenario_id']}"
+                    )
+                continue
             if not math.isfinite(float(row[column])):
                 raise OpenDataNetValueError(
                     f"non-finite {column} in {row['scenario_id']}"
@@ -1222,20 +1419,13 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
                 raise OpenDataNetValueError(
                     f"unordered {prefix} range in {row['scenario_id']}"
                 )
-        if float(row["net_model_base_cad_m3"]) != float(
-            row["gross_margin_base_cad_m3"]
-        ) - float(row["road_silviculture_allowance_cad_m3"]):
-            # Two-decimal output can differ by one cent; allow that.
-            delta = abs(
-                float(row["net_model_base_cad_m3"])
-                - (
-                    float(row["gross_margin_base_cad_m3"])
-                    - float(row["road_silviculture_allowance_cad_m3"])
-                )
-            )
-            if delta > 0.011:
+        allowance = _silviculture_value(row)
+        for level in ("low", "base", "high"):
+            gross = float(row[f"gross_margin_{level}_cad_m3"])
+            net = float(row[f"net_model_{level}_cad_m3"])
+            if abs(net - (gross - allowance)) > 0.011:
                 raise OpenDataNetValueError(
-                    f"net_model does not equal gross minus allowance in "
+                    f"net_model {level} does not equal gross minus allowance in "
                     f"{row['scenario_id']}"
                 )
 
@@ -1254,6 +1444,37 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
     if not labels_complete:
         raise OpenDataNetValueError("a net-value row is missing a required label")
 
+    silviculture_interior_rows = sum(
+        1 for row in rows if row["road_silviculture_included"] == "true"
+    )
+    silviculture_coast_rows = len(rows) - silviculture_interior_rows
+    silviculture_interior_only = all(
+        (
+            row["price_region"] == SILVICULTURE_PRICE_REGION
+            and row["road_silviculture_included"] == "true"
+            and row["road_silviculture_allowance_cad_m3"] != ""
+        )
+        or (
+            row["price_region"] != SILVICULTURE_PRICE_REGION
+            and row["road_silviculture_included"] == "false"
+            and row["road_silviculture_allowance_cad_m3"] == ""
+        )
+        for row in rows
+    )
+    if not silviculture_interior_only:
+        raise OpenDataNetValueError(
+            "silviculture allowance must be Interior-only and blank on Coast rows"
+        )
+    coast_panel = price_panels["Coast"]
+    coast_price_contract = (
+        coast_panel.report_totals_status == "consistent"
+        and coast_panel.report_classes_used == 2
+        and coast_panel.average_basis == "pdf_report_footer_average_and_volume"
+        and coast_panel.outliers_excluded == 0
+    )
+    if not coast_price_contract:
+        raise OpenDataNetValueError("Coast price panel contract is not satisfied")
+
     validation: dict[str, Any] = {
         "cost_rows": len(cost_rows),
         "net_value_rows": len(rows),
@@ -1270,6 +1491,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
             and panel.period_end == SENSITIVITY_PRICE_PERIOD_END
             for panel in sensitivity_panels.values()
         ),
+        "coast_price_contract": coast_price_contract,
         "interior_aggregates_excluded": price_panels[
             "Interior"
         ].aggregates_excluded
@@ -1277,9 +1499,9 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
         "labels_complete": labels_complete,
         "negative_net_base_rows": negative_net_base,
         "negative_net_values_documented": True,
-        "road_silviculture_included_on_all_rows": all(
-            row["road_silviculture_included"] == "true" for row in rows
-        ),
+        "silviculture_interior_only": silviculture_interior_only,
+        "silviculture_interior_rows": silviculture_interior_rows,
+        "silviculture_coast_rows_excluded": silviculture_coast_rows,
         "no_restricted_inputs": True,
         "combined_bc_qc_national_total": False,
         "price_outlier_register_rows": len(outliers),
@@ -1302,7 +1524,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
     _write_csv(summary_path, summary_rows, tuple(summary_rows[0]))
     _write_csv(sensitivity_path, sensitivity, tuple(sensitivity[0]))
     _write_csv(qc_path, [qc], tuple(qc))
-    _write_csv(outliers_path, outliers, tuple(outliers[0]))
+    _write_csv(outliers_path, outliers, OUTLIER_FIELDS, allow_empty=True)
     report_path.write_text(
         render_report(
             rows, summary_rows, sensitivity, price_panels, allowances, qc, validation
@@ -1366,6 +1588,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
             "qc_net_value_status": QC_NET_VALUE_STATUS,
             "combined_bc_qc_national_total": False,
         },
+        "licensing": LICENSING,
         "price_panel": {
             "primary_report_basis": PRIMARY_PRICE_BASIS,
             "primary_period_end": PRIMARY_PRICE_PERIOD_END,
@@ -1386,6 +1609,9 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
                     "report_ids": list(panel.report_ids),
                     "log_classes": list(panel.log_classes),
                     "cells_used": panel.cells_used,
+                    "report_classes_used": panel.report_classes_used,
+                    "average_basis": panel.average_basis,
+                    "report_totals_status": panel.report_totals_status,
                     "aggregates_excluded": panel.aggregates_excluded,
                     "outliers_excluded": panel.outliers_excluded,
                 }
@@ -1409,6 +1635,12 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
             "basis": COST_BASIS,
             "rows": len(cost_rows),
             "zones": len(EXPECTED_ZONES),
+            "appraisal_regions": {
+                region: sorted(
+                    {row["zone"] for row in cost_rows if row["appraisal_region"] == region}
+                )
+                for region in ("Coast", "Interior")
+            },
             "systems": list(EXPECTED_SYSTEMS),
             "logging_range_cad_m3": {
                 "min": min(float(row["logging_base_cad_m3"]) for row in cost_rows),
@@ -1420,7 +1652,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
             },
         },
         "road_silviculture_panel": {
-            "included": True,
+            "included": "Interior_priced_rows_only",
             "component": "Interior basic silviculture",
             "cost_basis": "CAD/m3",
             "source_series": SILVICULTURE_SERIES,
@@ -1429,6 +1661,16 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
                 zone: round(allowance.value_cad_m3, 2)
                 for zone, allowance in sorted(allowances.items())
             },
+            "applies_to_price_region": {
+                zone: ZONE_PRICE_REGION[zone] for zone in sorted(allowances)
+            },
+            "coast_included": False,
+            "coast_component": COAST_SILVICULTURE_COMPONENT,
+            "coast_basis": COAST_SILVICULTURE_BASIS,
+            "coast_note": (
+                "CAM Table 5-6 publishes Coast basic silviculture in CAD/ha by "
+                "BEC unit only; no CAD/m3 conversion is invented."
+            ),
             "excluded_components": [
                 "road_development_CAD_per_km",
                 "bridge_CAD_per_each",
@@ -1488,14 +1730,16 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
         "caveats": [
             "Published averages, not observed transactions.",
             "Proxy productivity from public case studies, not a BC-wide survey.",
-            "Proxy system assignment; seven forest zones map to two rate groups.",
-            "North West Zone price crosswalk is a documented boundary case (priced Interior).",
+            "Proxy system assignment; seven forest zones map to two rate groups plus explicit appraisal regions.",
+            "North West Zone is appraisal-Interior: Interior price, haul method and grapple skidder, with coastal/northwest hourly rates.",
+            "South West Zone is Coast-priced; Coast silviculture is excluded because CAM publishes CAD/ha only.",
             "Slope, piece-size and sale-volume IAM coefficients are cost proxies.",
             "Helicopter logging is a specified-operation allowance proxy.",
             "The silviculture allowance is an appraisal/policy value, not an invoice.",
             "Nominal CAD; no deflator is applied across report periods.",
             "No grade/species/end-use matching to specific mills or tenures.",
             "Road/bridge/culvert CAD/km or CAD/each allowances are not converted to CAD/m3.",
+            "Public-reference copyrighted sources, not strict OGL/CC-BY/StatCan open licences; PDFs not redistributed and commercial reuse requires permission.",
             "No observed transactions, mill profit, legal, AAC, tenure, or policy claim.",
         ],
         "non_claims": [
@@ -1523,6 +1767,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
             "CAD/m3 allowance."
         ),
         "restricted_inputs_used": [],
+        "licensing": LICENSING,
         "inputs": [
             {
                 "path": str(path.relative_to(REPO_ROOT)),
@@ -1544,8 +1789,17 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
             "sensitivity_price_basis": SENSITIVITY_PRICE_BASIS,
             "sensitivity_price_period_end": SENSITIVITY_PRICE_PERIOD_END,
             "price_regions": dict(ZONE_PRICE_REGION),
+            "appraisal_regions": {
+                region: sorted(
+                    zone for zone, price_region in ZONE_PRICE_REGION.items()
+                    if price_region == region
+                )
+                for region in ("Coast", "Interior")
+            },
             "silviculture_series": SILVICULTURE_SERIES,
             "silviculture_effective_date": SILVICULTURE_EFFECTIVE_DATE,
+            "silviculture_applies_to_price_region": SILVICULTURE_PRICE_REGION,
+            "coast_silviculture_basis": COAST_SILVICULTURE_BASIS,
         },
         "validation": validation,
         "caveats": summary_payload["caveats"],
@@ -1559,9 +1813,15 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
 
 
 def _write_csv(
-    path: Path, rows: Sequence[Mapping[str, Any]], fieldnames: Sequence[str]
+    path: Path,
+    rows: Sequence[Mapping[str, Any]],
+    fieldnames: Sequence[str],
+    *,
+    allow_empty: bool = False,
 ) -> None:
-    if not rows:
+    if not fieldnames:
+        raise OpenDataNetValueError(f"refusing to write a table without columns: {path}")
+    if not rows and not allow_empty:
         raise OpenDataNetValueError(f"refusing to write empty table: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:

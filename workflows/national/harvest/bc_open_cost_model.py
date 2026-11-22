@@ -39,7 +39,7 @@ from typing import Any
 CAD_M3 = "CAD/m3"
 CAD_SMH = "CAD/SMH"
 M3_SMH = "m3/SMH"
-MODEL_VERSION = "1.0.0"
+MODEL_VERSION = "1.1.0"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT_DIR = (
@@ -53,17 +53,23 @@ APPRAISAL_MANIFEST = (
 RATE_GROUP_COAST = "coastal_northwest_interior"
 RATE_GROUP_INTERIOR = "southern_northern_interior"
 
-# BC forest zones used by the public Interior silviculture table.  The rate
-# guide publishes only two rate groups, so zones inside a group share rates.
+# BC forest zones with their TLA rate group and appraisal jurisdiction.  The
+# rate guide publishes only two rate groups, so zones inside a group share
+# hourly rates.  ``appraisal_region`` is the IAM/CAM jurisdiction and is the
+# field that selects haul and ground-extraction methods; ``rate_group`` only
+# selects machine rates.  North West Zone is Interior for appraisal purposes
+# even though the rate guide files it under the coastal/northwest group.
 ZONES: tuple[tuple[str, str, str], ...] = (
     ("South West Zone", RATE_GROUP_COAST, "Coast"),
-    ("North West Zone", RATE_GROUP_COAST, "Coast/Northwest Interior"),
+    ("North West Zone", RATE_GROUP_COAST, "Interior"),
     ("North Central Zone", RATE_GROUP_INTERIOR, "Interior"),
     ("North East Zone", RATE_GROUP_INTERIOR, "Interior"),
     ("North Fort Nelson Zone", RATE_GROUP_INTERIOR, "Interior"),
     ("South Central Zone", RATE_GROUP_INTERIOR, "Interior"),
     ("South East Zone", RATE_GROUP_INTERIOR, "Interior"),
 )
+APPRAISAL_REGIONS = ("Coast", "Interior")
+SYSTEMS = ("ground", "cable", "heli")
 
 SLOPE_SCENARIOS: tuple[tuple[str, float, str], ...] = (
     ("gentle", 10.0, "ground"),
@@ -163,7 +169,7 @@ IN_BLOCK_LOADED_KMH = 10.0
 IN_BLOCK_EMPTY_KMH = 15.0
 ROAD_LOADED_KMH = 55.0
 ROAD_EMPTY_KMH = 65.0
-UNACHIEVABLE_DELAY_H = 78.0 / 60.0
+UNAVOIDABLE_DELAY_H = 78.0 / 60.0
 LOAD_UNLOAD_H = 0.5
 PAYLOAD_M3 = 50.0
 PAYLOAD_LOW_M3 = 45.0
@@ -336,7 +342,7 @@ class Scenario:
 
     zone: str
     rate_group: str
-    region: str
+    appraisal_region: str
     slope_class: str
     slope_pct: float
     system: str
@@ -346,6 +352,26 @@ class Scenario:
     sale_volume_m3: float
     distance_class: str
     haul_distance_km: float
+
+    def __post_init__(self) -> None:
+        expected = {zone: (rate_group, region) for zone, rate_group, region in ZONES}
+        if self.zone not in expected:
+            raise BcOpenCostModelError(f"unknown forest zone: {self.zone!r}")
+        expected_rate_group, expected_region = expected[self.zone]
+        if self.rate_group != expected_rate_group:
+            raise BcOpenCostModelError(
+                f"rate-group mismatch for {self.zone}: {self.rate_group!r} "
+                f"vs {expected_rate_group!r}"
+            )
+        if self.appraisal_region != expected_region:
+            raise BcOpenCostModelError(
+                f"appraisal-region mismatch for {self.zone}: "
+                f"{self.appraisal_region!r} vs {expected_region!r}"
+            )
+        if self.rate_group not in EQUIPMENT_RATES:
+            raise BcOpenCostModelError(f"unknown rate group: {self.rate_group!r}")
+        if self.system not in SYSTEMS:
+            raise BcOpenCostModelError(f"unknown harvesting system: {self.system!r}")
 
     @property
     def scenario_id(self) -> str:
@@ -390,21 +416,23 @@ def phase_cost(rate_cad_per_smh: float, productivity_m3_per_smh: float) -> float
     return rate / productivity
 
 
-def system_phases(rate_group: str, system: str) -> tuple[str, ...]:
-    """Return the machine phases used by a harvesting system."""
+def system_phases(appraisal_region: str, system: str) -> tuple[str, ...]:
+    """Return the machine phases for an appraisal region and harvesting system."""
+    if appraisal_region not in APPRAISAL_REGIONS:
+        raise BcOpenCostModelError(f"unknown appraisal region: {appraisal_region!r}")
+    if system not in SYSTEMS:
+        raise BcOpenCostModelError(f"unknown harvesting system: {system!r}")
     if system == "ground":
-        if rate_group == RATE_GROUP_COAST:
-            return ("feller_buncher", "forwarder", "processor", "loader")
-        return ("feller_buncher", "grapple_skidder", "processor", "loader")
+        extraction = "forwarder" if appraisal_region == "Coast" else "grapple_skidder"
+        return ("feller_buncher", extraction, "processor", "loader")
     if system == "cable":
         return ("feller_buncher", "yarder", "processor", "loader")
-    if system == "heli":
-        return ()
-    raise BcOpenCostModelError(f"unknown harvesting system: {system!r}")
+    return ()
 
 
 def logging_phase_sum(
     rate_group: str,
+    appraisal_region: str,
     system: str,
     *,
     rate_index: int,
@@ -416,7 +444,9 @@ def logging_phase_sum(
     rates.  ``productivity_factor`` scales the published base productivity.
     """
     _require_positive("productivity_factor", productivity_factor)
-    phases = system_phases(rate_group, system)
+    if rate_group not in EQUIPMENT_RATES:
+        raise BcOpenCostModelError(f"unknown rate group: {rate_group!r}")
+    phases = system_phases(appraisal_region, system)
     rates = EQUIPMENT_RATES[rate_group]
     productivities = BASE_PRODUCTIVITY[rate_group]
     total = 0.0
@@ -425,6 +455,13 @@ def logging_phase_sum(
         productivity = productivities[phase] * productivity_factor
         total += phase_cost(rate, productivity)
     return total
+
+
+def _system_factor(system: str, factors: Mapping[str, float]) -> float:
+    """Return the scenario factor for a validated harvesting system."""
+    if system not in SYSTEMS:
+        raise BcOpenCostModelError(f"unknown harvesting system: {system!r}")
+    return factors[system]
 
 
 def slope_adjustment(slope_pct: float, system: str) -> float:
@@ -437,7 +474,7 @@ def slope_adjustment(slope_pct: float, system: str) -> float:
     """
     if not math.isfinite(slope_pct) or slope_pct < 0.0:
         raise BcOpenCostModelError(f"invalid slope_pct: {slope_pct!r}")
-    factor = {"ground": 1.0, "cable": 0.5, "heli": 0.0}[system]
+    factor = _system_factor(system, {"ground": 1.0, "cable": 0.5, "heli": 0.0})
     return SLOPE_COEFFICIENT_CAD_M3_PER_PCT * max(0.0, slope_pct - SLOPE_FREE_PCT) * factor
 
 
@@ -448,7 +485,7 @@ def piece_adjustment(piece_size_m3: float, system: str) -> float:
     IAM estimated-winning-bid equation and is therefore a proxy.
     """
     piece = _require_positive("piece_size_m3", piece_size_m3)
-    factor = 0.5 if system == "heli" else 1.0
+    factor = _system_factor(system, {"ground": 1.0, "cable": 1.0, "heli": 0.5})
     return -PIECE_COEFFICIENT_CAD_M3_PER_LN * math.log(piece / PIECE_REFERENCE_M3) * factor
 
 
@@ -459,7 +496,7 @@ def volume_adjustment(sale_volume_m3: float, system: str) -> float:
     +/-6 CAD/m3 to keep the proxy within the observed case-study spread.
     """
     volume = _require_positive("sale_volume_m3", sale_volume_m3)
-    factor = 0.5 if system == "heli" else 1.0
+    factor = _system_factor(system, {"ground": 1.0, "cable": 1.0, "heli": 0.5})
     raw = -VOLUME_COEFFICIENT_CAD_M3_PER_LN * math.log(volume / VOLUME_REFERENCE_M3)
     return _clamp(raw, -VOLUME_ADJUSTMENT_CAP_CAD_M3, VOLUME_ADJUSTMENT_CAP_CAD_M3) * factor
 
@@ -482,6 +519,7 @@ def logging_cost(scenario: Scenario) -> CostRange:
     low = (
         logging_phase_sum(
             scenario.rate_group,
+            scenario.appraisal_region,
             scenario.system,
             rate_index=0,
             productivity_factor=PRODUCTIVITY_HIGH_FACTOR,
@@ -491,6 +529,7 @@ def logging_cost(scenario: Scenario) -> CostRange:
     base = (
         logging_phase_sum(
             scenario.rate_group,
+            scenario.appraisal_region,
             scenario.system,
             rate_index=1,
             productivity_factor=1.0,
@@ -500,6 +539,7 @@ def logging_cost(scenario: Scenario) -> CostRange:
     high = (
         logging_phase_sum(
             scenario.rate_group,
+            scenario.appraisal_region,
             scenario.system,
             rate_index=2,
             productivity_factor=PRODUCTIVITY_LOW_FACTOR,
@@ -528,7 +568,7 @@ def cycle_hours(
         + in_block / IN_BLOCK_EMPTY_KMH
         + road / loaded_kmh
         + road / empty_kmh
-        + UNACHIEVABLE_DELAY_H
+        + UNAVOIDABLE_DELAY_H
         + LOAD_UNLOAD_H
     )
 
@@ -551,47 +591,85 @@ def engineering_haul(
     rate_group: str,
     distance_km: float,
     payload_m3: float = PAYLOAD_M3,
+    *,
+    rate_index: int = 1,
 ) -> float:
     """All-found truck + trailer cost divided by payload, CAD/m3."""
     _require_positive("payload_m3", payload_m3)
+    if rate_group not in EQUIPMENT_RATES:
+        raise BcOpenCostModelError(f"unknown rate group: {rate_group!r}")
     rates = EQUIPMENT_RATES[rate_group]
-    hourly = rates["truck_tractor"][1] + rates["trailer"][1]
+    hourly = rates["truck_tractor"][rate_index] + rates["trailer"][rate_index]
     return hourly * cycle_hours(distance_km) / payload_m3
 
 
 def haul_cost(scenario: Scenario) -> CostRange:
-    """Return low/base/high truck-haul cost for a scenario."""
-    engineering = engineering_haul(
+    """Return low/base/high truck-haul cost for a scenario.
+
+    The Interior uses the IAM cycle-time equation combined with the all-found
+    engineering model; the Coast uses the engineering model only because the
+    CAM publishes no general truck-haul equation.  The method follows
+    ``appraisal_region`` (IAM/CAM jurisdiction), not the TLA rate group:
+    North West Zone is appraisal-Interior even though its machine rates come
+    from the coastal/northwest rate group.
+    """
+    engineering_base = engineering_haul(
         scenario.rate_group,
         scenario.haul_distance_km,
         PAYLOAD_M3,
     )
-    if scenario.rate_group == RATE_GROUP_INTERIOR:
-        published = published_interior_haul(scenario.haul_distance_km)
-        base = math.sqrt(published * engineering)
-        low = min(published, engineering * 0.75)
-        high = max(engineering * 1.30, base * 1.10)
+    engineering_low = engineering_haul(
+        scenario.rate_group,
+        scenario.haul_distance_km,
+        PAYLOAD_M3,
+        rate_index=0,
+    )
+    engineering_high = engineering_haul(
+        scenario.rate_group,
+        scenario.haul_distance_km,
+        PAYLOAD_M3,
+        rate_index=2,
+    )
+    if scenario.appraisal_region == "Interior":
+        published_low = published_interior_haul(
+            scenario.haul_distance_km, cpif=CPIF_LOW
+        )
+        published_base = published_interior_haul(scenario.haul_distance_km)
+        published_high = published_interior_haul(
+            scenario.haul_distance_km, cpif=CPIF_HIGH
+        )
+        base = math.sqrt(published_base * engineering_base)
+        low = min(published_low, engineering_low)
+        high = max(published_high, engineering_high)
         return CostRange(low=low, base=base, high=high)
 
     # No general CAM truck-haul equation is published; use the all-found
     # engineering model and its payload/rate uncertainty bounds.
-    low = engineering_haul(
-        scenario.rate_group,
-        scenario.haul_distance_km,
-        PAYLOAD_HIGH_M3,
-    ) * 0.90
-    high = engineering_haul(
-        scenario.rate_group,
-        scenario.haul_distance_km,
-        PAYLOAD_LOW_M3,
-    ) * 1.10
-    return CostRange(low=low, base=engineering, high=high)
+    low = (
+        engineering_haul(
+            scenario.rate_group,
+            scenario.haul_distance_km,
+            PAYLOAD_HIGH_M3,
+            rate_index=0,
+        )
+        * 0.90
+    )
+    high = (
+        engineering_haul(
+            scenario.rate_group,
+            scenario.haul_distance_km,
+            PAYLOAD_LOW_M3,
+            rate_index=2,
+        )
+        * 1.10
+    )
+    return CostRange(low=low, base=engineering_base, high=high)
 
 
 def build_scenarios() -> list[Scenario]:
     """Build the full zone x slope x piece x volume x distance grid."""
     scenarios: list[Scenario] = []
-    for zone, rate_group, region in ZONES:
+    for zone, rate_group, appraisal_region in ZONES:
         for slope_class, slope_pct, system in SLOPE_SCENARIOS:
             for piece_class, piece_size in PIECE_SCENARIOS:
                 for volume_class, sale_volume in VOLUME_SCENARIOS:
@@ -600,7 +678,7 @@ def build_scenarios() -> list[Scenario]:
                             Scenario(
                                 zone=zone,
                                 rate_group=rate_group,
-                                region=region,
+                                appraisal_region=appraisal_region,
                                 slope_class=slope_class,
                                 slope_pct=slope_pct,
                                 system=system,
@@ -628,7 +706,7 @@ def estimate_row(scenario: Scenario) -> dict[str, Any]:
         "scenario_id": scenario.scenario_id,
         "zone": scenario.zone,
         "rate_group": scenario.rate_group,
-        "region": scenario.region,
+        "appraisal_region": scenario.appraisal_region,
         "slope_class": scenario.slope_class,
         "slope_pct": f"{scenario.slope_pct:.1f}",
         "system": scenario.system,
@@ -654,7 +732,7 @@ def estimate_row(scenario: Scenario) -> dict[str, Any]:
         ),
         "haul_basis": (
             "iam_cycle_equation_geometric_mean_engineering"
-            if scenario.rate_group == RATE_GROUP_INTERIOR
+            if scenario.appraisal_region == "Interior"
             else "engineering_all_found_truck_cycle"
         ),
         "evidence_tier": "proxy_modeled_from_published_inputs",
@@ -816,7 +894,7 @@ def parameter_rows() -> list[dict[str, str]]:
         "delay_and_load",
         "truck_haul_cycle",
         "78 min unavoidable delay + 0.5 h loading/unloading",
-        f"{UNACHIEVABLE_DELAY_H:.2f};{LOAD_UNLOAD_H:.2f}",
+        f"{UNAVOIDABLE_DELAY_H:.2f};{LOAD_UNLOAD_H:.2f}",
         "hours per cycle",
         "all regions",
         "bc_iam_2026",
@@ -870,7 +948,7 @@ def sensitivity_rows() -> list[dict[str, str]]:
     base = Scenario(
         zone="South Central Zone",
         rate_group=RATE_GROUP_INTERIOR,
-        region="Interior",
+        appraisal_region="Interior",
         slope_class="moderate",
         slope_pct=28.0,
         system="ground",
@@ -1034,8 +1112,12 @@ contractor cost, a mill settlement, or a net-value estimate.
 
 - **Tree-to-truck logging:** all-found 2026 BC machine rates divided by public
   FPInnovations/FERIC scheduled-hour productivity, by rate group and system.
-- **Truck haul:** IAM 2026 cycle-time/haul equation for the Interior and an
-  all-found truck-cycle model for both regions, with a 45-60 m3 payload band.
+  Ground extraction uses a coastal loader-forwarder for Coast appraisal rows and
+  a grapple skidder for Interior appraisal rows.
+- **Truck haul:** IAM 2026 cycle-time/haul equation combined with an all-found
+  truck-cycle model for Interior appraisal rows; the all-found truck-cycle model
+  alone for Coast appraisal rows (the CAM publishes no general truck-haul
+  equation). The appraisal region, not the rate group, selects the method.
 - **Sensitivity:** slope, piece size, sale volume and haul distance.
 
 The model deliberately does **not** use ILCR/CCTMCS microdata, FPInterface,
@@ -1082,11 +1164,15 @@ haul_CAD_m3 = (truck_tractor_CAD_SMH + trailer_CAD_SMH) * CYCLE_hours / payload_
 
 For the Interior the base is the geometric mean of the published equation and
 the engineering model; for the Coast the engineering model is used because the
-CAM publishes no general truck-haul equation.
+CAM publishes no general truck-haul equation. North West Zone is appraisal-
+Interior and therefore uses the Interior method, while its machine rates come
+from the coastal/northwest rate group. The low/high bounds use the published
+low/high truck and trailer rates and the IAM CPIF range of 0.95-1.05.
 
 ## Coverage
 
-- 7 BC forest zones mapped to the rate guide's two region groups.
+- 7 BC forest zones with explicit appraisal regions: 1 Coast and 6 Interior.
+- Two TLA hourly-rate groups: coastal/northwest and southern/northern Interior.
 - 5 slope scenarios (10, 28, 42, 55, 70%) mapped to ground, cable and
   helicopter systems.
 - 3 piece sizes (0.30, 0.60, 1.00 m3/tree).
@@ -1105,7 +1191,7 @@ CAM publishes no general truck-haul equation.
 | Helicopter allowance | Published IAM specified-operation allowance, used as total proxy |
 | Payload 45-60 m3 | Published weight limits + density conversion, proxy |
 | Road speeds 55/65 km/h | Proxy; district schedules are not public |
-| Regional zone mapping | Proxy; rate guide publishes only two groups |
+| Regional zone mapping | Proxy; rate guide publishes two groups, with an explicit appraisal-region crosswalk |
 
 ## Worked example
 
@@ -1170,7 +1256,8 @@ The model supplies the two missing BC cost components that previously forced
 `net_value_status=not_estimated`: tree-to-truck logging and general truck haul.
 A net-value calculation can now subtract a **range** from a public
 mill-delivered log price or a standing-timber stumpage benchmark, while keeping
-the result labelled `proxy_cost_net_value`. It must still add road, bridge,
+the result labelled `net_value_status=model_estimate` and
+`cost_basis=open_proxy_model`. It must still add road, bridge,
 culvert, silviculture and tenure allowances separately, and it must not label
 the residual as an observed profit or an official net value.
 """
@@ -1261,6 +1348,11 @@ def build(out_dir: Path, pdf_dir: Path | None = None) -> dict[str, Any]:
         "parameters": parameters,
         "scenario_grid": {
             "zones": len(ZONES),
+            "appraisal_regions": {
+                region: sorted(zone for zone, _, appraisal in ZONES if appraisal == region)
+                for region in APPRAISAL_REGIONS
+            },
+            "rate_groups": sorted({rate_group for _, rate_group, _ in ZONES}),
             "slope_scenarios": len(SLOPE_SCENARIOS),
             "piece_scenarios": len(PIECE_SCENARIOS),
             "volume_scenarios": len(VOLUME_SCENARIOS),
@@ -1293,6 +1385,23 @@ def build(out_dir: Path, pdf_dir: Path | None = None) -> dict[str, Any]:
             ),
             "all_systems_present": sorted({row["system"] for row in estimates})
             == ["cable", "ground", "heli"],
+            "appraisal_region_matches_zone": all(
+                row["appraisal_region"]
+                == next(
+                    appraisal for zone, _, appraisal in ZONES if zone == row["zone"]
+                )
+                for row in estimates
+            ),
+            "coast_ground_uses_forwarder": all(
+                "forwarder" in system_phases(row["appraisal_region"], row["system"])
+                for row in estimates
+                if row["appraisal_region"] == "Coast" and row["system"] == "ground"
+            ),
+            "interior_ground_uses_grapple_skidder": all(
+                "grapple_skidder" in system_phases(row["appraisal_region"], row["system"])
+                for row in estimates
+                if row["appraisal_region"] == "Interior" and row["system"] == "ground"
+            ),
             "no_restricted_inputs": True,
             "outputs_sha256": {
                 estimates_path.name: _sha256_file(estimates_path),
@@ -1307,13 +1416,16 @@ def build(out_dir: Path, pdf_dir: Path | None = None) -> dict[str, Any]:
             "All-found equipment rates are contractor revenue requirements, not observed costs.",
             "Productivity is transferred from public case studies and is not a BC-wide survey.",
             "The rate guide publishes two region groups, not seven forest zones.",
+            "North West Zone is appraisal-Interior but uses the coastal/northwest machine-rate group.",
             "Slope, piece-size and sale-volume coefficients are IAM bid-response proxies, not cost elasticities.",
             "Coastal barge/tow, rail, sorting and road/silviculture costs are outside this model.",
             "The helicopter allowance is a specified-operation proxy, not an observed heli contract rate.",
             "No ILCR/CCTMCS microdata, FPInterface, or confidential mill settlement was used.",
         ],
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
     return manifest
 
 
