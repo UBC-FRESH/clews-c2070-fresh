@@ -2,6 +2,25 @@
 
 ## 2026-11-22
 
+- **Added the 13-jurisdiction national bucking representative pilot v1.**
+  Added `workflows/national/bucking/national_bucking_pilot_v1.py`, a national
+  dimension-only pilot sort set
+  (`rules/national_pilot_sorts.csv`), and
+  `tests/test_national_bucking_pilot_v1.py`. The pilot builds ten
+  representative synthetic trees per province from NFI coverage species
+  composition and national DBH/height fits, with explicit documented
+  composition assumptions for AB, ON, NS and NU. Taper dispatch is local
+  Schneider (2013) for QC, local Kozak (2004) for BC, and a labelled donor
+  taper elsewhere. Every row is `model_estimate=true`, `synthetic=true`,
+  `observed=false`, `policy_grade=false`, `national_claim=false`;
+  `grade=not_assigned` and `sort_basis=dimension_only`. The run emits
+  `BuckedLog`, `ResidueLedger`, per-tree reconciliation, province summary,
+  facility coefficient comparison, `summary.json`, report and checksummed
+  manifest under
+  `data/derived/national/bucking/national_bucking_pilot_v1/`. Volume balance is
+  exact per tree and in total (130 trees, 211 logs, 22.086 m3 taper total,
+  3.053 m3 residue). No UI/public OSeCAN change and no unexpected `D`.
+
 - **Added the national bucking Phase 0/2 Quebec pilot.** Added
   `workflows/national/bucking/national_bucking_pilot.py`, `schneider2013.py`,
   `pilot_schema.py`, a versioned Schneider (2013) taper registry

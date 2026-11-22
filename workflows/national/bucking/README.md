@@ -250,3 +250,23 @@ PYTHONPATH=$NEMORA_ROOT/src \
   grade/residue benchmark is model output and is reported with
   mill-vs-harvest and no-official-grade caveats.
 - No RSYC-driven bucking.  RSYC is a stand-level sanity check at most.
+
+## 10. National representative pilot v1
+
+`national_bucking_pilot_v1.py` extends the pilot contract to all 13
+jurisdictions.  It builds ten deterministic representative trees per province
+from open NFI coverage composition and fitted DBH/height statistics, then
+dispatches Quebec Schneider (2013), BC Kozak (2004), or a labelled
+cross-jurisdiction donor taper.  Alberta, Ontario, Nova Scotia and Nunavut use
+explicit documented composition assumptions because the open NFI coverage
+table has no provincial rows for them.  Products use one national
+dimension-only sort set; `grade=not_assigned`.  Scope is a representative
+synthetic pilot, not inventory and not a national supply estimate.  Outputs are
+written under
+`data/derived/national/bucking/national_bucking_pilot_v1/`.
+
+```bash
+.venv/bin/python -m workflows.national.bucking.national_bucking_pilot_v1 \
+  --out-dir data/derived/national/bucking/national_bucking_pilot_v1
+.venv/bin/pytest -q tests/test_national_bucking_pilot_v1.py
+```
