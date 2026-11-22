@@ -7,12 +7,12 @@
   <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="styles.css?v=5e3e9ba98f2a">
+  <link rel="stylesheet" href="styles.css?v=04e0ab69e4e4">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=17c553ef1253"></script>
+  <script defer src="app.js?v=e65e67ba9512"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -454,6 +454,23 @@
                   <table class="data-table economics-table national-net-value-table" id="national-net-value-table"></table>
                 </div>
                 <p class="national-net-value-footnote" id="national-net-value-footnote">150 Mm³ at intensity 1.0 and 1.2 is infeasible: values are blank, not zero.</p>
+
+                <div class="national-allocation-sensitivity" id="national-allocation-sensitivity" aria-labelledby="national-allocation-title">
+                  <div class="national-allocation-head">
+                    <h4 id="national-allocation-title">Economic allocation sensitivity</h4>
+                    <p>Documented ceilings · canonical least-deviation baseline vs net-value optimum · model_estimate · lp_objective=net_value_sensitivity · canonical_changed=false · no LP controls</p>
+                  </div>
+                  <div class="table-wrap national-allocation-table-wrap">
+                    <table class="data-table economics-table national-allocation-table" id="national-allocation-table"></table>
+                  </div>
+                  <p class="national-net-value-footnote" id="national-allocation-footnote">Model estimate only. Delta = optimized − canonical baseline. Donor-price caveat: donor_flat is a donor/flat price proxy, not an observed provincial price; stumpage_scaled is a method sensitivity. canonical_changed=false · no LP/OSeCAN input.</p>
+                  <details class="national-allocation-shifts" id="national-allocation-shifts">
+                    <summary><span>Province allocation shifts</span><span class="national-allocation-summary-note">13 provinces · 119 Mm³ · baseline vs optimized</span></summary>
+                    <div class="table-wrap national-allocation-shift-wrap">
+                      <table class="data-table economics-table national-allocation-shift-table" id="national-allocation-shift-table"></table>
+                    </div>
+                  </details>
+                </div>
               </section>
 
               <p class="national-caveat" id="national-caveat" role="note"></p>

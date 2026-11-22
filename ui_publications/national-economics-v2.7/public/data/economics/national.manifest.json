@@ -1,0 +1,211 @@
+{
+  "schema_version": "economics/national-manifest/3",
+  "model_id": "national_economics_v2_3",
+  "artifact_version": "2.3.0",
+  "generated_utc": "2026-11-22T15:36:32+00:00",
+  "parent_commit": "7ddba4174ed2162bee0eedcb4f843dac32fed8ab",
+  "data_commit": "a8fa59a77ffbdf16b695b3c1cfb543afb507c574",
+  "files": [
+    {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "bytes": 188855,
+      "sha256": "57ae88fe80ac1f27b7e1c6f2ef0468271248ef7a73fda5a4a62ebf45571c8551"
+    }
+  ],
+  "generated": [
+    {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "bytes": 188855,
+      "sha256": "57ae88fe80ac1f27b7e1c6f2ef0468271248ef7a73fda5a4a62ebf45571c8551"
+    }
+  ],
+  "sources": [
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/national_margin_estimates.csv",
+      "rows": 78,
+      "bytes": 67623,
+      "sha256": "376982d9abd17fd5adb2ea455b78cd4bdf7bb74fe5cc7a6ba9cd2eb846e2c3bf"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/national_margin_summary.csv",
+      "rows": 30,
+      "bytes": 14163,
+      "sha256": "ce1fc9969b592d9d7295c838dbaa6bb079945c7577a2e21f42a9b2fcdcf00fc4"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/v2_2_v2_3_comparison.csv",
+      "rows": 30,
+      "bytes": 19597,
+      "sha256": "2f7a2e77649208289ef49ab8e1ca3a6b33d8f97918af410d53daa510acdb1488"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/tier_coverage.csv",
+      "rows": 42,
+      "bytes": 15103,
+      "sha256": "d7c8fdc3314993c5fe3f8f91c4f81117d257f032c4c39393e62973a584f4d404"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/national_cost_inputs.csv",
+      "rows": 18,
+      "bytes": 16274,
+      "sha256": "a9f252046f4d970cbb7a53ad76146f22b58214cdffaa979f6f05f1217ed84733"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/summary.json",
+      "rows": null,
+      "bytes": 96824,
+      "sha256": "0484f13d993ccc9626cc3fa1c7e94c12836c185e6e380482ff000ae76b7e54fc"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_coverage.csv",
+      "rows": 65,
+      "bytes": 32427,
+      "sha256": "d497b3db3c35640df78d7264db404a0aa4bf0015ab3d8283fd1730631135cb49"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_summary.json",
+      "rows": null,
+      "bytes": 6543,
+      "sha256": "0708c44a2c65b97bf998d928d895f85a60d993465e1445407c4885481659be75"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/sources.csv",
+      "rows": 12,
+      "bytes": 6012,
+      "sha256": "9dd6ec092144daa0051fce8fc69165eddbbb4c592f8632236e4ef334b5c0a929"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
+      "rows": 13,
+      "bytes": 8127,
+      "sha256": "187e8d6addbd979259ec2159fe77284f70b3784a30332e9e460d5ac21b7ed168"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/provincial_allocation/119m.csv",
+      "rows": 13,
+      "bytes": 2845,
+      "sha256": "979cda6b5c4b56b593cecc9faf3bd0483db26e821738c8da0f19d5646b5c9a42"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+      "rows": 26,
+      "bytes": 7620,
+      "sha256": "919567ae7e7d85f9103571e72f5bdec32869332c87ec6d2314313fc4efa87d90"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
+      "rows": null,
+      "bytes": 33791,
+      "sha256": "dad15e44fb4d520d6a7773ed0eaba1848d9e09ae9eca722338aae308924e0467"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value.csv",
+      "rows": 117,
+      "bytes": 43893,
+      "sha256": "5f47eb66e6df5a2454a17ca084778c78bbcbb8bcd9d658f4bfeff6414852eda0"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value_summary.csv",
+      "rows": 18,
+      "bytes": 4949,
+      "sha256": "ce1cb62a1194d6b8908c28326d9dd872190d2ae3e107159a577322ce7c5c592c"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/national_net_value_summary.csv",
+      "rows": 54,
+      "bytes": 7344,
+      "sha256": "894166d03b7576d0b130fc833dff0a0ed1a8481b3f01c7fdec38c1f45d714417"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/summary.json",
+      "rows": null,
+      "bytes": 72219,
+      "sha256": "4d174adefd2b4ebdb90476605743955861783d3c0f6b21034cd64ce4ba2b763f"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_net_value_lp.csv",
+      "rows": 182,
+      "bytes": 118111,
+      "sha256": "61058cfbd674d7c62cb87708f67734fbcbffe540b7687bdaff353f0f17100e33"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_delta.csv",
+      "rows": 182,
+      "bytes": 75879,
+      "sha256": "217a925916b6e2ab044bf647b98e04dbf6fc09b7775b732bdc3f8a85e1f706e7"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/summary.json",
+      "rows": null,
+      "bytes": 68264,
+      "sha256": "3ac2a78aafd0eff0159e72facadbe1db9a20653c18f964239bca5a131e9c60f8"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
+      "rows": 13,
+      "bytes": 10854,
+      "sha256": "20e63ca71e644bddc197908aeacfadf765dbae36fbb75eb23de8a6610e9b4e03"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/sources.csv",
+      "rows": 2,
+      "bytes": 1838,
+      "sha256": "19203c8bf6f0f74a30fb186708b16e56f1740a0d8dae6a009d32e7afcce7bd71"
+    }
+  ],
+  "validation": {
+    "ok": true,
+    "default_view": "evidence_coverage",
+    "jurisdiction_count": 13,
+    "price_cell_count": 65,
+    "direct_reported_price_share": 0.33601842,
+    "industry_aggregate_proxy_share": 0.45522715,
+    "component_stack_share": 0.54477285,
+    "donor_fallback_share": 0.0,
+    "direct_cell_count": 3,
+    "proxy_cell_count": 2,
+    "donor_cell_count": 60,
+    "aggregate_proxy_count": 10,
+    "donor_fallback_count": 1,
+    "direct_jurisdiction_count": 1,
+    "donor_only_count": 11,
+    "donor_price_count": 12,
+    "stumpage_rate_count": 8,
+    "stumpage_fallback_count": 5,
+    "ranking_performed": false,
+    "not_decision_grade": true,
+    "base_national_margin_cad_m3": 43.0187,
+    "sensitivity_national_margin_cad_m3": -5.7444,
+    "national_total_margin_donor_flat_m_cad": 5205.328748,
+    "national_total_margin_stumpage_scaled_m_cad": -655.319124,
+    "national_total_margin_province_count": 13,
+    "national_total_margin_allocation_m3": 118977339.1,
+    "national_total_margin_label": "model_estimate_not_policy",
+    "national_total_margin_policy_result": false,
+    "net_value_sensitivity_model_id": "forest_lp_net_value_sensitivity_v1",
+    "net_value_sensitivity_allocation_rows": 117,
+    "net_value_sensitivity_groups": 18,
+    "net_value_sensitivity_documented_ceiling_rows": 6,
+    "net_value_sensitivity_infeasible_rows": 4,
+    "net_value_sensitivity_label": "model_estimate_not_policy",
+    "net_value_sensitivity_lp_objective": "not_used",
+    "net_value_sensitivity_observed_claim": false,
+    "net_value_sensitivity_policy_grade_claim": false,
+    "net_value_sensitivity_unexpected_d_cells": 0,
+    "allocation_net_value_lp_model_id": "provincial_allocation_net_value_lp_v1",
+    "allocation_net_value_lp_documented_rows": 6,
+    "allocation_net_value_lp_province_shift_rows": 13,
+    "allocation_net_value_lp_lp_objective": "net_value_sensitivity",
+    "allocation_net_value_lp_canonical_changed": false,
+    "allocation_net_value_lp_unexpected_d_cells": 0,
+    "observed_claim": false,
+    "policy_grade_claim": false,
+    "combined_national_net_value": false,
+    "forest_lp_input": false,
+    "public_osecan_input": false,
+    "deletions_checked": true,
+    "statcan_unexpected_d_cells": 0
+  }
+}

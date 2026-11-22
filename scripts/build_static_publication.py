@@ -342,6 +342,56 @@ def main() -> None:
     if {row["scenario_role"] for row in documented} != {"base", "sensitivity"}:
         fail("Forest LP net-value documented scenarios must be base/sensitivity")
 
+    allocation_lp = net_value.get("economic_allocation_sensitivity")
+    if not isinstance(allocation_lp, dict):
+        fail("Forest LP net-value section must include the allocation LP sensitivity")
+    if allocation_lp.get("model_id") != "provincial_allocation_net_value_lp_v1":
+        fail("allocation LP net-value model id mismatch")
+    if allocation_lp.get("schema_version") != (
+        "national/provincial-allocation-net-value-lp/1"
+    ):
+        fail("allocation LP net-value schema mismatch")
+    allocation_labels = allocation_lp.get("labels") or {}
+    if allocation_labels.get("evidence") != "model_estimate":
+        fail("allocation LP net-value must stay a model estimate")
+    if allocation_labels.get("lp_objective") != "net_value_sensitivity":
+        fail("allocation LP net-value objective label mismatch")
+    if allocation_labels.get("canonical_changed") is not False:
+        fail("allocation LP net-value must not change the canonical allocation")
+    if allocation_labels.get("observed") is not False or allocation_labels.get(
+        "policy_grade"
+    ) is not False:
+        fail("allocation LP net-value labels must stay model-only")
+    if allocation_labels.get("public_osecan_input") is not False:
+        fail("allocation LP net-value must stay outside public OSeCAN")
+    if not isinstance(allocation_lp.get("donor_price_caveat"), str):
+        fail("allocation LP net-value donor-price caveat is missing")
+    allocation_coverage = allocation_lp.get("coverage") or {}
+    if allocation_coverage.get("documented_ceiling_rows") != 6:
+        fail("allocation LP net-value documented row count mismatch")
+    if allocation_coverage.get("province_shift_rows") != 13:
+        fail("allocation LP net-value province shift count mismatch")
+    if allocation_coverage.get("province_shift_level") != "119m":
+        fail("allocation LP net-value province shifts must use 119m")
+    allocation_rows = allocation_lp.get("rows") or []
+    allocation_shifts = allocation_lp.get("province_shifts") or []
+    if len(allocation_rows) != 6 or len(allocation_shifts) != 13:
+        fail("allocation LP net-value rows or province shifts are incomplete")
+    for row in allocation_rows:
+        if row.get("level") not in {"100m", "119m", "150m"}:
+            fail("allocation LP net-value unexpected level")
+        if row.get("scenario") not in {"donor_flat", "stumpage_scaled"}:
+            fail("allocation LP net-value unexpected scenario")
+        values = (
+            row.get("baseline_m_cad"),
+            row.get("optimized_m_cad"),
+            row.get("delta_m_cad"),
+        )
+        if not all(isinstance(value, (int, float)) for value in values):
+            fail("allocation LP net-value row is blank")
+        if abs(row["delta_m_cad"] - (row["optimized_m_cad"] - row["baseline_m_cad"])) > 1e-3:
+            fail("allocation LP net-value delta does not reconcile")
+
     scenarios = load_json(destination / "public/data/scenarios.json")
     families = {scenario["family"] for scenario in scenarios["scenarios"]}
     pareto_eligible = sum(1 for scenario in scenarios["scenarios"] if scenario.get("pareto_eligible"))
@@ -402,6 +452,8 @@ def main() -> None:
             "forest_lp_net_value_groups": net_coverage["group_rows"],
             "forest_lp_net_value_documented_rows": len(documented),
             "forest_lp_net_value_infeasible_rows": len(infeasible),
+            "allocation_net_value_lp_rows": len(allocation_rows),
+            "allocation_net_value_lp_province_shifts": len(allocation_shifts),
             "payload_manifest_files": len(manifest["files"]),
         },
         "economics": {
@@ -440,6 +492,13 @@ def main() -> None:
                 "documented_ceiling_row_count": len(documented),
                 "infeasible_row_count": len(infeasible),
                 "labels": net_labels,
+                "economic_allocation_sensitivity": {
+                    "model_id": allocation_lp["model_id"],
+                    "artifact_version": allocation_lp.get("artifact_version"),
+                    "coverage": allocation_coverage,
+                    "labels": allocation_labels,
+                    "donor_price_caveat": allocation_lp["donor_price_caveat"],
+                },
             },
         },
         "data_bundle": {

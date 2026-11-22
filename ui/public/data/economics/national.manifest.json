@@ -3,22 +3,22 @@
   "model_id": "national_economics_v2_3",
   "artifact_version": "2.3.0",
   "generated_utc": "2026-11-22T15:36:32+00:00",
-  "parent_commit": "7d568bcb85786ca16569ca03c4d8ad1e3690421f",
-  "data_commit": "a08f97e6abb7601e474500bd702496843f8de374",
+  "parent_commit": "7ddba4174ed2162bee0eedcb4f843dac32fed8ab",
+  "data_commit": "a8fa59a77ffbdf16b695b3c1cfb543afb507c574",
   "files": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 170544,
-      "sha256": "3160b7e80ae5dac9d886cbd8c1cb28c4932ffdaa0af3d9f83febdce09f809a5b"
+      "bytes": 188855,
+      "sha256": "57ae88fe80ac1f27b7e1c6f2ef0468271248ef7a73fda5a4a62ebf45571c8551"
     }
   ],
   "generated": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 170544,
-      "sha256": "3160b7e80ae5dac9d886cbd8c1cb28c4932ffdaa0af3d9f83febdce09f809a5b"
+      "bytes": 188855,
+      "sha256": "57ae88fe80ac1f27b7e1c6f2ef0468271248ef7a73fda5a4a62ebf45571c8551"
     }
   ],
   "sources": [
@@ -125,6 +125,24 @@
       "sha256": "4d174adefd2b4ebdb90476605743955861783d3c0f6b21034cd64ce4ba2b763f"
     },
     {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_net_value_lp.csv",
+      "rows": 182,
+      "bytes": 118111,
+      "sha256": "61058cfbd674d7c62cb87708f67734fbcbffe540b7687bdaff353f0f17100e33"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_delta.csv",
+      "rows": 182,
+      "bytes": 75879,
+      "sha256": "217a925916b6e2ab044bf647b98e04dbf6fc09b7775b732bdc3f8a85e1f706e7"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/summary.json",
+      "rows": null,
+      "bytes": 68264,
+      "sha256": "3ac2a78aafd0eff0159e72facadbe1db9a20653c18f964239bca5a131e9c60f8"
+    },
+    {
       "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
       "rows": 13,
       "bytes": 10854,
@@ -176,6 +194,12 @@
     "net_value_sensitivity_observed_claim": false,
     "net_value_sensitivity_policy_grade_claim": false,
     "net_value_sensitivity_unexpected_d_cells": 0,
+    "allocation_net_value_lp_model_id": "provincial_allocation_net_value_lp_v1",
+    "allocation_net_value_lp_documented_rows": 6,
+    "allocation_net_value_lp_province_shift_rows": 13,
+    "allocation_net_value_lp_lp_objective": "net_value_sensitivity",
+    "allocation_net_value_lp_canonical_changed": false,
+    "allocation_net_value_lp_unexpected_d_cells": 0,
     "observed_claim": false,
     "policy_grade_claim": false,
     "combined_national_net_value": false,

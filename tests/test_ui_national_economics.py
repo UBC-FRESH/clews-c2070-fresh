@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import shutil
 import subprocess
 from pathlib import Path
@@ -21,6 +22,9 @@ TOTAL_SOURCE = (
 TIER_SOURCE = (
     ROOT / "data/derived/national/harvest_basis/national_tier_coverage"
     / "national_tier_coverage.csv"
+)
+ALLOCATION_LP = (
+    ROOT / "data/derived/national/harvest_basis/allocation_net_value_lp"
 )
 
 
@@ -383,6 +387,9 @@ def test_manifest_hashes_v23_payload_and_sources(built):
         "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value_summary.csv",
         "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/national_net_value_summary.csv",
         "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/summary.json",
+        "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_net_value_lp.csv",
+        "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_delta.csv",
+        "data/derived/national/harvest_basis/allocation_net_value_lp/summary.json",
     }
     assert {item["path"] for item in manifest["sources"]} == expected
     for item in manifest["sources"]:
@@ -566,6 +573,10 @@ def test_national_tables_stack_readably_on_mobile():
     assert "content: attr(data-label)" in mobile
     assert ".national-net-value-row" in mobile
     assert "national-net-value-case-note" in app_js
+    assert ".national-allocation-table thead" in mobile
+    assert ".national-allocation-row" in mobile
+    assert ".national-allocation-shift-row" in mobile
+    assert ".national-allocation-shift-table thead" in mobile
 
 
 def test_live_payload_is_not_stale(built):
@@ -663,6 +674,178 @@ def test_forest_lp_net_value_sensitivity_values_and_labels(built):
     assert manifest["validation"]["net_value_sensitivity_lp_objective"] == "not_used"
     assert manifest["validation"]["net_value_sensitivity_observed_claim"] is False
     assert manifest["validation"]["net_value_sensitivity_policy_grade_claim"] is False
+
+
+def test_economic_allocation_sensitivity_has_six_rows_and_119_values(built):
+    payload, manifest = built
+    allocation = payload["forest_lp_net_value_sensitivity"][
+        "economic_allocation_sensitivity"
+    ]
+
+    assert allocation["model_id"] == "provincial_allocation_net_value_lp_v1"
+    assert allocation["schema_version"] == (
+        "national/provincial-allocation-net-value-lp/1"
+    )
+    assert allocation["labels"] == {
+        "evidence": "model_estimate",
+        "net_value_label": "model_estimate",
+        "observed": False,
+        "policy_grade": False,
+        "lp_objective": "net_value_sensitivity",
+        "canonical_changed": False,
+        "baseline_objective": "least_deviation_from_observed_2024_shares",
+        "combined_national_net_value": False,
+        "public_osecan_input": False,
+        "restricted_data_used": False,
+        "ranking_performed": False,
+        "forest_lp_input": False,
+    }
+    assert allocation["coverage"]["documented_ceiling_rows"] == 6
+    assert allocation["coverage"]["province_shift_rows"] == 13
+    assert allocation["coverage"]["province_shift_level"] == "119m"
+    assert "donor/flat price proxy" in allocation["donor_price_caveat"]
+
+    expected = {
+        ("100m", "donor_flat"): (4347.226340, 5546.067491, 1198.841151),
+        ("100m", "stumpage_scaled"): (-559.722837, 1564.428413, 2124.151250),
+        ("119m", "donor_flat"): (5205.328751, 6166.356896, 961.028145),
+        ("119m", "stumpage_scaled"): (-655.319121, 880.081002, 1535.400123),
+        ("150m", "donor_flat"): (6662.823952, 7167.753143, 504.929191),
+        ("150m", "stumpage_scaled"): (-1194.863822, -472.825253, 722.038569),
+    }
+    rows = allocation["rows"]
+    assert len(rows) == 6
+    assert {(row["level"], row["scenario"]) for row in rows} == set(expected)
+    for row in rows:
+        baseline, optimized, delta = expected[(row["level"], row["scenario"])]
+        assert row["baseline_m_cad"] == pytest.approx(baseline, abs=1e-6)
+        assert row["optimized_m_cad"] == pytest.approx(optimized, abs=1e-6)
+        assert row["delta_m_cad"] == pytest.approx(delta, abs=1e-6)
+        assert row["delta_m_cad"] == pytest.approx(
+            row["optimized_m_cad"] - row["baseline_m_cad"], abs=1e-3
+        )
+        assert row["evidence"] == "model_estimate"
+        assert row["lp_objective"] == "net_value_sensitivity"
+        assert row["canonical_changed"] is False
+    donor_119 = next(
+        row
+        for row in rows
+        if row["level"] == "119m" and row["scenario"] == "donor_flat"
+    )
+    scaled_119 = next(
+        row
+        for row in rows
+        if row["level"] == "119m" and row["scenario"] == "stumpage_scaled"
+    )
+    assert donor_119["baseline_m_cad"] == pytest.approx(5205.328751, abs=1e-6)
+    assert donor_119["optimized_m_cad"] == pytest.approx(6166.356896, abs=1e-6)
+    assert donor_119["delta_m_cad"] == pytest.approx(961.028145, abs=1e-6)
+    assert scaled_119["baseline_m_cad"] == pytest.approx(-655.319121, abs=1e-6)
+    assert scaled_119["optimized_m_cad"] == pytest.approx(880.081002, abs=1e-6)
+    assert scaled_119["delta_m_cad"] == pytest.approx(1535.400123, abs=1e-6)
+
+    shifts = allocation["province_shifts"]
+    assert len(shifts) == 13
+    assert {row["province"] for row in shifts} == {
+        "BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "NL", "PE", "YT", "NT", "NU"
+    }
+    for row in shifts:
+        assert row["level"] == "119m"
+        assert math.isfinite(row["baseline_m3"])
+        for scenario in ("donor_flat", "stumpage_scaled"):
+            assert math.isfinite(row["scenarios"][scenario]["optimized_m3"])
+            assert math.isfinite(row["scenarios"][scenario]["delta_m3"])
+
+    validation = manifest["validation"]
+    assert validation["allocation_net_value_lp_model_id"] == (
+        "provincial_allocation_net_value_lp_v1"
+    )
+    assert validation["allocation_net_value_lp_documented_rows"] == 6
+    assert validation["allocation_net_value_lp_province_shift_rows"] == 13
+    assert validation["allocation_net_value_lp_lp_objective"] == (
+        "net_value_sensitivity"
+    )
+    assert validation["allocation_net_value_lp_canonical_changed"] is False
+    assert validation["allocation_net_value_lp_unexpected_d_cells"] == 0
+
+
+def test_allocation_lp_unexpected_d_fails_closed():
+    allocation_rows = _read_csv(ALLOCATION_LP / "allocation_net_value_lp.csv")
+    delta_rows = _read_csv(ALLOCATION_LP / "allocation_delta.csv")
+    summary = json.loads(
+        (ALLOCATION_LP / "summary.json").read_text(encoding="utf-8")
+    )
+    exporter._allocation_net_value_lp_sensitivity(
+        allocation_rows, delta_rows, summary
+    )
+
+    mutated = [dict(row) for row in allocation_rows]
+    mutated[0]["case_status"] = "D"
+    with pytest.raises(exporter.NationalEconomicsUiError, match="unexpected D"):
+        exporter._allocation_net_value_lp_sensitivity(
+            mutated, delta_rows, summary
+        )
+
+    mutated_delta = [dict(row) for row in delta_rows]
+    mutated_delta[0]["direction"] = "D"
+    with pytest.raises(exporter.NationalEconomicsUiError, match="unexpected D"):
+        exporter._allocation_net_value_lp_sensitivity(
+            allocation_rows, mutated_delta, summary
+        )
+
+
+def test_ui_economic_allocation_sensitivity_is_compact_and_read_only():
+    html = (ROOT / "ui/index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
+    allocation = html.split('id="national-allocation-sensitivity"', 1)[1].split(
+        'id="national-caveat"', 1
+    )[0]
+
+    assert 'id="national-allocation-title"' in allocation
+    assert "Economic allocation sensitivity" in allocation
+    assert "model_estimate" in allocation
+    assert "lp_objective=net_value_sensitivity" in allocation
+    assert "canonical_changed=false" in allocation
+    assert "donor/flat price proxy" in allocation
+    assert 'id="national-allocation-table"' in allocation
+    assert 'id="national-allocation-footnote"' in allocation
+    assert 'id="national-allocation-shifts"' in allocation
+    assert 'id="national-allocation-shift-table"' in allocation
+    assert (
+        '<details class="national-allocation-shifts" '
+        'id="national-allocation-shifts">'
+    ) in allocation
+    assert (
+        '<details class="national-allocation-shifts" '
+        'id="national-allocation-shifts" open'
+    ) not in allocation
+    assert "national-allocation-chart" not in allocation
+    assert allocation.count("<button") == 0
+    assert allocation.count("<form") == 0
+    assert allocation.count("<select") == 0
+    assert allocation.count('type="range"') == 0
+
+    assert "function renderNationalAllocationSensitivity" in app_js
+    assert "economic_allocation_sensitivity" in app_js
+    renderer = app_js.split(
+        "function renderNationalAllocationSensitivity", 1
+    )[1].split("function renderNationalCaveat", 1)[0]
+    assert "row.baseline_m_cad" in renderer
+    assert "row.optimized_m_cad" in renderer
+    assert "row.delta_m_cad" in renderer
+    assert "allocation.province_shifts" in renderer
+    assert "national-allocation-chart" not in app_js
+    assert "data-label=\"Baseline M CAD\"" in renderer
+    assert "data-label=\"Optimized M CAD\"" in renderer
+    assert "data-label=\"Delta M CAD\"" in renderer
+    render_block = app_js.split("function renderNational()", 1)[1].split(
+        "/* ---------------- Inputs ---------------- */", 1
+    )[0]
+    assert render_block.index(
+        "renderNationalNetValueTable()"
+    ) < render_block.index(
+        "renderNationalAllocationSensitivity()"
+    ) < render_block.index("renderNationalCaveat()")
 
 
 def test_150m_intensity_rows_are_blank_not_zero(built):

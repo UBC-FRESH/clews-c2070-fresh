@@ -6697,6 +6697,66 @@
     requireTrue(infeasibleRows === 4,
       '150m intensity 1.0 and 1.2 net-value rows must stay infeasible and blank');
 
+    var allocationLp = netValue.economic_allocation_sensitivity || {};
+    requireTrue(allocationLp.model_id === 'provincial_allocation_net_value_lp_v1' &&
+      allocationLp.schema_version === 'national/provincial-allocation-net-value-lp/1',
+      'economic allocation sensitivity schema mismatch');
+    var allocationLabels = allocationLp.labels || {};
+    requireTrue(allocationLabels.evidence === 'model_estimate' &&
+      allocationLabels.lp_objective === 'net_value_sensitivity' &&
+      allocationLabels.canonical_changed === false,
+      'economic allocation sensitivity labels mismatch');
+    requireTrue(allocationLabels.observed === false && allocationLabels.policy_grade === false &&
+      allocationLabels.public_osecan_input === false && allocationLabels.ranking_performed === false &&
+      allocationLabels.combined_national_net_value === false,
+      'economic allocation sensitivity must stay read-only and model-only');
+    var allocationCoverage = allocationLp.coverage || {};
+    requireTrue(allocationCoverage.documented_ceiling_rows === 6 &&
+      allocationCoverage.province_shift_rows === 13 &&
+      allocationCoverage.province_shift_level === '119m' &&
+      allocationCoverage.province_count === 13,
+      'economic allocation sensitivity coverage mismatch');
+    requireTrue(Array.isArray(allocationLp.rows) && allocationLp.rows.length === 6,
+      'economic allocation sensitivity must have six rows');
+    var allocationKeys = new Set();
+    allocationLp.rows.forEach(function (row) {
+      requireTrue(['100m', '119m', '150m'].indexOf(row.level) !== -1 &&
+        ['donor_flat', 'stumpage_scaled'].indexOf(row.scenario) !== -1,
+        'unexpected economic allocation case or scenario');
+      requireTrue(row.evidence === 'model_estimate' && row.observed === false &&
+        row.policy_grade === false && row.lp_objective === 'net_value_sensitivity' &&
+        row.canonical_changed === false,
+        'economic allocation row labels mismatch');
+      requireTrue(Number.isFinite(row.baseline_m_cad) && Number.isFinite(row.optimized_m_cad) &&
+        Number.isFinite(row.delta_m_cad),
+        'economic allocation row is blank');
+      requireTrue(Math.abs(row.delta_m_cad - (row.optimized_m_cad - row.baseline_m_cad)) < 0.001,
+        'economic allocation delta does not equal optimized minus baseline');
+      allocationKeys.add(row.level + '/' + row.scenario);
+    });
+    requireTrue(allocationKeys.size === 6,
+      'economic allocation rows must be 3 cases x 2 scenarios');
+    requireTrue(Array.isArray(allocationLp.province_shifts) &&
+      allocationLp.province_shifts.length === 13,
+      'province allocation shift table must have 13 provinces');
+    var shiftProvinces = new Set();
+    allocationLp.province_shifts.forEach(function (row) {
+      requireTrue(row.level === '119m' && Number.isFinite(row.baseline_m3) &&
+        row.scenarios && row.scenarios.donor_flat && row.scenarios.stumpage_scaled,
+        'province allocation shift row is incomplete');
+      requireTrue(Number.isFinite(row.scenarios.donor_flat.optimized_m3) &&
+        Number.isFinite(row.scenarios.donor_flat.delta_m3) &&
+        Number.isFinite(row.scenarios.stumpage_scaled.optimized_m3) &&
+        Number.isFinite(row.scenarios.stumpage_scaled.delta_m3),
+        'province allocation shift values are incomplete');
+      shiftProvinces.add(row.province);
+    });
+    requireTrue(shiftProvinces.size === 13,
+      'province allocation shifts must cover 13 unique provinces');
+    requireTrue(typeof allocationLp.donor_price_caveat === 'string' &&
+      allocationLp.donor_price_caveat.indexOf('donor/flat price proxy') !== -1,
+      'economic allocation sensitivity is missing the donor-price caveat');
+
     var coverage = national.evidence_coverage || {};
     requireTrue(coverage.default_view === 'evidence_coverage' && coverage.not_decision_grade === true,
       'national evidence coverage is not evidence-first');
@@ -7163,6 +7223,75 @@
     $('national-net-value-table').innerHTML = header + '<tbody>' + rows + '</tbody>';
   }
 
+  function renderNationalAllocationSensitivity() {
+    var allocation = state.national.forest_lp_net_value_sensitivity.economic_allocation_sensitivity;
+    var rows = allocation.rows.map(function (row) {
+      return '<tr class="national-allocation-row" data-level="' + esc(row.level) +
+          '" data-scenario="' + esc(row.scenario) + '">' +
+        '<td class="national-allocation-case"><strong>' + esc(row.level_label) + '</strong>' +
+          '<span class="national-cell-note">documented ceiling</span></td>' +
+        '<td class="national-allocation-scenario"><span class="badge badge--national-tier badge--national-' +
+          (row.scenario === 'donor_flat' ? 'donor-proxy' : 'stumpage-scaled-proxy') + '">' +
+          esc(row.scenario_label) + '</span></td>' +
+        '<td class="num national-allocation-num" data-label="Baseline M CAD">' +
+          '<span class="' + (row.baseline_m_cad < 0 ? 'is-negative-value' : '') + '">' +
+          nationalSigned(row.baseline_m_cad, 2) + '</span></td>' +
+        '<td class="num national-allocation-num" data-label="Optimized M CAD">' +
+          '<span class="' + (row.optimized_m_cad < 0 ? 'is-negative-value' : '') + '">' +
+          nationalSigned(row.optimized_m_cad, 2) + '</span></td>' +
+        '<td class="num national-allocation-num" data-label="Delta M CAD">' +
+          '<span class="' + (row.delta_m_cad < 0 ? 'is-negative-value' : '') + '">' +
+          nationalSigned(row.delta_m_cad, 2) + '</span></td>' +
+      '</tr>';
+    }).join('');
+    $('national-allocation-table').innerHTML =
+      '<caption>Economic allocation LP sensitivity · documented ceilings · model_estimate · ' +
+        'lp_objective=net_value_sensitivity · canonical_changed=false · ' +
+        'delta = optimized − canonical least-deviation baseline · no LP/OSeCAN input</caption>' +
+      '<thead><tr>' +
+        '<th>Case</th>' +
+        '<th>Scenario</th>' +
+        '<th class="num">Baseline<br><span class="national-th-sub">M CAD</span></th>' +
+        '<th class="num">Optimized<br><span class="national-th-sub">M CAD</span></th>' +
+        '<th class="num">Delta<br><span class="national-th-sub">M CAD</span></th>' +
+      '</tr></thead><tbody>' + rows + '</tbody>';
+
+    $('national-allocation-footnote').innerHTML =
+      '<strong>Model estimate only.</strong> Delta = optimized − canonical baseline. ' +
+      esc(allocation.donor_price_caveat) +
+      ' <span class="mono">lp_objective=net_value_sensitivity · canonical_changed=false · ' +
+      'no LP/OSeCAN input</span>';
+
+    var shiftRows = allocation.province_shifts.map(function (row) {
+      var donor = row.scenarios.donor_flat;
+      var scaled = row.scenarios.stumpage_scaled;
+      return '<tr class="national-allocation-shift-row">' +
+        '<td class="national-shift-province"><strong>' + esc(row.province) + '</strong>' +
+          '<span>' + esc(row.province_name) + '</span></td>' +
+        '<td class="num" data-label="Baseline Mm³">' + fmt(row.baseline_m3 / 1e6, 3) + '</td>' +
+        '<td class="num" data-label="donor_flat optimized Mm³">' + fmt(donor.optimized_m3 / 1e6, 3) + '</td>' +
+        '<td class="num" data-label="donor_flat delta Mm³">' +
+          '<span class="' + (donor.delta_m3 < 0 ? 'is-negative-value' : '') + '">' +
+          nationalSigned(donor.delta_m3 / 1e6, 3) + '</span></td>' +
+        '<td class="num" data-label="stumpage_scaled optimized Mm³">' + fmt(scaled.optimized_m3 / 1e6, 3) + '</td>' +
+        '<td class="num" data-label="stumpage_scaled delta Mm³">' +
+          '<span class="' + (scaled.delta_m3 < 0 ? 'is-negative-value' : '') + '">' +
+          nationalSigned(scaled.delta_m3 / 1e6, 3) + '</span></td>' +
+      '</tr>';
+    }).join('');
+    $('national-allocation-shift-table').innerHTML =
+      '<caption>Province allocation shifts · 119 Mm³ documented ceiling · ' +
+        'baseline = canonical least-deviation allocation · optimized = net-value LP · Mm³</caption>' +
+      '<thead><tr>' +
+        '<th>Province</th>' +
+        '<th class="num">Baseline<br><span class="national-th-sub">Mm³</span></th>' +
+        '<th class="num">donor_flat opt.<br><span class="national-th-sub">Mm³</span></th>' +
+        '<th class="num">donor Δ<br><span class="national-th-sub">Mm³</span></th>' +
+        '<th class="num">stumpage_scaled opt.<br><span class="national-th-sub">Mm³</span></th>' +
+        '<th class="num">scaled Δ<br><span class="national-th-sub">Mm³</span></th>' +
+      '</tr></thead><tbody>' + shiftRows + '</tbody>';
+  }
+
   function renderNationalCaveat() {
     var coverage = state.national.evidence_coverage;
     $('national-caveat').innerHTML =
@@ -7229,6 +7358,7 @@
     renderNationalTable();
     renderNationalDrilldown();
     renderNationalNetValueTable();
+    renderNationalAllocationSensitivity();
     renderNationalCaveat();
     renderNationalMethods();
     $('national-loading').hidden = true;

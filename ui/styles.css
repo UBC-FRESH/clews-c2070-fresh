@@ -3006,6 +3006,117 @@ tr.zone-row--national .zone-heat-cell { border-top: 3px solid var(--amber); }
   line-height: 1.5;
 }
 
+.national-allocation-sensitivity {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-strong);
+}
+.national-allocation-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+.national-allocation-head h4 {
+  margin: 0;
+  color: var(--pine-950);
+  font-family: var(--display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.national-allocation-head p {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  line-height: 1.5;
+}
+.national-allocation-table-wrap { margin-top: 8px; }
+.national-allocation-table { min-width: 630px; }
+.national-allocation-table caption {
+  caption-side: top;
+  padding: 0 0 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  line-height: 1.5;
+  text-align: left;
+}
+.national-allocation-row td { background: rgba(169, 79, 49, 0.035); }
+.national-allocation-row:hover td { background: rgba(169, 79, 49, 0.08); }
+.national-allocation-case strong { display: block; font-size: 0.78rem; }
+.national-allocation-case .national-cell-note { margin-top: 1px; }
+.national-allocation-scenario .badge { margin: 0; white-space: nowrap; }
+.national-allocation-num {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.national-allocation-num .is-negative-value { color: var(--rust-dark); font-weight: 700; }
+
+.national-allocation-shifts {
+  margin-top: 12px;
+  background: rgba(255, 252, 244, 0.7);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+.national-allocation-shifts summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 14px;
+  padding: 9px 12px;
+  color: var(--pine-900);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.national-allocation-shifts summary::-webkit-details-marker { display: none; }
+.national-allocation-shifts summary::after {
+  content: "+";
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.national-allocation-shifts[open] summary::after { content: "−"; }
+.national-allocation-summary-note {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.54rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.national-allocation-shift-wrap { margin: 0 12px 12px; }
+.national-allocation-shift-table { min-width: 720px; }
+.national-allocation-shift-table caption {
+  caption-side: top;
+  padding: 0 0 7px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  line-height: 1.5;
+  text-align: left;
+}
+.national-allocation-shift-row td {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.national-allocation-shift-row .is-negative-value { color: var(--rust-dark); font-weight: 700; }
+.national-shift-province strong { display: block; font-family: var(--body); font-size: 0.7rem; }
+.national-shift-province span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.52rem;
+}
+
 .national-caveat {
   margin: 18px 0 0;
   padding: 8px 0 8px 12px;
@@ -3163,6 +3274,107 @@ tr.zone-row--national .zone-heat-cell { border-top: 3px solid var(--amber); }
     border-top: 1px solid var(--line);
   }
   .national-net-value-footnote { font-size: 0.64rem; }
+
+  .national-allocation-table-wrap,
+  .national-allocation-shift-wrap {
+    overflow: visible;
+    margin: 8px 0 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  .table-wrap .national-allocation-table,
+  .table-wrap .national-allocation-shift-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .national-allocation-table caption,
+  .national-allocation-shift-table caption { display: block; }
+  .national-allocation-table thead,
+  .national-allocation-shift-table thead { display: none; }
+  .national-allocation-table tbody,
+  .national-allocation-shift-table tbody { display: grid; gap: 8px; }
+  .national-allocation-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px 10px;
+    padding: 8px 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-card);
+  }
+  .national-allocation-row td,
+  .national-allocation-row td.num {
+    display: block;
+    padding: 2px 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  .national-allocation-row td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .national-allocation-row td.national-allocation-case,
+  .national-allocation-row td.national-allocation-scenario {
+    padding: 0 0 5px;
+  }
+  .national-allocation-row td.national-allocation-case {
+    grid-column: 1 / -1;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--line);
+  }
+  .national-allocation-row td.national-allocation-scenario {
+    grid-column: 1 / -1;
+  }
+  .national-allocation-row td.national-allocation-scenario::before { display: none; }
+  .national-allocation-num { font-size: 0.78rem; }
+  .national-allocation-shift-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 10px;
+    padding: 8px 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+  }
+  .national-allocation-shift-row td,
+  .national-allocation-shift-row td.num {
+    display: block;
+    padding: 2px 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  .national-allocation-shift-row td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .national-allocation-shift-row td.national-shift-province {
+    grid-column: 1 / -1;
+    padding: 0 0 6px;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--line);
+  }
+  .national-allocation-shifts summary {
+    padding: 9px 10px;
+    font-size: 0.56rem;
+  }
+  .national-allocation-summary-note { font-size: 0.5rem; }
 }
 
 @media (max-width: 560px) {

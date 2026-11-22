@@ -64,6 +64,10 @@ NET_VALUE_ALLOCATION_CSV = NET_VALUE_DIR / "allocation_net_value.csv"
 NET_VALUE_GROUP_CSV = NET_VALUE_DIR / "allocation_net_value_summary.csv"
 NET_VALUE_NATIONAL_CSV = NET_VALUE_DIR / "national_net_value_summary.csv"
 NET_VALUE_SUMMARY_JSON = NET_VALUE_DIR / "summary.json"
+ALLOCATION_LP_DIR = HARVEST_BASIS_DIR / "allocation_net_value_lp"
+ALLOCATION_LP_CSV = ALLOCATION_LP_DIR / "allocation_net_value_lp.csv"
+ALLOCATION_LP_DELTA_CSV = ALLOCATION_LP_DIR / "allocation_delta.csv"
+ALLOCATION_LP_SUMMARY_JSON = ALLOCATION_LP_DIR / "summary.json"
 OUT_JSON = REPO_ROOT / "ui/public/data/economics/national.json"
 OUT_MANIFEST = REPO_ROOT / "ui/public/data/economics/national.manifest.json"
 
@@ -128,6 +132,33 @@ NET_VALUE_EXPECTED_BASE_M_CAD = {
     ("150m", "donor_flat"): 6662.82394963578,
     ("150m", "stumpage_scaled"): -1194.8638226528499,
 }
+
+ALLOCATION_LP_MODEL_ID = "provincial_allocation_net_value_lp_v1"
+ALLOCATION_LP_SCHEMA_VERSION = "national/provincial-allocation-net-value-lp/1"
+ALLOCATION_LP_LEVELS = ("100m", "119m", "150m")
+ALLOCATION_LP_SCENARIOS = ("donor_flat", "stumpage_scaled")
+ALLOCATION_LP_PROVINCES = (
+    "BC",
+    "AB",
+    "SK",
+    "MB",
+    "ON",
+    "QC",
+    "NB",
+    "NS",
+    "NL",
+    "PE",
+    "YT",
+    "NT",
+    "NU",
+)
+ALLOCATION_LP_EXPECTED_ALLOCATION_ROWS = 182
+ALLOCATION_LP_EXPECTED_DELTA_ROWS = 182
+ALLOCATION_LP_EXPECTED_FEASIBLE_CASES = 14
+ALLOCATION_LP_EXPECTED_SUMMARY_CASES = 18
+ALLOCATION_LP_EXPECTED_DOCUMENTED_ROWS = 6
+ALLOCATION_LP_EXPECTED_PROVINCE_SHIFTS = 13
+ALLOCATION_LP_SHIFT_LEVEL = "119m"
 
 
 class NationalEconomicsUiError(RuntimeError):
@@ -1344,6 +1375,397 @@ def _forest_lp_net_value_sensitivity(
     }
 
 
+def _allocation_net_value_lp_sensitivity(
+    allocation_rows: list[dict[str, str]],
+    delta_rows: list[dict[str, str]],
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Build the documented-ceiling net-value allocation LP sensitivity.
+
+    The section reports the optimized allocation beside the canonical
+    least-deviation baseline. It is derived only from the committed
+    per-province CSVs and cross-checked against the committed summary. The
+    LP objective is a sensitivity label here; no canonical allocation, UI
+    control, Forest LP objective, or public OSeCAN input changes.
+    """
+    if summary.get("model_id") != ALLOCATION_LP_MODEL_ID:
+        _fail(
+            "allocation LP net-value model_id mismatch: "
+            f"{summary.get('model_id')!r}"
+        )
+    if summary.get("schema_version") != ALLOCATION_LP_SCHEMA_VERSION:
+        _fail("allocation LP net-value schema mismatch")
+    if len(allocation_rows) != ALLOCATION_LP_EXPECTED_ALLOCATION_ROWS:
+        _fail(
+            "allocation LP net-value rows must be "
+            f"{ALLOCATION_LP_EXPECTED_ALLOCATION_ROWS}, "
+            f"got {len(allocation_rows)}"
+        )
+    if len(delta_rows) != ALLOCATION_LP_EXPECTED_DELTA_ROWS:
+        _fail(
+            "allocation LP delta rows must be "
+            f"{ALLOCATION_LP_EXPECTED_DELTA_ROWS}, "
+            f"got {len(delta_rows)}"
+        )
+    _assert_no_unexpected_d(allocation_rows, "allocation LP net-value")
+    _assert_no_unexpected_d(delta_rows, "allocation LP delta")
+
+    labels = summary.get("labels") or {}
+    expected_labels = {
+        "evidence": "model_estimate",
+        "observed": False,
+        "policy_grade": False,
+        "lp_objective": "net_value_sensitivity",
+        "canonical_changed": False,
+        "combined_national_net_value": False,
+        "public_osecan_input": False,
+        "restricted_data_used": False,
+    }
+    for field, expected in expected_labels.items():
+        if labels.get(field) != expected:
+            _fail(
+                f"allocation LP label {field} must be {expected!r}, "
+                f"got {labels.get(field)!r}"
+            )
+
+    validation = summary.get("validation") or {}
+    if validation.get("unexpected_d_cells") not in (0, None):
+        _fail(
+            "allocation LP reports unexpected D cells: "
+            f"{validation.get('unexpected_d_cells')!r}"
+        )
+    if validation.get("observed_d_cell_count") not in (0, None):
+        _fail(
+            "allocation LP observed D cell count must remain zero: "
+            f"{validation.get('observed_d_cell_count')!r}"
+        )
+    if validation.get("canonical_changed") is not False:
+        _fail("allocation LP must not change the canonical allocation")
+    if validation.get("canonical_snapshot_unchanged") is not True:
+        _fail("allocation LP canonical snapshot check failed")
+    if validation.get("baseline_preserved") is not True:
+        _fail("allocation LP baseline preservation check failed")
+    if validation.get("all_values_model_estimate") is not True:
+        _fail("allocation LP must keep every value a model estimate")
+    if validation.get("donor_price_caveat_present") is not True:
+        _fail("allocation LP must carry the donor-price caveat")
+
+    caveats = summary.get("caveats") or []
+    donor_price_caveat = next(
+        (
+            caveat
+            for caveat in caveats
+            if "donor/flat price proxy" in caveat
+        ),
+        None,
+    )
+    if donor_price_caveat is None:
+        _fail("allocation LP donor-price caveat is missing")
+
+    def row_key(row: dict[str, str], label: str) -> tuple[str, str, str, str]:
+        return (
+            _text(row, "scenario", label),
+            _text(row, "cap_case", label),
+            _text(row, "level", label),
+            _text(row, "province", label),
+        )
+
+    allocation_by_key: dict[
+        tuple[str, str, str, str], dict[str, str]
+    ] = {}
+    for index, row in enumerate(allocation_rows, start=1):
+        label = f"allocation LP row {index}"
+        key = row_key(row, label)
+        if key in allocation_by_key:
+            _fail(f"allocation LP duplicate row: {key}")
+        scenario, cap_case, level, province = key
+        if scenario not in ALLOCATION_LP_SCENARIOS:
+            _fail(f"{label}: unexpected scenario {scenario!r}")
+        if cap_case not in NET_VALUE_CAP_CASES:
+            _fail(f"{label}: unexpected cap_case {cap_case!r}")
+        if level not in ALLOCATION_LP_LEVELS:
+            _fail(f"{label}: unexpected level {level!r}")
+        if province not in ALLOCATION_LP_PROVINCES:
+            _fail(f"{label}: unexpected province {province!r}")
+        expected_role = "base" if scenario == "donor_flat" else "sensitivity"
+        if _text(row, "scenario_role", label) != expected_role:
+            _fail(f"{label}: scenario_role mismatch")
+        _number(row, "baseline_net_value_base_m_cad", label)
+        _number(row, "net_value_base_m_cad", label)
+        _number(row, "baseline_harvest_m3", label)
+        _number(row, "optimized_harvest_m3", label)
+        allocation_by_key[key] = row
+
+    delta_by_key: dict[
+        tuple[str, str, str, str], dict[str, str]
+    ] = {}
+    for index, row in enumerate(delta_rows, start=1):
+        label = f"allocation LP delta {index}"
+        key = row_key(row, label)
+        if key in delta_by_key:
+            _fail(f"allocation LP duplicate delta row: {key}")
+        if key not in allocation_by_key:
+            _fail(f"{label}: delta row has no allocation row")
+        delta_by_key[key] = row
+    if set(delta_by_key) != set(allocation_by_key):
+        _fail("allocation LP delta rows do not match the allocation rows")
+
+    all_cases = {
+        (scenario, cap_case, level)
+        for scenario, cap_case, level, _province in allocation_by_key
+    }
+    if len(all_cases) != ALLOCATION_LP_EXPECTED_FEASIBLE_CASES:
+        _fail(
+            "allocation LP feasible cases must be "
+            f"{ALLOCATION_LP_EXPECTED_FEASIBLE_CASES}, got {len(all_cases)}"
+        )
+    for scenario, cap_case, level in all_cases:
+        provinces = {
+            province
+            for key_scenario, key_cap, key_level, province in allocation_by_key
+            if (key_scenario, key_cap, key_level)
+            == (scenario, cap_case, level)
+        }
+        if provinces != set(ALLOCATION_LP_PROVINCES):
+            _fail(
+                "allocation LP province coverage mismatch for "
+                f"{scenario}/{cap_case}/{level}"
+            )
+
+    summary_totals = summary.get("national_totals") or []
+    totals_by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for item in summary_totals:
+        key = (
+            str(item.get("scenario", "")),
+            str(item.get("cap_case", "")),
+            str(item.get("level", "")),
+        )
+        if key in totals_by_key:
+            _fail(f"allocation LP summary duplicate case: {key}")
+        totals_by_key[key] = item
+    if len(totals_by_key) != ALLOCATION_LP_EXPECTED_SUMMARY_CASES:
+        _fail("allocation LP summary case count mismatch")
+
+    def summary_number(
+        item: dict[str, Any], field: str, label: str
+    ) -> float:
+        value = item.get(field)
+        if not isinstance(value, (int, float)):
+            _fail(f"{label}: missing numeric {field}")
+        numeric = float(value)
+        if not math.isfinite(numeric):
+            _fail(f"{label}: non-finite {field}")
+        return numeric
+
+    rows: list[dict[str, Any]] = []
+    for level in ALLOCATION_LP_LEVELS:
+        for scenario in ALLOCATION_LP_SCENARIOS:
+            label = f"allocation LP documented {scenario}/{level}"
+            provinces = [
+                allocation_by_key[(scenario, "documented_ceiling", level, province)]
+                for province in ALLOCATION_LP_PROVINCES
+            ]
+            baseline_m_cad = sum(
+                _number(row, "baseline_net_value_base_m_cad", label)
+                for row in provinces
+            )
+            optimized_m_cad = sum(
+                _number(row, "net_value_base_m_cad", label)
+                for row in provinces
+            )
+            delta_m_cad = optimized_m_cad - baseline_m_cad
+            total = totals_by_key.get(
+                (scenario, "documented_ceiling", level)
+            )
+            if total is None:
+                _fail(f"{label}: missing summary total")
+            summary_baseline = summary_number(
+                total, "baseline_net_value_base_m_cad", label
+            )
+            summary_optimized = summary_number(
+                total, "net_value_base_m_cad", label
+            )
+            summary_delta = summary_number(
+                total, "delta_net_value_base_m_cad", label
+            )
+            if abs(baseline_m_cad - summary_baseline) > 1e-3:
+                _fail(f"{label}: baseline total disagrees with summary")
+            if abs(optimized_m_cad - summary_optimized) > 1e-3:
+                _fail(f"{label}: optimized total disagrees with summary")
+            if abs(delta_m_cad - summary_delta) > 1e-3:
+                _fail(f"{label}: delta total disagrees with summary")
+            rows.append(
+                {
+                    "level": level,
+                    "level_label": level.replace("m", " Mm³"),
+                    "scenario": scenario,
+                    "scenario_role": (
+                        "base" if scenario == "donor_flat" else "sensitivity"
+                    ),
+                    "scenario_label": (
+                        "base · donor_flat"
+                        if scenario == "donor_flat"
+                        else "sensitivity · stumpage_scaled"
+                    ),
+                    "case_status": _text(total, "status", label),
+                    "allocation_m3": _round(
+                        summary_number(total, "national_total_m3", label), 1
+                    ),
+                    "baseline_m_cad": _round(baseline_m_cad, 6),
+                    "optimized_m_cad": _round(optimized_m_cad, 6),
+                    "delta_m_cad": _round(delta_m_cad, 6),
+                    "net_value_low_m_cad": _round(
+                        summary_number(total, "net_value_low_m_cad", label),
+                        6,
+                    ),
+                    "net_value_high_m_cad": _round(
+                        summary_number(total, "net_value_high_m_cad", label),
+                        6,
+                    ),
+                    "evidence": "model_estimate",
+                    "observed": False,
+                    "policy_grade": False,
+                    "lp_objective": "net_value_sensitivity",
+                    "canonical_changed": False,
+                }
+            )
+    if len(rows) != ALLOCATION_LP_EXPECTED_DOCUMENTED_ROWS:
+        _fail("allocation LP documented table must have six rows")
+
+    province_shifts: list[dict[str, Any]] = []
+    for province in ALLOCATION_LP_PROVINCES:
+        base_row = allocation_by_key[
+            ("donor_flat", "documented_ceiling", ALLOCATION_LP_SHIFT_LEVEL, province)
+        ]
+        scaled_row = allocation_by_key[
+            (
+                "stumpage_scaled",
+                "documented_ceiling",
+                ALLOCATION_LP_SHIFT_LEVEL,
+                province,
+            )
+        ]
+        base_baseline_m3 = _number(
+            base_row, "baseline_harvest_m3", f"shift {province}"
+        )
+        scaled_baseline_m3 = _number(
+            scaled_row, "baseline_harvest_m3", f"shift {province}"
+        )
+        if abs(base_baseline_m3 - scaled_baseline_m3) > 2.0:
+            _fail(f"shift {province}: baseline allocation differs by scenario")
+        baseline_m3 = (base_baseline_m3 + scaled_baseline_m3) / 2.0
+        scenarios: dict[str, Any] = {}
+        for scenario, allocation_row in (
+            ("donor_flat", base_row),
+            ("stumpage_scaled", scaled_row),
+        ):
+            delta_row = delta_by_key[
+                (scenario, "documented_ceiling", ALLOCATION_LP_SHIFT_LEVEL, province)
+            ]
+            optimized_m3 = _number(
+                allocation_row,
+                "optimized_harvest_m3",
+                f"shift {scenario}/{province}",
+            )
+            delta_m3 = _number(
+                delta_row, "delta_m3", f"shift {scenario}/{province}"
+            )
+            if abs(delta_m3 - (optimized_m3 - baseline_m3)) > 1.0:
+                _fail(
+                    f"shift {scenario}/{province}: delta volume disagrees"
+                )
+            scenarios[scenario] = {
+                "optimized_m3": _round(optimized_m3, 1),
+                "delta_m3": _round(optimized_m3 - baseline_m3, 1),
+                "optimized_share": _round(
+                    _number(
+                        delta_row,
+                        "optimized_share",
+                        f"shift {scenario}/{province}",
+                    ),
+                    8,
+                ),
+                "delta_share_pp": _round(
+                    _number(
+                        delta_row,
+                        "delta_share_pp",
+                        f"shift {scenario}/{province}",
+                    ),
+                    6,
+                ),
+                "direction": _text(
+                    delta_row, "direction", f"shift {scenario}/{province}"
+                ),
+            }
+        province_shifts.append(
+            {
+                "province": province,
+                "province_name": _text(
+                    base_row, "province_name", f"shift {province}"
+                ),
+                "level": ALLOCATION_LP_SHIFT_LEVEL,
+                "level_label": ALLOCATION_LP_SHIFT_LEVEL.replace(
+                    "m", " Mm³"
+                ),
+                "baseline_m3": _round(baseline_m3, 1),
+                "baseline_share": _round(
+                    _number(
+                        base_row,
+                        "baseline_share",
+                        f"shift {province}",
+                    ),
+                    8,
+                ),
+                "scenarios": scenarios,
+            }
+        )
+    if len(province_shifts) != ALLOCATION_LP_EXPECTED_PROVINCE_SHIFTS:
+        _fail("allocation LP province shift table must have 13 rows")
+
+    return {
+        "schema_version": summary.get("schema_version"),
+        "model_id": summary.get("model_id"),
+        "artifact_version": summary.get("artifact_version"),
+        "generated_utc": summary.get("generated_utc"),
+        "status": summary.get("status"),
+        "role": "report_only_not_canonical_allocation",
+        "labels": {
+            "evidence": "model_estimate",
+            "net_value_label": "model_estimate",
+            "observed": False,
+            "policy_grade": False,
+            "lp_objective": "net_value_sensitivity",
+            "canonical_changed": False,
+            "baseline_objective": labels.get("baseline_objective"),
+            "combined_national_net_value": False,
+            "public_osecan_input": False,
+            "restricted_data_used": False,
+            "ranking_performed": False,
+            "forest_lp_input": False,
+        },
+        "donor_price_caveat": donor_price_caveat,
+        "coverage": {
+            "allocation_rows": len(allocation_rows),
+            "delta_rows": len(delta_rows),
+            "feasible_case_count": len(all_cases),
+            "summary_case_count": len(totals_by_key),
+            "documented_ceiling_rows": len(rows),
+            "province_shift_rows": len(province_shifts),
+            "province_shift_level": ALLOCATION_LP_SHIFT_LEVEL,
+            "province_count": len(ALLOCATION_LP_PROVINCES),
+            "levels": list(ALLOCATION_LP_LEVELS),
+            "scenarios": list(ALLOCATION_LP_SCENARIOS),
+        },
+        "rows": rows,
+        "province_shifts": province_shifts,
+        "caveats": caveats,
+        "non_claims": summary.get("non_claims") or [],
+        "source_csv": _display_path(ALLOCATION_LP_CSV),
+        "source_delta_csv": _display_path(ALLOCATION_LP_DELTA_CSV),
+        "source_json": _display_path(ALLOCATION_LP_SUMMARY_JSON),
+    }
+
+
 def build_export(
     source_dir: Path = SOURCE_DIR,
     tier_source: Path = TIER_SOURCE,
@@ -1375,6 +1797,9 @@ def build_export(
     net_value_group_rows = _read_csv(NET_VALUE_GROUP_CSV)
     net_value_national_rows = _read_csv(NET_VALUE_NATIONAL_CSV)
     net_value_summary = _read_json(NET_VALUE_SUMMARY_JSON)
+    allocation_lp_rows = _read_csv(ALLOCATION_LP_CSV)
+    allocation_lp_delta_rows = _read_csv(ALLOCATION_LP_DELTA_CSV)
+    allocation_lp_summary = _read_json(ALLOCATION_LP_SUMMARY_JSON)
 
     coverage = summary.get("coverage") or {}
     provinces = list(coverage.get("provinces") or [])
@@ -1465,6 +1890,14 @@ def build_export(
         net_value_group_rows,
         net_value_national_rows,
         net_value_summary,
+    )
+    allocation_lp_sensitivity = _allocation_net_value_lp_sensitivity(
+        allocation_lp_rows,
+        allocation_lp_delta_rows,
+        allocation_lp_summary,
+    )
+    net_value_sensitivity["economic_allocation_sensitivity"] = (
+        allocation_lp_sensitivity
     )
 
     jurisdictions: list[dict[str, Any]] = []
@@ -1864,6 +2297,9 @@ def build_export(
         (NET_VALUE_GROUP_CSV, len(net_value_group_rows)),
         (NET_VALUE_NATIONAL_CSV, len(net_value_national_rows)),
         (NET_VALUE_SUMMARY_JSON, None),
+        (ALLOCATION_LP_CSV, len(allocation_lp_rows)),
+        (ALLOCATION_LP_DELTA_CSV, len(allocation_lp_delta_rows)),
+        (ALLOCATION_LP_SUMMARY_JSON, None),
         (STATCAN_DIR / STATCAN_CSV, len(statcan_rows)),
         (STATCAN_DIR / STATCAN_SOURCES_CSV, len(statcan_source_rows)),
     ]
@@ -1882,6 +2318,7 @@ def build_export(
             "province_drilldown",
             "national_margin_diagnostic",
             "forest_lp_net_value_sensitivity",
+            "economic_allocation_sensitivity",
             "downloads",
         ],
         "base_scenario": base_scenario,
@@ -2149,6 +2586,22 @@ def build_export(
             "net_value_sensitivity_unexpected_d_cells": net_value_sensitivity[
                 "statcan_d"
             ].get("observed_d_cell_count", 0),
+            "allocation_net_value_lp_model_id": allocation_lp_sensitivity[
+                "model_id"
+            ],
+            "allocation_net_value_lp_documented_rows": allocation_lp_sensitivity[
+                "coverage"
+            ]["documented_ceiling_rows"],
+            "allocation_net_value_lp_province_shift_rows": allocation_lp_sensitivity[
+                "coverage"
+            ]["province_shift_rows"],
+            "allocation_net_value_lp_lp_objective": allocation_lp_sensitivity[
+                "labels"
+            ]["lp_objective"],
+            "allocation_net_value_lp_canonical_changed": allocation_lp_sensitivity[
+                "labels"
+            ]["canonical_changed"],
+            "allocation_net_value_lp_unexpected_d_cells": 0,
             "observed_claim": False,
             "policy_grade_claim": False,
             "combined_national_net_value": False,
