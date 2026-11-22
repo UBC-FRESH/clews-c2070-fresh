@@ -2,6 +2,20 @@
 
 ## 2026-11-22
 
+- **Added the national bucking Phase 0/2 Quebec pilot.** Added
+  `workflows/national/bucking/national_bucking_pilot.py`, `schneider2013.py`,
+  `pilot_schema.py`, a versioned Schneider (2013) taper registry
+  (`rules/qc_schneider2013_taper.csv`), a pilot dimension sort set
+  (`rules/qc_pilot_sorts.csv`), and `tests/test_national_bucking_pilot.py`.
+  The pilot runs a 24-tree synthetic Quebec tree list through the published
+  Schneider (2013) fixed-effect taper and a value-maximising bucker, then emits
+  `BuckedLog`, `ResidueLedger`, per-tree reconciliation, schema documentation,
+  and a checksummed manifest under
+  `data/derived/national/bucking/national_bucking_pilot_v0/`. Taper geometry is
+  `published_table`; tree geometry, sorts, prices, density, moisture, chip and
+  hog yields are labelled `assumption`. Scope is a pilot only: no national
+  aggregation, official grade assignment, or operational supply claim.
+
 - **Froze and documented the national facility chain v1.** Added
   `docs/model-card-national-facility-chain.md` covering purpose, scope, data
   sources and capacity evidence tiers, inventory/capacity/assignment, the
