@@ -207,7 +207,7 @@ SOURCE_REGISTER: tuple[dict[str, str], ...] = (
         "licence_tier": "ogl_bc",
         "url": "https://www2.gov.bc.ca/gov/content/industry/forestry/managing-our-forest-resources/forest-inventory",
         "retrieved_utc": "2026-11-18T14:35:42+00:00",
-        "used_for": "Forest area by ecoprovince and species-group composition; regional slope weighting.",
+        "used_for": "Forest area by ecoprovince for regional slope weighting.",
         "evidence_tier": "open_derived_aggregate",
         "redistributed": "derived_aggregate_only",
         "notes": "The raw VRI geodatabase is not redistributed; only the committed aggregate is read.",
