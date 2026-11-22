@@ -1,0 +1,457 @@
+{
+  "schema_version": "clews.ui_payload.v1",
+  "generated_utc": "2026-11-22T07:30:44Z",
+  "files": [
+    {
+      "path": "api.js",
+      "bytes": 6347,
+      "sha256": "9f8483ad22ae8d5694331c3345795ab5765cd5ddf88945f868397ae45c52592e"
+    },
+    {
+      "path": "app.js",
+      "bytes": 351790,
+      "sha256": "fdc1d6b61d8456268a11acc6f35b08e55b479cfe4f682422a2bd399a822792d9"
+    },
+    {
+      "path": "index.html",
+      "bytes": 50855,
+      "sha256": "d71441b26a78430cd6ac70569cfed9074f87a3e54c26c8c7300db47247237d3f"
+    },
+    {
+      "path": "public/data/economics/detail.csv",
+      "bytes": 816632,
+      "sha256": "1e1da49aa36be34218c942bffb66af4b2f3ce8d37e30bc9dc475d49744999dc7"
+    },
+    {
+      "path": "public/data/economics/manifest.json",
+      "bytes": 5712,
+      "sha256": "b12dc9626a6f951ec39c8f12074756084f93a3414c95499884a0b3c24bf047bf"
+    },
+    {
+      "path": "public/data/economics/model_inputs.zip",
+      "bytes": 52828,
+      "sha256": "e933292a4d59161f996a4e2905db2bddcbc91efe35d3cfcc709e036ecbf482db"
+    },
+    {
+      "path": "public/data/economics/national.json",
+      "bytes": 139939,
+      "sha256": "1ebd414c49690e1d528e5a7621283c0c13c3e19fba12e46c7db5b6710bea97a2"
+    },
+    {
+      "path": "public/data/economics/national.manifest.json",
+      "bytes": 4625,
+      "sha256": "47a3f47238c29ff73763ba672fb70ffaa8d47e19491f26c4bb0545c46897c202"
+    },
+    {
+      "path": "public/data/economics/summary.json",
+      "bytes": 30934,
+      "sha256": "6eb0f57c7493163ae51413c52a861945a3920a33379d2003750a6e5c0fc36cec"
+    },
+    {
+      "path": "public/data/inputs/harvest_basis.json",
+      "bytes": 3348,
+      "sha256": "034abc12cb043eab90ed247a0409472797c69ffe8e7f8274c6d1714934d77e72"
+    },
+    {
+      "path": "public/data/inputs/managed_landbase.json",
+      "bytes": 2540,
+      "sha256": "4c61912468519049c9e9423eace32d8b5b33b6d504664807507227fd2597742d"
+    },
+    {
+      "path": "public/data/inputs/operable_proxy.json",
+      "bytes": 5178,
+      "sha256": "42cfd6fa1c49323c10ed92b9affedea0cf9142b00038f309ef8392977720dc2b"
+    },
+    {
+      "path": "public/data/inputs/osecan_links.json",
+      "bytes": 30656,
+      "sha256": "4474414a445166ab85b795a5e8fead49035b4580230f36d3d3905984adbab7be"
+    },
+    {
+      "path": "public/data/inputs/supply_curve.json",
+      "bytes": 5410,
+      "sha256": "f192e7d996ce721e3e44f3005b2c6fbe9f05630f5a441421944fb8120b00ca24"
+    },
+    {
+      "path": "public/data/manifest.json",
+      "bytes": 31855,
+      "sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102"
+    },
+    {
+      "path": "public/data/outputs/allocation_screening__lp_119m.json",
+      "bytes": 171706,
+      "sha256": "e1ce634f8f7494c0b4a86d5ea742d231e80963751c910b2cd307c905fa6b993b"
+    },
+    {
+      "path": "public/data/outputs/allocation_screening__lp_150m.json",
+      "bytes": 175839,
+      "sha256": "1613ef65abc97a8affd8cf9077719a96986a175f1c2137e4dde88c1eedadcdce"
+    },
+    {
+      "path": "public/data/outputs/emission_factor_fix__efix_baseline_119m.json",
+      "bytes": 28381,
+      "sha256": "3af1e4b13214ab4f41f5c6d7dd12539b26f09a8197f0e960cbf07e0524532b52"
+    },
+    {
+      "path": "public/data/outputs/emission_factor_fix__efix_stress_119m.json",
+      "bytes": 79360,
+      "sha256": "23ca49a7519a9a628b8a7e29890f3939acda92607e336519a5d33d5eb02ccabf"
+    },
+    {
+      "path": "public/data/outputs/emission_factor_fix__efix_tier_200.json",
+      "bytes": 84236,
+      "sha256": "7a57ae3ba798c9bafbe9af62fe7309cbfa89028ae53114b3e1e0a9b3a5934310"
+    },
+    {
+      "path": "public/data/outputs/emission_factor_fix__efix_tier_250.json",
+      "bytes": 84805,
+      "sha256": "289aa8d3ee35f97bbff4156fd77cf7e28169c3bce67ded542be47a68ecc0b5a8"
+    },
+    {
+      "path": "public/data/outputs/emission_factor_fix__efix_tier_300.json",
+      "bytes": 81816,
+      "sha256": "4a52b97ee626608b1d8d1d21f8fcbac9cf10c7c9b41e42dce9b31cfab537e420"
+    },
+    {
+      "path": "public/data/outputs/fleet_capacity__screening_119m_fleet.json",
+      "bytes": 172190,
+      "sha256": "9802f4f972e7b2735534f6f340510f1855f7d5a3ed2bc41dfc4f592c9c762300"
+    },
+    {
+      "path": "public/data/outputs/fleet_screening_ladder__screening_100m.json",
+      "bytes": 170830,
+      "sha256": "33ad2fd2e2f972fa3e57ea2c1d94b52c525e078375a9726bc2253d4af172dc29"
+    },
+    {
+      "path": "public/data/outputs/fleet_screening_ladder__screening_150m.json",
+      "bytes": 174832,
+      "sha256": "119df787fd48f0512311bc15b1e65e5fa5dda2d0249d723f9e36788d9ac9b1b3"
+    },
+    {
+      "path": "public/data/outputs/fleet_screening_ladder__screening_200m.json",
+      "bytes": 176710,
+      "sha256": "f2aeeaa0fe4cc2f6e17baf95a0105898265e5712b69c0882cfa7e2adcfeb8bdc"
+    },
+    {
+      "path": "public/data/outputs/full_constraint__fullconstraint_t3t4zero.json",
+      "bytes": 100600,
+      "sha256": "7e0fdc0703761e9584be356a6b5b7e8663cff506c5ae155b8e93dc2b3f94382b"
+    },
+    {
+      "path": "public/data/outputs/full_constraint__fullconstraint_t4zero.json",
+      "bytes": 103072,
+      "sha256": "23fe2a1bab5d1bd8a9dbefac21b43531fc3bdf4835da6e3a26af20c5c4839d30"
+    },
+    {
+      "path": "public/data/outputs/full_windcap__full_windcap20_t3t4zero.json",
+      "bytes": 124017,
+      "sha256": "f4613ef31effc92363dc523561ae00da1a0d40a9a418f084552a2733f6003c69"
+    },
+    {
+      "path": "public/data/outputs/full_windcap__full_windcap20_t4zero.json",
+      "bytes": 124874,
+      "sha256": "e0023a4657df1e84faeb48bd4da5829a54dec4f3accb626b426319f1cf8fa73e"
+    },
+    {
+      "path": "public/data/outputs/harvest_sensitivity_100_200__100m.json",
+      "bytes": 54961,
+      "sha256": "935481b2b1dfaefa8b83ac8da65ae08e7aa5451dafbf26da4284f1e4f9659518"
+    },
+    {
+      "path": "public/data/outputs/harvest_sensitivity_100_200__200m.json",
+      "bytes": 55644,
+      "sha256": "64b8c9a8d8c7a8b15377b17a81c4923f97551a120d66b18a52ee460c1bc9b38f"
+    },
+    {
+      "path": "public/data/outputs/national_150m__baseline.json",
+      "bytes": 52167,
+      "sha256": "8ea209477ebf7222cb4d36ea4d47da8489a415e45c8054a40f8fd335cdbe1a97"
+    },
+    {
+      "path": "public/data/outputs/national_150m__baseline_bio.json",
+      "bytes": 52171,
+      "sha256": "63f68074895fb0235f12c8eb4a200eed118c7ab779c71073371ccd070a4ed131"
+    },
+    {
+      "path": "public/data/outputs/national_150m__stress.json",
+      "bytes": 55420,
+      "sha256": "2f93e6b1b2d54c74059d9c9a7eacaeb5ef061f59550b9e97309070109d013644"
+    },
+    {
+      "path": "public/data/outputs/national_base_119m__baseline_119m.json",
+      "bytes": 52182,
+      "sha256": "7ca0a63ae8ce6154a8b74696f2517f4a55c74f0e83fd8135971085db0fdb5742"
+    },
+    {
+      "path": "public/data/outputs/national_base_119m__stress_119m.json",
+      "bytes": 55524,
+      "sha256": "72661edc301dc9501dac6c743e06c8b4136ed029d6ec6113f9d736a27eff5936"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve__baseline.json",
+      "bytes": 29946,
+      "sha256": "e1c59b3220511673a1195cb9542452dfa1d6ebd37da7e066b7ee21ed54f9e06f"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve__stress.json",
+      "bytes": 54271,
+      "sha256": "b7a0305be8e0d7680f43d689d5096945ce24469167e53f006bb7ce9b92cbd71e"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve__stress_fixed_hydro.json",
+      "bytes": 56167,
+      "sha256": "4b0145fa4388f023ce02e0e208ca336ab1141d194abde68c4bbce9967e2263a8"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve_demand_sensitivity__carbon_250.json",
+      "bytes": 63069,
+      "sha256": "9736c9348c6e59b86f0350d1207cbc726dd0646c57501fe4bb115d290473c1a5"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve_demand_sensitivity__carbon_300.json",
+      "bytes": 65445,
+      "sha256": "9e40a52613a1ce82290beabd010f65af4f41ab1c9efc6db729eebea3dd9b1330"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve_demand_sensitivity__carbon_400.json",
+      "bytes": 64677,
+      "sha256": "dde4122590f5c70377eaac24228e6887bca21ec3edc17ed86d408f897c7d53bd"
+    },
+    {
+      "path": "public/data/outputs/national_supply_curve_demand_sensitivity__mandate_saturation.json",
+      "bytes": 55770,
+      "sha256": "e7029285049d439b5fb7ac5cc3daf4362bff3ea2656b22084f2f5933ec473b38"
+    },
+    {
+      "path": "public/data/outputs/nuclear_audit__nuclear_cap0_pwrbio5_wind3.json",
+      "bytes": 104831,
+      "sha256": "11ef0cf9d878f4e1333de33ba4365b80883069a3a8b8d567cbe9f2a33d7a4084"
+    },
+    {
+      "path": "public/data/outputs/nuclear_audit__nuclear_cap0_tier200_reference.json",
+      "bytes": 82000,
+      "sha256": "a2d2664616df58ece2691681bee2944c862ced8afb361838523acb212145f54d"
+    },
+    {
+      "path": "public/data/outputs/nuclear_audit__nuclear_cap10gw_pwrbio5_wind3.json",
+      "bytes": 122779,
+      "sha256": "fe047816f70c2250d03fa4e0ea99c7345f01d46b2e9bd9b1124cca48a123465e"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__efix_tier_200.json",
+      "bytes": 84119,
+      "sha256": "bc3ac12c06856c55d09d33a4a696e1bb0a91729bbb7603de9e4769fcd465ceec"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__pwrbio_cap10_windint3_tier200.json",
+      "bytes": 101413,
+      "sha256": "4088548fa612f6f53e6f40c2f24a3b3f3b6ab7369027c8ff3ccc34a319d978c7"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__pwrbio_cap5_tier200.json",
+      "bytes": 82516,
+      "sha256": "e012f7ebef0163c0786aad85382fb40e1fdac3be3e007df670e524a042ded0b8"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__pwrbio_cap5_windint3_tier200.json",
+      "bytes": 101739,
+      "sha256": "0d6f295d0911d49c3c548133235b12e48dff8e7084759b54230cafecdafaf87f"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__pwrbio_cap5ofbio_tier200.json",
+      "bytes": 85270,
+      "sha256": "be5f8e11da7799b52ac1dffd557163b1d2da7c2b501590e29a65a5fe801d3911"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__wind_int3_refhydro_tier200.json",
+      "bytes": 80358,
+      "sha256": "fe54098755e40268d67fbcfd759ce3b3292d320e197414c4a9f372efcfd5ab40"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_cap__wind_int3_tier200.json",
+      "bytes": 77142,
+      "sha256": "0dd0bc034c27e9b4ab613c3bb62c90ff15830b79315e8f35ce69ac991b523a10"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_tight__pwrbio_cap0_tier200.json",
+      "bytes": 85157,
+      "sha256": "83b96f6ad54fad371f7cdfd8a425ca2869c64cd63a3d5f4d4658d11059b4a8b0"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_tight__pwrbio_cap3572_tier200.json",
+      "bytes": 89509,
+      "sha256": "cc2c73a39329ba6f42809b659df0c795bbce0813ad6e4b80998cc9e395b0d2e2"
+    },
+    {
+      "path": "public/data/outputs/pwrbio_tight__pwrbio_cap3572_windint3_tier200.json",
+      "bytes": 99578,
+      "sha256": "570ce6f7afd4fcb89647a5346878929788b9ebc940c4f634356e77636004213e"
+    },
+    {
+      "path": "public/data/outputs/reconcile__control.json",
+      "bytes": 53689,
+      "sha256": "181a500b57b04565e366190a977ef3e417a577c9fa7f306fb3678e043902d6f3"
+    },
+    {
+      "path": "public/data/outputs/reconcile__zonal.json",
+      "bytes": 52992,
+      "sha256": "bf820782f68bbae5bd44d9ddf8cb096d9efd95cc5fb31d7db07399b362149ba3"
+    },
+    {
+      "path": "public/data/outputs/reconcile_ffcm__control.json",
+      "bytes": 53830,
+      "sha256": "a8d110dff2734de7d30d8e8c6e1e6e420caa09445f46831bbe22aa49696c06d5"
+    },
+    {
+      "path": "public/data/outputs/reconcile_ffcm__zonal.json",
+      "bytes": 53046,
+      "sha256": "1c1177e5d87f098b13f762d33ae330e6542b6609ea338a5b27831ec1031a4413"
+    },
+    {
+      "path": "public/data/outputs/wind_integration_audit__efix_tier_200.json",
+      "bytes": 84143,
+      "sha256": "d2fb0a5ec8e303fa86be3f9d4a20eefc8d8d6b5999ab57398e99fe9b3a778024"
+    },
+    {
+      "path": "public/data/outputs/wind_integration_audit__wind_cap20_tier200.json",
+      "bytes": 100724,
+      "sha256": "2f3f9c9b1c09ee64ceb4249c1c96086236741ca9bb26ae3e25eb845e287e8d06"
+    },
+    {
+      "path": "public/data/outputs/wind_integration_audit__wind_int3_tier200.json",
+      "bytes": 77166,
+      "sha256": "464ee0c1085e972586661157fd0e11354d0cb64181eb0f1a30859e2120fb9b42"
+    },
+    {
+      "path": "public/data/outputs/wind_integration_audit__wind_int5_tier200.json",
+      "bytes": 76572,
+      "sha256": "385c9800cedfae1a5415560670e07cf2c5f21f20f6e4be2cb4ca575c9a27e8d1"
+    },
+    {
+      "path": "public/data/outputs/zonal__control.json",
+      "bytes": 54021,
+      "sha256": "dbc3c8da71326c2b600fa59ebdc866a61bbd7956348dfabb6f46205985a2964a"
+    },
+    {
+      "path": "public/data/outputs/zonal__zonal.json",
+      "bytes": 53028,
+      "sha256": "75a8ef737986efd26297182eeea8a405616d4ad80d75b790acc980d43bfb4a91"
+    },
+    {
+      "path": "public/data/outputs/zonal__zonal_bio.json",
+      "bytes": 53032,
+      "sha256": "e0e2a5193b39ebb09be5b56f33f62c0a093f9e6d37c51c5ff675f01b2d6ee61d"
+    },
+    {
+      "path": "public/data/scenarios.json",
+      "bytes": 190876,
+      "sha256": "25ac243781d419770a7bce3025eb944656a9f0122f6b33b720f70865d1444547"
+    },
+    {
+      "path": "public/data/spatial/ecoprovinces.geojson",
+      "bytes": 237471,
+      "sha256": "b81bd567ace3347ce837315d993140fcd85cc475e49dece8fc6d48d7fd7f5625"
+    },
+    {
+      "path": "public/data/spatial/provinces.geojson",
+      "bytes": 3573309,
+      "sha256": "ea2cc6134d1763b6e7fa35a38e4ab0d5435f2583d5694dca60666c98c675b806"
+    },
+    {
+      "path": "public/data/spatial/rsyc_tiles.geojson",
+      "bytes": 151888,
+      "sha256": "8d173c722793acf9f9d27f08a2e948dce697fa6039806abf0a5de41050a1f1bf"
+    },
+    {
+      "path": "public/data/spatial/zone_nodes.json",
+      "bytes": 2108,
+      "sha256": "8857e6324abdfc0153688e2b56a2b6ffc93dfc31728b24a56e2f9bd37c2b2e08"
+    },
+    {
+      "path": "publication-mode.js",
+      "bytes": 1172,
+      "sha256": "ed01f38231b6ae846913722a3ca6ed274b12add7252d6fac8385a7ebf445cb8b"
+    },
+    {
+      "path": "styles.css",
+      "bytes": 120003,
+      "sha256": "eee0a17c0d2a583ad533fcd39a9cee0287065c1489fb676743055ae4cae6d198"
+    },
+    {
+      "path": "vendor/README.md",
+      "bytes": 624,
+      "sha256": "b6d99e4d9e2f03a98930f00512aa9e2a5aa70fa8db9b64a4b464b4c2071f717d"
+    },
+    {
+      "path": "vendor/echarts.LICENSE.txt",
+      "bytes": 11990,
+      "sha256": "634293835b43a6dd2094fa39182a3d9a6b9ca43b7fdb9ac354e8037af2a3093a"
+    },
+    {
+      "path": "vendor/echarts.min.js",
+      "bytes": 1030855,
+      "sha256": "e84270bd0cd5bdf60fefc26d00c2a391cb2e81f4d26a7a9ee16185a54773a3cf"
+    },
+    {
+      "path": "vendor/fonts/fraunces-400-900.woff2",
+      "bytes": 67304,
+      "sha256": "7234ed860a9cc83045413c4faee63c960a8f2d1917adcf728119307d56e0d783"
+    },
+    {
+      "path": "vendor/fonts/ibm-plex-mono-400.woff2",
+      "bytes": 14648,
+      "sha256": "7ced53420784c93cecccb7c27237594f0e41e5a7990581565f0aef8eda9e9d2f"
+    },
+    {
+      "path": "vendor/fonts/ibm-plex-mono-500.woff2",
+      "bytes": 14904,
+      "sha256": "6e618344335cc436ffd25deba4f4cb5a60ca6c3a4832e67f236ca43922f74eea"
+    },
+    {
+      "path": "vendor/fonts/ibm-plex-sans-400.woff2",
+      "bytes": 45712,
+      "sha256": "e2291e842cf5af167122a22881a740c7f2dda7716f1e8cd76680264f4a859470"
+    },
+    {
+      "path": "vendor/fonts/ibm-plex-sans-500.woff2",
+      "bytes": 45712,
+      "sha256": "e2291e842cf5af167122a22881a740c7f2dda7716f1e8cd76680264f4a859470"
+    },
+    {
+      "path": "vendor/fonts/ibm-plex-sans-600.woff2",
+      "bytes": 45712,
+      "sha256": "e2291e842cf5af167122a22881a740c7f2dda7716f1e8cd76680264f4a859470"
+    },
+    {
+      "path": "vendor/fonts.LICENSE.txt",
+      "bytes": 4456,
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+    },
+    {
+      "path": "vendor/fonts.css",
+      "bytes": 898,
+      "sha256": "c2c3bdb1733acb7cbdd664ec007536df873d22d31a6c9ea49dac5f6581745dda"
+    },
+    {
+      "path": "vendor/fraunces.LICENSE.txt",
+      "bytes": 4391,
+      "sha256": "bdf4c22802eaf804f998195871c6b8938aac2ac14b2d78a8bd66a6f1eced833b"
+    },
+    {
+      "path": "vendor/maplibre-gl.LICENSE.txt",
+      "bytes": 5984,
+      "sha256": "ee5fc05a0677eaf69601d2c7db0d9ecd6cc27c3abc1d0733bc9ed34707cf8ef2"
+    },
+    {
+      "path": "vendor/maplibre-gl.css",
+      "bytes": 65534,
+      "sha256": "576b085fdd9487a65a19215328c1e086c07ce5bf6da09b666b3806d3d008dae9"
+    },
+    {
+      "path": "vendor/maplibre-gl.js",
+      "bytes": 803086,
+      "sha256": "be9633c4d870e26fb37f1cfe5c5a77181667114003ea16207ac7850d8da8add1"
+    }
+  ],
+  "total_bytes": 12506622
+}

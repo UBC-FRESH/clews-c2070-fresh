@@ -1,0 +1,3645 @@
+{
+  "schema_version": "economics/national/2",
+  "model_id": "national_economics_v2_1",
+  "artifact_version": "2.1.0",
+  "generated_utc": "2026-11-22T06:53:23+00:00",
+  "status": "model_estimate_base_donor_flat_sensitivity_stumpage_scaled",
+  "role": "evidence_coverage_with_national_diagnostic",
+  "default_view": "evidence_coverage",
+  "section_order": [
+    "evidence_coverage",
+    "province_ledger",
+    "province_drilldown",
+    "national_margin_diagnostic",
+    "downloads"
+  ],
+  "base_scenario": "donor_flat",
+  "sensitivity_scenario": "stumpage_scaled",
+  "jurisdiction_count": 13,
+  "decision": {
+    "base_scenario": "donor_flat",
+    "sensitivity_scenario": "stumpage_scaled",
+    "stumpage_scaled_observed": false,
+    "stumpage_scaled_policy_grade": false,
+    "reason": "v1 flat BC donor is the consistent base. The v2 stumpage-scaled proxy is a method sensitivity because dues/royalties are not delivered prices and are not comparable to the donor."
+  },
+  "labels": {
+    "evidence": "model_estimate",
+    "observed": false,
+    "policy_grade": false,
+    "not_decision_grade": true,
+    "ranking_performed": false,
+    "combined_national_net_value": false,
+    "national_diagnostic_label": "model_estimate_not_policy",
+    "strict_open": false,
+    "forest_lp_input": false,
+    "public_osecan_input": false
+  },
+  "coverage": {
+    "province_count": 13,
+    "provinces": [
+      "BC",
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "not_estimated_count": 0,
+    "jurisdiction_rows": 13,
+    "scenario_rows": 78
+  },
+  "evidence_coverage": {
+    "default_view": "evidence_coverage",
+    "basis": "volume_weighted_five_component_cells",
+    "weighting": "allocation harvest volume from provincial_allocation/119m.csv; each province has five equally weighted components",
+    "jurisdiction_count": 13,
+    "cell_count": 65,
+    "component_count": 5,
+    "volume_weighted": {
+      "direct_reported": {
+        "share": 0.17924672,
+        "pct": 17.9247,
+        "cells": 3,
+        "label": "direct / reported"
+      },
+      "proxy": {
+        "share": 0.13440737,
+        "pct": 13.4407,
+        "cells": 2,
+        "label": "proxy model"
+      },
+      "donor": {
+        "share": 0.68634592,
+        "pct": 68.6346,
+        "cells": 60,
+        "label": "donor proxy"
+      },
+      "assumption": {
+        "share": 0.0,
+        "pct": 0.0,
+        "cells": 0,
+        "label": "assumption"
+      }
+    },
+    "direct_jurisdictions": [
+      "BC",
+      "QC"
+    ],
+    "donor_only_jurisdictions": [
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "donor_price_jurisdictions": [
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "direct_cell_count": 3,
+    "proxy_cell_count": 2,
+    "donor_cell_count": 60,
+    "assumption_cell_count": 0,
+    "direct_jurisdiction_count": 2,
+    "donor_only_count": 11,
+    "donor_price_count": 12,
+    "not_decision_grade": true,
+    "warning": "68.6% of volume-weighted evidence is a donor proxy. 11 of 13 jurisdictions are donor-only and flagged provisional donor; 12 of 13 use a donor price. These margins are not decision-grade and are not ranked as comparable results."
+  },
+  "ranking": {
+    "performed": false,
+    "ordering": "canonical_jurisdiction_order",
+    "donor_only_excluded": true,
+    "reason": "Donor-only jurisdictions are provisional evidence rows. The UI does not sort or rank margins across jurisdictions."
+  },
+  "replacement_queue": {
+    "row_count": 60,
+    "province_count": 13,
+    "priority_counts": {
+      "P1": 15,
+      "P2": 15,
+      "P3": 25,
+      "P4": 5
+    },
+    "queue_status": "open_required_source_not_invented"
+  },
+  "stumpage_references": {
+    "path": "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
+    "row_count": 13,
+    "rate_count": 8,
+    "fallback_count": 5,
+    "rate_provinces": [
+      "BC",
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS"
+    ],
+    "fallback_provinces": [
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "rates_are_charges_not_delivered_prices": true
+  },
+  "model_assumptions": [
+    {
+      "id": "bc_scaled_ratio",
+      "category": "price",
+      "applies_to": "non_BC_with_rate",
+      "rule": "Multiply provincial stumpage by the BC blended delivered price divided by the BCTS average stumpage rate.",
+      "notes": "The ratio transfers BC's delivered/stumpage relationship; it is not a provincial cost survey or an observed price."
+    },
+    {
+      "id": "cost_donors_unchanged",
+      "category": "cost",
+      "applies_to": "all",
+      "rule": "v1 logging/haul, road and silviculture donors are retained",
+      "notes": "No new provincial cost survey is introduced in v2.1."
+    },
+    {
+      "id": "donor_flat_base",
+      "category": "price",
+      "applies_to": "all",
+      "rule": "flat BC 2025-12 blended delivered price",
+      "notes": "BC reported average; non-BC jurisdictions use the same BC donor with no provincial index materialised."
+    },
+    {
+      "id": "dues_not_comparable",
+      "category": "comparison",
+      "applies_to": "all",
+      "rule": "dues/stumpage rates are not delivered prices",
+      "notes": "Stumpage, dues, royalty and standing-value rates are charges on standing timber. They are not delivered log prices: a delivered price embeds harvest, haul, road and silviculture cost plus a margin. Subtracting the same cost stack from a scaled dues rate double counts those costs if the result is read as a mill margin. Rates also differ in unit, species/grade, tenure, scaling and vintage. Deltas are therefore method changes, not observed market changes."
+    },
+    {
+      "id": "fallback_jurisdictions",
+      "category": "price",
+      "applies_to": "PE,NL,YT,NT,NU",
+      "rule": "BC flat donor in both scenarios",
+      "notes": "NU open.canada record is an Ontario mirror and is not treated as a Nunavut rate."
+    },
+    {
+      "id": "margin_formula",
+      "category": "margin",
+      "applies_to": "all",
+      "rule": "price proxy - logging - haul - road - silviculture",
+      "notes": "Low uses high cost; high uses low cost."
+    },
+    {
+      "id": "national_weighting",
+      "category": "aggregation",
+      "applies_to": "national",
+      "rule": "volume-weight provincial margins by the 119 Mt allocation",
+      "notes": "Diagnostic only; model_estimate_not_policy."
+    },
+    {
+      "id": "negative_margins_unclipped",
+      "category": "margin",
+      "applies_to": "all",
+      "rule": "negative margins are retained and labelled",
+      "notes": "No floor at zero; the low case is deliberately conservative."
+    },
+    {
+      "id": "no_observed_or_open_claim",
+      "category": "label",
+      "applies_to": "all",
+      "rule": "all rows model_estimate, observed=false, policy_grade=false",
+      "notes": "No strict-open licence claim is made."
+    },
+    {
+      "id": "price_year_mismatch",
+      "category": "price",
+      "applies_to": "all",
+      "rule": "no deflator applied between 2025 BC price and 2026 rates",
+      "notes": "Nominal mismatch is explicit and not corrected."
+    },
+    {
+      "id": "qc_reference_only",
+      "category": "price",
+      "applies_to": "QC",
+      "rule": "QC purchase cost and BMMB historical rate are reference-only",
+      "notes": "Neither is used as a delivered price or observed revenue."
+    },
+    {
+      "id": "scenario_decision",
+      "category": "scenario",
+      "applies_to": "all",
+      "rule": "donor_flat is the base scenario; stumpage_scaled is sensitivity",
+      "notes": "donor_flat is the base and stumpage_scaled is the sensitivity. The scaled scenario is not observed and not policy grade. It is retained only to show the effect of the v2 method."
+    },
+    {
+      "id": "stumpage_rate_semantics",
+      "category": "price",
+      "applies_to": "all",
+      "rule": "Extracted provincial values are stumpage/dues/standing-value rates, not delivered prices and not observed revenue.",
+      "notes": "No row labels stumpage as a delivered price."
+    },
+    {
+      "id": "stumpage_scaled_sensitivity",
+      "category": "price",
+      "applies_to": "BC,AB,SK,MB,ON,QC,NB,NS",
+      "rule": "stumpage rate times BC delivered/BCTS ratio",
+      "notes": "Sensitivity only; labelled stumpage_scaled_proxy; not observed and not the base scenario."
+    }
+  ],
+  "national_diagnostic": {
+    "allocation_volume_m3": 118977339.1,
+    "label": "model_estimate_not_policy",
+    "combined_national_net_value": false,
+    "not_decision_grade": true,
+    "display_role": "diagnostic_not_headline",
+    "display_position": "after_evidence_coverage_and_province_ledgers",
+    "ranking_performed": false,
+    "warning": "National margins are volume-weighted model diagnostics shown last. They are not observed, not policy grade, not a combined national net value, and not a comparable jurisdictional ranking.",
+    "volume_weighted": true,
+    "donor_flat": {
+      "scenario_role": "base",
+      "low_cad_m3": -94.7046,
+      "base_cad_m3": 33.1365,
+      "high_cad_m3": 81.3168
+    },
+    "stumpage_scaled": {
+      "scenario_role": "sensitivity",
+      "low_cad_m3": -130.0389,
+      "base_cad_m3": -16.122,
+      "high_cad_m3": 38.4085
+    }
+  },
+  "scenarios": [
+    {
+      "id": "donor_flat",
+      "role": "base",
+      "label": "Base · donor_flat",
+      "is_base": true,
+      "price_basis": "flat_BC_donor_price_proxy_not_observed",
+      "price_tier_counts": {
+        "donor_proxy": 12,
+        "reported_average": 1
+      }
+    },
+    {
+      "id": "stumpage_scaled",
+      "role": "sensitivity",
+      "label": "Sensitivity · stumpage_scaled",
+      "is_base": false,
+      "price_basis": "mixed_reported_average_and_stumpage_scaled_proxy_not_observed",
+      "price_tier_counts": {
+        "donor_proxy": 5,
+        "reported_average": 1,
+        "stumpage_scaled_proxy": 7
+      }
+    }
+  ],
+  "jurisdictions": [
+    {
+      "province": "BC",
+      "province_name": "British Columbia",
+      "allocation_volume_m3": 39978577.0,
+      "volume_share": 0.33601842,
+      "volume_reference_basis": "repo_parsed_tsa_aac",
+      "donor_flat": {
+        "low_cad_m3": -100.193,
+        "base_cad_m3": 30.938,
+        "high_cad_m3": 80.1893,
+        "price_tier": "reported_average",
+        "cost_tier": "proxy_model",
+        "price_basis": "mill_delivered_observed_report_average",
+        "stumpage_rate_type": "bcts_average_stumpage_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -100.193,
+        "base_cad_m3": 30.938,
+        "high_cad_m3": 80.1893,
+        "price_tier": "reported_average",
+        "cost_tier": "proxy_model",
+        "price_basis": "mill_delivered_observed_report_average",
+        "stumpage_rate_type": "bcts_average_stumpage_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "bcts_average_stumpage_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_partial_direct",
+      "price_tier": "reported_average",
+      "cost_tier": "proxy_model",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "reported_average",
+        "is_direct": true,
+        "donor_province": "",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 2,
+        "proxy_model": 2,
+        "donor_proxy": 1,
+        "assumption": 0
+      },
+      "direct_cell_count": 2,
+      "proxy_cell_count": 2,
+      "donor_cell_count": 1,
+      "assumption_cell_count": 0,
+      "donor_only": false,
+      "status": "partial_direct",
+      "status_label": "partial direct",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 34.325,
+        "rate_base_cad_m3": 34.325,
+        "rate_high_cad_m3": 34.325,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "bcts_average_stumpage_rate",
+        "rate_basis": "BCTS harvesting-stumpage revenue divided by BCTS harvested volume",
+        "published_range": "137.3M CAD / 4.0M m3 = 34.325 CAD/m3",
+        "year": "2025",
+        "source_key": "bcts_annual_2024_25",
+        "source_title": "BC Timber Sales 2024/25 Annual Public Performance Report",
+        "source_url": "https://gov.bc.ca/assets/gov/farming-natural-resources-and-industry/forestry/bc-timber-sales/business-plans-performance-reports/fy2024_bcts_annual_public_performance_report.pdf",
+        "fallback_donor": "",
+        "notes": "Used only as the denominator of the BC delivered-price/stumpage ratio.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P1",
+        "open_cell_count": 1,
+        "components": [
+          "road"
+        ],
+        "first_action": "obtain a provincial road allowance in CAD/m3",
+        "first_component": "road",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "road",
+            "priority": "P1",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "BC:road"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "proxy_model",
+          "tier_score": 3,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "",
+          "assumption_ids": [
+            "cost_bc_distribution"
+          ],
+          "direct_evidence": false,
+          "proxy_model": true,
+          "donor_or_assumption": false,
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        },
+        {
+          "component": "logging",
+          "tier": "proxy_model",
+          "tier_score": 3,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "",
+          "assumption_ids": [
+            "cost_bc_distribution"
+          ],
+          "direct_evidence": false,
+          "proxy_model": true,
+          "donor_or_assumption": false,
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        },
+        {
+          "component": "price",
+          "tier": "reported_average",
+          "tier_score": 4,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "",
+          "assumption_ids": [
+            "price_bc_blend"
+          ],
+          "direct_evidence": true,
+          "proxy_model": false,
+          "donor_or_assumption": false,
+          "notes": "Direct BC reported mill-delivered average. Coast and Interior report averages are volume-weighted by their published report totals; this is a reported average, not a transaction record."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        },
+        {
+          "component": "silviculture",
+          "tier": "reported_average",
+          "tier_score": 4,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": true,
+          "proxy_model": false,
+          "donor_or_assumption": false,
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "price_bc_blend",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "AB",
+      "province_name": "Alberta",
+      "allocation_volume_m3": 22891404.0,
+      "volume_share": 0.19240138,
+      "volume_reference_basis": "crown_aac_approx",
+      "donor_flat": {
+        "low_cad_m3": -89.9629,
+        "base_cad_m3": 35.036,
+        "high_cad_m3": 82.2909,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -159.1259,
+        "base_cad_m3": -62.1313,
+        "high_cad_m3": -0.4042,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -97.1673,
+      "stumpage_rate_type": "timber_dues_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 2.66,
+        "rate_base_cad_m3": 5.53,
+        "rate_high_cad_m3": 12.68,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "timber_dues_rate",
+        "rate_basis": "General coniferous lumber, pulp and roundwood timber dues (Gov AB + FRIAA)",
+        "published_range": "Nov 2026 5.53; 12-month range 2.66-12.68 CAD/m3",
+        "year": "2026-11",
+        "source_key": "ab_timber_dues_2026_11",
+        "source_title": "Timber dues rates - coniferous lumber, pulp and roundwood timber",
+        "source_url": "https://www.alberta.ca/timber-dues-rates-coniferous-pulpwood-and-roundwood",
+        "fallback_donor": "",
+        "notes": "General dues rate, not the small-operator rate. Not a delivered price.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P1",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P1",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "AB:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P1",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "AB:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P1",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "AB:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P1",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "AB:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P1",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "AB:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "SK",
+      "province_name": "Saskatchewan",
+      "allocation_volume_m3": 4344697.6,
+      "volume_share": 0.03651702,
+      "volume_reference_basis": "crown_aac_approx",
+      "donor_flat": {
+        "low_cad_m3": -91.8865,
+        "base_cad_m3": 34.2655,
+        "high_cad_m3": 81.8957,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -161.1806,
+        "base_cad_m3": -28.7524,
+        "high_cad_m3": 10.5475,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -63.0179,
+      "stumpage_rate_type": "timber_dues_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 2.6,
+        "rate_base_cad_m3": 15.65,
+        "rate_high_cad_m3": 15.65,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "timber_dues_rate",
+        "rate_basis": "S1a white spruce/black spruce/lodgepole pine >15 cm dues, 2026-27",
+        "published_range": "Q1 2.60; Q2 8.15; Q3 15.65 CAD/m3",
+        "year": "2026-Q3",
+        "source_key": "sk_dues_q3_2026_27",
+        "source_title": "2026-27 Quarter 3 Dues and Fees Table",
+        "source_url": "https://publications.saskatchewan.ca/api/v1/products/129953/formats/157443/download",
+        "fallback_donor": "",
+        "notes": "Forest Management Fund fee (7.47 CAD/m3) is excluded to avoid double counting the silviculture cost donor.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P2",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P2",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "SK:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P2",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "SK:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P2",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "SK:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P2",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "SK:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P2",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "SK:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "MB",
+      "province_name": "Manitoba",
+      "allocation_volume_m3": 1135235.8,
+      "volume_share": 0.00954161,
+      "volume_reference_basis": "documented_range_midpoint_proxy",
+      "donor_flat": {
+        "low_cad_m3": -94.0598,
+        "base_cad_m3": 33.3948,
+        "high_cad_m3": 81.4492,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -159.0291,
+        "base_cad_m3": -60.2293,
+        "high_cad_m3": -24.5511,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -93.6241,
+      "stumpage_rate_type": "timber_dues_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 4.58,
+        "rate_base_cad_m3": 6.58,
+        "rate_high_cad_m3": 6.58,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "timber_dues_rate",
+        "rate_basis": "Softwood lumber Crown timber dues, standard/medium/long distance",
+        "published_range": "Standard 6.58; medium 5.58; long 4.58 CAD/m3",
+        "year": "2026-11",
+        "source_key": "mb_crown_timber_dues_2026_11",
+        "source_title": "Crown Timber Dues for November 2026",
+        "source_url": "https://www.gov.mb.ca/nrnd/forest/forestry/crown_timber/history/index.html",
+        "fallback_donor": "",
+        "notes": "Standard FMU rate used; not a delivered price.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P3",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P3",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "MB:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "MB:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "MB:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "MB:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "MB:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "ON",
+      "province_name": "Ontario",
+      "allocation_volume_m3": 13493596.0,
+      "volume_share": 0.11341316,
+      "volume_reference_basis": "crown_aac_approx",
+      "donor_flat": {
+        "low_cad_m3": -89.5499,
+        "base_cad_m3": 35.2015,
+        "high_cad_m3": 82.3757,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "crown_timber_charges_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -151.2866,
+        "base_cad_m3": -57.849,
+        "high_cad_m3": -22.9751,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "crown_timber_charges_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -93.0505,
+      "stumpage_rate_type": "crown_timber_charges_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 6.06,
+        "rate_base_cad_m3": 6.75,
+        "rate_high_cad_m3": 6.75,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "crown_timber_charges_rate",
+        "rate_basis": "Spruce/Jack Pine/Scots Pine/Balsam Fir/Larch sawmill Crown charges",
+        "published_range": "Minimum price 6.06; subtotal Crown charges 6.75 CAD/m3",
+        "year": "2026-11",
+        "source_key": "on_stumpage_matrix_2026_27",
+        "source_title": "Stumpage matrix 2026-27, Period 8 (November 2026)",
+        "source_url": "https://data.ontario.ca/dataset/crown-timber-charges-for-forestry-companies/resource/159952fe-22ad-4fb7-9067-8aec29964d74",
+        "fallback_donor": "",
+        "notes": "Subtotal Crown charge used; not a delivered price.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P1",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P1",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "ON:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P1",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "ON:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P1",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "ON:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P1",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "ON:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P1",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "ON:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "QC",
+      "province_name": "Quebec",
+      "allocation_volume_m3": 26674334.0,
+      "volume_share": 0.22419676,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -96.6814,
+        "base_cad_m3": 32.3447,
+        "high_cad_m3": 80.9107,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy_with_reported_road",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "standing_value_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -143.5218,
+        "base_cad_m3": -35.971,
+        "high_cad_m3": 35.6949,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy_with_reported_road",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "standing_value_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -68.3157,
+      "stumpage_rate_type": "standing_value_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_partial_direct",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy_with_reported_road",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 1,
+        "proxy_model": 0,
+        "donor_proxy": 4,
+        "assumption": 0
+      },
+      "direct_cell_count": 1,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 4,
+      "assumption_cell_count": 0,
+      "donor_only": false,
+      "status": "partial_direct",
+      "status_label": "partial direct",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 12.88,
+        "rate_base_cad_m3": 14.08,
+        "rate_high_cad_m3": 22.49,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "standing_value_rate",
+        "rate_basis": "Spruce sawlog (qualite B) standing-value rate, November 2026",
+        "published_range": "p10 12.88; median 14.08; p90 22.49 CAD/m3 across 191 zones",
+        "year": "2026-11",
+        "source_key": "qc_tarification_2026_27",
+        "source_title": "Taux unitaires de la valeur marchande des bois sur pied, novembre 2026",
+        "source_url": "https://cdn-contenu.quebec.ca/cdn-contenu/forets/documents/entreprises/recolte/tarification/2026-2027/GR_taux_bois_2026-2027.xlsx",
+        "fallback_donor": "",
+        "notes": "Zone distribution used because a single provincial rate does not exist. Not a delivered price.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P1",
+        "open_cell_count": 4,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P1",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "QC:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P1",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "QC:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P1",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "QC:haul"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P1",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "QC:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor",
+            "price_qc_gap"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "QC has no current delivered-log price in the materialised evidence. BC donor price used. The QC 2022 purchase cost and BMMB Crown historical rate are references only, not price inputs."
+        },
+        {
+          "component": "road",
+          "tier": "reported_average",
+          "tier_score": 4,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": true,
+          "proxy_model": false,
+          "donor_or_assumption": false,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "price_qc_gap",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "NB",
+      "province_name": "New Brunswick",
+      "allocation_volume_m3": 6234700.0,
+      "volume_share": 0.05240242,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -85.2473,
+        "base_cad_m3": 36.925,
+        "high_cad_m3": 83.2596,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_royalty_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -107.7337,
+        "base_cad_m3": 5.627,
+        "high_cad_m3": 55.5035,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_royalty_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -31.298,
+      "stumpage_rate_type": "timber_royalty_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 24.03,
+        "rate_base_cad_m3": 25.05,
+        "rate_high_cad_m3": 27.06,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "timber_royalty_rate",
+        "rate_basis": "Spruce/fir/jack pine sawlog royalty, 2026-27 season",
+        "published_range": "24.03-27.06; Nov 1-28 25.05 CAD/m3",
+        "year": "2026-11",
+        "source_key": "nb_timber_royalty_2026_27",
+        "source_title": "Timber royalty rates 2026-2027",
+        "source_url": "https://gnb.ca/en/topic/environment-resources/forestry-conservation/forest-products/timber-royalty-rates-26-27.html",
+        "fallback_donor": "",
+        "notes": "Crown royalty rate, not a delivered price.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P2",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P2",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "NB:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P2",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NB:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P2",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NB:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P2",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "NB:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P2",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "NB:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "NS",
+      "province_name": "Nova Scotia",
+      "allocation_volume_m3": 2388245.0,
+      "volume_share": 0.02007311,
+      "volume_reference_basis": "crown_plus_documented_private_aac",
+      "donor_flat": {
+        "low_cad_m3": -85.2563,
+        "base_cad_m3": 36.9214,
+        "high_cad_m3": 83.2577,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "standing_timber_value_survey"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -94.9869,
+        "base_cad_m3": 43.9234,
+        "high_cad_m3": 91.1853,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "stumpage_rate_type": "standing_timber_value_survey"
+      },
+      "scaled_minus_donor_flat_cad_m3": 7.002,
+      "stumpage_rate_type": "standing_timber_value_survey",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 29.87,
+        "rate_base_cad_m3": 36.4,
+        "rate_high_cad_m3": 36.4,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "standing_timber_value_survey",
+        "rate_basis": "Softwood sawlog standing-timber market value (SPF)",
+        "published_range": "SPF sawlogs 36.40; all-species sawables 29.87 CAD/m3",
+        "year": "2024-07",
+        "source_key": "ns_standing_timber_2024",
+        "source_title": "Report on Prices of Standing Timber, July 2024",
+        "source_url": "https://novascotia.ca/natr/forestry/registry/pdf/prices-standing-timber-2022.pdf",
+        "fallback_donor": "",
+        "notes": "The survey is used by the province to set Crown stumpage; it is not an observed Crown sale or a delivered price.",
+        "is_stumpage_or_dues_rate": true,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P2",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P2",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "NS:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P2",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NS:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P2",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NS:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P2",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "NS:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P2",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "NS:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "NL",
+      "province_name": "Newfoundland and Labrador",
+      "allocation_volume_m3": 1454037.5,
+      "volume_share": 0.01222113,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -96.6444,
+        "base_cad_m3": 32.3595,
+        "high_cad_m3": 80.9183,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -96.6444,
+        "base_cad_m3": 32.3595,
+        "high_cad_m3": 80.9183,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "rate_basis": "No current provincial stumpage/dues series materialised",
+        "published_range": "not available",
+        "year": "",
+        "source_key": "",
+        "source_title": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_stumpage_or_dues_rate": false,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P3",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P3",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "NL:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NL:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NL:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "NL:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "NL:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "PE",
+      "province_name": "Prince Edward Island",
+      "allocation_volume_m3": 302210.4,
+      "volume_share": 0.00254007,
+      "volume_reference_basis": "nfd_planning_volume_no_aac+operable_missing",
+      "donor_flat": {
+        "low_cad_m3": -85.2469,
+        "base_cad_m3": 36.9252,
+        "high_cad_m3": 83.2597,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -85.2469,
+        "base_cad_m3": 36.9252,
+        "high_cad_m3": 83.2597,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "rate_basis": "No current provincial stumpage/dues series materialised",
+        "published_range": "not available",
+        "year": "",
+        "source_key": "",
+        "source_title": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_stumpage_or_dues_rate": false,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P3",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P3",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "PE:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "PE:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "PE:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "PE:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "PE:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "YT",
+      "province_name": "Yukon",
+      "allocation_volume_m3": 43925.8,
+      "volume_share": 0.00036919,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -100.6176,
+        "base_cad_m3": 30.7679,
+        "high_cad_m3": 80.1021,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -100.6176,
+        "base_cad_m3": 30.7679,
+        "high_cad_m3": 80.1021,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "rate_basis": "No current provincial stumpage/dues series materialised",
+        "published_range": "not available",
+        "year": "",
+        "source_key": "",
+        "source_title": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_stumpage_or_dues_rate": false,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P3",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P3",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "YT:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "YT:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "YT:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "YT:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "YT:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "NT",
+      "province_name": "Northwest Territories",
+      "allocation_volume_m3": 36376.0,
+      "volume_share": 0.00030574,
+      "volume_reference_basis": "actual_mean_proxy_no_territory_aac",
+      "donor_flat": {
+        "low_cad_m3": -101.331,
+        "base_cad_m3": 30.4821,
+        "high_cad_m3": 79.9555,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -101.331,
+        "base_cad_m3": 30.4821,
+        "high_cad_m3": 79.9555,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "rate_basis": "No current provincial stumpage/dues series materialised",
+        "published_range": "not available",
+        "year": "",
+        "source_key": "",
+        "source_title": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_stumpage_or_dues_rate": false,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P3",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P3",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "NT:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NT:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P3",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NT:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "NT:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P3",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "NT:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    },
+    {
+      "province": "NU",
+      "province_name": "Nunavut",
+      "allocation_volume_m3": 0.0,
+      "volume_share": 0.0,
+      "volume_reference_basis": "not_assessed_no_data+operable_missing",
+      "donor_flat": {
+        "low_cad_m3": -105.3059,
+        "base_cad_m3": 28.8899,
+        "high_cad_m3": 79.139,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -105.3059,
+        "base_cad_m3": 28.8899,
+        "high_cad_m3": 79.139,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "not_ranked_donor_only",
+      "price_tier": "donor_proxy",
+      "cost_tier": "donor_proxy",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "evidence_tier": "donor_proxy",
+        "is_direct": false,
+        "donor_province": "BC",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing"
+      },
+      "evidence_mix": {
+        "reported_average": 0,
+        "proxy_model": 0,
+        "donor_proxy": 5,
+        "assumption": 0
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "assumption_cell_count": 0,
+      "donor_only": true,
+      "status": "provisional_donor",
+      "status_label": "provisional donor",
+      "ranked": false,
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "unit": "CAD_nominal_per_m3",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "rate_basis": "No current provincial stumpage/dues series materialised",
+        "published_range": "not available",
+        "year": "",
+        "source_key": "",
+        "source_title": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_stumpage_or_dues_rate": false,
+        "is_delivered_price": false,
+        "is_observed_revenue": false
+      },
+      "replacement": {
+        "priority": "P4",
+        "open_cell_count": 5,
+        "components": [
+          "price",
+          "logging",
+          "haul",
+          "road",
+          "silviculture"
+        ],
+        "first_action": "obtain a provincial delivered-log price series",
+        "first_component": "price",
+        "queue_status": "open_required_source_not_invented",
+        "cells": [
+          {
+            "component": "price",
+            "priority": "P4",
+            "required_source_category": "price series",
+            "replacement_action": "obtain a provincial delivered-log price series",
+            "current_source_id": "bc_log_market_2025_12",
+            "donor_province": "BC",
+            "coverage_cell_id": "NU:price"
+          },
+          {
+            "component": "logging",
+            "priority": "P4",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial logging cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NU:logging"
+          },
+          {
+            "component": "haul",
+            "priority": "P4",
+            "required_source_category": "cost study",
+            "replacement_action": "obtain a provincial truck-haul cost study",
+            "current_source_id": "bc_open_cost_model",
+            "donor_province": "BC",
+            "coverage_cell_id": "NU:haul"
+          },
+          {
+            "component": "road",
+            "priority": "P4",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial road allowance in CAD/m3",
+            "current_source_id": "qc_cost_survey_2022",
+            "donor_province": "QC",
+            "coverage_cell_id": "NU:road"
+          },
+          {
+            "component": "silviculture",
+            "priority": "P4",
+            "required_source_category": "road/silviculture rate",
+            "replacement_action": "obtain a provincial silviculture allowance in CAD/m3",
+            "current_source_id": "bc_appraisal_silviculture_2026_10",
+            "donor_province": "BC",
+            "coverage_cell_id": "NU:silviculture"
+          }
+        ]
+      },
+      "components": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "proxy_model",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "cost_bc_distribution",
+            "cost_wage_index",
+            "cost_diesel_index",
+            "cost_terrain_factor",
+            "cost_road_factor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "evidence_tier": "reported_market_average",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "price_non_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "survey_aggregate",
+          "donor_province": "QC",
+          "assumption_ids": [
+            "road_allowance_qc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "tier_score": 2,
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "evidence_tier": "appraisal_allowance",
+          "donor_province": "BC",
+          "assumption_ids": [
+            "silviculture_allowance_bc_donor"
+          ],
+          "direct_evidence": false,
+          "proxy_model": false,
+          "donor_or_assumption": true,
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ],
+      "assumption_ids": [
+        "cost_bc_distribution",
+        "cost_wage_index",
+        "cost_diesel_index",
+        "cost_terrain_factor",
+        "cost_road_factor",
+        "price_non_bc_donor",
+        "road_allowance_qc_donor",
+        "silviculture_allowance_bc_donor"
+      ]
+    }
+  ],
+  "tier_coverage": {
+    "basis": "volume_weighted_five_component_cells",
+    "component_count": 5,
+    "province_count": 13,
+    "cell_count": 65,
+    "volume_weighted_shares": {
+      "reported_average": 0.17924672,
+      "proxy_model": 0.13440737,
+      "donor_proxy": 0.68634592,
+      "assumption": 0.0
+    },
+    "volume_weighted_pct": {
+      "reported_average": 17.9247,
+      "proxy_model": 13.4407,
+      "donor_proxy": 68.6346,
+      "assumption": 0.0
+    },
+    "cell_counts": {
+      "reported_average": 3,
+      "proxy_model": 2,
+      "donor_proxy": 60,
+      "assumption": 0
+    },
+    "cell_shares": {
+      "reported_average": 0.04615385,
+      "proxy_model": 0.03076923,
+      "donor_proxy": 0.92307692,
+      "assumption": 0.0
+    },
+    "cell_pct": {
+      "reported_average": 4.6154,
+      "proxy_model": 3.0769,
+      "donor_proxy": 92.3077,
+      "assumption": 0.0
+    },
+    "total_harvest_volume_m3": 118977339.1,
+    "scenario_price_tiers": {
+      "donor_flat": {
+        "donor_proxy": 12,
+        "reported_average": 1
+      },
+      "stumpage_scaled": {
+        "donor_proxy": 5,
+        "reported_average": 1,
+        "stumpage_scaled_proxy": 7
+      }
+    },
+    "scenario_cost_tiers": {
+      "donor_flat": {
+        "donor_proxy": 11,
+        "donor_proxy_with_reported_road": 1,
+        "proxy_model": 1
+      },
+      "stumpage_scaled": {
+        "donor_proxy": 11,
+        "donor_proxy_with_reported_road": 1,
+        "proxy_model": 1
+      }
+    }
+  },
+  "national_comparison": {
+    "scaled_minus_donor_flat_cad_m3": -49.2585,
+    "dues_comparable_to_delivered_price": false,
+    "comparison_status": "method_change_not_observed_market_change",
+    "notes": "Volume-weighted diagnostic. A dues rate is not a delivered log price; the scaled-minus-donor-flat delta is a method effect, not an observed market change. No combined national net value is computed."
+  },
+  "caveats": [
+    "Evidence coverage comes first. The default view is the direct/reported, proxy and donor mix, not a national margin.",
+    "Donor-only jurisdictions are flagged provisional donor. Their margins are placeholders, not comparable provincial results, and the UI does not rank margins.",
+    "National values are volume-weighted model diagnostics shown last, not a combined national net value.",
+    "donor_flat is the base scenario. stumpage_scaled is the method sensitivity: the sensitivity, not the base; not observed and not policy grade.",
+    "Stumpage, dues, royalty and standing-value rates are charges on standing timber, not delivered log prices. The scaled-minus-donor-flat delta is a method change, not an observed market change.",
+    "No jurisdiction row is an observed transaction, policy-grade value, Forest LP input or public OSeCAN input."
+  ],
+  "non_claims": [
+    "No combined national net value.",
+    "Not observed; observed=false.",
+    "Not policy grade; policy_grade=false.",
+    "Not a Forest LP objective or constraint input.",
+    "Not a public OSeCAN input.",
+    "Not a legal AAC or a policy frontier."
+  ],
+  "source_files": [
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_estimates.csv",
+      "rows": 78
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_summary.csv",
+      "rows": 28
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/scenario_comparison.csv",
+      "rows": 14
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/tier_coverage.csv",
+      "rows": 39
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_coverage.csv",
+      "rows": 65
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/assumptions_donor_register.csv",
+      "rows": 14
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/sources.csv",
+      "rows": 12
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
+      "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/source_replacement_queue.csv",
+      "rows": 60
+    },
+    {
+      "path": "data/derived/national/harvest_basis/provincial_allocation/119m.csv",
+      "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_summary.json",
+      "rows": null
+    }
+  ],
+  "download": {
+    "json": {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "media_type": "application/json"
+    },
+    "manifest": {
+      "path": "economics/national.manifest.json",
+      "label": "National economics manifest",
+      "media_type": "application/json"
+    }
+  }
+}
