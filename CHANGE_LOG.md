@@ -2,6 +2,26 @@
 
 ## 2026-11-22
 
+- **Froze and documented the national facility chain v1.** Added
+  `docs/model-card-national-facility-chain.md` covering purpose, scope, data
+  sources and capacity evidence tiers, inventory/capacity/assignment, the
+  product/residue chain, the 100/119/150 Mm3 cases, the v6 local-processing
+  base versus the v5 `published_plus_proxy` trade sensitivity, the OSeCAN
+  handoff v4, key results, limitations, run commands, and non-claims. Created
+  annotated tag `national-facility-chain-v1` at parent `94c7501` and recorded
+  data commit `6ca272e` (inventory v1, capacity v3, assignment v6, product-chain
+  v1, residue curve v3, facility residue v3, chain scenarios v3, OSeCAN handoff
+  v4). The 119 Mm3 v6 base assigns 118.977 Mm3 with 118.941 Mm3 local (99.97%),
+  36,376 m3 cross-border (0.03%), 47.463 Mm3 proxy (39.89%), 208 facilities,
+  HHI 0.01287, and largest-facility share 6.80%; the v5 sensitivity has
+  21.902 Mm3 cross-border (18.41%) and 40.319 Mm3 proxy (33.89%). The
+  100/119/150 total gross residue is 583.12 / 693.78 / 874.68 PJ and total
+  recoverable residue is 542.46 / 645.40 / 813.69 PJ. OSeCAN handoff v4 maps
+  all 13 zones with no `UNMAPPED` bucket: 119 Mm3 process 50% is 263.003 PJ
+  and harvest 60% is 100.667 PJ, against a 2050 context of 152.923 PJ national
+  / 43.524 PJ BC. Documentation only: no code, model, UI, or public OSeCAN
+  change, and no unexpected `D`.
+
 - **Added floor-primary assignment v6 and processing comparisons.** Added
   `national_facility_assignment_v6.py`, `facility_residue_supply_v3.py`,
   `national_residue_curve_v3.py`, `national_facility_chain_scenarios_v3.py`,
