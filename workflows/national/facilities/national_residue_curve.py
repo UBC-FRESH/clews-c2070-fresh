@@ -75,6 +75,13 @@ OSECAN_MANIFEST = OSECAN_DIR / "manifest.json"
 
 ARTIFACT = "national_residue_curve_v1"
 ARTIFACT_VERSION = "1.0.0"
+ARTIFACT_TITLE = "National Residue Supply-Curve Sensitivity v1"
+REPORT_NAME = "NATIONAL_RESIDUE_CURVE_V1.md"
+FACILITY_ARTIFACT = "facility_residue_supply_v1"
+FACILITY_LABEL = "facility_residue_supply_v1"
+FACILITY_SCENARIO = "province_capacity_floor"
+MODULE_PATH = "workflows.national.facilities.national_residue_curve"
+TEST_PATH = "tests/test_national_residue_curve.py"
 PJ_GJ = 1_000_000.0
 EXPECTED_LHV_GJ_PER_ODT = 18.5
 EXPECTED_RSYC_119M_ODT = 7_080_062.0860263305
@@ -763,7 +770,7 @@ def _parse_process_base(
             f"facility residue table is missing columns {missing}"
         )
     frame = facility_frame.copy()
-    if set(frame["scenario"].astype(str).str.strip()) != {"province_capacity_floor"}:
+    if set(frame["scenario"].astype(str).str.strip()) != {FACILITY_SCENARIO}:
         raise NationalResidueCurveError(
             "facility residue table has an unexpected scenario"
         )
@@ -1786,11 +1793,11 @@ def _report(
     rsvc = summary["rsyc_comparison"]
     osecan = summary["osecan_context"]
     lines = [
-        "# National Residue Supply-Curve Sensitivity v1",
+        f"# {ARTIFACT_TITLE}",
         "",
         (
             "This forestry-side screening artifact converts the "
-            "`facility_residue_supply_v1` process and harvest residue streams "
+            f"`{FACILITY_LABEL}` process and harvest residue streams "
             "into availability and recovery scenarios at 18.5 GJ/odt. Process "
             "residue is aggregated by facility province and class; harvest "
             "residue is aggregated by origin province. The streams remain "
@@ -2004,11 +2011,9 @@ def _report(
             ),
             "",
             (
-                "Run `.venv/bin/python -m "
-                "workflows.national.facilities.national_residue_curve` to "
-                "reproduce the artifact and `.venv/bin/python -m pytest "
-                "tests/test_national_residue_curve.py -q` to run the regression "
-                "tests."
+                f"Run `.venv/bin/python -m {MODULE_PATH}` to reproduce the "
+                "artifact and `.venv/bin/python -m pytest "
+                f"{TEST_PATH} -q` to run the regression tests."
             ),
             "",
             "No policy/AAC claim is made.",
@@ -2033,7 +2038,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
     facility_summary = _load_json(
         FACILITY_DIR / "summary.json", "facility residue summary"
     )
-    if facility_summary.get("artifact") != "facility_residue_supply_v1":
+    if facility_summary.get("artifact") != FACILITY_ARTIFACT:
         raise NationalResidueCurveError(
             "unexpected facility residue artifact: "
             f"{facility_summary.get('artifact')!r}"
@@ -2243,7 +2248,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         "status": "pass",
         "scope": (
             "National and provincial residue supply-curve sensitivity on "
-            "facility_residue_supply_v1: process availability 0/25/50/75% by "
+            f"{FACILITY_LABEL}: process availability 0/25/50/75% by "
             "class and total, harvest recovery 0.35/0.60/0.75 of gross harvest "
             "residue, RSYC 119 Mm3 comparison, and OSeCAN 2050 context."
         ),
@@ -2262,15 +2267,14 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         },
         "method": {
             "process_base": (
-                "facility_residue_supply_v1 process residue aggregated by "
+                f"{FACILITY_LABEL} process residue aggregated by "
                 "facility province and facility class"
             ),
             "process_availability_cases": {
                 case: fraction for fraction, case in PROCESS_AVAILABILITY_CASES
             },
             "harvest_base": (
-                "facility_residue_supply_v1 gross harvest residue by origin "
-                "province"
+                f"{FACILITY_LABEL} gross harvest residue by origin province"
             ),
             "harvest_recovery_cases": {
                 case: fraction for fraction, case in HARVEST_RECOVERY_CASES
@@ -2363,10 +2367,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
                 OSECAN_MANIFEST,
             )
         },
-        "reproduce": (
-            ".venv/bin/python -m "
-            "workflows.national.facilities.national_residue_curve"
-        ),
+        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
     }
 
     curve_fields = [
@@ -2433,7 +2434,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         ],
     )
     _write_json(target_dir / "summary.json", summary)
-    (target_dir / "NATIONAL_RESIDUE_CURVE_V1.md").write_text(
+    (target_dir / REPORT_NAME).write_text(
         _report(
             summary=summary,
             national_rows=national_rows,

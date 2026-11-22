@@ -77,6 +77,17 @@ RSYC_SUMMARY = (
 
 ARTIFACT = "facility_residue_supply_v1"
 ARTIFACT_VERSION = "1.0.0"
+ARTIFACT_TITLE = "National Facility Residue Supply v1"
+REPORT_NAME = "FACILITY_RESIDUE_SUPPLY_V1.md"
+ASSIGNMENT_VERSION = "v3"
+ASSIGNMENT_LABEL = "assignment v3"
+ASSIGNMENT_ARTIFACT = "national_facility_assignment_v3"
+ASSIGNMENT_SUMMARY_KEY = "assignment_v3"
+ALLOCATION_BASIS = "assignment_v3_province_capacity_floor_assigned_m3"
+UTILIZATION_FIELD = "assignment_utilization_v3"
+UTILIZATION_MODE = "row"
+MODULE_PATH = "workflows.national.facilities.facility_residue_supply"
+TEST_PATH = "tests/test_facility_residue_supply.py"
 SCENARIO = "province_capacity_floor"
 PJ_GJ = 1_000_000.0
 
@@ -132,6 +143,10 @@ CAPACITY_EVIDENCE = {
     PUBLISHED: "published_mills_db_2015_infeed_proxy",
     PROXY: "class_median_proxy",
     SCALED_PROXY: "class_median_proxy_scaled_to_harvest_floor",
+}
+CAPACITY_EVIDENCE_ALLOWED = {
+    status: frozenset({evidence})
+    for status, evidence in CAPACITY_EVIDENCE.items()
 }
 RESIDUE_DENSITY_ODT_M3 = 0.45
 RSYC_BASE_RECOVERY = 0.60
@@ -643,21 +658,23 @@ def _parse_assignment() -> tuple[list[AssignmentLink], dict[str, Any]]:
         "observed",
         "policy_grade",
     ]
-    frame = _read_csv(path, required, "facility assignment v3")
+    frame = _read_csv(
+        path, required, f"facility assignment {ASSIGNMENT_VERSION}"
+    )
     frame = frame[
         frame["scenario"].astype(str).str.strip() == SCENARIO
     ].copy()
     if frame.empty:
         raise FacilityResidueSupplyError(
-            f"assignment v3 has no rows for scenario {SCENARIO!r}"
+            f"{ASSIGNMENT_LABEL} has no rows for scenario {SCENARIO!r}"
         )
     summary_path = ASSIGNMENT_DIR / "summary.json"
     if not summary_path.is_file():
         raise FacilityResidueSupplyError(
-            f"assignment v3 summary is missing: {summary_path}"
+            f"{ASSIGNMENT_LABEL} summary is missing: {summary_path}"
         )
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    if summary.get("artifact") != "national_facility_assignment_v3":
+    if summary.get("artifact") != ASSIGNMENT_ARTIFACT:
         raise FacilityResidueSupplyError(
             f"unexpected assignment artifact: {summary.get('artifact')!r}"
         )
@@ -668,12 +685,13 @@ def _parse_assignment() -> tuple[list[AssignmentLink], dict[str, Any]]:
     labels = summary.get("labels", {})
     if labels.get("observed") is not False or labels.get("policy_grade") is not False:
         raise FacilityResidueSupplyError(
-            "assignment v3 labels are not screening labels"
+            f"{ASSIGNMENT_LABEL} labels are not screening labels"
         )
 
     links: list[AssignmentLink] = []
     seen_origins: set[tuple[str, str]] = set()
     facility_meta: dict[str, tuple[Any, ...]] = {}
+    cumulative_assigned: dict[str, float] = defaultdict(float)
     for position, record in frame.iterrows():
         origin_province = str(record["province"]).strip().upper()
         if origin_province not in PROVINCES:
@@ -710,8 +728,7 @@ def _parse_assignment() -> tuple[list[AssignmentLink], dict[str, Any]]:
                 f"{facility_id}: unexpected capacity status {capacity_status!r}"
             )
         capacity_evidence = str(record["capacity_evidence"]).strip()
-        expected_evidence = CAPACITY_EVIDENCE[capacity_status]
-        if capacity_evidence != expected_evidence:
+        if capacity_evidence not in CAPACITY_EVIDENCE_ALLOWED[capacity_status]:
             raise FacilityResidueSupplyError(
                 f"{facility_id}: capacity evidence {capacity_evidence!r} "
                 f"does not match {capacity_status!r}"
@@ -740,9 +757,15 @@ def _parse_assignment() -> tuple[list[AssignmentLink], dict[str, Any]]:
         _require_between(
             utilization, 0.0, 1.0 + 1e-9, f"{facility_id} utilization"
         )
+        cumulative_assigned[facility_id] += assigned
+        expected_utilization = (
+            cumulative_assigned[facility_id]
+            if UTILIZATION_MODE == "cumulative"
+            else assigned
+        ) / capacity
         _require_close(
             utilization,
-            assigned / capacity,
+            expected_utilization,
             f"{facility_id} utilization reproduction",
         )
         scale = _finite_nonnegative(
@@ -1961,7 +1984,7 @@ def _validate(
 
     scenario = assignment_summary["scenarios"][SCENARIO]
     assignment_errors: list[str] = []
-    if float(scenario.get("unassigned_m3", 0.0)) != 0.0:
+    if abs(float(scenario.get("unassigned_m3", 0.0))) > ABS_TOL:
         assignment_errors.append("scenario has unassigned volume")
     if float(scenario.get("assigned_m3", 0.0)) <= 0.0:
         assignment_errors.append("scenario assigned volume is zero")
@@ -1969,7 +1992,7 @@ def _validate(
         assignment_errors.append("scenario name mismatch")
     _check(
         checks,
-        "assignment_v3_scenario",
+        f"{ASSIGNMENT_SUMMARY_KEY}_scenario",
         not assignment_errors,
         f"failed: {assignment_errors}",
     )
@@ -2103,12 +2126,12 @@ def _report(
     rsyc = summary["rsyc_comparison"]
     concentration = summary["concentration"]
     lines = [
-        "# National Facility Residue Supply v1",
+        f"# {ARTIFACT_TITLE}",
         "",
         (
             "This artifact recomputes facility-level class feedstock, products, "
-            "and process residue on the assignment v3 "
-            "`province_capacity_floor` case, and reports provincial harvest "
+            f"and process residue on the {ASSIGNMENT_LABEL} "
+            f"`{SCENARIO}` case, and reports provincial harvest "
             "residue alongside it. Process residue is facility-assigned; "
             "harvest residue is not."
         ),
@@ -2263,9 +2286,10 @@ def _report(
                 f"- Cross-border process residue (facility province differs "
                 f"from origin): {totals['cross_border_residue_share']:.2%} "
                 f"({_format_number(totals['cross_border_residue_odt'])} odt). "
-                "Assignment v3 cross-border volume is 0.03%, but the class "
-                "fallback routes some origin class streams to facilities in "
-                "other provinces."
+                f"{ASSIGNMENT_LABEL.capitalize()} cross-border volume differs "
+                "from the class-fallback cross-border residue because the "
+                "fallback routes origin class streams to facilities in other "
+                "provinces."
             ),
             "",
             "### Top facilities by process residue",
@@ -2313,7 +2337,7 @@ def _report(
             ),
             (
                 "- Facility feedstock is the product-chain class feedstock "
-                "allocated by assignment v3 assigned volume. It is not a "
+                f"allocated by {ASSIGNMENT_LABEL} assigned volume. It is not a "
                 "re-measurement of facility infeed and may differ from the "
                 "assigned_m3 weight."
             ),
@@ -2346,11 +2370,9 @@ def _report(
             ),
             "",
             (
-                "Run `.venv/bin/python -m "
-                "workflows.national.facilities.facility_residue_supply` to "
-                "reproduce the artifact and `.venv/bin/python -m pytest "
-                "tests/test_facility_residue_supply.py -q` to run the regression "
-                "tests."
+                f"Run `.venv/bin/python -m {MODULE_PATH}` to reproduce the "
+                "artifact and `.venv/bin/python -m pytest "
+                f"{TEST_PATH} -q` to run the regression tests."
             ),
             "",
             "No policy/AAC claim is made.",
@@ -2547,15 +2569,15 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         "facility_assignment": True,
         "ui_or_public_osecan_changed": False,
         "scope": (
-            "Facility-level process residue on assignment v3 "
-            "province_capacity_floor, plus separate provincial harvest residue "
+            f"Facility-level process residue on {ASSIGNMENT_LABEL} "
+            f"{SCENARIO}, plus separate provincial harvest residue "
             "and an RSYC 119 Mm3 comparison."
         ),
         "method": {
             "allocation": (
-                "per origin province and class, proportional to assignment-v3 "
-                "province_capacity_floor assigned volume among same-class "
-                "facilities"
+                "per origin province and class, proportional to "
+                f"{ASSIGNMENT_LABEL} {SCENARIO} assigned volume among "
+                "same-class facilities"
             ),
             "local_first": True,
             "fallback": (
@@ -2577,7 +2599,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
                 "facility-assigned"
             ),
         },
-        "assignment_v3": assignment_v3,
+        ASSIGNMENT_SUMMARY_KEY: assignment_v3,
         "lhv": {
             "value_gj_per_odt": rsvc.lhv_gj_per_odt,
             "source": "national RSYC residue factor summary",
@@ -2597,7 +2619,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             "Proxy facility capacity is a BC class-median fill, not an observed capacity; proxy and scaled-proxy shares are reported explicitly.",
             "Class matching prohibits class feedstock mixing and forces province class streams to assigned facilities of the same class.",
             "Provinces without a local assigned facility of a class use the national class fallback; this is not a transport or market model.",
-            "Facility feedstock is product-chain class feedstock allocated by assignment-v3 weight, not a re-measured facility infeed.",
+            f"Facility feedstock is product-chain class feedstock allocated by {ASSIGNMENT_LABEL} weight, not a re-measured facility infeed.",
             "Process residue is facility-assigned and separate from provincial harvest residue; harvest residue is never facility-assigned.",
             "The RSYC comparison is a screening check on recoverable harvest residue, not a calibration; process residue is not added to it without the combined label.",
             "The 129.6709 PJ figure is the documented RSYC 100 Mm3 base, not the 119 Mm3 value.",
@@ -2606,10 +2628,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             "No UI or public OSeCAN surface is changed.",
         ],
         "inputs": inputs,
-        "reproduce": (
-            ".venv/bin/python -m "
-            "workflows.national.facilities.facility_residue_supply"
-        ),
+        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
     }
 
     facility_fields = [
@@ -2632,7 +2651,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         "capacity_evidence",
         "floor_scale_factor",
         "capacity_m3_y",
-        "assignment_utilization_v3",
+        UTILIZATION_FIELD,
         "feedstock_m3",
         "share_of_origin_class_feedstock",
         "origin_class_reference_feedstock_m3",
@@ -2679,9 +2698,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
                 "feedstock_class": allocation.facility_class,
                 "cross_border": LABEL_TRUE if allocation.cross_border else LABEL_FALSE,
                 "allocation_scope": allocation.allocation_scope,
-                "allocation_basis": (
-                    "assignment_v3_province_capacity_floor_assigned_m3"
-                ),
+                "allocation_basis": ALLOCATION_BASIS,
                 "assignment_weight_m3": allocation.assignment_weight_m3,
                 "assignment_share": allocation.assignment_share,
                 "assigned_m3": allocation.assigned_m3,
@@ -2689,7 +2706,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
                 "capacity_evidence": allocation.capacity_evidence,
                 "floor_scale_factor": allocation.floor_scale_factor,
                 "capacity_m3_y": allocation.capacity_m3_y,
-                "assignment_utilization_v3": allocation.utilization,
+                UTILIZATION_FIELD: allocation.utilization,
                 "feedstock_m3": allocation.feedstock_m3,
                 "share_of_origin_class_feedstock": allocation.assignment_share,
                 "origin_class_reference_feedstock_m3": reference_feedstock,
@@ -2780,7 +2797,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         national_fields,
     )
     _write_json(target_dir / "summary.json", summary)
-    (target_dir / "FACILITY_RESIDUE_SUPPLY_V1.md").write_text(
+    (target_dir / REPORT_NAME).write_text(
         _report(summary, facility_rows, province_rows), encoding="utf-8"
     )
 

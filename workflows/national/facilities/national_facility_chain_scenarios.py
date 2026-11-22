@@ -91,6 +91,12 @@ INTENSITY_CASES = ("1.0", "1.2")
 
 ARTIFACT = "national_facility_chain_scenarios_v1"
 ARTIFACT_VERSION = "1.0.0"
+ARTIFACT_TITLE = "National Facility Chain Scenarios V1"
+REPORT_NAME = "NATIONAL_FACILITY_CHAIN_SCENARIOS_V1.md"
+CAPACITY_LABEL = "inventory v1 / capacity v2"
+ASSIGNMENT_LABEL = "assignment-v4"
+MODULE_PATH = "workflows.national.facilities.national_facility_chain_scenarios"
+TEST_PATH = "tests/test_national_facility_chain_scenarios.py"
 EVIDENCE_LABEL = "model_estimate"
 OBSERVED = False
 POLICY_GRADE = False
@@ -1761,11 +1767,11 @@ def _report(
 ) -> str:
     labels = summary["labels"]
     lines = [
-        "# National Facility Chain Scenarios V1",
+        f"# {ARTIFACT_TITLE}",
         "",
         (
             "Multi-scenario 100/119/150 Mm3 facility assignment and "
-            "product/residue chain on inventory v1 / capacity v2. All values "
+            f"product/residue chain on {CAPACITY_LABEL}. All values "
             "are model estimates: `observed=false`, `policy_grade=false`. No "
             "legal/AAC claim is made."
         ),
@@ -2048,7 +2054,9 @@ def build(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
     intensity_note = read_intensity_note()
     facilities = v4.read_facilities(CAPACITY_CSV, INVENTORY_CSV)
     if not eligible_facilities(facilities):
-        raise ScenarioChainError("no eligible facilities under capacity v2")
+        raise ScenarioChainError(
+            f"no eligible facilities under {CAPACITY_LABEL}"
+        )
 
     results: dict[str, v2.ScenarioResult] = {}
     chains_by_scenario: dict[str, dict[str, ScenarioChain]] = {}
@@ -2220,15 +2228,12 @@ def build(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
                 "No UI or public OSeCAN surface is changed by this artifact."
             ),
         ],
-        "reproduce": (
-            ".venv/bin/python -m "
-            "workflows.national.facilities.national_facility_chain_scenarios"
-        ),
+        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
         "inputs": inputs,
         "method": {
             "assignment": (
-                "assignment-v4 published_plus_proxy, local-first, finite "
-                "capacity, 500 km cross-border penalty"
+                f"{ASSIGNMENT_LABEL} published_plus_proxy, local-first, "
+                "finite capacity, 500 km cross-border penalty"
             ),
             "product_residue": (
                 "product-chain-v1 effective province/class ratios applied to "
@@ -2260,7 +2265,7 @@ def build(output_dir: Path = OUTPUT_DIR) -> dict[str, Any]:
         SCENARIO_COMPARISON_FIELDS,
         comparison_rows,
     )
-    (output_dir / "NATIONAL_FACILITY_CHAIN_SCENARIOS_V1.md").write_text(
+    (output_dir / REPORT_NAME).write_text(
         _report(summary, summaries), encoding="utf-8"
     )
     v2._write_json(output_dir / "summary.json", summary)

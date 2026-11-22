@@ -79,6 +79,16 @@ RSYC_CURVE_LIBRARY = (
 
 ARTIFACT = "forestry_osecan_handoff_v2"
 ARTIFACT_VERSION = "2.0.0"
+ARTIFACT_TITLE = "Forestry Residue Handoff to OSeCAN v2"
+REPORT_NAME = "FORESTRY_OSECAN_HANDOFF_V2.md"
+CURVE_LABEL = "national_residue_curve_v1"
+MODULE_PATH = "workflows.national.facilities.forestry_osecan_handoff_v2"
+TEST_PATH = "tests/test_forestry_osecan_handoff_v2.py"
+VERSION_NOTE = (
+    "Version 2 removes the `UNMAPPED` bucket by allocating "
+    "BC, AB, ON, and QC across their sub-zones with explicit proxy "
+    "weights."
+)
 PJ_GJ = v1.PJ_GJ
 EXPECTED_LHV_GJ_PER_ODT = v1.EXPECTED_LHV_GJ_PER_ODT
 LABEL_TRUE = v1.LABEL_TRUE
@@ -607,7 +617,7 @@ def _handoff_rows(
                     "official_osecan_changed": LABEL_FALSE,
                     "caveat": _allocation_caveat(item, weight, len(weights)),
                     "notes": (
-                        "Source: national_residue_curve_v1/"
+                        f"Source: {CURVE_LABEL}/"
                         "province_residue_curve.csv; "
                         f"stream={item.stream}; "
                         f"residue_class={item.residue_class}; "
@@ -1426,15 +1436,13 @@ def _report(
 ) -> str:
     allocation = summary["zone_allocation"]
     lines = [
-        "# Forestry Residue Handoff to OSeCAN v2",
+        f"# {ARTIFACT_TITLE}",
         "",
         (
             "This is a read-only forestry-side screening handoff from "
-            "`national_residue_curve_v1` province/case totals to every OSeCAN "
-            "zone. Version 2 removes the `UNMAPPED` bucket by allocating "
-            "BC, AB, ON, and QC across their sub-zones with explicit proxy "
-            "weights. It is not an official OSeCAN result, an operating plan, "
-            "or a policy target."
+            f"`{CURVE_LABEL}` province/case totals to every OSeCAN "
+            f"zone. {VERSION_NOTE} It is not an official OSeCAN result, an "
+            "operating plan, or a policy target."
         ),
         "",
         (
@@ -1670,11 +1678,9 @@ def _report(
             ),
             "",
             (
-                "Run `.venv/bin/python -m "
-                "workflows.national.facilities.forestry_osecan_handoff_v2` to "
-                "reproduce the artifact and `.venv/bin/python -m pytest "
-                "tests/test_forestry_osecan_handoff_v2.py -q` to run the "
-                "regression tests."
+                f"Run `.venv/bin/python -m {MODULE_PATH}` to reproduce the "
+                "artifact and `.venv/bin/python -m pytest "
+                f"{TEST_PATH} -q` to run the regression tests."
             ),
             "",
             "No policy/AAC claim is made.",
@@ -1911,10 +1917,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             "No official OSeCAN file or public OSeCAN surface is changed.",
             "No transport, cost, tenure, AAC, or policy claim is made.",
         ],
-        "reproduce": (
-            ".venv/bin/python -m "
-            "workflows.national.facilities.forestry_osecan_handoff_v2"
-        ),
+        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
     }
 
     handoff_fields = [
@@ -2040,7 +2043,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         comparison_fields,
     )
     _write_json(target_dir / "summary.json", summary)
-    (target_dir / "FORESTRY_OSECAN_HANDOFF_V2.md").write_text(
+    (target_dir / REPORT_NAME).write_text(
         _report(summary, weight_rows, zone_rows, comparison_rows),
         encoding="utf-8",
     )

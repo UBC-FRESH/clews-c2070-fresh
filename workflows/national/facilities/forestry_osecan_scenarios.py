@@ -83,6 +83,13 @@ OUTPUT_DIR = DATA_ROOT / "derived/national/facilities/forestry_osecan_scenarios_
 
 ARTIFACT = "forestry_osecan_scenarios_v1"
 ARTIFACT_VERSION = "1.0.0"
+ARTIFACT_TITLE = "Forestry Residue Scenarios to OSeCAN Zones v1"
+REPORT_NAME = "FORESTRY_OSECAN_SCENARIOS_V1.md"
+CHAIN_LABEL = "national_facility_chain_scenarios_v1"
+HANDOFF_LABEL = "forestry_osecan_handoff_v2"
+CURVE_LABEL = "national_residue_curve_v1"
+MODULE_PATH = "workflows.national.facilities.forestry_osecan_scenarios"
+TEST_PATH = "tests/test_forestry_osecan_scenarios.py"
 
 SCENARIO_ORDER: tuple[str, ...] = ("100m", "119m", "150m")
 PRIMARY_SCENARIO = "119m"
@@ -1797,7 +1804,7 @@ def _report(
     harvest_cases = [case for case, _ in HARVEST_CASES]
 
     lines: list[str] = []
-    lines.append("# Forestry residue scenarios to OSeCAN zones v1")
+    lines.append(f"# {ARTIFACT_TITLE}")
     lines.append("")
     lines.append(
         f"Status: **{summary['status']}**. Artifact version "
@@ -1815,15 +1822,15 @@ def _report(
     lines.append("")
     lines.append(
         "1. Read province process residue (sum of facility classes) and gross "
-        "harvest residue from `national_facility_chain_scenarios_v1`."
+        f"harvest residue from `{CHAIN_LABEL}`."
     )
     lines.append(
         "2. Apply the seven availability/recovery fractions from "
-        "`national_residue_curve_v1` to each scenario total."
+        f"`{CURVE_LABEL}` to each scenario total."
     )
     lines.append(
         "3. Split each province/case PJ total across all 13 OSeCAN zones with "
-        "the published `forestry_osecan_handoff_v2` weights; the floating "
+        f"the published `{HANDOFF_LABEL}` weights; the floating "
         "residual is assigned to the last zone so province totals are exactly "
         "conserved."
     )
@@ -1858,7 +1865,7 @@ def _report(
     lines.append("")
     lines.append(
         "Process and harvest streams are separate and are never summed. The "
-        "119m rows reproduce `national_residue_curve_v1` exactly at the "
+        f"119m rows reproduce `{CURVE_LABEL}` exactly at the "
         "national level."
     )
     lines.append("")
@@ -1999,12 +2006,8 @@ def _report(
     lines.append("## Reproduction and verification")
     lines.append("")
     lines.append("```bash")
-    lines.append(
-        ".venv/bin/python -m workflows.national.facilities.forestry_osecan_scenarios"
-    )
-    lines.append(
-        ".venv/bin/python -m pytest tests/test_forestry_osecan_scenarios.py -q"
-    )
+    lines.append(f".venv/bin/python -m {MODULE_PATH}")
+    lines.append(f".venv/bin/python -m pytest {TEST_PATH} -q")
     lines.append("```")
     lines.append("")
     lines.append(
@@ -2303,7 +2306,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         "caveats": [
             "All values are model estimates; observed=false and policy_grade=false.",
             "The 100/119/150 Mm3 cases are planning allocations, not legal AACs, sustainable-supply determinations, or observed harvest outcomes.",
-            "Zone splits are explicit handoff-v2 proxy weights; no observed sub-provincial residue split exists.",
+            f"Zone splits are explicit {HANDOFF_LABEL} proxy weights; no observed sub-provincial residue split exists.",
             "BC zone weights are proportional to the 2050 SUPBCWB1/SUPBCWB2 zonal supply limits, so B1 and B2 candidate ratios to their own limits are identical by construction.",
             "The national supply-curve tier caps are rest-of-Canada RSYC-only; national comparisons that include BC are a context screen, not a like-for-like capacity test.",
             "Process residue is facility-assigned by receiving facility province; its provincial distribution differs from the province-basis national residue curve even though the national 119m totals reconcile.",
@@ -2314,10 +2317,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             "Supply-curve and 2050 OSeCAN values are context, not policy targets, and the comparison is not a capacity-adequacy or sustainability test.",
             "No UI or public OSeCAN surface is changed by this artifact.",
         ],
-        "reproduce": (
-            ".venv/bin/python -m "
-            "workflows.national.facilities.forestry_osecan_scenarios"
-        ),
+        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
     }
 
     residue_fields = [
@@ -2451,7 +2451,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
         comparison_fields,
     )
     _write_json(target_dir / "summary.json", summary)
-    (target_dir / "FORESTRY_OSECAN_SCENARIOS_V1.md").write_text(
+    (target_dir / REPORT_NAME).write_text(
         _report(summary, residue_rows, zone_rows, candidate_rows, comparison_rows),
         encoding="utf-8",
     )
