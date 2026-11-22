@@ -2,6 +2,21 @@
 
 ## 2026-11-22
 
+- **Added the province break-even delivered-price artifact from
+  national-economics v2.3.** Added
+  `workflows/national/harvest/province_breakeven.py` and
+  `tests/test_province_breakeven.py`; published
+  `data/derived/national/harvest_basis/province_breakeven/` with 13 province
+  break-even rows, summary JSON, report and SHA-256 manifest. Break-even is
+  the central v2.3 modeled total cost: BC/QC component stacks are summed once;
+  the ten aggregate-proxy provinces use the single StatCan NAICS 11331 total
+  with no road, silviculture or haul add-on; NU uses the donor-total fallback.
+  The donor_flat margin is positive for all 13 provinces (minimum NB
+  +17.1615 CAD/m3); stumpage_scaled is negative for AB, MB, ON, QC and NB.
+  Five negative scaled margins are retained unclipped. All rows are
+  `evidence=model_estimate`, `observed=false`, `policy_grade=false`; no
+  combined national net value, policy claim, UI or public OSeCAN input.
+
 - **Applied the national-economics v2 review label fixes.** Proxy
   `price_basis` values no longer contain `delivered`
   (`stumpage_scaled_price_proxy_not_observed`,
