@@ -12,7 +12,7 @@
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=fdc1d6b61d84"></script>
+  <script defer src="app.js?v=13c038152ed8"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -476,7 +476,7 @@
               <div>
                 <p class="kicker">Evidence coverage · 13 jurisdictions · read-only</p>
                 <h3 id="national-economics-title">National economics evidence coverage</h3>
-                <p>Where the 119 Mm³ economics actually rests: direct/reported provincial evidence, open proxy models, and donor fill. Margins are secondary diagnostics, not the headline.</p>
+                <p>Where the 119 Mm³ economics actually rests: direct/reported price evidence, v2.3 cost tiers, and donor fill. Ten jurisdictions use a provisional StatCan industry aggregate proxy; margins are secondary diagnostics, not the headline.</p>
               </div>
             </div>
             <div class="economics-badges masthead-flags" id="national-badges" aria-label="National evidence and role labels"></div>
@@ -490,7 +490,7 @@
             <section class="section-block" aria-labelledby="national-table-title">
               <div class="section-heading">
                 <h3 id="national-table-title">Province evidence ledger</h3>
-                <p>13 jurisdictions in canonical order. Donor-only provinces are flagged <strong>provisional donor</strong> and are not ranked as comparable results. Price and cost tiers are evidence tiers, not quality scores.</p>
+                <p>13 jurisdictions in canonical order. Aggregate-proxy provinces are flagged <strong>provisional aggregate</strong>, not direct; NU is the only donor-fallback cost. Price and cost tiers are evidence tiers, not quality scores, and no province is ranked.</p>
               </div>
               <div class="table-wrap national-table-wrap">
                 <table class="data-table economics-table national-table" id="national-table"></table>
@@ -500,7 +500,7 @@
             <section class="section-block" aria-labelledby="national-drilldown-title">
               <div class="section-heading">
                 <h3 id="national-drilldown-title">Province drill-down</h3>
-                <p>Open a province for its price source, component tiers, assumptions, margins and replacement priority. Every value remains <span class="mono">model_estimate</span> with <span class="mono">observed=false</span> and <span class="mono">policy_grade=false</span>.</p>
+                <p>Open a province for its price source, v2.3 cost tier, StatCan source/year, aggregate caveat and margins. Every value remains <span class="mono">model_estimate</span> with <span class="mono">observed=false</span> and <span class="mono">policy_grade=false</span>.</p>
               </div>
               <div class="national-drilldown" id="national-drilldown"></div>
             </section>
@@ -520,7 +520,7 @@
             <section class="section-block" aria-labelledby="national-downloads-title">
               <div class="section-heading">
                 <h3 id="national-downloads-title">National data &amp; manifest</h3>
-                <p>Static JSON generated from the committed v2.1 CSVs, tier coverage, replacement queue, stumpage references and provincial allocation. The manifest records the payload hash and every source hash; no numbers are hand-coded in the UI.</p>
+                <p>Static JSON generated from the committed v2.3 CSVs, StatCan logging-cost proxy, tier coverage, stumpage references and provincial allocation. The manifest records the payload hash and every source hash; no numbers are hand-coded in the UI.</p>
               </div>
               <div class="economics-downloads national-downloads" id="national-downloads"></div>
             </section>
