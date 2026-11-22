@@ -572,16 +572,70 @@ class PilotSortRule:
     evidence: str
     authority: str
     notes: str
+    quality: str = "not_classified"
+    max_defect_pct: float = 100.0
+    price_reference: str = ""
+    dimension_evidence: str = "assumption"
+    mapping_evidence: str = "assumption"
 
     def __post_init__(self) -> None:
         if self.evidence not in EVIDENCE_TIERS:
             raise SchemaError(f"sort rule evidence must be one of {EVIDENCE_TIERS}")
+        if self.dimension_evidence not in EVIDENCE_TIERS:
+            raise SchemaError(
+                f"sort rule dimension_evidence must be one of {EVIDENCE_TIERS}"
+            )
+        if self.mapping_evidence not in EVIDENCE_TIERS:
+            raise SchemaError(
+                f"sort rule mapping_evidence must be one of {EVIDENCE_TIERS}"
+            )
+        expected = weakest_evidence((self.dimension_evidence, self.mapping_evidence))
+        if self.evidence != expected:
+            raise SchemaError(
+                f"sort rule evidence {self.evidence!r} must be the weakest of "
+                f"dimension and mapping evidence ({expected!r})"
+            )
         if self.target_length_m <= 0.0 or self.min_top_cm <= 0.0:
             raise SchemaError("sort rule length and top diameter must be positive")
+        if self.max_length_m < self.target_length_m:
+            raise SchemaError("sort rule max_length_m cannot be below target_length_m")
         if self.price_cad_m3 < 0.0:
             raise SchemaError("sort rule price must be non-negative")
-        if self.grade != "not_assigned" or self.grade_status != "not_assigned":
-            raise SchemaError("pilot sort rules must not assign an official grade")
+        if not 0.0 <= self.max_defect_pct <= 100.0:
+            raise SchemaError("sort rule max_defect_pct must be in [0, 100]")
+        if self.quality not in {
+            "not_classified",
+            "DER",
+            "F1",
+            "F2",
+            "F3",
+            "F4",
+            "PATE",
+            "AUTRE",
+        }:
+            raise SchemaError(f"unsupported QC quality class {self.quality!r}")
+        if self.grade_status == "not_assigned":
+            if self.grade != "not_assigned":
+                raise SchemaError("not_assigned sort rules cannot carry a grade label")
+            return
+        if self.grade_status == "pilot_assumption":
+            if not self.grade.startswith("pilot_"):
+                raise SchemaError(
+                    "pilot_assumption grade labels must start with 'pilot_'"
+                )
+            return
+        raise SchemaError(
+            "sort rule grade_status must be 'not_assigned' or 'pilot_assumption'"
+        )
+
+
+def _normalize_quality(value: object) -> str:
+    text = str(value or "not_classified").strip()
+    if not text:
+        return "not_classified"
+    if text.lower() == "not_classified":
+        return "not_classified"
+    return text.upper()
 
 
 def load_national_sort_rules(path: Path = SORT_RULES_PATH) -> tuple[PilotSortRule, ...]:
@@ -609,6 +663,15 @@ def load_national_sort_rules(path: Path = SORT_RULES_PATH) -> tuple[PilotSortRul
                     evidence=str(row["evidence"]).strip(),
                     authority=str(row["authority"]).strip(),
                     notes=str(row["notes"]).strip(),
+                    quality=_normalize_quality(row.get("quality")),
+                    max_defect_pct=float(row.get("max_defect_pct") or 100.0),
+                    price_reference=str(row.get("price_reference") or "").strip(),
+                    dimension_evidence=str(
+                        row.get("dimension_evidence") or "assumption"
+                    ).strip(),
+                    mapping_evidence=str(
+                        row.get("mapping_evidence") or "assumption"
+                    ).strip(),
                 )
             )
     if not rules:
@@ -619,14 +682,19 @@ def load_national_sort_rules(path: Path = SORT_RULES_PATH) -> tuple[PilotSortRul
 def _rules_for_group(
     rules: Iterable[PilotSortRule], group: str
 ) -> tuple[PilotSortRule, ...]:
-    selected = tuple(rule for rule in rules if rule.species_group == group)
+    selected = tuple(
+        rule for rule in rules if rule.species_group in {"all", group}
+    )
     if not selected:
         raise SchemaError(f"no sort rules for species group {group}")
     return selected
 
 
 def _best_rule(
-    rules: Iterable[PilotSortRule], length_m: float, top_dib_cm: float
+    rules: Iterable[PilotSortRule],
+    length_m: float,
+    top_dib_cm: float,
+    defect_pct: float = 100.0,
 ) -> PilotSortRule | None:
     eligible = [
         rule
@@ -634,6 +702,7 @@ def _best_rule(
         if math.isclose(rule.target_length_m, length_m, abs_tol=1e-9)
         and top_dib_cm + 1e-9 >= rule.min_top_cm
         and length_m <= rule.max_length_m + 1e-9
+        and defect_pct <= rule.max_defect_pct + 1e-9
     ]
     if not eligible:
         return None
@@ -669,7 +738,7 @@ def _solve(
         if top >= tree.height_m - 1e-6:
             continue
         top_dib = taper.diameter_inside_bark_cm(tree.dbh_cm, tree.height_m, top)
-        rule = _best_rule(rules, length, top_dib)
+        rule = _best_rule(rules, length, top_dib, tree.defect_pct)
         if rule is None:
             continue
         volume = taper.volume_between_m3(
@@ -758,6 +827,7 @@ def buck_tree(
                 grade_rule_id=cut.rule.rule_id,
                 price_deck_id=cut.rule.price_deck_id,
                 provenance=tree.provenance,
+                quality=cut.rule.quality,
             )
         )
         recovered_gross += cut.volume_m3

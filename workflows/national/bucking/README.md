@@ -270,3 +270,26 @@ written under
   --out-dir data/derived/national/bucking/national_bucking_pilot_v1
 .venv/bin/pytest -q tests/test_national_bucking_pilot_v1.py
 ```
+
+## 11. Quebec pilot grade-rule rerun v1
+
+`qc_grade_pilot.py` reruns the ten QC trees from the v1 tree list through two
+sort sets: `rules/qc_pilot_sorts.csv` (dimension-only) and
+`rules/qc_pilot_grade_sorts.csv` (pilot grade rules).  The grade set maps MERIS
+quality classes DER, F1-F4, PATE and AUTRE onto top-diameter, target-length and
+tree-defect thresholds and prices them with a MERIS current-deck proxy.  Every
+grade is `pilot_<class>` with `grade_status=pilot_assumption`; it is **not** an
+official Quebec grade, MERIS classification or Petro prediction.  Dimensions
+carry `published_table` evidence; the quality mapping and prices carry
+`assumption`.
+
+The rerun writes `BuckedLog`, `ResidueLedger`, per-tree reconciliation, grade
+distribution, product summary, scenario comparison, volume reconciliation,
+`summary.json`, report and a checksummed manifest under
+`data/derived/national/bucking/qc_grade_pilot_v1/`.
+
+```bash
+.venv/bin/python -m workflows.national.bucking.qc_grade_pilot \
+  --out-dir data/derived/national/bucking/qc_grade_pilot_v1
+.venv/bin/pytest -q tests/test_qc_grade_pilot.py
+```

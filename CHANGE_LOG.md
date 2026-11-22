@@ -2,6 +2,28 @@
 
 ## 2026-11-22
 
+- **Added the Quebec pilot grade-rule rerun v1.** Added
+  `workflows/national/bucking/qc_grade_pilot.py`, a 44-row pilot grade set
+  (`rules/qc_pilot_grade_sorts.csv`), and `tests/test_qc_grade_pilot.py`. The
+  rerun applies MERIS quality classes DER, F1-F4, PATE and AUTRE to the ten
+  committed Quebec representative trees from
+  `national_bucking_pilot_v1`, with explicit top-DIB, target-length and
+  tree-defect thresholds. Every grade is `pilot_<class>` with
+  `grade_status=pilot_assumption`; it is not an official Quebec grade, MERIS
+  classification or Petro prediction. Dimensions are tagged
+  `published_table`; quality mapping and prices are `assumption`. The
+  dimension-only comparator (`qc_pilot_sorts.csv`) yields 11 logs, 0.873 m3
+  recovered gross, 0.277 m3 residue, 0.680 sawlog+peeler share and 55.904 CAD
+  value. The grade rules yield 18 logs, 1.002 m3 recovered gross, 0.148 m3
+  residue, 0.895 sawlog+peeler share and 134.242 CAD value on the same 1.149
+  m3 taper total; all per-tree and total volume balances are exact. No DER-
+  class log is recovered from this small tree list, but the DER mapping is in
+  the rule set. Outputs, grade distribution, scenario comparison, volume
+  reconciliation, summary, report and checksummed manifest are under
+  `data/derived/national/bucking/qc_grade_pilot_v1/`. Tests: 31 passed across
+  the QC grade, QC Phase 0/2 and 13-jurisdiction pilot suites. No UI/public
+  OSeCAN change and no unexpected `D`.
+
 - **Added the 13-jurisdiction national bucking representative pilot v1.**
   Added `workflows/national/bucking/national_bucking_pilot_v1.py`, a national
   dimension-only pilot sort set

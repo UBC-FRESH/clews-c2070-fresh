@@ -172,6 +172,7 @@ class PilotBuckedLog:
     grade_rule_id: str
     price_deck_id: str
     provenance: str
+    quality: str = "not_classified"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "tree_id", _text("tree_id", self.tree_id))
@@ -215,6 +216,14 @@ class PilotBuckedLog:
             object.__setattr__(self, name, _text(name, getattr(self, name)))
         object.__setattr__(self, "price_cad_m3", _non_negative("price_cad_m3", self.price_cad_m3))
         object.__setattr__(self, "value_cad", _non_negative("value_cad", self.value_cad))
+        quality = _text("quality", self.quality)
+        if quality.lower() == "not_classified":
+            quality = "not_classified"
+        else:
+            quality = quality.upper()
+        if quality not in {"not_classified", "DER", "F1", "F2", "F3", "F4", "PATE", "AUTRE"}:
+            raise SchemaError(f"unsupported quality class {quality!r}")
+        object.__setattr__(self, "quality", quality)
         expected = net * self.price_cad_m3
         if not math.isclose(self.value_cad, expected, rel_tol=1e-9, abs_tol=1e-9):
             raise SchemaError("value_cad must equal net_volume_m3 * price_cad_m3")
