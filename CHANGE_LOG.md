@@ -2,6 +2,27 @@
 
 ## 2026-11-22
 
+- **Added floor-primary assignment v6 and processing comparisons.** Added
+  `national_facility_assignment_v6.py`, `facility_residue_supply_v3.py`,
+  `national_residue_curve_v3.py`, `national_facility_chain_scenarios_v3.py`,
+  `forestry_osecan_handoff_v4.py`, `forestry_osecan_scenarios_v3.py`, and
+  `national_processing_v5_v6_comparison.py` with regression tests. Assignment
+  v6 applies the 1.2x provincial floor to capacity v3 by scaling proxy
+  capacity only in AB, SK, MB, and ON; published capacity is unchanged. The
+  119 Mm3 floor case assigns 118.977 Mm3 with 118.941 Mm3 local (99.97%) and
+  36,376 m3 cross-border (0.03%), versus v5 `published_plus_proxy` at
+  21.902 Mm3 cross-border (18.4%). Proxy share rises 33.9% -> 39.9%, HHI
+  0.00755 -> 0.01287, largest-facility share 1.82% -> 6.80%, and the
+  provincial floor shortfall falls 30.28 Mm3 -> 43,651 m3 (NT only). Facility
+  residue v3 keeps process residue at 28.433 M odt / 526.006 PJ but shifts the
+  receiving-province distribution (BC -4.04 M odt, AB +3.55 M odt); scaled
+  proxy residue is 31.3%. The v3->v4 OSeCAN handoff keeps national totals and
+  zone weights unchanged while moving 119 Mm3 process 50% zone PJ (B2
+  -34.25 PJ, A1 +21.11 PJ, A2 +11.68 PJ). All rows remain
+  `model_estimate`, `observed=false`, `policy_grade=false`, and
+  `official_osecan_changed=false`; no UI/public OSeCAN change and no
+  unexpected `D`.
+
 - **Added public AB/ON/QC mill-capacity extracts, capacity v3 and assignment
   v5.** Added `workflows/national/facilities/national_facility_capacity_v3.py`,
   `national_facility_assignment_v5.py`, and three test modules; published
