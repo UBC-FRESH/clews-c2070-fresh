@@ -6070,7 +6070,7 @@
     requireTrue(h.negative_net_base_rows === 168, 'stale economics negative-row count');
     requireTrue(Array.isArray(econ.zones) && econ.zones.length === 7, 'economics zone count mismatch');
     econ.zones.forEach(function (zone) {
-      requireTrue(Array.isArray(zone.systems) && zone.systems.length === 3, 'economics system count mismatch');
+      requireTrue(zone && Array.isArray(zone.systems) && zone.systems.length === 3, 'economics system count mismatch');
       zone.systems.forEach(function (group) {
         requireTrue(ECONOMICS_SYSTEMS.indexOf(group.system) !== -1, 'unknown economics system');
         [group.low_cad_m3, group.base_cad_m3, group.high_cad_m3].forEach(function (value) {

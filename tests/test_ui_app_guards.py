@@ -6,11 +6,14 @@ run-id guards and form locks from silently disappearing during refactors.
 
 from __future__ import annotations
 
+import hashlib
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 APP_JS = (REPO_ROOT / "ui" / "app.js").read_text(encoding="utf-8")
 API_JS = (REPO_ROOT / "ui" / "api.js").read_text(encoding="utf-8")
+INDEX_HTML = (REPO_ROOT / "ui" / "index.html").read_text(encoding="utf-8")
 
 
 def test_ui_locks_creation_and_osecan_queue_during_active_run() -> None:
@@ -126,3 +129,40 @@ def test_ui_policy_selector_and_feasibility_badges() -> None:
     assert "constraintSetById" in APP_JS
     assert "constraints: { set_id: selectedSet }" in APP_JS
     assert "max_normal_harvest_m3" in APP_JS or "MAX_NORMAL_HARVEST_M3" in APP_JS
+
+
+def test_no_stale_econ_systems_reference_in_ui_or_publications() -> None:
+    offenders = []
+    for root in (REPO_ROOT / "ui", REPO_ROOT / "ui_publications"):
+        for path in root.rglob("*"):
+            if path.is_file() and path.suffix in {".js", ".html"}:
+                if "econ.systems.forEach" in path.read_text(encoding="utf-8", errors="replace"):
+                    offenders.append(path.relative_to(REPO_ROOT).as_posix())
+    assert offenders == []
+
+
+def test_economics_validation_guards_zone_systems_before_iteration() -> None:
+    guarded = APP_JS.index("requireTrue(zone && Array.isArray(zone.systems)")
+    iteration = APP_JS.index("zone.systems.forEach(function (group)", guarded)
+    assert guarded < iteration
+    assert "econ.systems" not in APP_JS
+    assert "Array.isArray(national.jurisdictions)" in APP_JS
+
+
+def test_index_assets_carry_content_hashes() -> None:
+    def versioned(name: str) -> str:
+        matches = re.findall(
+            r'(?:src|href)="' + re.escape(name) + r'\?v=([0-9a-f]{12})"',
+            INDEX_HTML,
+        )
+        assert len(matches) == 1, f"{name} must be referenced once with a 12-hex version"
+        return matches[0]
+
+    for name in ("app.js", "styles.css", "publication-mode.js"):
+        digest = hashlib.sha256((REPO_ROOT / "ui" / name).read_bytes()).hexdigest()[:12]
+        assert versioned(name) == digest, f"{name} cache key is stale"
+
+    guard_at = INDEX_HTML.index('src="publication-mode.js')
+    api_at = INDEX_HTML.index('src="api.js"')
+    app_at = INDEX_HTML.index('src="app.js')
+    assert guard_at < api_at < app_at

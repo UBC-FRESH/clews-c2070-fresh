@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -23,19 +24,13 @@ from pathlib import Path
 
 APP_FILES = ("index.html", "app.js", "api.js", "styles.css")
 GUARD_FILE = "publication-mode.js"
+VERSIONED_ASSETS = ("app.js", "styles.css")
 MANIFEST_FILE = "manifest.json"
 PUBLICATION_FILE = "PUBLICATION.json"
-MANIFEST_ANCHOR = (
-    '  <script defer src="vendor/maplibre-gl.js"></script>\n'
-    '  <script defer src="api.js"></script>\n'
-)
-PUBLICATION_ANCHOR = (
-    '  <script defer src="vendor/maplibre-gl.js"></script>\n'
-    '  <script defer src="' + GUARD_FILE + '"></script>\n'
-    '  <script defer src="api.js"></script>\n'
-)
 DATA_MANIFEST = Path("public/data/manifest.json")
 ECONOMICS_MANIFEST = Path("public/data/economics/manifest.json")
+NATIONAL_MANIFEST = Path("public/data/economics/national.manifest.json")
+NATIONAL_FILE = Path("public/data/economics/national.json")
 ECONOMICS_FILES = (
     "economics/summary.json",
     "economics/detail.csv",
@@ -91,6 +86,17 @@ def verify_manifest(root: Path, manifest_path: Path) -> tuple[dict, list[dict]]:
             fail(f"manifest mismatch for {item['path']}")
         records.append(record)
     return payload, records
+
+
+def verify_generated_payload(root: Path, manifest_path: Path) -> tuple[dict, dict]:
+    payload = load_json(manifest_path)
+    generated = payload.get("generated")
+    if not isinstance(generated, list) or len(generated) != 1:
+        fail(f"{manifest_path.name} must declare exactly one generated payload")
+    record = file_record(root, Path(generated[0]["path"]))
+    if record["bytes"] != generated[0].get("bytes") or record["sha256"] != generated[0].get("sha256"):
+        fail(f"manifest mismatch for {generated[0]['path']}")
+    return payload, record
 
 
 def git_status(repo: Path) -> list[str]:
@@ -149,12 +155,40 @@ def publication_guard(release: str, tag: str, commit: str) -> str:
 """
 
 
-def build_index(source_index: str) -> str:
-    if GUARD_FILE in source_index:
-        fail("source index.html already contains the publication guard")
-    if source_index.count(MANIFEST_ANCHOR) != 1:
-        fail("source index.html script anchor is missing or ambiguous")
-    return source_index.replace(MANIFEST_ANCHOR, PUBLICATION_ANCHOR, 1)
+def asset_version(path: Path) -> str:
+    return sha256_file(path)[:12]
+
+
+def asset_reference(source_index: str, name: str) -> str | None:
+    pattern = re.compile(r'(?:src|href)="' + re.escape(name) + r'(?:\?v=([0-9a-f]{12}))?"')
+    matches = pattern.findall(source_index)
+    if len(matches) != 1:
+        fail(f"index.html must reference {name} exactly once")
+    return matches[0] or None
+
+
+def build_index(source_index: str, guard_hash: str, source: Path) -> str:
+    for name in VERSIONED_ASSETS:
+        version = asset_reference(source_index, name)
+        expected = asset_version(source / name)
+        if version != expected:
+            fail(f"stale cache key for {name}: index has {version or 'none'}, expected {expected}")
+
+    guard_version = asset_reference(source_index, GUARD_FILE)
+    if guard_version is None:
+        fail(f"{GUARD_FILE} must carry a content-hash query in index.html")
+
+    guard_at = source_index.find(f'src="{GUARD_FILE}')
+    api_at = source_index.find('src="api.js"')
+    app_at = source_index.find('src="app.js')
+    if not (0 <= guard_at < api_at < app_at):
+        fail(f"{GUARD_FILE} must load before api.js and app.js")
+
+    guard_tag = re.compile(r'(src="' + re.escape(GUARD_FILE) + r')\?v=[0-9a-f]{12}"')
+    built = guard_tag.sub(r'\1?v=' + guard_hash + '"', source_index, count=1)
+    if built == source_index:
+        fail(f"failed to version {GUARD_FILE} with its generated content hash")
+    return built
 
 
 def copy_payload(source: Path, destination: Path) -> None:
@@ -226,12 +260,11 @@ def main() -> None:
     destination.mkdir(parents=True)
     copy_payload(source, destination)
 
+    guard_content = publication_guard(args.release, args.tag, args.source_commit)
+    guard_hash = sha256_bytes(guard_content.encode("utf-8"))[:12]
     index_source = (source / "index.html").read_text(encoding="utf-8")
-    (destination / "index.html").write_text(build_index(index_source), encoding="utf-8")
-    (destination / GUARD_FILE).write_text(
-        publication_guard(args.release, args.tag, args.source_commit),
-        encoding="utf-8",
-    )
+    (destination / "index.html").write_text(build_index(index_source, guard_hash, source), encoding="utf-8")
+    (destination / GUARD_FILE).write_text(guard_content, encoding="utf-8")
     verify_copied_bytes(source, destination)
 
     data_manifest, data_records = verify_manifest(destination / "public/data", destination / DATA_MANIFEST)
@@ -241,6 +274,27 @@ def main() -> None:
     economics_paths = {record["path"] for record in economics_records}
     if not set(ECONOMICS_FILES).issubset(economics_paths):
         fail("economics manifest does not cover summary.json, detail.csv, and model_inputs.zip")
+
+    national_manifest, national_record = verify_generated_payload(
+        destination / "public/data", destination / NATIONAL_MANIFEST
+    )
+    national = load_json(destination / NATIONAL_FILE)
+    diagnostic = national["national_diagnostic"]
+    if national.get("model_id") != "national_economics_v2_1":
+        fail("national economics model id mismatch")
+    if national["coverage"]["jurisdiction_rows"] != 13 or len(national["jurisdictions"]) != 13:
+        fail("national economics must cover 13 jurisdictions")
+    if abs(diagnostic["donor_flat"]["base_cad_m3"] - 33.1365) > 1e-6:
+        fail("national base margin mismatch")
+    if abs(diagnostic["stumpage_scaled"]["base_cad_m3"] + 16.1220) > 1e-6:
+        fail("national sensitivity margin mismatch")
+    national_labels = national["labels"]
+    if national_labels.get("observed") is not False or national_labels.get("policy_grade") is not False:
+        fail("national economics labels must stay model-only")
+    if national_labels.get("combined_national_net_value") is not False:
+        fail("national economics must not claim a combined national net value")
+    if national_labels.get("forest_lp_input") is not False or national_labels.get("public_osecan_input") is not False:
+        fail("national economics must stay outside the Forest LP and public OSeCAN")
 
     scenarios = load_json(destination / "public/data/scenarios.json")
     families = {scenario["family"] for scenario in scenarios["scenarios"]}
@@ -260,6 +314,8 @@ def main() -> None:
     for name, relative in (
         ("data_manifest", DATA_MANIFEST),
         ("economics_manifest", ECONOMICS_MANIFEST),
+        ("national_manifest", NATIONAL_MANIFEST),
+        ("national_json", NATIONAL_FILE),
     ):
         artifacts[name] = file_record(destination, relative)
 
@@ -293,6 +349,9 @@ def main() -> None:
             "data_manifest_files": len(data_records),
             "data_directory_files": sum(1 for path in (destination / "public/data").rglob("*") if path.is_file()),
             "economics_rows": headline["rows"],
+            "national_jurisdictions": len(national["jurisdictions"]),
+            "national_base_margin_cad_m3": diagnostic["donor_flat"]["base_cad_m3"],
+            "national_sensitivity_margin_cad_m3": diagnostic["stumpage_scaled"]["base_cad_m3"],
             "payload_manifest_files": len(manifest["files"]),
         },
         "economics": {
@@ -306,6 +365,24 @@ def main() -> None:
             },
             "labels": economics["labels"],
             "downloads": economics["downloads"],
+        },
+        "national_economics": {
+            "schema_version": national["schema_version"],
+            "model_id": national["model_id"],
+            "artifact_version": national.get("artifact_version"),
+            "coverage": national["coverage"],
+            "national_diagnostic": {
+                "donor_flat": diagnostic["donor_flat"],
+                "stumpage_scaled": diagnostic["stumpage_scaled"],
+            },
+            "labels": national_labels,
+            "payload": national_record,
+            "manifest": {
+                "path": NATIONAL_MANIFEST.relative_to("public/data").as_posix(),
+                "bytes": (destination / NATIONAL_MANIFEST).stat().st_size,
+                "sha256": sha256_file(destination / NATIONAL_MANIFEST),
+                "sources": len(national_manifest["sources"]),
+            },
         },
         "data_bundle": {
             "manifest_path": DATA_MANIFEST.as_posix(),
@@ -353,6 +430,10 @@ def main() -> None:
         "payload_bytes": manifest["total_bytes"],
         "data_files": len(data_records),
         "economics_files": len(economics_records),
+        "national_manifest": NATIONAL_MANIFEST.as_posix(),
+        "national_jurisdictions": len(national["jurisdictions"]),
+        "national_base_margin_cad_m3": diagnostic["donor_flat"]["base_cad_m3"],
+        "national_sensitivity_margin_cad_m3": diagnostic["stumpage_scaled"]["base_cad_m3"],
         "headline": headline,
         "qc_spread": qc_reference["cost_spread_after_transfers_cad_m3"],
     }, indent=2))
