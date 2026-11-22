@@ -6482,6 +6482,68 @@
     requireTrue(Math.abs(totalScaled - totals.scenarios.stumpage_scaled.national_total_base_m_cad) < 0.01,
       'national stumpage_scaled total margin does not equal the province sum');
 
+    var netValue = national.forest_lp_net_value_sensitivity || {};
+    requireTrue(netValue.model_id === 'forest_lp_net_value_sensitivity_v1' &&
+      netValue.schema_version === 'national/forest-lp-net-value-sensitivity/1',
+      'Forest LP net-value sensitivity schema mismatch');
+    var netLabels = netValue.labels || {};
+    requireTrue(netLabels.net_value_status === 'model_estimate_not_policy' &&
+      netLabels.observed === false && netLabels.policy_grade === false,
+      'Forest LP net-value sensitivity labels mismatch');
+    requireTrue(netLabels.lp_objective === 'not_used' && netLabels.forest_lp_input === false &&
+      netLabels.public_osecan_input === false,
+      'Forest LP net-value sensitivity must stay outside the LP objective and public OSeCAN');
+    requireTrue(netLabels.forest_lp_objective_changed === false &&
+      netLabels.v1_outputs_changed === false && netLabels.combined_national_net_value === false &&
+      netLabels.ranking_performed === false,
+      'Forest LP net-value sensitivity must not change the LP, rank, or claim a combined total');
+    var netCoverage = netValue.coverage || {};
+    requireTrue(netCoverage.allocation_rows === 117 && netCoverage.group_rows === 18 &&
+      netCoverage.documented_ceiling_rows === 6 && netCoverage.infeasible_rows === 4,
+      'Forest LP net-value sensitivity coverage mismatch');
+    requireTrue(Array.isArray(netValue.rows) && netValue.rows.length === 18,
+      'Forest LP net-value sensitivity rows are incomplete');
+    var documentedRows = 0;
+    var infeasibleRows = 0;
+    var documentedKeys = new Set();
+    netValue.rows.forEach(function (row) {
+      requireTrue(row.cap_case === 'documented_ceiling' || row.cap_case === 'intensity_1.0' ||
+        row.cap_case === 'intensity_1.2', 'unexpected net-value cap case');
+      requireTrue(['100m', '119m', '150m'].indexOf(row.allocation_case) !== -1 &&
+        ['donor_flat', 'stumpage_scaled'].indexOf(row.scenario) !== -1,
+        'unexpected net-value allocation case or scenario');
+      requireTrue(row.scenario_label === row.scenario_role &&
+        (row.scenario_role === 'base' || row.scenario_role === 'sensitivity'),
+        'net-value scenario role mismatch');
+      requireTrue(row.observed === false && row.policy_grade === false &&
+        row.net_value_status === 'model_estimate_not_policy' && row.lp_objective === 'not_used',
+        'net-value row labels mismatch');
+      if (row.feasible) {
+        requireTrue(row.case_status === 'optimal' && Number.isFinite(row.net_value_low_m_cad) &&
+          Number.isFinite(row.net_value_base_m_cad) && Number.isFinite(row.net_value_high_m_cad),
+          'feasible net-value row is blank');
+        requireTrue(row.net_value_low_m_cad <= row.net_value_base_m_cad &&
+          row.net_value_base_m_cad <= row.net_value_high_m_cad,
+          'feasible net-value row is unordered');
+        requireTrue(Number.isFinite(row.negative_province_count),
+          'feasible net-value row is missing its negative province count');
+      } else {
+        infeasibleRows += 1;
+        requireTrue(row.case_status === 'infeasible' &&
+          row.net_value_low_m_cad === null && row.net_value_base_m_cad === null &&
+          row.net_value_high_m_cad === null && row.negative_province_count === null,
+          'infeasible net-value row must stay blank, not zero');
+      }
+      if (row.cap_case === 'documented_ceiling') {
+        documentedRows += 1;
+        documentedKeys.add(row.allocation_case + '/' + row.scenario);
+      }
+    });
+    requireTrue(documentedRows === 6 && documentedKeys.size === 6,
+      'documented-ceiling net-value table must have 3 cases x 2 scenarios');
+    requireTrue(infeasibleRows === 4,
+      '150m intensity 1.0 and 1.2 net-value rows must stay infeasible and blank');
+
     var coverage = national.evidence_coverage || {};
     requireTrue(coverage.default_view === 'evidence_coverage' && coverage.not_decision_grade === true,
       'national evidence coverage is not evidence-first');
@@ -6980,6 +7042,185 @@
         'Not a legal AAC, not a policy result and not a combined national net value.</p>';
   }
 
+  function renderNationalNetValueBadges() {
+    var labels = state.national.forest_lp_net_value_sensitivity.labels;
+    $('national-net-value-badges').innerHTML =
+      '<span class="badge badge--econ-model">' + esc(labels.net_value_status) + '</span>' +
+      '<span class="badge badge--econ-model">lp_objective=not_used</span>' +
+      '<span class="badge badge--econ-policy">observed=' + esc(String(labels.observed)) + '</span>' +
+      '<span class="badge badge--econ-policy">policy_grade=' + esc(String(labels.policy_grade)) + '</span>' +
+      '<span class="badge badge--econ-readonly">no LP/OSeCAN input</span>' +
+      '<span class="badge badge--econ-readonly">no LP objective or output change</span>' +
+      '<span class="badge badge--econ-readonly">read-only</span>';
+  }
+
+  function renderNationalNetValueSummary() {
+    var netValue = state.national.forest_lp_net_value_sensitivity;
+    var coverage = netValue.coverage;
+    $('national-net-value-summary').innerHTML =
+      '<div class="national-net-value-stat"><strong>' + fmt(coverage.allocation_rows, 0) + '</strong>' +
+        '<span>Forest LP v1 allocation rows joined</span></div>' +
+      '<div class="national-net-value-stat"><strong>' + fmt(coverage.documented_ceiling_rows, 0) + '</strong>' +
+        '<span>documented-ceiling rows · 3 allocation cases × 2 scenarios</span></div>' +
+      '<div class="national-net-value-stat is-blank"><strong>' + fmt(coverage.infeasible_rows, 0) + '</strong>' +
+        '<span>infeasible intensity rows · blank, not zero</span></div>';
+  }
+
+  function nationalNetValueCell(row, value) {
+    if (!row.feasible) {
+      return '<span class="national-net-value-blank">blank</span>';
+    }
+    return '<span class="' + (value < 0 ? 'is-negative-value' : '') + '">' +
+      nationalSigned(value, 2) + '</span>';
+  }
+
+  function renderNationalNetValueTable() {
+    var netValue = state.national.forest_lp_net_value_sensitivity;
+    var header =
+      '<caption>Forest LP v1 allocation joined to national margin totals · model_estimate · ' +
+        'model_estimate_not_policy · observed=false · policy_grade=false · lp_objective=not_used · ' +
+        'no Forest LP/OSeCAN input · 100/119/150 Mm³ are alternative screening cases, not additive</caption>' +
+      '<thead><tr>' +
+        '<th>Cap case</th>' +
+        '<th>Allocation case</th>' +
+        '<th>Scenario</th>' +
+        '<th class="num">Low<br><span class="national-th-sub">M CAD</span></th>' +
+        '<th class="num">Base<br><span class="national-th-sub">M CAD</span></th>' +
+        '<th class="num">High<br><span class="national-th-sub">M CAD</span></th>' +
+        '<th>Feasibility</th>' +
+        '<th class="num">Negative provinces<br><span class="national-th-sub">base case</span></th>' +
+      '</tr></thead>';
+    var rows = netValue.rows.map(function (row) {
+      var negativeText = row.feasible
+        ? '<strong>' + fmt(row.negative_province_count, 0) + '</strong>' +
+          '<span class="national-cell-note">' +
+            (row.negative_provinces.base.length ? esc(row.negative_provinces.base.join(', ')) : 'none') +
+          '</span>'
+        : '<span class="national-net-value-blank">blank</span>';
+      return '<tr class="national-net-value-row' +
+        (row.cap_case === 'documented_ceiling' ? ' is-documented' : '') +
+        (row.feasible ? '' : ' is-infeasible') + '">' +
+        '<td><span class="national-net-value-cap">' + esc(row.cap_case) + '</span></td>' +
+        '<td><strong>' + esc(row.allocation_label) + '</strong>' +
+          '<span class="national-cell-note">' + fmt(row.allocation_target_m3 / 1e6, 0) + ' Mm³ target</span></td>' +
+        '<td>' + (row.scenario_role === 'base'
+          ? '<span class="badge badge--national-reported-average">base</span>'
+          : '<span class="badge badge--national-stumpage-scaled-proxy">sensitivity</span>') +
+          '<span class="national-cell-note mono">' + esc(row.scenario) + '</span></td>' +
+        '<td class="num' + (row.feasible && row.net_value_low_m_cad < 0 ? ' is-negative-value' : '') + '">' +
+          nationalNetValueCell(row, row.net_value_low_m_cad) + '</td>' +
+        '<td class="num' + (row.feasible && row.net_value_base_m_cad < 0 ? ' is-negative-value' : '') + '">' +
+          nationalNetValueCell(row, row.net_value_base_m_cad) + '</td>' +
+        '<td class="num' + (row.feasible && row.net_value_high_m_cad < 0 ? ' is-negative-value' : '') + '">' +
+          nationalNetValueCell(row, row.net_value_high_m_cad) + '</td>' +
+        '<td>' + (row.feasible
+          ? '<span class="badge badge--national-reported-average">feasible</span>'
+          : '<span class="badge badge--national-stumpage-scaled-proxy">infeasible</span>' +
+            '<span class="national-cell-note">blank · not zero</span>') + '</td>' +
+        '<td class="num">' + negativeText + '</td>' +
+      '</tr>';
+    }).join('');
+    $('national-net-value-table').innerHTML = header + '<tbody>' + rows + '</tbody>';
+  }
+
+  function renderNationalNetValueChart() {
+    var container = $('national-net-value-chart');
+    if (!window.echarts) {
+      container.innerHTML = '<div class="empty-state" style="display:grid">ECharts failed to load. The table remains authoritative.</div>';
+      return;
+    }
+    var netValue = state.national.forest_lp_net_value_sensitivity;
+    var documented = netValue.rows.filter(function (row) {
+      return row.cap_case === 'documented_ceiling';
+    });
+    var cases = ['100m', '119m', '150m'];
+    var categories = [];
+    cases.forEach(function (allocationCase) {
+      ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
+        var row = documented.find(function (item) {
+          return item.allocation_case === allocationCase && item.scenario === scenario;
+        });
+        categories.push(row ? row.allocation_label + ' · ' + row.scenario_label : allocationCase);
+      });
+    });
+    if (!state.nationalNetValueChart) {
+      state.nationalNetValueChart = window.echarts.init(container, null, { renderer: 'canvas' });
+    }
+    var series = [
+      { key: 'net_value_low_m_cad', label: 'Low', color: '#6f8f84' },
+      { key: 'net_value_base_m_cad', label: 'Base', color: '#d98a2b' },
+      { key: 'net_value_high_m_cad', label: 'High', color: '#2c5746' }
+    ].map(function (definition) {
+      return {
+        name: definition.label,
+        type: 'bar',
+        barMaxWidth: 22,
+        itemStyle: { color: definition.color },
+        data: documented.map(function (row) { return row[definition.key]; }),
+        emphasis: { focus: 'series' }
+      };
+    });
+    state.nationalNetValueChart.setOption({
+      animationDuration: 420,
+      textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
+      grid: { left: 64, right: 24, top: 46, bottom: 42, containLabel: true },
+      legend: {
+        top: 2,
+        textStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#435347' },
+        itemWidth: 14,
+        itemHeight: 8
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        confine: true,
+        backgroundColor: '#0c1f19',
+        borderColor: '#d98a2b',
+        borderWidth: 1,
+        textStyle: { color: '#f3ead7', fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 12 },
+        valueFormatter: function (value) {
+          return value === null || value === undefined ? 'blank' : nationalSigned(value, 2) + ' M CAD';
+        }
+      },
+      xAxis: {
+        type: 'category',
+        data: categories,
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#b8a57e' } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c', interval: 0 }
+      },
+      yAxis: {
+        type: 'value',
+        name: 'M CAD',
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c' },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c' },
+        splitLine: { lineStyle: { color: 'rgba(184,165,126,0.35)', type: 'dashed' } },
+        axisLine: { show: false }
+      },
+      series: series
+    }, true);
+  }
+
+  function renderNationalNetValueCaveat() {
+    var netValue = state.national.forest_lp_net_value_sensitivity;
+    $('national-net-value-caveat').innerHTML =
+      '<strong>Forest LP net-value sensitivity · model_estimate_not_policy · lp_objective=not_used · observed=false · policy_grade=false · no LP/OSeCAN input</strong>' +
+      '<p>117 committed Forest LP v1 allocation rows are joined to the national margin totals for reporting only. ' +
+        'The Forest LP objective, constraints and every v1 output are unchanged. Infeasible 150 Mm³ intensity rows are blank and not zero. ' +
+        'Negative net values are retained unclipped. Levels are alternative screening cases and are never summed.</p>' +
+      '<ul>' + netValue.caveats.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
+      '<p class="economics-nonclaims">Non-claims: ' + esc(netValue.non_claims.join(' · ')) + '</p>';
+  }
+
+  function renderNationalNetValue() {
+    if (!state.national || !state.national.forest_lp_net_value_sensitivity) return;
+    renderNationalNetValueBadges();
+    renderNationalNetValueSummary();
+    renderNationalNetValueTable();
+    renderNationalNetValueChart();
+    renderNationalNetValueCaveat();
+  }
+
   function renderNationalCaveat() {
     var national = state.national;
     var caveats = national.caveats || [];
@@ -7043,6 +7284,7 @@
     renderNationalTable();
     renderNationalDrilldown();
     renderNationalDiagnostic();
+    renderNationalNetValue();
     renderNationalCaveat();
     renderNationalDownloads();
   }
@@ -7233,6 +7475,7 @@
     if (state.tradeoffChart) state.tradeoffChart.resize();
     if (state.harvestChart) state.harvestChart.resize();
     if (state.economicsChart) state.economicsChart.resize();
+    if (state.nationalNetValueChart) state.nationalNetValueChart.resize();
     if (state.mapState.map) state.mapState.map.resize();
     if (state.tab === 'explore') {
       if (state.paretoChart) state.paretoChart.resize();

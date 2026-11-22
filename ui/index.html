@@ -7,12 +7,12 @@
   <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="styles.css?v=d24f54d3124a">
+  <link rel="stylesheet" href="styles.css?v=b03ce145f9f5">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=31c19a346cd4"></script>
+  <script defer src="app.js?v=6f1f529dba89"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -513,6 +513,24 @@
               </div>
               <div class="national-diagnostic-warning" id="national-diagnostic-warning" role="note"></div>
               <div class="national-diagnostic-values" id="national-diagnostic-values" aria-live="polite"></div>
+            </section>
+
+            <section class="section-block national-net-value" id="national-net-value" aria-labelledby="national-net-value-title">
+              <div class="section-heading">
+                <p class="kicker">Forest LP join · screening sensitivity · read-only</p>
+                <h3 id="national-net-value-title">Forest LP net-value sensitivity</h3>
+                <p>Volume-weighted net value joins the 117 committed Forest LP v1 allocation rows to the national margin totals. The 100, 119 and 150 Mm³ levels are alternative screening cases, not additive years. Infeasible intensity rows stay blank; they are never back-filled with zero.</p>
+              </div>
+              <div class="economics-badges masthead-flags" id="national-net-value-badges" aria-label="Forest LP net-value sensitivity labels"></div>
+              <p class="method-note mono small" id="national-net-value-labels">model_estimate_not_policy · lp_objective=not_used · observed=false · policy_grade=false · no LP/OSeCAN input</p>
+              <div class="national-net-value-summary" id="national-net-value-summary" aria-live="polite"></div>
+              <div class="chart-frame chart-frame--national-net-value">
+                <div class="chart" id="national-net-value-chart" role="img" aria-label="Grouped bar chart of Forest LP net value in M CAD for 100, 119 and 150 cubic metre allocation cases, base and sensitivity scenarios"></div>
+              </div>
+              <div class="table-wrap national-net-value-table-wrap">
+                <table class="data-table economics-table national-net-value-table" id="national-net-value-table"></table>
+              </div>
+              <div class="harvest-caveat economics-caveat national-net-value-caveat" id="national-net-value-caveat" role="note"></div>
             </section>
 
             <div class="harvest-caveat economics-caveat national-caveat" id="national-caveat" role="note"></div>

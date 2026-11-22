@@ -377,6 +377,10 @@ def test_manifest_hashes_v23_payload_and_sources(built):
         "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
         "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
         "data/derived/national/harvest_basis/statcan_logging_cost_proxy/sources.csv",
+        "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value.csv",
+        "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value_summary.csv",
+        "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/national_net_value_summary.csv",
+        "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/summary.json",
     }
     assert {item["path"] for item in manifest["sources"]} == expected
     for item in manifest["sources"]:
@@ -476,6 +480,184 @@ def test_export_does_not_touch_the_static_bundle():
     assert (
         ROOT / "ui/public/data/economics/national.manifest.json"
     ).stat().st_mtime_ns == before_manifest
+
+
+def test_forest_lp_net_value_sensitivity_values_and_labels(built):
+    payload, manifest = built
+    net_value = payload["forest_lp_net_value_sensitivity"]
+
+    assert net_value["model_id"] == "forest_lp_net_value_sensitivity_v1"
+    assert net_value["schema_version"] == "national/forest-lp-net-value-sensitivity/1"
+    assert net_value["status"] == "model_estimate_not_policy"
+    assert net_value["labels"] == {
+        "net_value_label": "model_estimate",
+        "net_value_status": "model_estimate_not_policy",
+        "observed": False,
+        "policy_grade": False,
+        "lp_objective": "not_used",
+        "forest_lp_input": False,
+        "public_osecan_input": False,
+        "forest_lp_objective_changed": False,
+        "v1_outputs_changed": False,
+        "combined_national_net_value": False,
+        "ranking_performed": False,
+        "restricted_data_used": False,
+    }
+    assert net_value["coverage"]["allocation_rows"] == 117
+    assert net_value["coverage"]["group_rows"] == 18
+    assert net_value["coverage"]["documented_ceiling_rows"] == 6
+    assert net_value["coverage"]["infeasible_rows"] == 4
+    assert net_value["infeasible_row_count"] == 4
+
+    expected = {
+        ("100m", "donor_flat"): (-3230.786923, 4347.226340, 7633.971898),
+        ("100m", "stumpage_scaled"): (-6750.691500, -559.722836, 3359.095964),
+        ("119m", "donor_flat"): (-3854.908562, 5205.328748, 9137.988762),
+        ("119m", "stumpage_scaled"): (-8058.885699, -655.319123, 4032.879740),
+        ("150m", "donor_flat"): (-4299.883636, 6662.823950, 11436.002324),
+        ("150m", "stumpage_scaled"): (-9950.394662, -1194.863823, 4505.859579),
+    }
+    documented = [
+        row
+        for row in net_value["rows"]
+        if row["cap_case"] == "documented_ceiling"
+    ]
+    assert len(documented) == 6
+    assert {(row["allocation_case"], row["scenario"]) for row in documented} == set(expected)
+    for row in documented:
+        low, base, high = expected[(row["allocation_case"], row["scenario"])]
+        assert row["feasible"] is True
+        assert row["case_status"] == "optimal"
+        assert row["net_value_low_m_cad"] == pytest.approx(low, abs=1e-6)
+        assert row["net_value_base_m_cad"] == pytest.approx(base, abs=1e-6)
+        assert row["net_value_high_m_cad"] == pytest.approx(high, abs=1e-6)
+        assert row["scenario_label"] == row["scenario_role"]
+        assert row["negative_province_count"] == (
+            0 if row["scenario"] == "donor_flat" else 5
+        )
+    assert {
+        (row["allocation_case"], row["scenario"]) for row in documented
+    } == {
+        (case, scenario)
+        for case in ("100m", "119m", "150m")
+        for scenario in ("donor_flat", "stumpage_scaled")
+    }
+
+    assert manifest["validation"]["net_value_sensitivity_allocation_rows"] == 117
+    assert manifest["validation"]["net_value_sensitivity_groups"] == 18
+    assert manifest["validation"]["net_value_sensitivity_documented_ceiling_rows"] == 6
+    assert manifest["validation"]["net_value_sensitivity_infeasible_rows"] == 4
+    assert manifest["validation"]["net_value_sensitivity_label"] == (
+        "model_estimate_not_policy"
+    )
+    assert manifest["validation"]["net_value_sensitivity_lp_objective"] == "not_used"
+    assert manifest["validation"]["net_value_sensitivity_observed_claim"] is False
+    assert manifest["validation"]["net_value_sensitivity_policy_grade_claim"] is False
+
+
+def test_150m_intensity_rows_are_blank_not_zero(built):
+    payload, _ = built
+    net_value = payload["forest_lp_net_value_sensitivity"]
+    infeasible = [row for row in net_value["rows"] if not row["feasible"]]
+
+    assert len(infeasible) == 4
+    assert {
+        (row["cap_case"], row["allocation_case"], row["scenario"])
+        for row in infeasible
+    } == {
+        (cap_case, "150m", scenario)
+        for cap_case in ("intensity_1.0", "intensity_1.2")
+        for scenario in ("donor_flat", "stumpage_scaled")
+    }
+    for row in infeasible:
+        assert row["case_status"] == "infeasible"
+        assert row["net_value_low_m_cad"] is None
+        assert row["net_value_base_m_cad"] is None
+        assert row["net_value_high_m_cad"] is None
+        assert row["allocation_m3"] is None
+        assert row["negative_province_count"] is None
+        assert row["negative_province_counts"] == {
+            "low": None,
+            "base": None,
+            "high": None,
+        }
+        assert row["net_value_low_m_cad"] != 0
+        assert row["net_value_base_m_cad"] != 0
+        assert row["net_value_high_m_cad"] != 0
+
+
+def test_unexpected_d_in_net_value_rows_fails_closed():
+    groups = _read_csv(
+        ROOT
+        / "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity"
+        / "allocation_net_value_summary.csv"
+    )
+    allocation_rows = _read_csv(
+        ROOT
+        / "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity"
+        / "allocation_net_value.csv"
+    )
+    national_rows = _read_csv(
+        ROOT
+        / "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity"
+        / "national_net_value_summary.csv"
+    )
+    summary = json.loads(
+        (
+            ROOT
+            / "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity"
+            / "summary.json"
+        ).read_text(encoding="utf-8")
+    )
+    exporter._forest_lp_net_value_sensitivity(
+        allocation_rows, groups, national_rows, summary
+    )
+
+    mutated = [dict(row) for row in groups]
+    mutated[0]["case_status"] = "D"
+    with pytest.raises(exporter.NationalEconomicsUiError, match="unexpected D"):
+        exporter._forest_lp_net_value_sensitivity(
+            allocation_rows, mutated, national_rows, summary
+        )
+
+
+def test_ui_net_value_section_is_read_only_and_renders_blanks():
+    html = (ROOT / "ui/index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
+    section = html.split('id="national-net-value"', 1)[1].split(
+        "</section>", 1
+    )[0]
+
+    assert 'id="national-net-value-title"' in section
+    assert "Forest LP net-value sensitivity" in section
+    assert 'id="national-net-value-table"' in section
+    assert 'id="national-net-value-chart"' in section
+    assert 'id="national-net-value-badges"' in section
+    assert 'id="national-net-value-caveat"' in section
+    assert "model_estimate_not_policy" in section
+    assert "lp_objective=not_used" in section
+    assert "observed=false" in section
+    assert "policy_grade=false" in section
+    assert "no LP/OSeCAN input" in section
+    assert section.count("<button") == 0
+    assert section.count("<form") == 0
+    assert section.count("<select") == 0
+    assert 'id="national-net-value-table"' in app_js or "national-net-value-table" in app_js
+    assert "function renderNationalNetValueTable" in app_js
+    assert "national-net-value-blank" in app_js
+    assert "blank · not zero" in app_js
+    assert "lp_objective=not_used" in app_js
+    assert "no LP/OSeCAN input" in app_js
+
+    render_block = app_js.split("function renderNational()", 1)[1].split(
+        "/* ---------------- Inputs ---------------- */", 1
+    )[0]
+    assert render_block.index("renderNationalDiagnostic()") < render_block.index(
+        "renderNationalNetValue()"
+    )
+    assert render_block.index("renderNationalNetValue()") < render_block.index(
+        "renderNationalCaveat()"
+    )
 
 
 def test_app_js_syntax():

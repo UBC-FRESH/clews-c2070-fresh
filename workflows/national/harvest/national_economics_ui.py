@@ -59,6 +59,11 @@ ALLOCATION_SOURCE = HARVEST_BASIS_DIR / "provincial_allocation/119m.csv"
 MARGIN_TOTALS_DIR = HARVEST_BASIS_DIR / "national_margin_totals"
 MARGIN_TOTALS_CSV = MARGIN_TOTALS_DIR / "province_margin_totals.csv"
 MARGIN_TOTALS_JSON = MARGIN_TOTALS_DIR / "national_margin_totals.json"
+NET_VALUE_DIR = HARVEST_BASIS_DIR / "forest_lp_net_value_sensitivity"
+NET_VALUE_ALLOCATION_CSV = NET_VALUE_DIR / "allocation_net_value.csv"
+NET_VALUE_GROUP_CSV = NET_VALUE_DIR / "allocation_net_value_summary.csv"
+NET_VALUE_NATIONAL_CSV = NET_VALUE_DIR / "national_net_value_summary.csv"
+NET_VALUE_SUMMARY_JSON = NET_VALUE_DIR / "summary.json"
 OUT_JSON = REPO_ROOT / "ui/public/data/economics/national.json"
 OUT_MANIFEST = REPO_ROOT / "ui/public/data/economics/national.manifest.json"
 
@@ -104,6 +109,25 @@ COST_INPUTS_CSV = "national_cost_inputs.csv"
 SUMMARY_JSON = "summary.json"
 STATCAN_CSV = "provincial_logging_cost_proxy.csv"
 STATCAN_SOURCES_CSV = "sources.csv"
+
+NET_VALUE_MODEL_ID = "forest_lp_net_value_sensitivity_v1"
+NET_VALUE_SCHEMA_VERSION = "national/forest-lp-net-value-sensitivity/1"
+NET_VALUE_ALLOCATION_CASES = ("100m", "119m", "150m")
+NET_VALUE_SCENARIOS = ("donor_flat", "stumpage_scaled")
+NET_VALUE_CAP_CASES = ("documented_ceiling", "intensity_1.0", "intensity_1.2")
+NET_VALUE_EXPECTED_ALLOCATION_ROWS = 117
+NET_VALUE_EXPECTED_GROUPS = 18
+NET_VALUE_EXPECTED_NATIONAL_ROWS = 54
+NET_VALUE_EXPECTED_INFEASIBLE_GROUPS = 4
+# Documented-ceiling base net values, M CAD, from the committed summary.
+NET_VALUE_EXPECTED_BASE_M_CAD = {
+    ("100m", "donor_flat"): 4347.22634042173,
+    ("100m", "stumpage_scaled"): -559.72283638965,
+    ("119m", "donor_flat"): 5205.32874847936,
+    ("119m", "stumpage_scaled"): -655.31912331146,
+    ("150m", "donor_flat"): 6662.82394963578,
+    ("150m", "stumpage_scaled"): -1194.8638226528499,
+}
 
 
 class NationalEconomicsUiError(RuntimeError):
@@ -215,6 +239,34 @@ def _boolean(row: dict[str, str], field: str, label: str) -> bool:
     if value not in {"true", "false"}:
         _fail(f"{label}: invalid boolean {field}={value!r}")
     return value == "true"
+
+
+def _optional_number(
+    row: dict[str, str], field: str, label: str
+) -> float | None:
+    raw = row.get(field, "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError as error:
+        _fail(f"{label}: invalid {field}={raw!r}: {error}")
+    if not math.isfinite(value):
+        _fail(f"{label}: non-finite {field}")
+    return value
+
+
+def _assert_no_unexpected_d(
+    rows: list[dict[str, str]], label: str
+) -> None:
+    """Fail closed if a source row carries an unexpected D quality flag."""
+    for index, row in enumerate(rows, start=1):
+        for field, value in row.items():
+            if value is not None and str(value).strip() == "D":
+                _fail(
+                    f"{label}: unexpected D quality flag at row {index} "
+                    f"field {field}"
+                )
 
 
 def _round(value: float, digits: int) -> float:
@@ -935,6 +987,363 @@ def _margin_totals(
     return indexed, summary
 
 
+def _forest_lp_net_value_sensitivity(
+    allocation_rows: list[dict[str, str]],
+    group_rows: list[dict[str, str]],
+    national_rows: list[dict[str, str]],
+    summary: dict[str, Any],
+) -> dict[str, Any]:
+    """Build the Forest LP net-value sensitivity section from committed rows.
+
+    The section is a reporting join only. It never feeds the Forest LP
+    objective, a constraint, or public OSeCAN. Infeasible allocation groups
+    keep blank net values and are never back-filled with zero.
+    """
+    if summary.get("model_id") != NET_VALUE_MODEL_ID:
+        _fail(
+            "net-value sensitivity model_id mismatch: "
+            f"{summary.get('model_id')!r}"
+        )
+    if summary.get("schema_version") != NET_VALUE_SCHEMA_VERSION:
+        _fail("net-value sensitivity schema mismatch")
+    if len(allocation_rows) != NET_VALUE_EXPECTED_ALLOCATION_ROWS:
+        _fail(
+            "net-value sensitivity allocation rows must be "
+            f"{NET_VALUE_EXPECTED_ALLOCATION_ROWS}, "
+            f"got {len(allocation_rows)}"
+        )
+
+    for rows, label in (
+        (allocation_rows, "net-value allocation"),
+        (group_rows, "net-value allocation summary"),
+        (national_rows, "net-value national summary"),
+    ):
+        _assert_no_unexpected_d(rows, label)
+
+    validation = summary.get("validation") or {}
+    if validation.get("allocation_rows") != NET_VALUE_EXPECTED_ALLOCATION_ROWS:
+        _fail("net-value summary allocation row count drifted")
+    if validation.get("unexpected_d_cells") not in (0, None):
+        _fail(
+            "net-value sensitivity reports unexpected D cells: "
+            f"{validation.get('unexpected_d_cells')!r}"
+        )
+    statcan_d = summary.get("statcan_d") or {}
+    if statcan_d.get("unexpected_cells"):
+        _fail(
+            "net-value sensitivity reports unexpected StatCan D cells: "
+            f"{statcan_d.get('unexpected_cells')!r}"
+        )
+    if statcan_d.get("observed_d_cell_count") != 0:
+        _fail(
+            "net-value sensitivity observed D cell count must remain zero: "
+            f"{statcan_d.get('observed_d_cell_count')!r}"
+        )
+    if validation.get("observed_claim") is not False:
+        _fail("net-value sensitivity must not claim observed values")
+    if validation.get("policy_grade_claim") is not False:
+        _fail("net-value sensitivity must not claim policy grade")
+    if validation.get("lp_objective") != "not_used":
+        _fail("net-value sensitivity lp_objective must be not_used")
+    if validation.get("forest_lp_objective_changed") is not False:
+        _fail("net-value sensitivity must not change the Forest LP objective")
+    if validation.get("public_osecan_input") is not False:
+        _fail("net-value sensitivity must not be a public OSeCAN input")
+
+    labels = summary.get("labels") or {}
+    expected_labels = {
+        "net_value_status": "model_estimate_not_policy",
+        "observed": False,
+        "policy_grade": False,
+        "lp_objective": "not_used",
+        "forest_lp_objective_changed": False,
+        "v1_outputs_changed": False,
+        "combined_national_net_value": False,
+        "ranking_performed": False,
+        "public_osecan_input": False,
+        "restricted_data_used": False,
+    }
+    for field, expected in expected_labels.items():
+        if labels.get(field) != expected:
+            _fail(
+                f"net-value label {field} must be {expected!r}, "
+                f"got {labels.get(field)!r}"
+            )
+
+    if len(group_rows) != NET_VALUE_EXPECTED_GROUPS:
+        _fail(
+            "net-value allocation summary must have "
+            f"{NET_VALUE_EXPECTED_GROUPS} groups, got {len(group_rows)}"
+        )
+    if len(national_rows) != NET_VALUE_EXPECTED_NATIONAL_ROWS:
+        _fail(
+            "net-value national summary must have "
+            f"{NET_VALUE_EXPECTED_NATIONAL_ROWS} rows, "
+            f"got {len(national_rows)}"
+        )
+
+    national_by_key: dict[tuple[str, str, str, str], dict[str, str]] = {}
+    for row in national_rows:
+        key = (
+            _text(row, "cap_case", "net-value national"),
+            _text(row, "allocation_case", "net-value national"),
+            _text(row, "scenario", "net-value national"),
+            _text(row, "case", "net-value national"),
+        )
+        if key in national_by_key:
+            _fail(f"net-value national summary duplicate row: {key}")
+        national_by_key[key] = row
+
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for index, row in enumerate(group_rows, start=1):
+        label = f"net-value group {index}"
+        cap_case = _text(row, "cap_case", label)
+        allocation_case = _text(row, "allocation_case", label)
+        scenario = _text(row, "scenario", label)
+        scenario_role = _text(row, "scenario_role", label)
+        case_status = _text(row, "case_status", label)
+        if cap_case not in NET_VALUE_CAP_CASES:
+            _fail(f"{label}: unexpected cap_case {cap_case!r}")
+        if allocation_case not in NET_VALUE_ALLOCATION_CASES:
+            _fail(f"{label}: unexpected allocation_case {allocation_case!r}")
+        if scenario not in NET_VALUE_SCENARIOS:
+            _fail(f"{label}: unexpected scenario {scenario!r}")
+        expected_role = "base" if scenario == NET_VALUE_SCENARIOS[0] else "sensitivity"
+        if scenario_role != expected_role:
+            _fail(
+                f"{label}: scenario_role {scenario_role!r} "
+                f"must be {expected_role!r}"
+            )
+        key = (cap_case, allocation_case, scenario)
+        if key in seen:
+            _fail(f"{label}: duplicate group key {key}")
+        seen.add(key)
+
+        feasible = _boolean(row, "case_feasible", label)
+        if feasible and case_status != "optimal":
+            _fail(f"{label}: feasible group must have status optimal")
+        if not feasible and case_status != "infeasible":
+            _fail(f"{label}: infeasible group must have status infeasible")
+
+        low = _optional_number(row, "net_value_low_m_cad", label)
+        base = _optional_number(row, "net_value_base_m_cad", label)
+        high = _optional_number(row, "net_value_high_m_cad", label)
+        allocation_m3 = _optional_number(row, "allocation_m3", label)
+        count_low = _optional_number(
+            row, "negative_net_value_low_count", label
+        )
+        count_base = _optional_number(
+            row, "negative_net_value_base_count", label
+        )
+        count_high = _optional_number(
+            row, "negative_net_value_high_count", label
+        )
+        if feasible:
+            if any(value is None for value in (low, base, high)):
+                _fail(f"{label}: feasible group has blank net values")
+            assert low is not None and base is not None and high is not None
+            if not low <= base <= high:
+                _fail(f"{label}: net values are unordered")
+            if any(
+                value is None
+                for value in (count_low, count_base, count_high)
+            ):
+                _fail(f"{label}: feasible group has blank negative counts")
+        else:
+            if any(
+                value is not None
+                for value in (
+                    low,
+                    base,
+                    high,
+                    allocation_m3,
+                    count_low,
+                    count_base,
+                    count_high,
+                )
+            ):
+                _fail(
+                    f"{label}: infeasible group must keep blank values, "
+                    "not zero"
+                )
+
+        national_values: dict[str, float] = {}
+        for case, expected in (
+            ("low", low),
+            ("base", base),
+            ("high", high),
+        ):
+            national_row = national_by_key.get(
+                (cap_case, allocation_case, scenario, case)
+            )
+            if national_row is None:
+                _fail(f"{label}: missing national {case} row")
+            if feasible:
+                actual = _number(
+                    national_row, "net_value_m_cad", f"{label}/{case}"
+                )
+                if expected is None or abs(actual - expected) > 1e-6:
+                    _fail(
+                        f"{label}: national {case} value disagrees with "
+                        "the allocation summary"
+                    )
+                national_values[case] = _round(actual, 6)
+            else:
+                blank = national_row.get("net_value_m_cad", "").strip()
+                if blank:
+                    _fail(
+                        f"{label}: national {case} row must stay blank "
+                        "for an infeasible group"
+                    )
+
+        negative_provinces = {
+            case: [
+                part
+                for part in row.get(
+                    f"negative_provinces_{case}", ""
+                ).split(";")
+                if part
+            ]
+            for case in ("low", "base", "high")
+        }
+        rows.append(
+            {
+                "cap_case": cap_case,
+                "allocation_case": allocation_case,
+                "allocation_label": allocation_case.replace("m", " Mm³"),
+                "allocation_target_m3": _round(
+                    _number(row, "allocation_target_m3", label), 1
+                ),
+                "scenario": scenario,
+                "scenario_role": scenario_role,
+                "scenario_label": scenario_role,
+                "case_status": case_status,
+                "feasible": feasible,
+                "allocation_m3": (
+                    None if allocation_m3 is None else _round(allocation_m3, 1)
+                ),
+                "net_value_low_m_cad": (
+                    None if low is None else _round(low, 6)
+                ),
+                "net_value_base_m_cad": (
+                    None if base is None else _round(base, 6)
+                ),
+                "net_value_high_m_cad": (
+                    None if high is None else _round(high, 6)
+                ),
+                "negative_province_count": (
+                    None if count_base is None else int(count_base)
+                ),
+                "negative_province_counts": {
+                    "low": None if count_low is None else int(count_low),
+                    "base": None if count_base is None else int(count_base),
+                    "high": None if count_high is None else int(count_high),
+                },
+                "negative_provinces": negative_provinces,
+                "observed": False,
+                "policy_grade": False,
+                "net_value_status": "model_estimate_not_policy",
+                "lp_objective": "not_used",
+            }
+        )
+
+    if seen != {
+        (cap_case, allocation_case, scenario)
+        for cap_case in NET_VALUE_CAP_CASES
+        for allocation_case in NET_VALUE_ALLOCATION_CASES
+        for scenario in NET_VALUE_SCENARIOS
+    }:
+        _fail("net-value groups do not cover every cap x level x scenario")
+
+    documented = [row for row in rows if row["cap_case"] == "documented_ceiling"]
+    if len(documented) != 6:
+        _fail("net-value documented-ceiling table must have six rows")
+    if {
+        (row["allocation_case"], row["scenario"]) for row in documented
+    } != {
+        (allocation_case, scenario)
+        for allocation_case in NET_VALUE_ALLOCATION_CASES
+        for scenario in NET_VALUE_SCENARIOS
+    }:
+        _fail("net-value documented-ceiling rows are incomplete")
+    for row in documented:
+        expected_base = NET_VALUE_EXPECTED_BASE_M_CAD[
+            (row["allocation_case"], row["scenario"])
+        ]
+        if abs(row["net_value_base_m_cad"] - expected_base) > 1e-5:
+            _fail(
+                "net-value documented-ceiling base total drifted for "
+                f"{row['allocation_case']}/{row['scenario']}"
+            )
+
+    infeasible = [row for row in rows if not row["feasible"]]
+    if len(infeasible) != NET_VALUE_EXPECTED_INFEASIBLE_GROUPS:
+        _fail(
+            "net-value sensitivity must keep four infeasible intensity rows"
+        )
+    if {
+        (row["cap_case"], row["allocation_case"], row["scenario"])
+        for row in infeasible
+    } != {
+        (cap_case, "150m", scenario)
+        for cap_case in ("intensity_1.0", "intensity_1.2")
+        for scenario in NET_VALUE_SCENARIOS
+    }:
+        _fail("net-value infeasible rows must be the 150m intensity screens")
+
+    coverage = dict(summary.get("coverage") or {})
+    coverage.update(
+        {
+            "allocation_rows": len(allocation_rows),
+            "expected_allocation_rows": NET_VALUE_EXPECTED_ALLOCATION_ROWS,
+            "group_rows": len(group_rows),
+            "national_rows": len(national_rows),
+            "documented_ceiling_rows": len(documented),
+            "infeasible_rows": len(infeasible),
+            "cap_cases": list(NET_VALUE_CAP_CASES),
+            "allocation_cases": list(NET_VALUE_ALLOCATION_CASES),
+            "scenarios": list(NET_VALUE_SCENARIOS),
+        }
+    )
+
+    return {
+        "schema_version": summary.get("schema_version"),
+        "model_id": summary.get("model_id"),
+        "artifact_version": summary.get("artifact_version"),
+        "generated_utc": summary.get("generated_utc"),
+        "status": summary.get("status"),
+        "source_publication_context": summary.get(
+            "source_publication_context"
+        ),
+        "role": "sensitivity_report_not_lp_objective",
+        "display_role": "economics_tab_after_national_totals",
+        "labels": {
+            "net_value_label": "model_estimate",
+            "net_value_status": "model_estimate_not_policy",
+            "observed": False,
+            "policy_grade": False,
+            "lp_objective": "not_used",
+            "forest_lp_input": False,
+            "public_osecan_input": False,
+            "forest_lp_objective_changed": False,
+            "v1_outputs_changed": False,
+            "combined_national_net_value": False,
+            "ranking_performed": False,
+            "restricted_data_used": False,
+        },
+        "coverage": coverage,
+        "rows": rows,
+        "documented_ceiling_row_count": len(documented),
+        "infeasible_row_count": len(infeasible),
+        "canonical_119m": summary.get("canonical") or {},
+        "validation": validation,
+        "statcan_d": statcan_d,
+        "caveats": summary.get("caveats") or [],
+        "non_claims": summary.get("non_claims") or [],
+    }
+
+
 def build_export(
     source_dir: Path = SOURCE_DIR,
     tier_source: Path = TIER_SOURCE,
@@ -962,6 +1371,10 @@ def build_export(
     tier_summary = _read_json(TIER_SUMMARY_JSON)
     statcan_rows = _read_csv(STATCAN_DIR / STATCAN_CSV)
     statcan_source_rows = _read_csv(STATCAN_DIR / STATCAN_SOURCES_CSV)
+    net_value_allocation_rows = _read_csv(NET_VALUE_ALLOCATION_CSV)
+    net_value_group_rows = _read_csv(NET_VALUE_GROUP_CSV)
+    net_value_national_rows = _read_csv(NET_VALUE_NATIONAL_CSV)
+    net_value_summary = _read_json(NET_VALUE_SUMMARY_JSON)
 
     coverage = summary.get("coverage") or {}
     provinces = list(coverage.get("provinces") or [])
@@ -1046,6 +1459,12 @@ def build_export(
         _fail("provincial allocation does not match the 13 summary provinces")
     total_margins_by_key, total_margin_summary = _margin_totals(
         total_margin_rows, total_margin_payload, allocation_by_province
+    )
+    net_value_sensitivity = _forest_lp_net_value_sensitivity(
+        net_value_allocation_rows,
+        net_value_group_rows,
+        net_value_national_rows,
+        net_value_summary,
     )
 
     jurisdictions: list[dict[str, Any]] = []
@@ -1441,6 +1860,10 @@ def build_export(
         (ALLOCATION_SOURCE, len(allocation_rows)),
         (MARGIN_TOTALS_CSV, len(total_margin_rows)),
         (MARGIN_TOTALS_JSON, None),
+        (NET_VALUE_ALLOCATION_CSV, len(net_value_allocation_rows)),
+        (NET_VALUE_GROUP_CSV, len(net_value_group_rows)),
+        (NET_VALUE_NATIONAL_CSV, len(net_value_national_rows)),
+        (NET_VALUE_SUMMARY_JSON, None),
         (STATCAN_DIR / STATCAN_CSV, len(statcan_rows)),
         (STATCAN_DIR / STATCAN_SOURCES_CSV, len(statcan_source_rows)),
     ]
@@ -1458,6 +1881,7 @@ def build_export(
             "province_ledger",
             "province_drilldown",
             "national_margin_diagnostic",
+            "forest_lp_net_value_sensitivity",
             "downloads",
         ],
         "base_scenario": base_scenario,
@@ -1539,6 +1963,7 @@ def build_export(
             },
         },
         "national_margin_totals": total_margin_summary,
+        "forest_lp_net_value_sensitivity": net_value_sensitivity,
         "scenarios": [
             {
                 "id": scenario,
@@ -1700,6 +2125,30 @@ def build_export(
             ],
             "national_total_margin_label": total_margin_summary["label"],
             "national_total_margin_policy_result": False,
+            "net_value_sensitivity_model_id": net_value_sensitivity["model_id"],
+            "net_value_sensitivity_allocation_rows": net_value_sensitivity[
+                "coverage"
+            ]["allocation_rows"],
+            "net_value_sensitivity_groups": net_value_sensitivity["coverage"][
+                "group_rows"
+            ],
+            "net_value_sensitivity_documented_ceiling_rows": net_value_sensitivity[
+                "documented_ceiling_row_count"
+            ],
+            "net_value_sensitivity_infeasible_rows": net_value_sensitivity[
+                "infeasible_row_count"
+            ],
+            "net_value_sensitivity_label": net_value_sensitivity["labels"][
+                "net_value_status"
+            ],
+            "net_value_sensitivity_lp_objective": net_value_sensitivity[
+                "labels"
+            ]["lp_objective"],
+            "net_value_sensitivity_observed_claim": False,
+            "net_value_sensitivity_policy_grade_claim": False,
+            "net_value_sensitivity_unexpected_d_cells": net_value_sensitivity[
+                "statcan_d"
+            ].get("observed_d_cell_count", 0),
             "observed_claim": False,
             "policy_grade_claim": False,
             "combined_national_net_value": False,

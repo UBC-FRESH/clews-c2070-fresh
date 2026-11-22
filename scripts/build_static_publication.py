@@ -312,6 +312,36 @@ def main() -> None:
     if national_labels.get("forest_lp_input") is not False or national_labels.get("public_osecan_input") is not False:
         fail("national economics must stay outside the Forest LP and public OSeCAN")
 
+    net_value = national.get("forest_lp_net_value_sensitivity")
+    if not isinstance(net_value, dict):
+        fail("national economics must include the Forest LP net-value sensitivity")
+    if net_value.get("model_id") != "forest_lp_net_value_sensitivity_v1":
+        fail("Forest LP net-value sensitivity model id mismatch")
+    net_labels = net_value.get("labels") or {}
+    if net_labels.get("observed") is not False or net_labels.get("policy_grade") is not False:
+        fail("Forest LP net-value sensitivity labels must stay model-only")
+    if net_labels.get("lp_objective") != "not_used":
+        fail("Forest LP net-value sensitivity must not use the LP objective")
+    if net_labels.get("forest_lp_input") is not False or net_labels.get("public_osecan_input") is not False:
+        fail("Forest LP net-value sensitivity must stay outside the LP and public OSeCAN")
+    net_coverage = net_value.get("coverage") or {}
+    if net_coverage.get("allocation_rows") != 117 or net_coverage.get("group_rows") != 18:
+        fail("Forest LP net-value sensitivity coverage mismatch")
+    net_rows = net_value.get("rows") or []
+    documented = [row for row in net_rows if row.get("cap_case") == "documented_ceiling"]
+    infeasible = [row for row in net_rows if row.get("feasible") is False]
+    if len(net_rows) != 18 or len(documented) != 6 or len(infeasible) != 4:
+        fail("Forest LP net-value sensitivity row counts mismatch")
+    for row in infeasible:
+        if row.get("net_value_low_m_cad") is not None or row.get("net_value_base_m_cad") is not None:
+            fail("infeasible Forest LP net-value rows must stay blank, not zero")
+        if row.get("allocation_case") != "150m":
+            fail("only the 150m intensity rows may be infeasible")
+    if {row["allocation_case"] for row in documented} != {"100m", "119m", "150m"}:
+        fail("Forest LP net-value documented cases must be 100/119/150m")
+    if {row["scenario_role"] for row in documented} != {"base", "sensitivity"}:
+        fail("Forest LP net-value documented scenarios must be base/sensitivity")
+
     scenarios = load_json(destination / "public/data/scenarios.json")
     families = {scenario["family"] for scenario in scenarios["scenarios"]}
     pareto_eligible = sum(1 for scenario in scenarios["scenarios"] if scenario.get("pareto_eligible"))
@@ -368,6 +398,10 @@ def main() -> None:
             "national_jurisdictions": len(national["jurisdictions"]),
             "national_base_margin_cad_m3": diagnostic["donor_flat"]["base_cad_m3"],
             "national_sensitivity_margin_cad_m3": diagnostic["stumpage_scaled"]["base_cad_m3"],
+            "forest_lp_net_value_allocation_rows": net_coverage["allocation_rows"],
+            "forest_lp_net_value_groups": net_coverage["group_rows"],
+            "forest_lp_net_value_documented_rows": len(documented),
+            "forest_lp_net_value_infeasible_rows": len(infeasible),
             "payload_manifest_files": len(manifest["files"]),
         },
         "economics": {
@@ -398,6 +432,14 @@ def main() -> None:
                 "bytes": (destination / NATIONAL_MANIFEST).stat().st_size,
                 "sha256": sha256_file(destination / NATIONAL_MANIFEST),
                 "sources": len(national_manifest["sources"]),
+            },
+            "forest_lp_net_value_sensitivity": {
+                "model_id": net_value["model_id"],
+                "artifact_version": net_value.get("artifact_version"),
+                "coverage": net_coverage,
+                "documented_ceiling_row_count": len(documented),
+                "infeasible_row_count": len(infeasible),
+                "labels": net_labels,
             },
         },
         "data_bundle": {

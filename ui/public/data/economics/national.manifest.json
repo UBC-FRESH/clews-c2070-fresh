@@ -3,22 +3,22 @@
   "model_id": "national_economics_v2_3",
   "artifact_version": "2.3.0",
   "generated_utc": "2026-11-22T15:36:32+00:00",
-  "parent_commit": "f86d73a48f10f1d78001e485f00408e1e95eba26",
-  "data_commit": "0484ad6e12efe27309c0790063a81f91291fafa8",
+  "parent_commit": "7d568bcb85786ca16569ca03c4d8ad1e3690421f",
+  "data_commit": "a08f97e6abb7601e474500bd702496843f8de374",
   "files": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 138835,
-      "sha256": "8f2b28b286c328687a1ff9dc5975f66ad3cb4248eeb4e64e1f40e2870b24a384"
+      "bytes": 170544,
+      "sha256": "3160b7e80ae5dac9d886cbd8c1cb28c4932ffdaa0af3d9f83febdce09f809a5b"
     }
   ],
   "generated": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 138835,
-      "sha256": "8f2b28b286c328687a1ff9dc5975f66ad3cb4248eeb4e64e1f40e2870b24a384"
+      "bytes": 170544,
+      "sha256": "3160b7e80ae5dac9d886cbd8c1cb28c4932ffdaa0af3d9f83febdce09f809a5b"
     }
   ],
   "sources": [
@@ -101,6 +101,30 @@
       "sha256": "dad15e44fb4d520d6a7773ed0eaba1848d9e09ae9eca722338aae308924e0467"
     },
     {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value.csv",
+      "rows": 117,
+      "bytes": 43893,
+      "sha256": "5f47eb66e6df5a2454a17ca084778c78bbcbb8bcd9d658f4bfeff6414852eda0"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value_summary.csv",
+      "rows": 18,
+      "bytes": 4949,
+      "sha256": "ce1cb62a1194d6b8908c28326d9dd872190d2ae3e107159a577322ce7c5c592c"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/national_net_value_summary.csv",
+      "rows": 54,
+      "bytes": 7344,
+      "sha256": "894166d03b7576d0b130fc833dff0a0ed1a8481b3f01c7fdec38c1f45d714417"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/summary.json",
+      "rows": null,
+      "bytes": 72219,
+      "sha256": "4d174adefd2b4ebdb90476605743955861783d3c0f6b21034cd64ce4ba2b763f"
+    },
+    {
       "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
       "rows": 13,
       "bytes": 10854,
@@ -142,6 +166,16 @@
     "national_total_margin_allocation_m3": 118977339.1,
     "national_total_margin_label": "model_estimate_not_policy",
     "national_total_margin_policy_result": false,
+    "net_value_sensitivity_model_id": "forest_lp_net_value_sensitivity_v1",
+    "net_value_sensitivity_allocation_rows": 117,
+    "net_value_sensitivity_groups": 18,
+    "net_value_sensitivity_documented_ceiling_rows": 6,
+    "net_value_sensitivity_infeasible_rows": 4,
+    "net_value_sensitivity_label": "model_estimate_not_policy",
+    "net_value_sensitivity_lp_objective": "not_used",
+    "net_value_sensitivity_observed_claim": false,
+    "net_value_sensitivity_policy_grade_claim": false,
+    "net_value_sensitivity_unexpected_d_cells": 0,
     "observed_claim": false,
     "policy_grade_claim": false,
     "combined_national_net_value": false,

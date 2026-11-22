@@ -11,6 +11,7 @@
     "province_ledger",
     "province_drilldown",
     "national_margin_diagnostic",
+    "forest_lp_net_value_sensitivity",
     "downloads"
   ],
   "base_scenario": "donor_flat",
@@ -552,6 +553,1020 @@
     },
     "source_csv": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
     "source_json": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json"
+  },
+  "forest_lp_net_value_sensitivity": {
+    "schema_version": "national/forest-lp-net-value-sensitivity/1",
+    "model_id": "forest_lp_net_value_sensitivity_v1",
+    "artifact_version": "1.0.0",
+    "generated_utc": "2026-11-22T16:42:39+00:00",
+    "status": "model_estimate_not_policy",
+    "source_publication_context": "national-economics-v2.4",
+    "role": "sensitivity_report_not_lp_objective",
+    "display_role": "economics_tab_after_national_totals",
+    "labels": {
+      "net_value_label": "model_estimate",
+      "net_value_status": "model_estimate_not_policy",
+      "observed": false,
+      "policy_grade": false,
+      "lp_objective": "not_used",
+      "forest_lp_input": false,
+      "public_osecan_input": false,
+      "forest_lp_objective_changed": false,
+      "v1_outputs_changed": false,
+      "combined_national_net_value": false,
+      "ranking_performed": false,
+      "restricted_data_used": false
+    },
+    "coverage": {
+      "allocation_source": "out/forest_lp_v1/forest_lp_allocation.csv",
+      "allocation_rows": 117,
+      "expected_allocation_rows": 117,
+      "margin_source": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+      "margin_rows": 26,
+      "province_count": 13,
+      "scenario_count": 2,
+      "scenarios": [
+        "donor_flat",
+        "stumpage_scaled"
+      ],
+      "levels": [
+        "100m",
+        "119m",
+        "150m"
+      ],
+      "cap_cases": [
+        "documented_ceiling",
+        "intensity_1.0",
+        "intensity_1.2"
+      ],
+      "joined_province_scenario_rows": 234,
+      "feasible_group_count": 14,
+      "infeasible_group_count": 4,
+      "infeasible_allocation_rows": 26,
+      "group_rows": 18,
+      "national_rows": 54,
+      "documented_ceiling_rows": 6,
+      "infeasible_rows": 4,
+      "allocation_cases": [
+        "100m",
+        "119m",
+        "150m"
+      ]
+    },
+    "rows": [
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.1,
+        "net_value_low_m_cad": -3230.786923,
+        "net_value_base_m_cad": 4347.22634,
+        "net_value_high_m_cad": 7633.971898,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.1,
+        "net_value_low_m_cad": -6750.6915,
+        "net_value_base_m_cad": -559.722836,
+        "net_value_high_m_cad": 3359.095964,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.1,
+        "net_value_low_m_cad": -3854.908562,
+        "net_value_base_m_cad": 5205.328748,
+        "net_value_high_m_cad": 9137.988762,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.1,
+        "net_value_low_m_cad": -8058.885699,
+        "net_value_base_m_cad": -655.319123,
+        "net_value_high_m_cad": 4032.87974,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 150000000.2,
+        "net_value_low_m_cad": -4299.883636,
+        "net_value_base_m_cad": 6662.82395,
+        "net_value_high_m_cad": 11436.002324,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 150000000.2,
+        "net_value_low_m_cad": -9950.394662,
+        "net_value_base_m_cad": -1194.863823,
+        "net_value_high_m_cad": 4505.859579,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 99999998.6,
+        "net_value_low_m_cad": -3494.678442,
+        "net_value_base_m_cad": 4377.398167,
+        "net_value_high_m_cad": 7811.963398,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 99999998.6,
+        "net_value_low_m_cad": -7041.10513,
+        "net_value_base_m_cad": -588.308659,
+        "net_value_high_m_cad": 3481.717363,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -4380.974391,
+        "net_value_base_m_cad": 5144.587973,
+        "net_value_high_m_cad": 9263.984141,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -8500.784098,
+        "net_value_base_m_cad": -636.279694,
+        "net_value_high_m_cad": 4078.507445,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.6,
+        "net_value_low_m_cad": -3338.197498,
+        "net_value_base_m_cad": 4416.332373,
+        "net_value_high_m_cad": 7791.809234,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.6,
+        "net_value_low_m_cad": -6938.015687,
+        "net_value_base_m_cad": -619.86799,
+        "net_value_high_m_cad": 3404.714702,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -4142.893627,
+        "net_value_base_m_cad": 5212.079155,
+        "net_value_high_m_cad": 9292.8967,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -8369.501089,
+        "net_value_base_m_cad": -705.812831,
+        "net_value_high_m_cad": 4132.820518,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      }
+    ],
+    "documented_ceiling_row_count": 6,
+    "infeasible_row_count": 4,
+    "canonical_119m": {
+      "cap_case": "documented_ceiling",
+      "allocation_case": "119m",
+      "scenarios": {
+        "donor_flat": {
+          "cap_case": "documented_ceiling",
+          "allocation_case": "119m",
+          "allocation_target_m3": 118977339.0,
+          "scenario": "donor_flat",
+          "scenario_role": "base",
+          "case_status": "optimal",
+          "case_feasible": true,
+          "province_rows": 13,
+          "allocated_province_rows": 13,
+          "blank_province_rows": 0,
+          "allocation_m3": 118977339.1,
+          "net_value_low_m_cad": -3854.9085620411397,
+          "net_value_base_m_cad": 5205.32874847936,
+          "net_value_high_m_cad": 9137.98876199119,
+          "national_margin_low_cad_m3": -32.40035952393509,
+          "national_margin_base_cad_m3": 43.75058971611645,
+          "national_margin_high_cad_m3": 76.80444722596079,
+          "negative_net_value_low_count": 4,
+          "negative_net_value_base_count": 0,
+          "negative_net_value_high_count": 0,
+          "positive_net_value_low_count": 8,
+          "positive_net_value_base_count": 12,
+          "positive_net_value_high_count": 12,
+          "zero_net_value_low_count": 1,
+          "zero_net_value_base_count": 1,
+          "zero_net_value_high_count": 1,
+          "negative_provinces_low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "negative_provinces_base": [],
+          "negative_provinces_high": [],
+          "observed": false,
+          "policy_grade": false,
+          "net_value_status": "model_estimate_not_policy",
+          "lp_objective": "not_used"
+        },
+        "stumpage_scaled": {
+          "cap_case": "documented_ceiling",
+          "allocation_case": "119m",
+          "allocation_target_m3": 118977339.0,
+          "scenario": "stumpage_scaled",
+          "scenario_role": "sensitivity",
+          "case_status": "optimal",
+          "case_feasible": true,
+          "province_rows": 13,
+          "allocated_province_rows": 13,
+          "blank_province_rows": 0,
+          "allocation_m3": 118977339.1,
+          "net_value_low_m_cad": -8058.88569946204,
+          "net_value_base_m_cad": -655.31912331146,
+          "net_value_high_m_cad": 4032.8797400337303,
+          "national_margin_low_cad_m3": -67.73462711826643,
+          "national_margin_base_cad_m3": -5.507932252213733,
+          "national_margin_high_cad_m3": 33.89620049112134,
+          "negative_net_value_low_count": 7,
+          "negative_net_value_base_count": 5,
+          "negative_net_value_high_count": 3,
+          "positive_net_value_low_count": 5,
+          "positive_net_value_base_count": 7,
+          "positive_net_value_high_count": 9,
+          "zero_net_value_low_count": 1,
+          "zero_net_value_base_count": 1,
+          "zero_net_value_high_count": 1,
+          "negative_provinces_low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "negative_provinces_base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "negative_provinces_high": [
+            "AB",
+            "MB",
+            "ON"
+          ],
+          "observed": false,
+          "policy_grade": false,
+          "net_value_status": "model_estimate_not_policy",
+          "lp_objective": "not_used"
+        }
+      }
+    },
+    "validation": {
+      "checks": [
+        {
+          "id": "allocation-rows",
+          "name": "Forest LP v1 allocation rows preserved",
+          "status": "pass",
+          "detail": "117 rows (expected 117)"
+        },
+        {
+          "id": "net-value-arithmetic",
+          "name": "Net value equals allocation x margin / 1e6",
+          "status": "pass",
+          "detail": "0 arithmetic mismatches"
+        },
+        {
+          "id": "infeasible-blanks",
+          "name": "Infeasible rows keep blank net values",
+          "status": "pass",
+          "detail": "0 non-blank values on infeasible rows"
+        },
+        {
+          "id": "feasible-complete",
+          "name": "Feasible rows carry all six net values",
+          "status": "pass",
+          "detail": "0 blank values on feasible rows"
+        },
+        {
+          "id": "negative-unclipped",
+          "name": "Negative values are retained without clipping",
+          "status": "pass",
+          "detail": "133 negative net-value cells; 0 sign/clipping mismatches"
+        },
+        {
+          "id": "infeasible-count",
+          "name": "Infeasible allocation rows are blank",
+          "status": "pass",
+          "detail": "26 infeasible rows"
+        },
+        {
+          "id": "group-summaries",
+          "name": "Allocation-level summaries cover cap x level x scenario",
+          "status": "pass",
+          "detail": "18 groups"
+        },
+        {
+          "id": "national-rows",
+          "name": "National totals cover every group and case",
+          "status": "pass",
+          "detail": "54 rows"
+        },
+        {
+          "id": "national-equals-province-sum",
+          "name": "National totals equal the province sum",
+          "status": "pass",
+          "detail": "0 total mismatches"
+        },
+        {
+          "id": "tier-labels",
+          "name": "Price and cost tiers match national_economics_v2_3",
+          "status": "pass",
+          "detail": "0 tier mismatches"
+        },
+        {
+          "id": "margin-total-crosscheck",
+          "name": "Canonical 119m totals match the margin-total diagnostic",
+          "status": "pass",
+          "detail": "max abs delta vs national_margin_totals.json: 0.000000959 M CAD"
+        },
+        {
+          "id": "labels",
+          "name": "Model-estimate labels are carried on every row",
+          "status": "pass",
+          "detail": "observed=false, policy_grade=false, lp_objective=not_used"
+        },
+        {
+          "id": "objective-unchanged",
+          "name": "Forest LP objective and v1 outputs are unchanged",
+          "status": "pass",
+          "detail": "5 v1 output files hashed before and after; forest_lp_v1.py hash unchanged"
+        },
+        {
+          "id": "no-restricted-data",
+          "name": "No restricted or raw data is used",
+          "status": "pass",
+          "detail": "all inputs are under data/derived or out/; restricted_data_used=false"
+        },
+        {
+          "id": "no-public-ui",
+          "name": "No UI or public OSeCAN publication is written",
+          "status": "pass",
+          "detail": "output is a derived data artifact; public_osecan_input=false"
+        }
+      ],
+      "allocation_rows": 117,
+      "expected_allocation_rows": 117,
+      "group_summaries": 18,
+      "national_rows": 54,
+      "feasible_rows": 91,
+      "infeasible_rows": 26,
+      "negative_net_value_cells": 133,
+      "national_equals_province_sum": true,
+      "net_value_arithmetic": true,
+      "infeasible_blanks": true,
+      "feasible_complete": true,
+      "negative_unclipped": true,
+      "tier_labels_match_v2_3": true,
+      "margin_total_max_abs_delta_m_cad": 9.588602551957592e-07,
+      "margin_total_deltas_m_cad": {
+        "donor_flat_low": 9.588602551957592e-07,
+        "donor_flat_base": 4.793600965058431e-07,
+        "donor_flat_high": 8.811184670776129e-09,
+        "stumpage_scaled_low": 5.379597496357746e-07,
+        "stumpage_scaled_base": 6.885400125611341e-07,
+        "stumpage_scaled_high": 3.373043000465259e-08
+      },
+      "labels_model_estimate": true,
+      "observed_claim": false,
+      "policy_grade_claim": false,
+      "lp_objective": "not_used",
+      "forest_lp_objective_changed": false,
+      "forest_lp_source_sha256": "ce28e6231fc416b2ac84f64925f14b1e6bb3aee651e4bfafe514c72ea0361dfe",
+      "v1_outputs_unchanged": true,
+      "v1_output_files_hashed": 5,
+      "public_osecan_input": false,
+      "restricted_data_used": false,
+      "unexpected_d_cells": 0
+    },
+    "statcan_d": {
+      "observed_d_cell_count": 0,
+      "unexpected_cells": [],
+      "policy": "D is a data-quality flag, not a deletion; no direct input may carry an unlisted D."
+    },
+    "caveats": [
+      "Net value is a volume-weighted model estimate: allocation_m3 times province margin_cad_m3, divided by 1e6. It is not an observed transaction, a policy result, or a combined national net value.",
+      "The Forest LP objective and every Forest LP v1 output are unchanged. Net value is used only for reporting and is not an LP objective or constraint.",
+      "Negative margins and negative net values are retained without clipping. A negative value is a model result, not a data error.",
+      "Infeasible allocation cases keep blank allocation and blank net-value fields. They are not clamped, back-filled, or allocated a zero value.",
+      "The allocation levels are alternative screening ladders, not additive years or independent jurisdictions. National totals are reported per allocation case and must not be summed across levels.",
+      "Donor-price and donor-cost provinces remain model estimates. Stumpage_scaled is a method sensitivity, not the base scenario.",
+      "Nunavut has zero allocation volume in the 119m provenance, but a non-zero unit margin. Its net value is zero by multiplication where allocated volume is zero and is not an observed zero-profit finding."
+    ],
+    "non_claims": [
+      "Not observed; observed=false.",
+      "Not policy grade; policy_grade=false.",
+      "Not a Forest LP objective or constraint input; lp_objective=not_used.",
+      "Not a change to Forest LP v1 outputs or the v1 least-deviation allocation.",
+      "Not a combined national net value.",
+      "Not a public OSeCAN input and not a UI publication.",
+      "Not a jurisdiction ranking and not an investment recommendation."
+    ]
   },
   "scenarios": [
     {
@@ -3279,6 +4294,22 @@
     },
     {
       "path": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value.csv",
+      "rows": 117
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value_summary.csv",
+      "rows": 18
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/national_net_value_summary.csv",
+      "rows": 54
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/summary.json",
       "rows": null
     },
     {

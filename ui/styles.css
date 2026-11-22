@@ -2735,6 +2735,76 @@ tr.zone-row--national .zone-heat-cell { border-top: 3px solid var(--amber); }
 
 .national-table-wrap { margin-top: 10px; }
 .national-table { min-width: 1280px; }
+
+/* ---------- Forest LP net-value sensitivity ---------- */
+
+.national-net-value {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-strong);
+}
+.national-net-value .section-heading p { max-width: 82ch; }
+.national-net-value-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 16px;
+}
+.national-net-value-stat {
+  padding: 12px 14px;
+  background: var(--card-warm);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--pine-600);
+}
+.national-net-value-stat.is-blank { border-left-color: var(--rust); }
+.national-net-value-stat strong {
+  display: block;
+  color: var(--pine-900);
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+}
+.national-net-value-stat span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.chart-frame--national-net-value {
+  min-height: 330px;
+  margin-bottom: 16px;
+}
+.chart-frame--national-net-value .chart { height: 330px; }
+.national-net-value-table-wrap { margin-top: 8px; }
+.national-net-value-table { min-width: 1080px; }
+.national-net-value-table .num { white-space: nowrap; }
+.national-net-value-cap {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+}
+.national-net-value-row.is-documented td { background: rgba(44, 87, 70, 0.05); }
+.national-net-value-row.is-infeasible td {
+  background: repeating-linear-gradient(135deg, rgba(169, 79, 49, 0.055) 0 1px, transparent 1px 8px);
+  color: var(--muted);
+}
+.national-net-value-blank {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-style: italic;
+  letter-spacing: 0.03em;
+}
+.national-net-value-caveat { margin-top: 16px; }
+
+@media (max-width: 880px) {
+  .national-net-value-summary { grid-template-columns: 1fr; }
+}
+
 .national-table thead th { vertical-align: bottom; }
 .national-table .national-group-base,
 .national-table .national-group-sensitivity {
