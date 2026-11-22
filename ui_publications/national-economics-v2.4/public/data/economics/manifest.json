@@ -1,0 +1,184 @@
+{
+  "schema_version": "economics/1",
+  "dataset": "open_data_net_value",
+  "generated_utc": "2026-11-22T04:47:47+00:00",
+  "source_root": "data/derived/national/harvest_basis",
+  "files": [
+    {
+      "path": "economics/summary.json",
+      "bytes": 30934,
+      "sha256": "6eb0f57c7493163ae51413c52a861945a3920a33379d2003750a6e5c0fc36cec"
+    },
+    {
+      "path": "economics/detail.csv",
+      "bytes": 816632,
+      "sha256": "1e1da49aa36be34218c942bffb66af4b2f3ce8d37e30bc9dc475d49744999dc7",
+      "rows": 945
+    },
+    {
+      "path": "economics/model_inputs.zip",
+      "bytes": 52828,
+      "sha256": "e933292a4d59161f996a4e2905db2bddcbc91efe35d3cfcc709e036ecbf482db"
+    }
+  ],
+  "sources": [
+    {
+      "path": "data/derived/national/harvest_basis/open_data_net_value/bc_open_net_value_summary.csv",
+      "bytes": 6567,
+      "sha256": "ef1ca0866928ecc3fe157bda7bea9e95362c9e3cae63261efa8de0f763f5ba4b",
+      "rows": 21
+    },
+    {
+      "path": "data/derived/national/harvest_basis/open_data_net_value/bc_open_net_value.csv",
+      "bytes": 816632,
+      "sha256": "1e1da49aa36be34218c942bffb66af4b2f3ce8d37e30bc9dc475d49744999dc7",
+      "rows": 945
+    },
+    {
+      "path": "data/derived/national/harvest_basis/open_data_net_value/qc_open_reference.csv",
+      "bytes": 690,
+      "sha256": "1620f39e1742fb9782b5c6b6f3a42486cf19f65557bb591b341af74867668e7e",
+      "rows": 1
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_economics_v2d/forest_economics_v2d_summary.csv",
+      "bytes": 8841,
+      "sha256": "e6bdf876888506a9e4aa0f0d3b8df3775462a6c5c0673c0f7480b8f23cd0c4a7",
+      "rows": 14
+    },
+    {
+      "path": "data/derived/national/harvest_basis/open_data_net_value/summary.json",
+      "bytes": 15313,
+      "sha256": "6a5a3dbeb1d16b33f6e5aebdef7dd85bb3630a0c5de5f3cf86cd421c26f602b0",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_economics_v2d/summary.json",
+      "bytes": 25332,
+      "sha256": "6944d2a70fd6691173458999b9c9c83036bcb93b4d4b675f9d5791f89c5a733d",
+      "rows": null
+    }
+  ],
+  "bundle": {
+    "source_dir": "data/derived/national/harvest_basis/open_data_net_value/model_inputs",
+    "zip": {
+      "label": "Model-input bundle (ZIP)",
+      "path": "economics/model_inputs.zip",
+      "bytes": 52828,
+      "sha256": "e933292a4d59161f996a4e2905db2bddcbc91efe35d3cfcc709e036ecbf482db",
+      "media_type": "application/zip",
+      "files": [
+        {
+          "path": "README.md",
+          "bytes": 3003,
+          "sha256": "dbde220cc833b794b4e3a2f8ef1fd674853fe5946ca90c9e5a617b56ea2ae5ac"
+        },
+        {
+          "path": "RUN.md",
+          "bytes": 1184,
+          "sha256": "2c345b3a1132a94745d3fbc7e07beabbd8615afd8b92501e705a9e59dd15f728"
+        },
+        {
+          "path": "bc_cost_inputs_used.csv",
+          "bytes": 1219305,
+          "sha256": "86b53a837935d8c45660fbc9b7f5f43bda5a535c57ae9376df0748ebb884b0d1"
+        },
+        {
+          "path": "bc_cost_parameters_used.csv",
+          "bytes": 22885,
+          "sha256": "2cfada94ce3f546083c9f7c15491a3a5ae824f77a6e41e3c43c4af91ee39f152"
+        },
+        {
+          "path": "bc_price_panel_used.csv",
+          "bytes": 113340,
+          "sha256": "cfd5b66720628296499e000c9167b69d3b26e9b127f1bdeac58478aa7833fd24"
+        },
+        {
+          "path": "input_manifest.json",
+          "bytes": 7249,
+          "sha256": "51124400f802f4264873e321fbef547e209381106ee41cf086bb3acd4ce5816e"
+        },
+        {
+          "path": "qc_reference_used.csv",
+          "bytes": 2204,
+          "sha256": "24d3811a8491b8f0af2ec34c5519db5093ebcaa6e323b183c3b23e5fc722de5c"
+        },
+        {
+          "path": "silviculture_inputs_used.csv",
+          "bytes": 13383,
+          "sha256": "debf394a33d04453d29a96adb607a36d2b45e53673d8d95e5b1a43f63507e27c"
+        },
+        {
+          "path": "sources.csv",
+          "bytes": 15605,
+          "sha256": "e2da1375d645862d0331727aad0384521f428b4f72e2adb0792541a4c6997b4b"
+        },
+        {
+          "path": "zone_region_mapping.csv",
+          "bytes": 1893,
+          "sha256": "14f39767bf9659ea591425aa14cfd2e4c157fc201ac63d4583f3b3e75af2c617"
+        }
+      ]
+    }
+  },
+  "validation": {
+    "ok": true,
+    "checks": [
+      {
+        "name": "headline_matches_corrected_values",
+        "ok": true,
+        "detail": {
+          "rows": 945,
+          "zone_system_groups": 21,
+          "median_base_net_model_cad_m3": 48.84,
+          "min_base_net_model_cad_m3": -23.38,
+          "max_base_net_model_cad_m3": 86.85,
+          "negative_net_base_rows": 168,
+          "negative_net_base_share": 0.177778
+        }
+      },
+      {
+        "name": "zone_system_groups",
+        "ok": true,
+        "detail": {
+          "zones": 7,
+          "groups": 21
+        }
+      },
+      {
+        "name": "qc_reference_separate_not_net_value",
+        "ok": true,
+        "detail": 0.81
+      },
+      {
+        "name": "evidence_tiers_not_estimated",
+        "ok": true,
+        "detail": {
+          "rows": 14,
+          "tiers": [
+            "appraisal_allowance",
+            "benchmark_historical",
+            "not_available",
+            "observed_price",
+            "observed_stumpage",
+            "survey_procurement_cost",
+            "survey_regional_procurement_cost"
+          ]
+        }
+      },
+      {
+        "name": "retired_headline_values_absent",
+        "ok": true,
+        "detail": "headline and zone/system medians exclude the retired guards"
+      },
+      {
+        "name": "model_input_bundle_present",
+        "ok": true,
+        "detail": {
+          "files": 10,
+          "bytes": 52828
+        }
+      }
+    ]
+  }
+}

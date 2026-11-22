@@ -1,4 +1,4 @@
-# CLEWS/C2070 Forest Ledger national-economics-v2.3 static publication origin.
+# CLEWS/C2070 Forest Ledger national-economics-v2.4 static publication origin.
 #
 # Serves the immutable static bundle on the container network so the root-host
 # Cloudflare Tunnel can reach it. This unit exposes no application API: the
@@ -12,7 +12,7 @@
 # The bundle path is read-only to the service and contains no secrets.
 
 [Unit]
-Description=CLEWS-C2070 Forest Ledger national-economics-v2.3 static origin
+Description=CLEWS-C2070 Forest Ledger national-economics-v2.4 static origin
 Documentation=file:/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/deploy/README.md
 After=network-online.target
 Wants=network-online.target
@@ -23,10 +23,10 @@ StartLimitBurst=5
 Type=simple
 User=gep
 Group=gep
-WorkingDirectory=/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/national-economics-v2.3
+WorkingDirectory=/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/national-economics-v2.4
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 -m http.server 8131 --bind 0.0.0.0 --directory /srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/national-economics-v2.3
+ExecStart=/usr/bin/python3 -m http.server 8131 --bind 0.0.0.0 --directory /srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/national-economics-v2.4
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=15
@@ -52,7 +52,7 @@ RestrictNamespaces=true
 SystemCallArchitectures=native
 CapabilityBoundingSet=
 AmbientCapabilities=
-ReadOnlyPaths=/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/national-economics-v2.3
+ReadOnlyPaths=/srv/shared-data/gep/jupyterhub16-projects/clews-c2070-fresh/ui_publications/national-economics-v2.4
 
 MemoryMax=256M
 CPUQuota=25%
