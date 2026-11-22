@@ -24,6 +24,13 @@ no combined national net value is computed.
 - [x] QC MRNF 2022 survey — 660 observations; 81.40 / 25.01 / 106.41 CAD/m3
   procurement stack.
 - [x] BC log market — 15,705 rows from 505 PDFs, 2019–2026.
+- [x] Open-data input publication — exact derived inputs for the corrected BC
+  net-value model published under
+  `data/derived/national/harvest_basis/open_data_net_value/model_inputs/` with
+  SHA-256 manifest, 18 cited raw sources, fail-closed reproducer and
+  `input_publication=derived_model_inputs` /
+  `raw_source_redistribution=false`; raw PDFs not redistributed. See
+  `planning/open-data-policy.md`.
 - [x] Operable proxy v2 — core20 99.87 Mha, core30 77.05 Mha; road binding.
 - [x] Slope screen — 960 m MRDEM-30; >30% removes 1.51%; core20 98.39 Mha.
 - [x] Operable proxy v3 — core20 >30% 98.39 Mha, 150M 1.525 m3/ha/yr; core30

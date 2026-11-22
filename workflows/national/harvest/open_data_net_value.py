@@ -57,6 +57,11 @@ APPRAISAL_MANIFEST_JSON = APPRAISAL_DIR / "manifest.json"
 PROCUREMENT_CSV = PROCUREMENT_DIR / "qc_procurement_cost_benchmark.csv"
 PROCUREMENT_MANIFEST_JSON = PROCUREMENT_DIR / "manifest.json"
 
+BUNDLE_COST_INPUTS_CSV = "bc_cost_inputs_used.csv"
+BUNDLE_PRICE_PANEL_CSV = "bc_price_panel_used.csv"
+BUNDLE_SILVICULTURE_CSV = "silviculture_inputs_used.csv"
+BUNDLE_QC_REFERENCE_CSV = "qc_reference_used.csv"
+
 MODEL_VERSION = "1.1.0"
 PRIMARY_PRICE_BASIS = "3_month"
 PRIMARY_PRICE_PERIOD_END = "2025-12-31"
@@ -247,6 +252,14 @@ def _fmt(value: float) -> str:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _repo_path(path: Path) -> str:
+    """Return a repository-relative path when possible, else an absolute path."""
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path.resolve())
 
 
 def load_cost_estimates(path: Path = COST_ESTIMATES_CSV) -> list[dict[str, str]]:
@@ -571,7 +584,8 @@ def load_silviculture_allowances(
     selected = [
         row
         for row in rows
-        if row["source_series"] == SILVICULTURE_SERIES
+        if row.get("loaded_into_model", "true").strip().lower() != "false"
+        and row["source_series"] == SILVICULTURE_SERIES
         and row["component_group"] == "silviculture"
         and row["component"] == SILVICULTURE_COMPONENT
         and row["cost_basis"] == "CAD/m3"
@@ -1076,6 +1090,29 @@ def build_price_outlier_rows(path: Path = LOG_MARKET_PRICES_CSV) -> list[dict[st
     return outliers
 
 
+def _resolve_input_tables(inputs_dir: Path | None) -> dict[str, Path]:
+    """Resolve the four model tables from the corpus or a published bundle."""
+    if inputs_dir is None:
+        return {
+            "cost": COST_ESTIMATES_CSV,
+            "prices": LOG_MARKET_PRICES_CSV,
+            "appraisal": APPRAISAL_CSV,
+            "procurement": PROCUREMENT_CSV,
+        }
+    if not inputs_dir.is_dir():
+        raise OpenDataNetValueError(f"input bundle is not a directory: {inputs_dir}")
+    resolved = {
+        "cost": inputs_dir / BUNDLE_COST_INPUTS_CSV,
+        "prices": inputs_dir / BUNDLE_PRICE_PANEL_CSV,
+        "appraisal": inputs_dir / BUNDLE_SILVICULTURE_CSV,
+        "procurement": inputs_dir / BUNDLE_QC_REFERENCE_CSV,
+    }
+    for role, path in resolved.items():
+        if not path.is_file():
+            raise OpenDataNetValueError(f"missing bundle {role} table: {path}")
+    return resolved
+
+
 def _md_table(headers: Sequence[str], rows: Sequence[Sequence[str]]) -> str:
     lines = [
         "| " + " | ".join(headers) + " |",
@@ -1355,23 +1392,33 @@ Commercial reuse or redistribution requires permission from the rights holder.
 """
 
 
-def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
-    """Build every artifact and return the manifest payload."""
+def build(
+    out_dir: Path = DEFAULT_OUT_DIR,
+    *,
+    inputs_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Build every artifact and return the manifest payload.
+
+    ``inputs_dir`` points at the self-contained published model-input bundle.
+    When omitted, the full parent corpus tables are used.
+    """
     if out_dir.exists() and not out_dir.is_dir():
         raise OpenDataNetValueError(f"output path is not a directory: {out_dir}")
 
-    cost_rows = load_cost_estimates()
-    price_panels = load_price_panels()
+    input_tables = _resolve_input_tables(inputs_dir)
+    cost_rows = load_cost_estimates(input_tables["cost"])
+    price_panels = load_price_panels(input_tables["prices"])
     sensitivity_panels = load_price_panels(
+        input_tables["prices"],
         report_basis=SENSITIVITY_PRICE_BASIS,
         period_end=SENSITIVITY_PRICE_PERIOD_END,
     )
-    allowances = load_silviculture_allowances()
+    allowances = load_silviculture_allowances(input_tables["appraisal"])
     rows = build_net_value_rows(cost_rows, price_panels, allowances)
     summary_rows = summarize_by_zone_system(rows)
     sensitivity = build_sensitivity(rows, price_panels, sensitivity_panels)
-    qc = load_qc_reference()
-    outliers = build_price_outlier_rows()
+    qc = load_qc_reference(input_tables["procurement"])
+    outliers = build_price_outlier_rows(input_tables["prices"])
 
     if len(rows) != EXPECTED_COST_ROWS:
         raise OpenDataNetValueError(
@@ -1532,16 +1579,19 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    input_paths = (
-        COST_ESTIMATES_CSV,
-        COST_MANIFEST_JSON,
-        LOG_MARKET_PRICES_CSV,
-        LOG_MARKET_MANIFEST_JSON,
-        APPRAISAL_CSV,
-        APPRAISAL_MANIFEST_JSON,
-        PROCUREMENT_CSV,
-        PROCUREMENT_MANIFEST_JSON,
-    )
+    if inputs_dir is None:
+        input_paths = (
+            COST_ESTIMATES_CSV,
+            COST_MANIFEST_JSON,
+            LOG_MARKET_PRICES_CSV,
+            LOG_MARKET_MANIFEST_JSON,
+            APPRAISAL_CSV,
+            APPRAISAL_MANIFEST_JSON,
+            PROCUREMENT_CSV,
+            PROCUREMENT_MANIFEST_JSON,
+        )
+    else:
+        input_paths = tuple(input_tables.values())
     output_paths = (
         net_value_path,
         summary_path,
@@ -1770,7 +1820,7 @@ def build(out_dir: Path = DEFAULT_OUT_DIR) -> dict[str, Any]:
         "licensing": LICENSING,
         "inputs": [
             {
-                "path": str(path.relative_to(REPO_ROOT)),
+                "path": _repo_path(path),
                 "sha256": sha256_file(path),
                 "bytes": path.stat().st_size,
             }

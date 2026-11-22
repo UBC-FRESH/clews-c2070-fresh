@@ -2,6 +2,24 @@
 
 ## 2026-11-22
 
+- **Published the corrected BC open-data net-value model inputs as an open-data
+  bundle.** Added `data/derived/national/harvest_basis/open_data_net_value/
+  model_inputs/` with the exact primary 3-month 2025-12 price panel and separate
+  1-month sensitivity panel (190 rows; 10 Interior weighted-average rows
+  explicitly excluded), the full 945-row logging/haul cost grid with formula,
+  parameter and source IDs, the 36 referenced cost parameters, the seven
+  Interior basic silviculture rows plus all 15 Coast CAM CAD/ha exclusions, the
+  exact QC 2022 SEPM 0.81 CAD/m3 procurement cost-spread reference, the
+  zone/region/rate-group mapping, 18 cited raw sources, an SHA-256 manifest and
+  a fail-closed reproducer. Labels are
+  `input_publication=derived_model_inputs` and
+  `raw_source_redistribution=false`; raw copyrighted PDFs are cited by URL,
+  retrieval date and SHA-256 but not redistributed. The committed code
+  reproduces median 48.84 CAD/m3, range -23.38 to 86.85, 168/945 negative base
+  rows, South West ground 64.40, North West ground 57.76 and QC 0.81, with
+  byte-identical core outputs. Added `planning/open-data-policy.md` and nine
+  bundle/reproduction tests. No model result, UI or public OSeCAN change.
+
 - **Added the open-data BC modeled-margin layer.** `workflows/national/harvest/
   open_data_net_value.py` combines one 2025-12 3-month published log-market
   vintage (Coast and Interior, Interior aggregates excluded) with the open
