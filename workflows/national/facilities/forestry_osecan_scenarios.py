@@ -1858,7 +1858,7 @@ def _report(
     lines.append("")
     lines.append(
         "Process and harvest streams are separate and are never summed. The "
-        "119m column set reproduces `national_residue_curve_v1` exactly at the "
+        "119m rows reproduce `national_residue_curve_v1` exactly at the "
         "national level."
     )
     lines.append("")
@@ -2304,6 +2304,8 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             "All values are model estimates; observed=false and policy_grade=false.",
             "The 100/119/150 Mm3 cases are planning allocations, not legal AACs, sustainable-supply determinations, or observed harvest outcomes.",
             "Zone splits are explicit handoff-v2 proxy weights; no observed sub-provincial residue split exists.",
+            "BC zone weights are proportional to the 2050 SUPBCWB1/SUPBCWB2 zonal supply limits, so B1 and B2 candidate ratios to their own limits are identical by construction.",
+            "The national supply-curve tier caps are rest-of-Canada RSYC-only; national comparisons that include BC are a context screen, not a like-for-like capacity test.",
             "Process residue is facility-assigned by receiving facility province; its provincial distribution differs from the province-basis national residue curve even though the national 119m totals reconcile.",
             "Harvest residue is province-only gross residue multiplied by a recovery fraction; it is never facility-assigned.",
             "Process and harvest residue are separate streams and are never summed.",
