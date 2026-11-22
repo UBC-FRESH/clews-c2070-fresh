@@ -2,6 +2,25 @@
 
 ## 2026-11-22
 
+- **Added the national facility capacity v1 layer and bounded assignment v2.**
+  Added `workflows/national/facilities/national_facility_capacity.py`,
+  `national_facility_assignment_v2.py` and their tests; published
+  `data/derived/national/facilities/national_facility_capacity_v1/` and
+  `national_facility_assignment_v2/` with CSVs, summaries, reports and SHA-256
+  manifests. Capacity v1 carries 179 published BC values unchanged and fills
+  292 blank relevant-class records with labelled BC class-median proxies
+  (p25-p75 reported); 15 OTHER records remain blank because no anchor exists.
+  Combined capacity is 216.08 Mm3/yr (95.84 published, 120.24 proxy). Public
+  sources were screened and recorded with licence/access status; the Canadian
+  Biomass pellet map is accessible but reports finished pellet tonnes/yr and
+  was not adopted. Assignment v2 replaces the v1 unbounded sink with
+  `published_only` (68.54 Mm3 assigned, 50.44 Mm3 unassigned) and
+  `published_plus_proxy` (118.98 Mm3 assigned, zero unassigned); every
+  assignment row has finite capacity, maximum single-facility share is 1.82%
+  in the proxy scenario, and there is no unbounded facility. All rows are
+  `model_estimate`, `observed=false`, `policy_grade=false`; no legal/AAC claim,
+  no UI or public OSeCAN change.
+
 - **Added the province break-even delivered-price artifact from
   national-economics v2.3.** Added
   `workflows/national/harvest/province_breakeven.py` and
