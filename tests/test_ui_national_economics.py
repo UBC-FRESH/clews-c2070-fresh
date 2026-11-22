@@ -296,8 +296,10 @@ def test_total_margin_column_and_national_cards_use_the_committed_ledger(built):
 
 def test_total_margin_header_and_cards_are_not_hand_coded():
     app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
-    assert "Total margin" in app_js
+    assert "Base total" in app_js
+    assert "Sensitivity total" in app_js
     assert "row.total_margin_119m.donor_flat.total_base_m_cad" in app_js
+    assert "row.total_margin_119m.stumpage_scaled.total_base_m_cad" in app_js
     assert "national.national_margin_totals" in app_js
     assert "totals.scenarios.donor_flat" in app_js
     assert "totals.scenarios.stumpage_scaled" in app_js
@@ -413,19 +415,40 @@ def test_ui_panel_remains_read_only_and_names_v23_cost_tiers():
     panel = html.split('id="panel-economics"', 1)[1].split(
         'id="panel-osecan"', 1
     )[0]
-    national = panel.split('id="national-economics"', 1)[1]
+    national = panel.split('id="national-economics"', 1)[1].split(
+        'id="economics-view-bc"', 1
+    )[0]
+
+    assert 'id="economics-subtab-national"' in panel
+    assert 'id="economics-subtab-bc"' in panel
+    assert 'id="economics-view-national"' in panel
+    assert 'id="economics-view-bc"' in panel
+    assert panel.count("<button") == 2
+    assert panel.count("<form") == 0
+    assert panel.count("<select") == 0
+    assert 'type="range"' not in panel
 
     assert 'id="national-economics"' in panel
-    assert 'id="national-warning"' in national
-    assert 'id="national-coverage"' in national
+    assert 'id="national-headline"' in national
+    assert 'id="national-evidence-strip"' in national
     assert 'id="national-table"' in national
     assert 'id="national-drilldown"' in national
-    assert 'id="national-margin-diagnostic"' in national
+    assert 'id="national-net-value"' in national
+    assert 'id="national-caveat"' in national
+    assert 'id="national-methods"' in national
     assert 'id="national-downloads"' in national
+    for removed in (
+        'id="national-warning"',
+        'id="national-coverage"',
+        'id="national-margin-diagnostic"',
+        'id="national-net-value-chart"',
+        'id="national-net-value-summary"',
+        'id="national-net-value-badges"',
+    ):
+        assert removed not in national
     assert national.count("<button") == 0
     assert national.count("<form") == 0
     assert national.count("<select") == 0
-    assert "provisional aggregate" in national.lower()
     assert "v2.3" in national.lower()
 
     assert "loadJSON('economics/national.json')" in app_js
@@ -443,19 +466,106 @@ def test_ui_panel_remains_read_only_and_names_v23_cost_tiers():
     assert "not Forest LP/OSeCAN input" in app_js
     assert "observed=false" in app_js
     assert "policy_grade=false" in app_js
+    for removed in (
+        "function renderNationalCoverage",
+        "function renderNationalDiagnostic",
+        "function renderNationalNetValueChart",
+        "renderNationalBadges",
+    ):
+        assert removed not in app_js
 
     render_block = app_js.split("function renderNational()", 1)[1].split(
         "/* ---------------- Inputs ---------------- */", 1
     )[0]
-    assert render_block.index("renderNationalCoverage()") < render_block.index(
+    assert render_block.index("renderNationalHeadline()") < render_block.index(
+        "renderNationalEvidenceStrip()"
+    )
+    assert render_block.index("renderNationalEvidenceStrip()") < render_block.index(
         "renderNationalTable()"
     )
     assert render_block.index("renderNationalTable()") < render_block.index(
         "renderNationalDrilldown()"
     )
     assert render_block.index("renderNationalDrilldown()") < render_block.index(
-        "renderNationalDiagnostic()"
+        "renderNationalNetValueTable()"
     )
+    assert render_block.index("renderNationalNetValueTable()") < render_block.index(
+        "renderNationalCaveat()"
+    )
+    assert render_block.index("renderNationalCaveat()") < render_block.index(
+        "renderNationalMethods()"
+    )
+
+
+def test_economics_subtabs_default_to_national_and_hide_bc_detail():
+    html = (ROOT / "ui/index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
+
+    buttons = html.split("<button")
+    national_button = next(
+        button for button in buttons if 'id="economics-subtab-national"' in button
+    ).split(">", 1)[0]
+    bc_button = next(
+        button for button in buttons if 'id="economics-subtab-bc"' in button
+    ).split(">", 1)[0]
+    assert 'aria-selected="true"' in national_button
+    assert 'aria-selected="false"' in bc_button
+
+    sections = html.split("<section")
+    national_view = next(
+        section for section in sections if 'id="economics-view-national"' in section
+    ).split(">", 1)[0]
+    bc_view = next(
+        section for section in sections if 'id="economics-view-bc"' in section
+    ).split(">", 1)[0]
+    assert "hidden" not in national_view
+    assert "hidden" in bc_view
+
+    assert "economicsView: 'national'" in app_js
+    assert "function activateEconomicsView" in app_js
+    assert "function bindEconomicsSubtabs" in app_js
+    assert "state.economicsView === 'bc'" in app_js
+    assert 'name="national-province-detail"' in app_js
+    assert "card.open = false" in app_js
+    assert "Collapsed by default" in html
+
+    bc_detail = html.split('id="economics-view-bc"', 1)[1].split(
+        'id="panel-osecan"', 1
+    )[0]
+    assert 'id="economics-chart"' in bc_detail
+    assert 'id="economics-table"' in bc_detail
+    assert 'id="economics-qc"' in bc_detail
+    assert 'id="economics-evidence"' in bc_detail
+    assert 'id="economics-downloads"' in bc_detail
+    assert 'id="national-table"' not in bc_detail
+    assert 'id="national-net-value"' not in bc_detail
+
+
+def test_national_tables_stack_readably_on_mobile():
+    app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
+    css = (ROOT / "ui/styles.css").read_text(encoding="utf-8")
+
+    assert 'data-label="Base total · M CAD"' in app_js
+    assert 'data-label="Sensitivity total · M CAD"' in app_js
+    assert 'data-label="Status"' in app_js
+    assert "national-price-tier-cell" in app_js
+    assert "national-cost-tier-cell" in app_js
+    assert 'data-label="Base low"' in app_js
+    assert 'data-label="Sensitivity high"' in app_js
+    assert 'data-label="Status / note"' in app_js
+
+    mobile = css.rsplit("@media (max-width: 720px)", 1)[1].split(
+        "@media (max-width: 560px)", 1
+    )[0]
+    assert ".national-table thead" in mobile
+    assert ".national-net-value-table thead" in mobile
+    assert ".national-price-tier-cell" in mobile
+    assert ".national-cost-tier-cell" in mobile
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in mobile
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in mobile
+    assert "content: attr(data-label)" in mobile
+    assert ".national-net-value-row" in mobile
+    assert "national-net-value-case-note" in app_js
 
 
 def test_live_payload_is_not_stale(built):
@@ -629,34 +739,41 @@ def test_ui_net_value_section_is_read_only_and_renders_blanks():
     )[0]
 
     assert 'id="national-net-value-title"' in section
-    assert "Forest LP net-value sensitivity" in section
+    assert "Forest LP net-value table" in section
     assert 'id="national-net-value-table"' in section
-    assert 'id="national-net-value-chart"' in section
-    assert 'id="national-net-value-badges"' in section
-    assert 'id="national-net-value-caveat"' in section
+    assert 'id="national-net-value-footnote"' in section
+    assert 'id="national-net-value-chart"' not in section
+    assert 'id="national-net-value-badges"' not in section
+    assert 'id="national-net-value-summary"' not in section
+    assert "150 Mm³ at intensity 1.0 and 1.2 is infeasible" in section
+    assert "blank, not zero" in section
     assert "model_estimate_not_policy" in section
-    assert "lp_objective=not_used" in section
-    assert "observed=false" in section
-    assert "policy_grade=false" in section
     assert "no LP/OSeCAN input" in section
     assert section.count("<button") == 0
     assert section.count("<form") == 0
     assert section.count("<select") == 0
-    assert 'id="national-net-value-table"' in app_js or "national-net-value-table" in app_js
     assert "function renderNationalNetValueTable" in app_js
     assert "national-net-value-blank" in app_js
-    assert "blank · not zero" in app_js
+    assert "documented ceiling" in app_js
     assert "lp_objective=not_used" in app_js
     assert "no LP/OSeCAN input" in app_js
+
+    renderer = app_js.split("function renderNationalNetValueTable", 1)[1].split(
+        "function renderNationalCaveat", 1
+    )[0]
+    assert "row.cap_case === 'documented_ceiling'" in renderer
+    assert "['100m', '119m', '150m'].map" in renderer
+    assert "netValue.rows.map" not in renderer
+    assert "national-net-value-chart" not in app_js
 
     render_block = app_js.split("function renderNational()", 1)[1].split(
         "/* ---------------- Inputs ---------------- */", 1
     )[0]
-    assert render_block.index("renderNationalDiagnostic()") < render_block.index(
-        "renderNationalNetValue()"
-    )
-    assert render_block.index("renderNationalNetValue()") < render_block.index(
+    assert render_block.index("renderNationalNetValueTable()") < render_block.index(
         "renderNationalCaveat()"
+    )
+    assert render_block.index("renderNationalCaveat()") < render_block.index(
+        "renderNationalMethods()"
     )
 
 

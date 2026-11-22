@@ -7,12 +7,12 @@
   <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="styles.css?v=b03ce145f9f5">
+  <link rel="stylesheet" href="styles.css?v=5e3e9ba98f2a">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=6f1f529dba89"></script>
+  <script defer src="app.js?v=17c553ef1253"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -402,148 +402,145 @@
       </section>
 
       <section class="panel" id="panel-economics" role="tabpanel" aria-labelledby="tab-economics" tabindex="0" hidden>
-        <div class="panel-heading economics-panel-heading">
-          <div>
-            <p class="kicker">Reported sensitivity · read-only</p>
-            <h2>BC modeled margin</h2>
-          </div>
-          <p class="panel-deck">Corrected open-data BC mill-delivered margin from published price averages, proxy logging and haul costs, and an Interior silviculture allowance. This is a reported sensitivity, not a Forest LP objective input, not a public OSeCAN input, and not policy grade. No run controls are exposed.</p>
+        <div class="economics-subtabs" role="tablist" aria-label="Economics views">
+          <button class="economics-subtab is-active" id="economics-subtab-national" role="tab" aria-selected="true" aria-controls="economics-view-national" data-economics-view="national" type="button">
+            <span class="economics-subtab-label">National</span>
+            <span class="economics-subtab-note">13 jurisdictions · evidence coverage</span>
+          </button>
+          <button class="economics-subtab" id="economics-subtab-bc" role="tab" aria-selected="false" aria-controls="economics-view-bc" data-economics-view="bc" tabindex="-1" type="button">
+            <span class="economics-subtab-label">BC detail</span>
+            <span class="economics-subtab-note">Zone × system modeled margin</span>
+          </button>
         </div>
-        <div class="economics-badges masthead-flags" id="economics-badges" aria-label="Evidence, licensing and policy labels"></div>
-        <div class="economics-provenance">
-          <p class="method-note" id="economics-source-note">Loading corrected economics bundle…</p>
-          <p class="method-note mono small" id="economics-generated"></p>
-        </div>
-        <div id="economics-loading" class="chart-loading">Reading corrected economics bundle…</div>
-        <div id="economics-content" hidden>
-          <div class="metric-grid economics-metric-grid" id="economics-headline" aria-live="polite"></div>
 
-          <section class="economics-range-card" aria-labelledby="economics-range-title">
-            <div class="economics-range-head">
+        <section class="economics-view" id="economics-view-national" role="tabpanel" aria-labelledby="economics-subtab-national" tabindex="0">
+          <div class="national-economics" id="national-economics" aria-labelledby="national-economics-title">
+            <header class="national-header">
               <div>
-                <p class="kicker">Base net_model · all modeled rows</p>
-                <h3 id="economics-range-title">Low · median · high</h3>
+                <p class="kicker">Read-only · v2.3 cost model</p>
+                <h2 id="national-economics-title">National forest economics</h2>
               </div>
-              <p class="method-note">The rust band is the negative part of the range. The zero line is drawn explicitly; nothing is clipped.</p>
-            </div>
-            <div id="economics-range" class="economics-range"></div>
-          </section>
+              <p class="national-deck">Modeled national margins at the 119 Mm³ allocation: a screening estimate, not observed, not policy grade, and not a combined net value.</p>
+            </header>
+            <div id="national-loading" class="chart-loading">Reading national economics bundle…</div>
+            <div id="national-content" hidden>
+              <div class="national-headline" id="national-headline" aria-live="polite"></div>
+              <section class="national-evidence-strip" id="national-evidence-strip" aria-label="Volume-weighted price and cost evidence coverage"></section>
 
-          <div class="economics-layout">
-            <section class="economics-chart-card" aria-labelledby="economics-chart-title">
-              <div class="section-heading">
-                <h3 id="economics-chart-title">Zone × system base median</h3>
-                <p id="economics-chart-note">Modeled net_model, CAD/m³. Negative cells are rust; hover for low/base/high and the negative row count.</p>
-              </div>
-              <div class="chart-frame chart-frame--economics">
-                <div class="chart" id="economics-chart" role="img" aria-label="Heatmap of modeled base net margin by BC forest zone and harvesting system"></div>
-              </div>
-              <p class="method-note">Seven forest zones map to two appraisal-price regions. South West is Coast-priced; the other six are Interior-priced. Coast silviculture is not deducted because the source publishes CAD/ha only.</p>
-            </section>
-            <aside class="economics-qc-card" id="economics-qc" aria-label="QC reference, not net value"></aside>
+              <section class="national-block" aria-labelledby="national-table-title">
+                <div class="national-block-head">
+                  <h3 id="national-table-title">Province ledger</h3>
+                  <p>Canonical order · totals at the 119 Mm³ allocation · no ranking</p>
+                </div>
+                <div class="table-wrap national-table-wrap">
+                  <table class="data-table economics-table national-table" id="national-table"></table>
+                </div>
+              </section>
+
+              <section class="national-block" aria-labelledby="national-drilldown-title">
+                <div class="national-block-head">
+                  <h3 id="national-drilldown-title">Province detail</h3>
+                  <p>Collapsed by default · one province open at a time</p>
+                </div>
+                <div class="national-drilldown" id="national-drilldown"></div>
+              </section>
+
+              <section class="national-block national-net-value" id="national-net-value" aria-labelledby="national-net-value-title">
+                <div class="national-block-head">
+                  <h3 id="national-net-value-title">Forest LP net-value table</h3>
+                  <p>Documented-ceiling screening cases · model_estimate_not_policy · no LP/OSeCAN input</p>
+                </div>
+                <div class="table-wrap national-net-value-table-wrap">
+                  <table class="data-table economics-table national-net-value-table" id="national-net-value-table"></table>
+                </div>
+                <p class="national-net-value-footnote" id="national-net-value-footnote">150 Mm³ at intensity 1.0 and 1.2 is infeasible: values are blank, not zero.</p>
+              </section>
+
+              <p class="national-caveat" id="national-caveat" role="note"></p>
+
+              <details class="national-methods" id="national-methods">
+                <summary>Methods, sources &amp; downloads</summary>
+                <div class="national-methods-body">
+                  <p class="method-note" id="national-source-note">Loading national economics bundle…</p>
+                  <p class="method-note mono small" id="national-generated"></p>
+                  <div class="economics-downloads national-downloads" id="national-downloads"></div>
+                </div>
+              </details>
+            </div>
           </div>
+        </section>
 
-          <section class="section-block" aria-labelledby="economics-table-title">
-            <div class="section-heading">
-              <h3 id="economics-table-title">Zone × system ledger</h3>
-              <p>Low and high are medians of the conservative and optimistic envelopes, not observed transactions. Base is the primary modeled case.</p>
+        <section class="economics-view" id="economics-view-bc" role="tabpanel" aria-labelledby="economics-subtab-bc" tabindex="0" hidden>
+          <div class="panel-heading economics-panel-heading">
+            <div>
+              <p class="kicker">Reported sensitivity · read-only</p>
+              <h2>BC modeled margin</h2>
             </div>
-            <div class="table-wrap economics-table-wrap">
-              <table class="data-table economics-table" id="economics-table"></table>
-            </div>
-          </section>
+            <p class="panel-deck">Corrected open-data BC mill-delivered margin from published price averages, proxy logging and haul costs, and an Interior silviculture allowance. This is a reported sensitivity, not a Forest LP objective input, not a public OSeCAN input, and not policy grade. No run controls are exposed.</p>
+          </div>
+          <div class="economics-badges masthead-flags" id="economics-badges" aria-label="Evidence, licensing and policy labels"></div>
+          <div class="economics-provenance">
+            <p class="method-note" id="economics-source-note">Loading corrected economics bundle…</p>
+            <p class="method-note mono small" id="economics-generated"></p>
+          </div>
+          <div id="economics-loading" class="chart-loading">Reading corrected economics bundle…</div>
+          <div id="economics-content" hidden>
+            <div class="metric-grid economics-metric-grid" id="economics-headline" aria-live="polite"></div>
 
-          <section class="section-block" aria-labelledby="economics-evidence-title">
-            <div class="section-heading">
-              <h3 id="economics-evidence-title">Evidence tiers</h3>
-              <p>Revenue, cost, and procurement evidence stay separated. Every row is <span class="mono">not_estimated</span> and <span class="mono">policy_grade=false</span>; no monetary net value is reported here.</p>
-            </div>
-            <div id="economics-evidence"></div>
-          </section>
-
-          <div class="harvest-caveat economics-caveat" id="economics-caveat" role="note"></div>
-
-          <section class="section-block" aria-labelledby="economics-downloads-title">
-            <div class="section-heading">
-              <h3 id="economics-downloads-title">Bundle &amp; downloads</h3>
-              <p>Generated from the committed CSVs. Hashes are recorded in the economics manifest and are not re-hashed in the browser.</p>
-            </div>
-            <div class="economics-downloads" id="economics-downloads"></div>
-          </section>
-
-          <section class="section-block national-economics" id="national-economics" aria-labelledby="national-economics-title">
-            <div class="section-heading national-heading">
-              <div>
-                <p class="kicker">Evidence coverage · 13 jurisdictions · read-only</p>
-                <h3 id="national-economics-title">National economics evidence coverage</h3>
-                <p>Where the 119 Mm³ economics actually rests: direct/reported price evidence, v2.3 cost tiers, and donor fill. Ten jurisdictions use a provisional StatCan industry aggregate proxy; margins are secondary diagnostics, not the headline.</p>
+            <section class="economics-range-card" aria-labelledby="economics-range-title">
+              <div class="economics-range-head">
+                <div>
+                  <p class="kicker">Base net_model · all modeled rows</p>
+                  <h3 id="economics-range-title">Low · median · high</h3>
+                </div>
+                <p class="method-note">The rust band is the negative part of the range. The zero line is drawn explicitly; nothing is clipped.</p>
               </div>
-            </div>
-            <div class="economics-badges masthead-flags" id="national-badges" aria-label="National evidence and role labels"></div>
-            <div class="national-decision-warning" id="national-warning" role="alert">Not decision-grade — loading national evidence coverage…</div>
-            <div class="national-coverage" id="national-coverage" aria-live="polite"></div>
-            <div class="economics-provenance national-provenance">
-              <p class="method-note" id="national-source-note">Loading national economics bundle…</p>
-              <p class="method-note mono small" id="national-generated"></p>
+              <div id="economics-range" class="economics-range"></div>
+            </section>
+
+            <div class="economics-layout">
+              <section class="economics-chart-card" aria-labelledby="economics-chart-title">
+                <div class="section-heading">
+                  <h3 id="economics-chart-title">Zone × system base median</h3>
+                  <p id="economics-chart-note">Modeled net_model, CAD/m³. Negative cells are rust; hover for low/base/high and the negative row count.</p>
+                </div>
+                <div class="chart-frame chart-frame--economics">
+                  <div class="chart" id="economics-chart" role="img" aria-label="Heatmap of modeled base net margin by BC forest zone and harvesting system"></div>
+                </div>
+                <p class="method-note">Seven forest zones map to two appraisal-price regions. South West is Coast-priced; the other six are Interior-priced. Coast silviculture is not deducted because the source publishes CAD/ha only.</p>
+              </section>
+              <aside class="economics-qc-card" id="economics-qc" aria-label="QC reference, not net value"></aside>
             </div>
 
-            <section class="section-block" aria-labelledby="national-table-title">
+            <section class="section-block" aria-labelledby="economics-table-title">
               <div class="section-heading">
-                <h3 id="national-table-title">Province evidence ledger</h3>
-                <p>13 jurisdictions in canonical order. Aggregate-proxy provinces are flagged <strong>provisional aggregate</strong>, not direct; NU is the only donor-fallback cost. The <strong>Total margin</strong> column multiplies the model CAD/m³ margin by the 119 Mm³ allocation and reports M CAD; NU is zero-volume and negative values are unclipped. Price and cost tiers are evidence tiers, not quality scores, and no province is ranked.</p>
+                <h3 id="economics-table-title">Zone × system ledger</h3>
+                <p>Low and high are medians of the conservative and optimistic envelopes, not observed transactions. Base is the primary modeled case.</p>
               </div>
-              <div class="table-wrap national-table-wrap">
-                <table class="data-table economics-table national-table" id="national-table"></table>
+              <div class="table-wrap economics-table-wrap">
+                <table class="data-table economics-table" id="economics-table"></table>
               </div>
             </section>
 
-            <section class="section-block" aria-labelledby="national-drilldown-title">
+            <section class="section-block" aria-labelledby="economics-evidence-title">
               <div class="section-heading">
-                <h3 id="national-drilldown-title">Province drill-down</h3>
-                <p>Open a province for its price source, v2.3 cost tier, StatCan source/year, aggregate caveat and margins. Every value remains <span class="mono">model_estimate</span> with <span class="mono">observed=false</span> and <span class="mono">policy_grade=false</span>.</p>
+                <h3 id="economics-evidence-title">Evidence tiers</h3>
+                <p>Revenue, cost, and procurement evidence stay separated. Every row is <span class="mono">not_estimated</span> and <span class="mono">policy_grade=false</span>; no monetary net value is reported here.</p>
               </div>
-              <div class="national-drilldown" id="national-drilldown"></div>
+              <div id="economics-evidence"></div>
             </section>
 
-            <section class="section-block national-diagnostic-block" id="national-margin-diagnostic" aria-labelledby="national-diagnostic-title">
-              <div class="section-heading">
-                <p class="kicker">Diagnostic only · shown last</p>
-                <h3 id="national-diagnostic-title">National margin diagnostic</h3>
-                <p>Volume-weighted model diagnostics. This is not a combined national net value, not observed, not policy grade, and not the first thing to read.</p>
-              </div>
-              <div class="national-diagnostic-warning" id="national-diagnostic-warning" role="note"></div>
-              <div class="national-diagnostic-values" id="national-diagnostic-values" aria-live="polite"></div>
-            </section>
+            <div class="harvest-caveat economics-caveat" id="economics-caveat" role="note"></div>
 
-            <section class="section-block national-net-value" id="national-net-value" aria-labelledby="national-net-value-title">
+            <section class="section-block" aria-labelledby="economics-downloads-title">
               <div class="section-heading">
-                <p class="kicker">Forest LP join · screening sensitivity · read-only</p>
-                <h3 id="national-net-value-title">Forest LP net-value sensitivity</h3>
-                <p>Volume-weighted net value joins the 117 committed Forest LP v1 allocation rows to the national margin totals. The 100, 119 and 150 Mm³ levels are alternative screening cases, not additive years. Infeasible intensity rows stay blank; they are never back-filled with zero.</p>
+                <h3 id="economics-downloads-title">Bundle &amp; downloads</h3>
+                <p>Generated from the committed CSVs. Hashes are recorded in the economics manifest and are not re-hashed in the browser.</p>
               </div>
-              <div class="economics-badges masthead-flags" id="national-net-value-badges" aria-label="Forest LP net-value sensitivity labels"></div>
-              <p class="method-note mono small" id="national-net-value-labels">model_estimate_not_policy · lp_objective=not_used · observed=false · policy_grade=false · no LP/OSeCAN input</p>
-              <div class="national-net-value-summary" id="national-net-value-summary" aria-live="polite"></div>
-              <div class="chart-frame chart-frame--national-net-value">
-                <div class="chart" id="national-net-value-chart" role="img" aria-label="Grouped bar chart of Forest LP net value in M CAD for 100, 119 and 150 cubic metre allocation cases, base and sensitivity scenarios"></div>
-              </div>
-              <div class="table-wrap national-net-value-table-wrap">
-                <table class="data-table economics-table national-net-value-table" id="national-net-value-table"></table>
-              </div>
-              <div class="harvest-caveat economics-caveat national-net-value-caveat" id="national-net-value-caveat" role="note"></div>
+              <div class="economics-downloads" id="economics-downloads"></div>
             </section>
-
-            <div class="harvest-caveat economics-caveat national-caveat" id="national-caveat" role="note"></div>
-
-            <section class="section-block" aria-labelledby="national-downloads-title">
-              <div class="section-heading">
-                <h3 id="national-downloads-title">National data &amp; manifest</h3>
-                <p>Static JSON generated from the committed v2.3 CSVs, StatCan logging-cost proxy, tier coverage, stumpage references and provincial allocation. The manifest records the payload hash and every source hash; no numbers are hand-coded in the UI.</p>
-              </div>
-              <div class="economics-downloads national-downloads" id="national-downloads"></div>
-            </section>
-          </section>
-        </div>
+          </div>
+        </section>
       </section>
 
       <section class="panel" id="panel-osecan" role="tabpanel" aria-labelledby="tab-osecan" tabindex="0" hidden>

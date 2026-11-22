@@ -209,4 +209,11 @@ def test_ui_exposes_read_only_economics_panel_without_run_controls() -> None:
     assert "no BC+QC total" in app_js
 
     panel = html.split('id="panel-economics"', 1)[1].split('id="panel-osecan"', 1)[0]
-    assert "<button" not in panel
+    assert 'id="economics-subtab-national"' in panel
+    assert 'id="economics-subtab-bc"' in panel
+    assert 'id="economics-view-national"' in panel
+    assert 'id="economics-view-bc"' in panel
+    assert panel.count("<button") == 2
+    assert "<form" not in panel
+    assert "<select" not in panel
+    assert 'type="range"' not in panel
