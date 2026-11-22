@@ -280,13 +280,29 @@ def main() -> None:
     )
     national = load_json(destination / NATIONAL_FILE)
     diagnostic = national["national_diagnostic"]
-    if national.get("model_id") != "national_economics_v2_1":
+    if national.get("schema_version") != "economics/national/3":
+        fail("national economics schema mismatch")
+    if national.get("model_id") != "national_economics_v2_3":
         fail("national economics model id mismatch")
+    if national.get("artifact_version") != "2.3.0":
+        fail("national economics artifact version mismatch")
     if national["coverage"]["jurisdiction_rows"] != 13 or len(national["jurisdictions"]) != 13:
         fail("national economics must cover 13 jurisdictions")
-    if abs(diagnostic["donor_flat"]["base_cad_m3"] - 33.1365) > 1e-6:
+    shares = national["evidence_coverage"]["volume_weighted"]
+    if abs(shares["direct_reported"]["share"] - 0.33601842) > 5e-9:
+        fail("national direct/reported price share mismatch")
+    if abs(shares["donor"]["share"] - 0.66398158) > 5e-9:
+        fail("national donor price share mismatch")
+    cost_shares = national["evidence_coverage"]["cost_evidence"]["volume_weighted"]
+    if abs(cost_shares["component_stack"]["share"] - 0.54477285) > 5e-9:
+        fail("national component-stack cost share mismatch")
+    if abs(cost_shares["industry_aggregate_proxy"]["share"] - 0.45522715) > 5e-9:
+        fail("national aggregate-proxy cost share mismatch")
+    if cost_shares["donor_fallback"]["jurisdictions"] != ["NU"]:
+        fail("national donor-fallback cost must be NU only")
+    if abs(diagnostic["donor_flat"]["base_cad_m3"] - 43.0187) > 1e-6:
         fail("national base margin mismatch")
-    if abs(diagnostic["stumpage_scaled"]["base_cad_m3"] + 16.1220) > 1e-6:
+    if abs(diagnostic["stumpage_scaled"]["base_cad_m3"] + 5.7444) > 1e-6:
         fail("national sensitivity margin mismatch")
     national_labels = national["labels"]
     if national_labels.get("observed") is not False or national_labels.get("policy_grade") is not False:
