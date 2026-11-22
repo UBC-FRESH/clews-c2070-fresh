@@ -2,6 +2,32 @@
 
 ## 2026-11-22
 
+- **Added the facility-level product/residue chain v1.** Added
+  `workflows/national/facilities/facility_product_chain.py` and
+  `tests/test_facility_product_chain.py`; published
+  `data/derived/national/facilities/facility_product_chain_v1/` with 900
+  facility-origin allocation rows, 65 province/class rows, 13 province rows,
+  national summary, JSON summary, report and SHA-256 manifest. The builder
+  joins `national_product_chain_v1` to assignment v2
+  `published_plus_proxy`: each origin province/class feedstock stream is
+  allocated only to same-class facilities in proportion to assigned volume.
+  Local assigned class pools are used first (29 pools); 31 province/class
+  pools with no locally assigned same-class facility use the explicit
+  national same-class fallback (8.81 Mm3, 6.61% of facility feedstock).
+  Facility feedstock totals 133.32 Mm3, products are 48.47 Mm3 lumber,
+  7.59 M odt pulp, 5.30 Mm3 panel, 4.75 M odt pellet and 845,182 MWh
+  electricity; process residue is 28.43 M odt. Provincial harvest residue is
+  kept separate (9.07 M odt gross, 6.45 M odt recoverable) and is not assigned
+  to facilities. Conservation checks pass for province/class feedstock and
+  national products/process residue; no NaN or negative values. Facility HHI
+  is 0.009905 (top-1 4.14%, top-5 13.50%); proxy-capacity facilities process
+  55.06% of feedstock, compared with 61.23% proxy share in assignment v2, and
+  proxy facilities hold 62.00% of used capacity. The RSYC comparison is
+  unchanged at 0.7686 (`model_below_rsyc`). All rows are `model_estimate`,
+  `observed=false`, `policy_grade=false`; proxy capacity is a BC class-median
+  screening fill. The builder fails closed on any unexpected `D` in the parent
+  or `data` repository status; none was present. No UI or public OSeCAN change.
+
 - **Added the national facility capacity v1 layer and bounded assignment v2.**
   Added `workflows/national/facilities/national_facility_capacity.py`,
   `national_facility_assignment_v2.py` and their tests; published
