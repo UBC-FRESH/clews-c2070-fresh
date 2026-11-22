@@ -3013,6 +3013,13 @@ tr.zone-row--national .zone-heat-cell { border-top: 3px solid var(--amber); }
 .national-stumpage-cell { min-width: 220px; }
 .national-stumpage-cell strong { color: var(--pine-900); font-size: 0.72rem; }
 .national-margin-cell strong { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.national-total-margin-cell { min-width: 155px; }
+.national-total-margin-cell strong {
+  color: var(--pine-900);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.national-total-margin-cell.is-negative-value strong { color: var(--rust-dark); }
 .national-priority-cell { min-width: 180px; }
 .badge--priority {
   padding: 2px 6px;
@@ -3197,6 +3204,12 @@ tr.zone-row--national .zone-heat-cell { border-top: 3px solid var(--amber); }
 }
 .national-diagnostic-mini.is-sensitivity strong { color: var(--rust-dark); }
 .national-diagnostic-mini.is-quiet strong { color: var(--muted); }
+.national-diagnostic-mini.is-total {
+  background: rgba(23, 56, 44, 0.06);
+  border-color: rgba(23, 56, 44, 0.24);
+}
+.national-diagnostic-mini.is-total strong { color: var(--pine-900); }
+.national-diagnostic-mini.is-total.is-sensitivity strong { color: var(--rust-dark); }
 .national-diagnostic-mini .mono { color: var(--muted); font-size: 0.54rem; }
 .national-diagnostic-basis { grid-column: 1 / -1; margin: 2px 0 0; font-size: 0.62rem; }
 

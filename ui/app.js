@@ -6435,6 +6435,53 @@
     requireTrue(diagnostic.stumpage_scaled.base_cad_m3 < 0,
       'national sensitivity diagnostic is not the v2.3 stumpage_scaled value');
 
+    var totals = national.national_margin_totals || {};
+    requireTrue(totals.label === 'model_estimate_not_policy' &&
+      totals.observed === false && totals.policy_grade === false,
+      'national total margin labels mismatch');
+    requireTrue(totals.not_policy_result === true && totals.ranking_performed === false &&
+      totals.combined_national_net_value === false,
+      'national total margin must stay a non-policy diagnostic without ranking');
+    requireTrue(totals.province_count === 13 && totals.volume_basis === '119m_allocation',
+      'national total margin coverage or volume basis mismatch');
+    ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
+      var values = (totals.scenarios || {})[scenario];
+      requireTrue(values && Number.isFinite(values.national_total_low_m_cad) &&
+        Number.isFinite(values.national_total_base_m_cad) &&
+        Number.isFinite(values.national_total_high_m_cad),
+        'national total margin is incomplete for ' + scenario);
+      requireTrue(values.national_total_low_m_cad <= values.national_total_base_m_cad &&
+        values.national_total_base_m_cad <= values.national_total_high_m_cad,
+        'national total margin is unordered for ' + scenario);
+    });
+    var totalDonor = 0;
+    var totalScaled = 0;
+    var totalRows = 0;
+    (national.jurisdictions || []).forEach(function (row) {
+      var total = row.total_margin_119m || {};
+      var donor = total.donor_flat || {};
+      var scaled = total.stumpage_scaled || {};
+      requireTrue(Number.isFinite(donor.total_base_m_cad) &&
+        Number.isFinite(scaled.total_base_m_cad),
+        'province total margin is missing for ' + row.province);
+      requireTrue(donor.total_low_m_cad <= donor.total_base_m_cad &&
+        donor.total_base_m_cad <= donor.total_high_m_cad,
+        'province total margin is unordered for ' + row.province);
+      if (donor.zero_volume) {
+        requireTrue(row.province === 'NU' && donor.total_base_m_cad === 0,
+          'zero-volume total margin must only be NU');
+      }
+      totalDonor += donor.total_base_m_cad;
+      totalScaled += scaled.total_base_m_cad;
+      totalRows += 1;
+    });
+    requireTrue(totalRows === 13,
+      'province total margin rows are incomplete');
+    requireTrue(Math.abs(totalDonor - totals.scenarios.donor_flat.national_total_base_m_cad) < 0.01,
+      'national donor_flat total margin does not equal the province sum');
+    requireTrue(Math.abs(totalScaled - totals.scenarios.stumpage_scaled.national_total_base_m_cad) < 0.01,
+      'national stumpage_scaled total margin does not equal the province sum');
+
     var coverage = national.evidence_coverage || {};
     requireTrue(coverage.default_view === 'evidence_coverage' && coverage.not_decision_grade === true,
       'national evidence coverage is not evidence-first');
@@ -6744,6 +6791,7 @@
         '<th>Stumpage / dues reference</th>' +
         '<th class="num">Base margin<br><span class="national-th-sub">CAD/m³ · donor_flat</span></th>' +
         '<th class="num">Sensitivity margin<br><span class="national-th-sub">CAD/m³ · stumpage_scaled</span></th>' +
+        '<th class="num">Total margin<br><span class="national-th-sub">M CAD · 119 Mm³ allocation</span></th>' +
         '<th>Status</th>' +
       '</tr></thead>';
     var rows = national.jurisdictions.map(function (row) {
@@ -6776,6 +6824,13 @@
         '<td class="num national-margin-cell' + (row.stumpage_scaled.base_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
           '<strong>' + fmt(row.stumpage_scaled.base_cad_m3, 2) + '</strong>' +
           '<span class="national-cell-note">' + nationalRange(row.stumpage_scaled) + '</span></td>' +
+        '<td class="num national-total-margin-cell' +
+          (row.total_margin_119m.donor_flat.total_base_m_cad < 0 ? ' is-negative-value' : '') + '">' +
+          '<strong>' + nationalSigned(row.total_margin_119m.donor_flat.total_base_m_cad, 2) + '</strong>' +
+          '<span class="national-cell-note">low ' + nationalSigned(row.total_margin_119m.donor_flat.total_low_m_cad, 2) +
+            ' · high ' + nationalSigned(row.total_margin_119m.donor_flat.total_high_m_cad, 2) + '</span>' +
+          '<span class="national-cell-note">sens ' + nationalSigned(row.total_margin_119m.stumpage_scaled.total_base_m_cad, 2) +
+            ' M CAD</span></td>' +
         '<td class="national-status-cell"><span class="national-cell-note">' + esc(row.status_label) + '</span>' +
           '<span class="national-cell-source mono">not ranked</span></td>' +
       '</tr>';
@@ -6880,6 +6935,9 @@
   function renderNationalDiagnostic() {
     var national = state.national;
     var diagnostic = national.national_diagnostic;
+    var totals = national.national_margin_totals;
+    var donorTotal = totals.scenarios.donor_flat;
+    var scaledTotal = totals.scenarios.stumpage_scaled;
     $('national-diagnostic-warning').innerHTML =
       '<strong>Warning:</strong> ' + esc(diagnostic.warning) +
       ' <span class="mono">combined_national_net_value=false</span>';
@@ -6899,10 +6957,27 @@
         '<strong>' + nationalSigned(diagnostic.national_comparison.scaled_minus_donor_flat_cad_m3, 2) + '</strong>' +
         '<span class="mono">CAD/m³ · not observed</span>' +
       '</div>' +
+      '<div class="national-diagnostic-mini is-total">' +
+        '<span class="kicker">National total · donor_flat</span>' +
+        '<strong>' + nationalSigned(donorTotal.national_total_base_m_cad, 2) + '</strong>' +
+        '<span class="mono">M CAD · low ' + nationalSigned(donorTotal.national_total_low_m_cad, 2) +
+          ' · high ' + nationalSigned(donorTotal.national_total_high_m_cad, 2) + '</span>' +
+        '<span class="mono">' + donorTotal.positive_province_count + ' positive · ' +
+          donorTotal.negative_province_count + ' negative · ' + donorTotal.zero_total_province_count + ' zero</span>' +
+      '</div>' +
+      '<div class="national-diagnostic-mini is-total is-sensitivity">' +
+        '<span class="kicker">National total · stumpage_scaled</span>' +
+        '<strong>' + nationalSigned(scaledTotal.national_total_base_m_cad, 2) + '</strong>' +
+        '<span class="mono">M CAD · low ' + nationalSigned(scaledTotal.national_total_low_m_cad, 2) +
+          ' · high ' + nationalSigned(scaledTotal.national_total_high_m_cad, 2) + '</span>' +
+        '<span class="mono">' + scaledTotal.positive_province_count + ' positive · ' +
+          scaledTotal.negative_province_count + ' negative · ' + scaledTotal.zero_total_province_count + ' zero</span>' +
+      '</div>' +
       '<p class="national-diagnostic-basis method-note">Observed 2024 harvest basis · ' +
         fmt(diagnostic.observed_2024_volume_m3 / 1e6, 1) + ' Mm³ · 119 Mm³ allocation sensitivity · ' +
         fmt(diagnostic.sensitivity_119m.donor_flat.base_cad_m3, 2) + ' base. ' +
-        'Not a legal AAC and not a combined national net value.</p>';
+        'Totals use the 119 Mm³ allocation and remain model_estimate_not_policy. ' +
+        'Not a legal AAC, not a policy result and not a combined national net value.</p>';
   }
 
   function renderNationalCaveat() {
@@ -6911,7 +6986,8 @@
     $('national-caveat').innerHTML =
       '<strong>Evidence-first national panel · v2.3 cost model · model_estimate · observed=false · policy_grade=false · not decision-grade</strong>' +
       '<p>13 jurisdictions, 65 price/evidence cells and 13 cost-basis cells. Aggregate-proxy provinces are provisional aggregate and are not ranked. ' +
-        'Not a Forest LP input. Not a public OSeCAN input. National margins are a trailing diagnostic, not a headline.</p>' +
+        'Total margins multiply model CAD/m³ by the 119 Mm³ allocation and remain model_estimate_not_policy; NU is zero-volume, and negative values are unclipped. ' +
+        'Not a Forest LP input. Not a public OSeCAN input. National margins and totals are trailing diagnostics, not a headline or policy result.</p>' +
       '<ul>' + caveats.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
       '<p class="economics-nonclaims">Non-claims: ' + esc((national.non_claims || []).join(' · ')) + '</p>';
   }
@@ -6944,17 +7020,20 @@
     var costSource = '';
     var statcanSource = '';
     var stumpageSource = '';
+    var totalSource = '';
     sources.forEach(function (source) {
       if (/national_margin_summary\.csv$/.test(source.path)) summarySource = source.path;
       if (/national_cost_inputs\.csv$/.test(source.path)) costSource = source.path;
       if (/provincial_logging_cost_proxy\.csv$/.test(source.path)) statcanSource = source.path;
       if (/provincial_stumpage_references\.csv$/.test(source.path)) stumpageSource = source.path;
+      if (/province_margin_totals\.csv$/.test(source.path)) totalSource = source.path;
     });
     $('national-source-note').innerHTML = 'Margins: <span class="mono">' +
       esc(summarySource || 'national_margin_summary.csv') + '</span> · cost: <span class="mono">' +
       esc(costSource || 'national_cost_inputs.csv') + '</span> · StatCan proxy: <span class="mono">' +
       esc(statcanSource || 'provincial_logging_cost_proxy.csv') + '</span> · stumpage: <span class="mono">' +
-      esc(stumpageSource || 'provincial_stumpage_references.csv') + '</span>.';
+      esc(stumpageSource || 'provincial_stumpage_references.csv') + '</span> · totals: <span class="mono">' +
+      esc(totalSource || 'national_margin_totals/province_margin_totals.csv') + '</span>.';
     $('national-generated').textContent = 'National v' + (national.artifact_version || '2.3.0') +
       ' · 13 jurisdictions · 65 price cells · 13 cost-basis cells · default evidence coverage · base donor_flat · sensitivity stumpage_scaled · generated ' +
       fmtDate(national.generated_utc) + ' · schema ' + national.schema_version;

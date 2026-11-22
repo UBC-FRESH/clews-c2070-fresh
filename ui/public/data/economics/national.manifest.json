@@ -3,22 +3,22 @@
   "model_id": "national_economics_v2_3",
   "artifact_version": "2.3.0",
   "generated_utc": "2026-11-22T15:36:32+00:00",
-  "parent_commit": "1429c07d81349459f71a214fa40a9f61cdca3613",
-  "data_commit": "797098d3fe9bd129cca785a79dece44cbfb8529f",
+  "parent_commit": "f86d73a48f10f1d78001e485f00408e1e95eba26",
+  "data_commit": "0484ad6e12efe27309c0790063a81f91291fafa8",
   "files": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 121460,
-      "sha256": "061b830b16e76d7aecbd58d13f120c06794508589e6b5c2464ee3697c88b95b2"
+      "bytes": 138835,
+      "sha256": "8f2b28b286c328687a1ff9dc5975f66ad3cb4248eeb4e64e1f40e2870b24a384"
     }
   ],
   "generated": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 121460,
-      "sha256": "061b830b16e76d7aecbd58d13f120c06794508589e6b5c2464ee3697c88b95b2"
+      "bytes": 138835,
+      "sha256": "8f2b28b286c328687a1ff9dc5975f66ad3cb4248eeb4e64e1f40e2870b24a384"
     }
   ],
   "sources": [
@@ -89,6 +89,18 @@
       "sha256": "979cda6b5c4b56b593cecc9faf3bd0483db26e821738c8da0f19d5646b5c9a42"
     },
     {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+      "rows": 26,
+      "bytes": 7620,
+      "sha256": "919567ae7e7d85f9103571e72f5bdec32869332c87ec6d2314313fc4efa87d90"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
+      "rows": null,
+      "bytes": 33791,
+      "sha256": "dad15e44fb4d520d6a7773ed0eaba1848d9e09ae9eca722338aae308924e0467"
+    },
+    {
       "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
       "rows": 13,
       "bytes": 10854,
@@ -124,6 +136,12 @@
     "not_decision_grade": true,
     "base_national_margin_cad_m3": 43.0187,
     "sensitivity_national_margin_cad_m3": -5.7444,
+    "national_total_margin_donor_flat_m_cad": 5205.328748,
+    "national_total_margin_stumpage_scaled_m_cad": -655.319124,
+    "national_total_margin_province_count": 13,
+    "national_total_margin_allocation_m3": 118977339.1,
+    "national_total_margin_label": "model_estimate_not_policy",
+    "national_total_margin_policy_result": false,
     "observed_claim": false,
     "policy_grade_claim": false,
     "combined_national_net_value": false,

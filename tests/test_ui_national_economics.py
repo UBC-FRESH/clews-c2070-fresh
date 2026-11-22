@@ -15,6 +15,9 @@ from workflows.national.harvest import national_economics_ui as exporter
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "data/derived/national/harvest_basis/national_economics_v2_3"
 STATCAN = ROOT / "data/derived/national/harvest_basis/statcan_logging_cost_proxy"
+TOTAL_SOURCE = (
+    ROOT / "data/derived/national/harvest_basis/national_margin_totals"
+)
 TIER_SOURCE = (
     ROOT / "data/derived/national/harvest_basis/national_tier_coverage"
     / "national_tier_coverage.csv"
@@ -229,6 +232,80 @@ def test_aggregate_cost_inputs_match_the_statcan_proxy_csv(built):
         ]
 
 
+def test_total_margin_column_and_national_cards_use_the_committed_ledger(built):
+    payload, manifest = built
+    totals = payload["national_margin_totals"]
+    assert totals["label"] == "model_estimate_not_policy"
+    assert totals["observed"] is False
+    assert totals["policy_grade"] is False
+    assert totals["not_policy_result"] is True
+    assert totals["ranking_performed"] is False
+    assert totals["combined_national_net_value"] is False
+    assert totals["volume_basis"] == "119m_allocation"
+    assert totals["province_count"] == 13
+
+    source_rows = {
+        (row["province"], row["scenario"]): row
+        for row in _read_csv(TOTAL_SOURCE / "province_margin_totals.csv")
+    }
+    source_payload = json.loads(
+        (TOTAL_SOURCE / "national_margin_totals.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert totals["scenarios"] == source_payload["scenarios"]
+    donor_sum = 0.0
+    scaled_sum = 0.0
+    for row in payload["jurisdictions"]:
+        total = row["total_margin_119m"]
+        assert total["volume_basis"] == "119m_allocation"
+        for scenario in ("donor_flat", "stumpage_scaled"):
+            raw = source_rows[(row["province"], scenario)]
+            values = total[scenario]
+            assert values["total_low_m_cad"] == pytest.approx(
+                float(raw["total_low_m_cad"])
+            )
+            assert values["total_base_m_cad"] == pytest.approx(
+                float(raw["total_base_m_cad"])
+            )
+            assert values["total_high_m_cad"] == pytest.approx(
+                float(raw["total_high_m_cad"])
+            )
+            assert values["negative_flag"] == (
+                raw["negative_flag"] == "true"
+            )
+        donor_sum += total["donor_flat"]["total_base_m_cad"]
+        scaled_sum += total["stumpage_scaled"]["total_base_m_cad"]
+    assert donor_sum == pytest.approx(
+        totals["scenarios"]["donor_flat"]["national_total_base_m_cad"],
+        abs=1e-4,
+    )
+    assert scaled_sum == pytest.approx(
+        totals["scenarios"]["stumpage_scaled"]["national_total_base_m_cad"],
+        abs=1e-4,
+    )
+    assert manifest["validation"][
+        "national_total_margin_donor_flat_m_cad"
+    ] == pytest.approx(5205.328748, abs=1e-6)
+    assert manifest["validation"][
+        "national_total_margin_stumpage_scaled_m_cad"
+    ] == pytest.approx(-655.319124, abs=1e-6)
+    assert manifest["validation"]["national_total_margin_province_count"] == 13
+    assert manifest["validation"]["national_total_margin_policy_result"] is False
+
+
+def test_total_margin_header_and_cards_are_not_hand_coded():
+    app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
+    assert "Total margin" in app_js
+    assert "row.total_margin_119m.donor_flat.total_base_m_cad" in app_js
+    assert "national.national_margin_totals" in app_js
+    assert "totals.scenarios.donor_flat" in app_js
+    assert "totals.scenarios.stumpage_scaled" in app_js
+    assert "Totals use the 119 Mm³ allocation" in app_js
+    assert "5,205" not in app_js
+    assert "655.31" not in app_js
+
+
 def test_national_diagnostic_is_not_a_combined_net_value(built):
     payload, _ = built
     diagnostic = payload["national_diagnostic"]
@@ -296,6 +373,8 @@ def test_manifest_hashes_v23_payload_and_sources(built):
         "data/derived/national/harvest_basis/national_economics_v2_1/sources.csv",
         "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
         "data/derived/national/harvest_basis/provincial_allocation/119m.csv",
+        "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+        "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
         "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
         "data/derived/national/harvest_basis/statcan_logging_cost_proxy/sources.csv",
     }
@@ -373,6 +452,16 @@ def test_ui_panel_remains_read_only_and_names_v23_cost_tiers():
     assert render_block.index("renderNationalDrilldown()") < render_block.index(
         "renderNationalDiagnostic()"
     )
+
+
+def test_live_payload_is_not_stale(built):
+    payload, _ = built
+    live = json.loads(
+        (ROOT / "ui/public/data/economics/national.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert live == payload
 
 
 def test_export_does_not_touch_the_static_bundle():

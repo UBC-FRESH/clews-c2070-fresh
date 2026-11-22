@@ -7,12 +7,12 @@
   <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="styles.css?v=eee0a17c0d2a">
+  <link rel="stylesheet" href="styles.css?v=d24f54d3124a">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=13c038152ed8"></script>
+  <script defer src="app.js?v=31c19a346cd4"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -490,7 +490,7 @@
             <section class="section-block" aria-labelledby="national-table-title">
               <div class="section-heading">
                 <h3 id="national-table-title">Province evidence ledger</h3>
-                <p>13 jurisdictions in canonical order. Aggregate-proxy provinces are flagged <strong>provisional aggregate</strong>, not direct; NU is the only donor-fallback cost. Price and cost tiers are evidence tiers, not quality scores, and no province is ranked.</p>
+                <p>13 jurisdictions in canonical order. Aggregate-proxy provinces are flagged <strong>provisional aggregate</strong>, not direct; NU is the only donor-fallback cost. The <strong>Total margin</strong> column multiplies the model CAD/m³ margin by the 119 Mm³ allocation and reports M CAD; NU is zero-volume and negative values are unclipped. Price and cost tiers are evidence tiers, not quality scores, and no province is ranked.</p>
               </div>
               <div class="table-wrap national-table-wrap">
                 <table class="data-table economics-table national-table" id="national-table"></table>

@@ -31,6 +31,8 @@
     "ranking_performed": false,
     "combined_national_net_value": false,
     "national_diagnostic_label": "model_estimate_not_policy",
+    "national_total_margin_label": "model_estimate_not_policy",
+    "total_margin_policy_result": false,
     "strict_open": false,
     "forest_lp_input": false,
     "public_osecan_input": false
@@ -384,6 +386,173 @@
       "v2_2_margin_base_cad_m3": 36.7456
     }
   },
+  "national_margin_totals": {
+    "model_id": "national_margin_totals_v1",
+    "label": "model_estimate_not_policy",
+    "observed": false,
+    "policy_grade": false,
+    "not_policy_result": true,
+    "combined_national_net_value": false,
+    "ranking_performed": false,
+    "volume_basis": "119m_allocation",
+    "allocation_total_m3": 118977339.1,
+    "province_count": 13,
+    "scenarios": {
+      "donor_flat": {
+        "role": "base",
+        "evidence": "model_estimate",
+        "observed": false,
+        "policy_grade": false,
+        "combined_national_net_value": false,
+        "national_total_low_m_cad": -3854.908563,
+        "national_total_base_m_cad": 5205.328748,
+        "national_total_high_m_cad": 9137.988762,
+        "national_margin_low_cad_m3": -32.4004,
+        "national_margin_base_cad_m3": 43.7506,
+        "national_margin_high_cad_m3": 76.8044,
+        "positive_province_count": 12,
+        "negative_province_count": 0,
+        "zero_total_province_count": 1,
+        "counts_by_case": {
+          "low": {
+            "positive": 8,
+            "negative": 4,
+            "zero": 1
+          },
+          "base": {
+            "positive": 12,
+            "negative": 0,
+            "zero": 1
+          },
+          "high": {
+            "positive": 12,
+            "negative": 0,
+            "zero": 1
+          }
+        },
+        "negative_provinces_by_case": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "zero_volume_provinces": [
+          "NU"
+        ]
+      },
+      "stumpage_scaled": {
+        "role": "sensitivity",
+        "evidence": "model_estimate",
+        "observed": false,
+        "policy_grade": false,
+        "combined_national_net_value": false,
+        "national_total_low_m_cad": -8058.8857,
+        "national_total_base_m_cad": -655.319124,
+        "national_total_high_m_cad": 4032.87974,
+        "national_margin_low_cad_m3": -67.7346,
+        "national_margin_base_cad_m3": -5.5079,
+        "national_margin_high_cad_m3": 33.8962,
+        "positive_province_count": 7,
+        "negative_province_count": 5,
+        "zero_total_province_count": 1,
+        "counts_by_case": {
+          "low": {
+            "positive": 5,
+            "negative": 7,
+            "zero": 1
+          },
+          "base": {
+            "positive": 7,
+            "negative": 5,
+            "zero": 1
+          },
+          "high": {
+            "positive": 9,
+            "negative": 3,
+            "zero": 1
+          }
+        },
+        "negative_provinces_by_case": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "zero_volume_provinces": [
+          "NU"
+        ]
+      }
+    },
+    "national_diagnostic": {
+      "label": "model_estimate_not_policy",
+      "not_policy_result": true,
+      "observed": false,
+      "policy_grade": false,
+      "combined_national_net_value": false,
+      "ranking_performed": false,
+      "volume_basis": "119m_allocation",
+      "allocation_total_m3": 118977339.1,
+      "donor_flat": {
+        "national_total_low_m_cad": -3854.908563,
+        "national_total_base_m_cad": 5205.328748,
+        "national_total_high_m_cad": 9137.988762,
+        "national_margin_low_cad_m3": -32.4004,
+        "national_margin_base_cad_m3": 43.7506,
+        "national_margin_high_cad_m3": 76.8044,
+        "positive_province_count": 12,
+        "negative_province_count": 0,
+        "zero_total_province_count": 1
+      },
+      "stumpage_scaled": {
+        "national_total_low_m_cad": -8058.8857,
+        "national_total_base_m_cad": -655.319124,
+        "national_total_high_m_cad": 4032.87974,
+        "national_margin_low_cad_m3": -67.7346,
+        "national_margin_base_cad_m3": -5.5079,
+        "national_margin_high_cad_m3": 33.8962,
+        "positive_province_count": 7,
+        "negative_province_count": 5,
+        "zero_total_province_count": 1
+      },
+      "v2_3_119m_cross_check": {
+        "source_volume_basis": "119m_allocation_sensitivity",
+        "max_abs_delta_cad_m3": 0.0,
+        "deltas_cad_m3": {
+          "donor_flat_low": 0.0,
+          "donor_flat_base": 0.0,
+          "donor_flat_high": 0.0,
+          "stumpage_scaled_low": 0.0,
+          "stumpage_scaled_base": 0.0,
+          "stumpage_scaled_high": 0.0
+        },
+        "checked": true
+      },
+      "warning": "National totals are volume-weighted model diagnostics at the 119 Mm3 allocation. They are not observed, not policy grade, not a policy result and not a combined national net value."
+    },
+    "source_csv": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+    "source_json": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json"
+  },
   "scenarios": [
     {
       "id": "donor_flat",
@@ -522,6 +691,32 @@
       "status_label": "partial direct",
       "is_direct": true,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 39978577.0,
+        "donor_flat": {
+          "total_low_m_cad": -3601.15028,
+          "total_base_m_cad": 1662.62906,
+          "total_high_m_cad": 3786.343043,
+          "share_of_national_total_base": 0.3194090403,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -3601.15028,
+          "total_base_m_cad": 1662.62906,
+          "total_high_m_cad": 3786.343043,
+          "share_of_national_total_base": -2.5371288569,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 34.325,
@@ -680,6 +875,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 22891404.0,
+        "donor_flat": {
+          "total_low_m_cad": 457.519046,
+          "total_base_m_cad": 1392.747356,
+          "total_high_m_cad": 1743.244511,
+          "share_of_national_total_base": 0.2675618435,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -1125.719129,
+          "total_base_m_cad": -831.548563,
+          "total_high_m_cad": -149.762432,
+          "share_of_national_total_base": 1.2689215568,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": true,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 2.66,
@@ -838,6 +1059,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 4344697.6,
+        "donor_flat": {
+          "total_low_m_cad": 167.497216,
+          "total_base_m_cad": 344.999837,
+          "total_high_m_cad": 411.522805,
+          "share_of_national_total_base": 0.0662782033,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -133.564694,
+          "total_base_m_cad": 71.206118,
+          "total_high_m_cad": 101.536452,
+          "share_of_national_total_base": -0.1086586907,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 2.6,
@@ -996,6 +1243,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 1135235.8,
+        "donor_flat": {
+          "total_low_m_cad": 25.091549,
+          "total_base_m_cad": 71.471608,
+          "total_high_m_cad": 88.853544,
+          "share_of_national_total_base": 0.0137304696,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -48.663926,
+          "total_base_m_cad": -34.813822,
+          "total_high_m_cad": -31.481792,
+          "share_of_national_total_base": 0.0531249901,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": true,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 4.58,
@@ -1154,6 +1427,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 13493596.0,
+        "donor_flat": {
+          "total_low_m_cad": -118.153975,
+          "total_base_m_cad": 433.12689,
+          "total_high_m_cad": 639.731386,
+          "share_of_national_total_base": 0.0832083642,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -951.204063,
+          "total_base_m_cad": -822.458965,
+          "total_high_m_cad": -781.829747,
+          "share_of_national_total_base": 1.2550510658,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": true,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 6.06,
@@ -1354,6 +1653,32 @@
       "status_label": "component stack · survey",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 26674334.0,
+        "donor_flat": {
+          "total_low_m_cad": -792.947927,
+          "total_base_m_cad": 865.795533,
+          "total_high_m_cad": 1873.586548,
+          "share_of_national_total_base": 0.1663286941,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -2042.384401,
+          "total_base_m_cad": -956.480266,
+          "total_high_m_cad": 667.485197,
+          "share_of_national_total_base": 1.4595640978,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 12.88,
@@ -1512,6 +1837,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 6234700.0,
+        "donor_flat": {
+          "total_low_m_cad": -147.721864,
+          "total_base_m_cad": 106.996804,
+          "total_high_m_cad": 202.458166,
+          "share_of_national_total_base": 0.0205552443,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -287.917823,
+          "total_base_m_cad": -88.136837,
+          "total_high_m_cad": 29.407209,
+          "share_of_national_total_base": 0.1344945291,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 24.03,
@@ -1670,6 +2021,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 2388245.0,
+        "donor_flat": {
+          "total_low_m_cad": 84.663046,
+          "total_base_m_cad": 182.234796,
+          "total_high_m_cad": 218.801932,
+          "share_of_national_total_base": 0.035009277,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 61.42399,
+          "total_base_m_cad": 198.957287,
+          "total_high_m_cad": 237.734983,
+          "share_of_national_total_base": -0.3036036638,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": true,
         "rate_low_cad_m3": 29.87,
@@ -1828,6 +2205,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 1454037.5,
+        "donor_flat": {
+          "total_low_m_cad": 56.496918,
+          "total_base_m_cad": 115.90162,
+          "total_high_m_cad": 138.164824,
+          "share_of_national_total_base": 0.0222659558,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 56.496918,
+          "total_base_m_cad": 115.90162,
+          "total_high_m_cad": 138.164824,
+          "share_of_national_total_base": -0.1768628684,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": false,
         "rate_low_cad_m3": null,
@@ -1986,6 +2389,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 302210.4,
+        "donor_flat": {
+          "total_low_m_cad": 9.006323,
+          "total_base_m_cad": 21.353129,
+          "total_high_m_cad": 25.980363,
+          "share_of_national_total_base": 0.0041021672,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 9.006323,
+          "total_base_m_cad": 21.353129,
+          "total_high_m_cad": 25.980363,
+          "share_of_national_total_base": -0.0325843215,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": false,
         "rate_low_cad_m3": null,
@@ -2144,6 +2573,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 43925.8,
+        "donor_flat": {
+          "total_low_m_cad": 2.230969,
+          "total_base_m_cad": 4.025558,
+          "total_high_m_cad": 4.698119,
+          "share_of_national_total_base": 0.0007733533,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 2.230969,
+          "total_base_m_cad": 4.025558,
+          "total_high_m_cad": 4.698119,
+          "share_of_national_total_base": -0.0061428972,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": false,
         "rate_low_cad_m3": null,
@@ -2302,6 +2757,32 @@
       "status_label": "provisional aggregate",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 36376.0,
+        "donor_flat": {
+          "total_low_m_cad": 2.560416,
+          "total_base_m_cad": 4.046557,
+          "total_high_m_cad": 4.603521,
+          "share_of_national_total_base": 0.0007773874,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 2.560416,
+          "total_base_m_cad": 4.046557,
+          "total_high_m_cad": 4.603521,
+          "share_of_national_total_base": -0.0061749411,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
       "stumpage_reference": {
         "has_rate": false,
         "rate_low_cad_m3": null,
@@ -2461,6 +2942,32 @@
       "status_label": "provisional donor fallback",
       "is_direct": false,
       "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 0.0,
+        "donor_flat": {
+          "total_low_m_cad": 0.0,
+          "total_base_m_cad": 0.0,
+          "total_high_m_cad": 0.0,
+          "share_of_national_total_base": 0.0,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": true
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 0.0,
+          "total_base_m_cad": 0.0,
+          "total_high_m_cad": 0.0,
+          "share_of_national_total_base": 0.0,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": true
+        }
+      },
       "stumpage_reference": {
         "has_rate": false,
         "rate_low_cad_m3": null,
@@ -2765,6 +3272,14 @@
     {
       "path": "data/derived/national/harvest_basis/provincial_allocation/119m.csv",
       "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+      "rows": 26
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
+      "rows": null
     },
     {
       "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",

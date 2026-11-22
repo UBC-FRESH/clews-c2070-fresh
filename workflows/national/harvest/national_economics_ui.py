@@ -56,6 +56,9 @@ STUMPAGE_SOURCE = (
     / "provincial_stumpage_references.csv"
 )
 ALLOCATION_SOURCE = HARVEST_BASIS_DIR / "provincial_allocation/119m.csv"
+MARGIN_TOTALS_DIR = HARVEST_BASIS_DIR / "national_margin_totals"
+MARGIN_TOTALS_CSV = MARGIN_TOTALS_DIR / "province_margin_totals.csv"
+MARGIN_TOTALS_JSON = MARGIN_TOTALS_DIR / "national_margin_totals.json"
 OUT_JSON = REPO_ROOT / "ui/public/data/economics/national.json"
 OUT_MANIFEST = REPO_ROOT / "ui/public/data/economics/national.manifest.json"
 
@@ -778,6 +781,160 @@ def _national_diagnostic(
     }
 
 
+def _margin_totals(
+    rows: list[dict[str, str]],
+    payload: dict[str, Any],
+    allocation_by_province: dict[str, float],
+) -> tuple[dict[tuple[str, str], dict[str, Any]], dict[str, Any]]:
+    """Validate and index the 119 Mm3 province total-margin ledger."""
+    if payload.get("model_id") != "national_margin_totals_v1":
+        _fail(f"unexpected total-margin model_id {payload.get('model_id')!r}")
+    if payload.get("label") != "model_estimate_not_policy":
+        _fail("total-margin label changed")
+    for field in (
+        "observed",
+        "policy_grade",
+        "combined_national_net_value",
+        "ranking_performed",
+    ):
+        if payload.get(field) is not False:
+            _fail(f"total-margin {field} must be false")
+    if payload.get("volume_basis") != "119m_allocation":
+        _fail("total-margin volume basis must be the 119 Mm3 allocation")
+    if payload.get("province_count") != 13:
+        _fail("total-margin payload must cover 13 provinces")
+    allocation_total = float(payload.get("allocation_total_m3", math.nan))
+    if not math.isfinite(allocation_total):
+        _fail("total-margin allocation total is missing")
+
+    if len(rows) != 26:
+        _fail(f"total-margin ledger has {len(rows)} rows, expected 26")
+    indexed: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        province = _text(row, "province", "total margin")
+        scenario = _text(row, "scenario", "total margin")
+        label = f"total margin {province}/{scenario}"
+        if scenario not in SCENARIO_KEYS:
+            _fail(f"{label}: unknown scenario")
+        if province not in allocation_by_province:
+            _fail(f"{label}: unknown province")
+        key = (province, scenario)
+        if key in indexed:
+            _fail(f"duplicate total-margin row: {key}")
+        allocation = _number(row, "allocation_m3", label)
+        if abs(allocation - allocation_by_province[province]) > 0.2:
+            _fail(f"{label}: allocation does not match 119m.csv")
+        margin_low = _number(row, "margin_low_cad_m3", label)
+        margin_base = _number(row, "margin_base_cad_m3", label)
+        margin_high = _number(row, "margin_high_cad_m3", label)
+        total_low = _number(row, "total_low_m_cad", label)
+        total_base = _number(row, "total_base_m_cad", label)
+        total_high = _number(row, "total_high_m_cad", label)
+        if not margin_low <= margin_base <= margin_high:
+            _fail(f"{label}: margins are unordered")
+        if not total_low <= total_base <= total_high:
+            _fail(f"{label}: totals are unordered")
+        for case, margin, total in (
+            ("low", margin_low, total_low),
+            ("base", margin_base, total_base),
+            ("high", margin_high, total_high),
+        ):
+            computed = allocation * margin / 1_000_000.0
+            if abs(computed - total) > 1e-4:
+                _fail(f"{label}: {case} total does not equal volume x margin")
+        if row.get("evidence_tier", "").strip() != "model_estimate":
+            _fail(f"{label}: evidence tier must remain model_estimate")
+        for field in ("observed", "policy_grade"):
+            if row.get(field, "").strip().lower() != "false":
+                _fail(f"{label}: {field} must remain false")
+        negative_flag = _boolean(row, "negative_flag", label)
+        if negative_flag != (margin_base < 0.0):
+            _fail(f"{label}: negative flag does not match the base margin")
+        if _boolean(row, "zero_volume", label) != (allocation == 0.0):
+            _fail(f"{label}: zero-volume flag mismatch")
+        indexed[key] = {
+            "total_low_m_cad": _round(total_low, 6),
+            "total_base_m_cad": _round(total_base, 6),
+            "total_high_m_cad": _round(total_high, 6),
+            "share_of_national_total_base": _round(
+                _number(row, "share_of_national_total_base", label), 10
+            ),
+            "negative_flag": negative_flag,
+            "total_negative_low": _boolean(row, "total_negative_low", label),
+            "total_negative_base": _boolean(
+                row, "total_negative_base", label
+            ),
+            "total_negative_high": _boolean(
+                row, "total_negative_high", label
+            ),
+            "zero_volume": allocation == 0.0,
+        }
+    expected = {
+        (province, scenario)
+        for province in allocation_by_province
+        for scenario in SCENARIO_KEYS
+    }
+    if set(indexed) != expected:
+        _fail("total-margin ledger does not cover 13 provinces x 2 scenarios")
+
+    scenarios = payload.get("scenarios") or {}
+    if set(scenarios) != set(SCENARIO_KEYS):
+        _fail("total-margin scenarios are incomplete")
+    for scenario in SCENARIO_KEYS:
+        summary = scenarios[scenario]
+        scenario_rows = [
+            value for (province, key), value in indexed.items()
+            if key == scenario
+        ]
+        for case in ("low", "base", "high"):
+            computed = sum(
+                float(value[f"total_{case}_m_cad"])
+                for value in scenario_rows
+            )
+            stated = float(summary[f"national_total_{case}_m_cad"])
+            if abs(computed - stated) > 1e-4:
+                _fail(f"{scenario}/{case}: national total is not the sum")
+        if summary.get("role") != (
+            "base" if scenario == SCENARIO_KEYS[0] else "sensitivity"
+        ):
+            _fail(f"{scenario}: scenario role mismatch")
+    if abs(
+        sum(allocation_by_province.values()) - allocation_total
+    ) > 0.2:
+        _fail("total-margin allocation total does not match 119m.csv")
+    if allocation_by_province.get("NU") != 0.0:
+        _fail("Nunavut must remain zero-volume in the total-margin ledger")
+
+    summary = {
+        "model_id": payload.get("model_id"),
+        "label": "model_estimate_not_policy",
+        "observed": False,
+        "policy_grade": False,
+        "not_policy_result": True,
+        "combined_national_net_value": False,
+        "ranking_performed": False,
+        "volume_basis": "119m_allocation",
+        "allocation_total_m3": _round(allocation_total, 1),
+        "province_count": 13,
+        "scenarios": {
+            scenario: {
+                **scenarios[scenario],
+                "negative_province_count": int(
+                    scenarios[scenario]["negative_province_count"]
+                ),
+                "positive_province_count": int(
+                    scenarios[scenario]["positive_province_count"]
+                ),
+            }
+            for scenario in SCENARIO_KEYS
+        },
+        "national_diagnostic": payload.get("national_diagnostic") or {},
+        "source_csv": _display_path(MARGIN_TOTALS_CSV),
+        "source_json": _display_path(MARGIN_TOTALS_JSON),
+    }
+    return indexed, summary
+
+
 def build_export(
     source_dir: Path = SOURCE_DIR,
     tier_source: Path = TIER_SOURCE,
@@ -800,6 +957,8 @@ def build_export(
     price_source_rows = _read_csv(PRICE_SOURCES)
     stumpage_rows = _read_csv(STUMPAGE_SOURCE)
     allocation_rows = _read_csv(ALLOCATION_SOURCE)
+    total_margin_rows = _read_csv(MARGIN_TOTALS_CSV)
+    total_margin_payload = _read_json(MARGIN_TOTALS_JSON)
     tier_summary = _read_json(TIER_SUMMARY_JSON)
     statcan_rows = _read_csv(STATCAN_DIR / STATCAN_CSV)
     statcan_source_rows = _read_csv(STATCAN_DIR / STATCAN_SOURCES_CSV)
@@ -837,6 +996,7 @@ def build_export(
         (price_cell_rows, "price cell audit"),
         (stumpage_rows, "stumpage references"),
         (allocation_rows, "provincial allocation"),
+        (total_margin_rows, "total margin"),
     ):
         _validate_labels(rows, label)
     for row in statcan_rows:
@@ -884,6 +1044,9 @@ def build_export(
         )
     if set(allocation_by_province) != set(provinces):
         _fail("provincial allocation does not match the 13 summary provinces")
+    total_margins_by_key, total_margin_summary = _margin_totals(
+        total_margin_rows, total_margin_payload, allocation_by_province
+    )
 
     jurisdictions: list[dict[str, Any]] = []
     for province in provinces:
@@ -1034,6 +1197,18 @@ def build_export(
                 "status_label": status_label,
                 "is_direct": price_cell["tier"] == "reported_average",
                 "ranked": False,
+                "total_margin_119m": {
+                    "volume_basis": "119m_allocation",
+                    "allocation_m3": _round(
+                        allocation_by_province[province], 1
+                    ),
+                    "donor_flat": total_margins_by_key[
+                        (province, SCENARIO_KEYS[0])
+                    ],
+                    "stumpage_scaled": total_margins_by_key[
+                        (province, SCENARIO_KEYS[1])
+                    ],
+                },
                 "stumpage_reference": stumpage_by_province[province],
                 "price_evidence": price_cells,
             }
@@ -1264,6 +1439,8 @@ def build_export(
         (PRICE_SOURCES, len(price_source_rows)),
         (STUMPAGE_SOURCE, len(stumpage_rows)),
         (ALLOCATION_SOURCE, len(allocation_rows)),
+        (MARGIN_TOTALS_CSV, len(total_margin_rows)),
+        (MARGIN_TOTALS_JSON, None),
         (STATCAN_DIR / STATCAN_CSV, len(statcan_rows)),
         (STATCAN_DIR / STATCAN_SOURCES_CSV, len(statcan_source_rows)),
     ]
@@ -1301,6 +1478,8 @@ def build_export(
             "ranking_performed": False,
             "combined_national_net_value": False,
             "national_diagnostic_label": "model_estimate_not_policy",
+            "national_total_margin_label": "model_estimate_not_policy",
+            "total_margin_policy_result": False,
             "strict_open": False,
             "forest_lp_input": False,
             "public_osecan_input": False,
@@ -1359,6 +1538,7 @@ def build_export(
                 ),
             },
         },
+        "national_margin_totals": total_margin_summary,
         "scenarios": [
             {
                 "id": scenario,
@@ -1506,6 +1686,20 @@ def build_export(
             "sensitivity_national_margin_cad_m3": national_payload[
                 "stumpage_scaled"
             ]["base_cad_m3"],
+            "national_total_margin_donor_flat_m_cad": total_margin_summary[
+                "scenarios"
+            ]["donor_flat"]["national_total_base_m_cad"],
+            "national_total_margin_stumpage_scaled_m_cad": total_margin_summary[
+                "scenarios"
+            ]["stumpage_scaled"]["national_total_base_m_cad"],
+            "national_total_margin_province_count": total_margin_summary[
+                "province_count"
+            ],
+            "national_total_margin_allocation_m3": total_margin_summary[
+                "allocation_total_m3"
+            ],
+            "national_total_margin_label": total_margin_summary["label"],
+            "national_total_margin_policy_result": False,
             "observed_claim": False,
             "policy_grade_claim": False,
             "combined_national_net_value": False,
