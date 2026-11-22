@@ -1,0 +1,114 @@
+REF_DATE,GEO,DGUID,Principal statistics,North American Industry Classification System (NAICS),UOM,UOM_ID,SCALAR_FACTOR,SCALAR_ID,VECTOR,COORDINATE,VALUE,STATUS,SYMBOL,TERMINATED,DECIMALS
+2019,Yukon,2016A000260,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821730,14.3.3,549,E,,,0
+2024,Canada,2016A000011124,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821533,1.3.1,11695849,B,,,0
+2024,Canada,2016A000011124,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821535,1.3.3,5709677,B,,,0
+2024,Canada,2016A000011124,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821536,1.4.1,1781082,C,,,0
+2024,Canada,2016A000011124,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821538,1.4.3,1220560,C,,,0
+2024,Canada,2016A000011124,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524092,1.6.1,991345,E,,,0
+2024,Canada,2016A000011124,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524094,1.6.3,714570,E,,,0
+2024,Canada,2016A000011124,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821539,1.5.1,5971598,E,,,0
+2024,Canada,2016A000011124,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821541,1.5.3,2233115,C,,,0
+2024,Newfoundland and Labrador,2016A000210,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821563,3.3.1,51069,B,,,0
+2024,Newfoundland and Labrador,2016A000210,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821565,3.3.3,46524,B,,,0
+2024,Newfoundland and Labrador,2016A000210,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821566,3.4.1,17300,B,,,0
+2024,Newfoundland and Labrador,2016A000210,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821568,3.4.3,15899,A,,,0
+2024,Newfoundland and Labrador,2016A000210,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524128,3.6.1,7969,C,,,0
+2024,Newfoundland and Labrador,2016A000210,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524130,3.6.3,7144,C,,,0
+2024,Newfoundland and Labrador,2016A000210,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821569,3.5.1,8870,B,,,0
+2024,Newfoundland and Labrador,2016A000210,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821571,3.5.3,7340,B,,,0
+2024,Prince Edward Island,2016A000211,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821578,4.3.1,13275,B,,,0
+2024,Prince Edward Island,2016A000211,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821580,4.3.3,5191,B,,,0
+2024,Prince Edward Island,2016A000211,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821581,4.4.1,2391,C,,,0
+2024,Prince Edward Island,2016A000211,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821583,4.4.3,1016,B,,,0
+2024,Prince Edward Island,2016A000211,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524146,4.6.1,1761,C,,,0
+2024,Prince Edward Island,2016A000211,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524148,4.6.3,942,C,,,0
+2024,Prince Edward Island,2016A000211,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821584,4.5.1,4064,E,,,0
+2024,Prince Edward Island,2016A000211,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821586,4.5.3,1684,C,,,0
+2024,Nova Scotia,2016A000212,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821593,5.3.1,91789,E,,,0
+2024,Nova Scotia,2016A000212,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821595,5.3.3,51251,E,,,0
+2024,Nova Scotia,2016A000212,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821596,5.4.1,22644,E,,,0
+2024,Nova Scotia,2016A000212,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821598,5.4.3,14415,E,,,0
+2024,Nova Scotia,2016A000212,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524164,5.6.1,17368,E,,,0
+2024,Nova Scotia,2016A000212,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524166,5.6.3,10138,E,,,0
+2024,Nova Scotia,2016A000212,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821599,5.5.1,25587,E,,,0
+2024,Nova Scotia,2016A000212,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821601,5.5.3,,F,,,0
+2024,New Brunswick,2016A000213,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821608,6.3.1,921662,E,,,0
+2024,New Brunswick,2016A000213,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821610,6.3.3,226455,C,,,0
+2024,New Brunswick,2016A000213,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821611,6.4.1,117649,E,,,0
+2024,New Brunswick,2016A000213,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821613,6.4.3,54191,D,,,0
+2024,New Brunswick,2016A000213,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524182,6.6.1,92723,E,,,0
+2024,New Brunswick,2016A000213,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524184,6.6.3,37700,E,,,0
+2024,New Brunswick,2016A000213,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821614,6.5.1,326958,E,,,0
+2024,New Brunswick,2016A000213,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821616,6.5.3,54783,E,,,0
+2024,Quebec,2016A000224,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821623,7.3.1,2626809,B,,,0
+2024,Quebec,2016A000224,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821625,7.3.3,1373224,B,,,0
+2024,Quebec,2016A000224,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821626,7.4.1,399290,D,,,0
+2024,Quebec,2016A000224,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821628,7.4.3,254981,D,,,0
+2024,Quebec,2016A000224,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524200,7.6.1,208733,E,,,0
+2024,Quebec,2016A000224,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524202,7.6.3,136347,E,,,0
+2024,Quebec,2016A000224,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821629,7.5.1,1387013,E,,,0
+2024,Quebec,2016A000224,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821631,7.5.3,604735,D,,,0
+2024,Ontario,2016A000235,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821638,8.3.1,1098666,B,,,0
+2024,Ontario,2016A000235,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821640,8.3.3,525190,B,,,0
+2024,Ontario,2016A000235,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821641,8.4.1,168954,D,,,0
+2024,Ontario,2016A000235,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821643,8.4.3,108026,E,,,0
+2024,Ontario,2016A000235,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524218,8.6.1,113581,D,,,0
+2024,Ontario,2016A000235,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524220,8.6.3,71462,E,,,0
+2024,Ontario,2016A000235,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821644,8.5.1,591535,C,,,0
+2024,Ontario,2016A000235,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821646,8.5.3,230152,D,,,0
+2024,Manitoba,2016A000246,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821668,10.3.1,58366,B,,,0
+2024,Manitoba,2016A000246,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821670,10.3.3,40680,C,,,0
+2024,Manitoba,2016A000246,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821671,10.4.1,13754,B,,,0
+2024,Manitoba,2016A000246,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821673,10.4.3,10191,C,,,0
+2024,Manitoba,2016A000246,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524254,10.6.1,10178,C,,,0
+2024,Manitoba,2016A000246,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524256,10.6.3,6958,E,,,0
+2024,Manitoba,2016A000246,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821674,10.5.1,21478,D,,,0
+2024,Manitoba,2016A000246,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821676,10.5.3,15517,E,,,0
+2024,Saskatchewan,2016A000247,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821683,11.3.1,153876,B,,,0
+2024,Saskatchewan,2016A000247,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821685,11.3.3,78121,B,,,0
+2024,Saskatchewan,2016A000247,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821686,11.4.1,24765,C,,,0
+2024,Saskatchewan,2016A000247,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821688,11.4.3,15533,B,,,0
+2024,Saskatchewan,2016A000247,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524272,11.6.1,19279,C,,,0
+2024,Saskatchewan,2016A000247,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524274,11.6.3,12113,C,,,0
+2024,Saskatchewan,2016A000247,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821689,11.5.1,81126,E,,,0
+2024,Saskatchewan,2016A000247,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821691,11.5.3,33678,C,,,0
+2024,Alberta,2016A000248,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821698,12.3.1,1224021,B,,,0
+2024,Alberta,2016A000248,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821700,12.3.3,895541,B,,,0
+2024,Alberta,2016A000248,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821701,12.4.1,249700,D,,,0
+2024,Alberta,2016A000248,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821703,12.4.3,209647,D,,,0
+2024,Alberta,2016A000248,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524290,12.6.1,134237,D,,,0
+2024,Alberta,2016A000248,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524292,12.6.3,120820,D,,,0
+2024,Alberta,2016A000248,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821704,12.5.1,606289,C,,,0
+2024,Alberta,2016A000248,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821706,12.5.3,354870,C,,,0
+2024,British Columbia,2016A000259,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821713,13.3.1,5455115,B,,,0
+2024,British Columbia,2016A000259,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821715,13.3.3,2467271,B,,,0
+2024,British Columbia,2016A000259,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821716,13.4.1,764431,C,,,0
+2024,British Columbia,2016A000259,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821718,13.4.3,536609,C,,,0
+2024,British Columbia,2016A000259,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524308,13.6.1,385411,E,,,0
+2024,British Columbia,2016A000259,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524310,13.6.3,310915,E,,,0
+2024,British Columbia,2016A000259,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821719,13.5.1,2918176,C,,,0
+2024,British Columbia,2016A000259,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821721,13.5.3,918435,E,,,0
+2024,Yukon,2016A000260,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821728,14.3.1,1033,E,,,0
+2024,Yukon,2016A000260,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v105821730,14.3.3,,x,,,0
+2024,Yukon,2016A000260,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105821731,14.4.1,174,E,,,0
+2024,Yukon,2016A000260,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v105821732,14.4.3,,x,,,0
+2024,Yukon,2016A000260,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524326,14.6.1,90,E,,,0
+2024,Yukon,2016A000260,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524328,14.6.3,,x,,,0
+2024,Yukon,2016A000260,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821733,14.5.1,430,E,,,0
+2024,Yukon,2016A000260,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v105821735,14.5.3,,x,,,0
+2024,Northwest Territories,2016A000261,Total expenses,Logging [11331],Dollars,81,thousands,3,v105821740,15.3.1,168,E,,,0
+2024,Northwest Territories,2016A000261,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v108524358,15.3.3,,x,,,0
+2024,Northwest Territories,2016A000261,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v105881607,15.4.1,28,E,,,0
+2024,Northwest Territories,2016A000261,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v108524359,15.4.3,,x,,,0
+2024,Northwest Territories,2016A000261,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524344,15.6.1,15,E,,,0
+2024,Northwest Territories,2016A000261,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524360,15.6.3,,x,,,0
+2024,Northwest Territories,2016A000261,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v105821742,15.5.1,73,E,,,0
+2024,Northwest Territories,2016A000261,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v108524363,15.5.3,,x,,,0
+2024,Nunavut,2016A000262,Total expenses,Logging [11331],Dollars,81,thousands,3,v108524371,16.3.1,0,E,,,0
+2024,Nunavut,2016A000262,Total expenses,Contract Logging [113312],Dollars,81,thousands,3,v108524372,16.3.3,0,E,,,0
+2024,Nunavut,2016A000262,"Total salaries and wages, direct and indirect labour",Logging [11331],Dollars,81,thousands,3,v108524373,16.4.1,0,E,,,0
+2024,Nunavut,2016A000262,"Total salaries and wages, direct and indirect labour",Contract Logging [113312],Dollars,81,thousands,3,v108524374,16.4.3,0,E,,,0
+2024,Nunavut,2016A000262,"Total cost of energy, water utility and vehicle fuel",Logging [11331],Dollars,81,thousands,3,v108524375,16.6.1,0,E,,,0
+2024,Nunavut,2016A000262,"Total cost of energy, water utility and vehicle fuel",Contract Logging [113312],Dollars,81,thousands,3,v108524376,16.6.3,0,E,,,0
+2024,Nunavut,2016A000262,Cost of materials and supplies,Logging [11331],Dollars,81,thousands,3,v108524381,16.5.1,0,E,,,0
+2024,Nunavut,2016A000262,Cost of materials and supplies,Contract Logging [113312],Dollars,81,thousands,3,v108524382,16.5.3,0,E,,,0
