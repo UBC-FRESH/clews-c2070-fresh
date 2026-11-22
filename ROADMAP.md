@@ -46,6 +46,21 @@ no combined national net value is computed.
   `net_value_is_combined_national=false`; no BC partial net value and no
   combined national net value. Old `net_value_v2d/` and
   `net_value_benchmark/` are deprecated.
+- [x] National economics v1 scaffold — 13 jurisdictions, 39 low/base/high
+  margin rows, explicit donor/proxy tiers, and a volume-weighted national
+  diagnostic labelled `model_estimate_not_policy`.
+- [x] National economics v2 stumpage-scaled proxies — 8 extracted provincial
+  stumpage/dues/royalty/standing-value references times the BC
+  delivered/BCTS ratio; 5 donor fallbacks; no rate labelled as a delivered
+  price.
+- [x] National economics v2.1 base/sensitivity correction — fixed
+  `base_scenario=donor_flat` and `sensitivity_scenario=stumpage_scaled`;
+  78 margin rows, 28 summary rows, 39 tier-coverage rows. The scaled scenario
+  is **not preferred, not observed and not policy grade**; dues are not
+  comparable to delivered prices. National base diagnostic 33.1365 CAD/m3;
+  scaled sensitivity -16.1220 CAD/m3; both labelled
+  `model_estimate_not_policy`; no combined national net value. Negative
+  margins remain unclipped.
 - [ ] Model/UI wiring — only after validation; no OSeCAN change.
 
 ## Phase 1: Foundation and Model Development

@@ -2,6 +2,24 @@
 
 ## 2026-11-22
 
+- **Fixed the national-economics base/sensitivity framing as v2.1.** Added
+  `workflows/national/harvest/national_economics_v2_1.py` and
+  `tests/test_national_economics_v2_1.py`, publishing
+  `data/derived/national/harvest_basis/national_economics_v2_1/` with
+  `base_scenario=donor_flat` and `sensitivity_scenario=stumpage_scaled`.
+  The v1 flat BC donor is the base; the v2 provincial stumpage-scaled proxies
+  are a non-preferred, non-observed sensitivity. Outputs: 78 margin rows
+  (13 jurisdictions x 2 scenarios x low/base/high), 28 summary rows, 14
+  scenario-comparison rows, 39 tier-coverage rows, report, summary and
+  manifest. National volume-weighted donor-flat diagnostic 33.1365 CAD/m3
+  (low -94.7046, high 81.3168); scaled sensitivity -16.1220 (low -130.0389,
+  high 38.4085). Both are `model_estimate_not_policy`; no combined national
+  net value. All rows `evidence=model_estimate`, `observed=false`,
+  `policy_grade=false`; 34 negative margins (13 donor-flat, 21 scaled) are
+  unclipped. The comparison explains why stumpage/dues rates are not delivered
+  prices and why scaled deltas are method effects only. No v1/v2 artifact, UI
+  or public OSeCAN change.
+
 - **Published the corrected BC open-data net-value model inputs as an open-data
   bundle.** Added `data/derived/national/harvest_basis/open_data_net_value/
   model_inputs/` with the exact primary 3-month 2025-12 price panel and separate

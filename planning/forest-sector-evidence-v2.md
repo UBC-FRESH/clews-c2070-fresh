@@ -322,7 +322,27 @@ pass.
   national net value. The layer is isolated from the merged ledger, Forest LP,
   UI, and OSeCAN.
 
-### 3.11 Deprecated net-value artifacts
+### 3.11 National economics v2.1
+
+`national_economics_v2_1/` fixes the base/sensitivity decision. The base
+scenario is `donor_flat`: the v1 BC 2025-12 blended mill-delivered donor applied
+to all 13 jurisdictions. The sensitivity is `stumpage_scaled`: the v2
+provincial stumpage/dues/royalty/standing-value proxies multiplied by the BC
+delivered-price/BCTS-stumpage ratio. The scaled scenario is not preferred, not
+observed and not policy grade.
+
+- 78 margin rows: 13 jurisdictions x 2 scenarios x low/base/high.
+- 28 summary rows: 26 province-scenario rows plus two national diagnostics.
+- National diagnostic: donor-flat 33.1365 CAD/m3 (low -94.7046, high 81.3168);
+  scaled sensitivity -16.1220 CAD/m3 (low -130.0389, high 38.4085). Both are
+  `model_estimate_not_policy`; no combined national net value exists.
+- Price tiers: donor-flat 1 `reported_average` + 12 `donor_proxy`; scaled 1
+  `reported_average` + 7 `stumpage_scaled_proxy` + 5 `donor_proxy`.
+- 34 negative margins are retained unclipped (13 donor-flat, 21 scaled).
+- Dues/royalties are charges on standing timber, not delivered log prices.
+  Scenario deltas are method effects, not observed market changes.
+
+### 3.12 Deprecated net-value artifacts
 
 The former `net_value_v2d/` and `net_value_benchmark/` outputs are retained
 only for audit with `DEPRECATED.md` pointers. `net_value_benchmark_v1.py`
