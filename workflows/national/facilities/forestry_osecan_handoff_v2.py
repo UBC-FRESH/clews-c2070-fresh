@@ -486,26 +486,19 @@ def _allocation_weights(
     return weights_by_province
 
 
-def _zone_status(province: str, zone_id: str, weights: Sequence[ZoneWeight]) -> str:
+def _zone_status(
+    zone_id: str,
+    weights: Sequence[ZoneWeight],
+    weights_by_province: Mapping[str, tuple[ZoneWeight, ...]],
+) -> str:
     if len(weights) > 1:
         return "allocated_multi_zone_province"
-    if province in SINGLE_ZONE_PROVINCES:
-        return v1._zone_assignment(
-            province,
-            {
-                zone_id: v1.Zone(
-                    zone_id=zone_id,
-                    zone_name=weights[0].zone_name,
-                    provinces=(province,),
-                    mapping_basis="code",
-                    official_status="code_defined",
-                    geometry_available=False,
-                    notes="",
-                )
-            },
-            {province: (zone_id,)},
-        ).status
-    return "mapped_single_zone"
+    zone_members = [
+        candidate
+        for candidate, candidate_weights in weights_by_province.items()
+        if any(weight.zone_id == zone_id for weight in candidate_weights)
+    ]
+    return "mapped_aggregate_zone" if len(zone_members) > 1 else "mapped_single_zone"
 
 
 def _allocate_total(total: float, weights: Sequence[ZoneWeight]) -> list[float]:
@@ -564,7 +557,7 @@ def _handoff_rows(
             assignment = v1.ZoneAssignment(
                 zone_id=weight.zone_id,
                 zone_name=weight.zone_name,
-                status=_zone_status(item.province, weight.zone_id, weights),
+                status=_zone_status(weight.zone_id, weights, weights_by_province),
                 candidates=tuple(entry.zone_id for entry in weights),
                 basis=weight.mapping_basis,
                 note=weight.note,

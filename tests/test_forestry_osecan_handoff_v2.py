@@ -201,6 +201,16 @@ def test_handoff_rows_labels_and_no_unmapped(handoff_rows, summary_json):
     assert set(single["proxy_share"]) == {"false"}
     assert set(single["allocation_status"]) == {"single_zone"}
 
+    for zone_id, members in {
+        "T1": {"NB", "NS", "PE"},
+        "N1": {"YT", "NT", "NU"},
+    }.items():
+        aggregate = handoff_rows[
+            (handoff_rows["zone_id"] == zone_id)
+            & (handoff_rows["province"].isin(members))
+        ]
+        assert set(aggregate["zone_mapping_status"]) == {"mapped_aggregate_zone"}
+
     for (province, stream, case), group in handoff_rows.groupby(
         ["province", "stream", "availability_case"]
     ):
