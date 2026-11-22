@@ -2,6 +2,31 @@
 
 ## 2026-11-22
 
+- **Added facility-level residue supply v1 on assignment v3.** Added
+  `workflows/national/facilities/facility_residue_supply.py` and
+  `tests/test_facility_residue_supply.py`; published
+  `data/derived/national/facilities/facility_residue_supply_v1/` with
+  facility allocation, province residue, national summary, JSON summary,
+  report and SHA-256 manifest. The builder joins `national_product_chain_v1`
+  to assignment v3 `province_capacity_floor`: each origin province/class
+  feedstock stream is allocated only to same-class facilities in proportion
+  to assigned volume, local assigned class pools first with an explicit
+  national same-class fallback. Facility process residue is 28.43 M odt /
+  526.01 PJ at the documented RSYC dry LHV of 18.5 GJ/odt (201
+  facilities; 188 with positive residue). Provincial harvest residue is kept
+  separate and not facility-assigned: 9.07 M odt gross / 167.78 PJ,
+  6.45 M odt recoverable / 119.40 PJ and 2.62 M odt unrecovered / 48.38 PJ.
+  The RSYC 119 Mm3 base is 7.08 M odt / 130.98 PJ; model recoverable harvest
+  residue is 0.7686 of that (`model_below_rsyc`). The familiar 129.6709 PJ
+  figure is the documented RSYC 100 Mm3 base, not the 119 Mm3 value; both are
+  shown. Process residue is never added to the RSYC stream without an explicit
+  `combined` label (34.89 M odt / 645.40 PJ). Proxy and scaled-proxy capacity
+  carry 64.00% of process residue (33.30% scaled); published capacity carries
+  36.00%. All rows are `model_estimate`, `observed=false`,
+  `policy_grade=false`; proxy capacity remains a BC class-median screening
+  fill. The builder/tests fail closed on unexpected `D`; none was present.
+  No UI or public OSeCAN change.
+
 - **Added the provincial capacity-floor sensitivity and assignment v3.**
   Added `workflows/national/facilities/national_facility_assignment_v3.py` and
   `tests/test_national_facility_assignment_v3.py`; published
