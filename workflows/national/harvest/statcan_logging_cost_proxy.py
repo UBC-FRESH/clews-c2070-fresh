@@ -128,8 +128,21 @@ CAVEATS = (
             "2025-12-18 table release, and are preliminary and subject to "
             "revision. Values are nominal 2024 CAD; no deflator or escalation "
             "is applied. The primary harvest denominator is the 2024 observed "
-            "provincial harvest in provincial_allocation/119m.csv; the 119 Mm3 "
-            "allocation column is a sensitivity, not the primary basis."
+            "provincial harvest in provincial_allocation/119m.csv. The "
+            "119 Mm3 allocation column is a scenario basis: it introduces a "
+            "year/scenario mismatch and is reported only as a sensitivity, "
+            "not as the primary ratio."
+        ),
+    },
+    {
+        "id": "harvest_denominator_choice",
+        "text": (
+            "Observed 2024 harvest is used because it includes Crown and "
+            "private volume and aligns with the establishment coverage of the "
+            "expense numerator. The 119 Mm3 allocation is capped by Crown AAC "
+            "in some provinces; for New Brunswick it is 6.23 Mm3 versus "
+            "9.34 Mm3 observed, which would inflate the scenario ratio to "
+            "about 148 CAD/m3. Both ratios are published for transparency."
         ),
     },
     {
