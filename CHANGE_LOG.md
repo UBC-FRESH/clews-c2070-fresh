@@ -2,7 +2,30 @@
 
 ## 2026-11-22
 
-- **Added multi-scenario national facility chain v1 for 100/119/150 Mm3.**
+- **Added multi-scenario forestry residue OSeCAN handoff v1.** Added
+  `workflows/national/facilities/forestry_osecan_scenarios.py` and
+  `tests/test_forestry_osecan_scenarios.py`; published
+  `data/derived/national/facilities/forestry_osecan_scenarios_v1/` with
+  scenario residue, zone summary, candidate activity limits, supply-curve
+  comparison, JSON summary, report and SHA-256 manifest. Applies the
+  `forestry_osecan_handoff_v2` weights to the 100/119/150 Mm3 scenario
+  process/harvest residue totals across all 13 OSeCAN zones with no
+  `UNMAPPED` bucket. National process residue is 442.11 / 526.01 / 663.16 PJ
+  and gross harvest residue is 141.02 / 167.78 / 211.53 PJ; the 0/25/50/75%
+  process cases and 35/60/75% recovery cases are reported separately. The
+  119m cases reproduce `national_residue_curve_v1` exactly at the national
+  level (process 0 / 131.50 / 263.00 / 394.50 PJ; harvest 58.72 / 100.67 /
+  125.83 PJ). Under the 119m scenario, B2 is 81.05 PJ at process 50% and
+  31.02 PJ at harvest 60%. Comparison is context only: 119m process at 25%
+  is 0.616 of the T4 upper and 0.860 of the 2050 national supply context,
+  while process at 50% is 1.232 of T4; BC process at 25% is 1.015 of the
+  BC zonal upper. The candidate activity-limit table (273 rows) is
+  documented as read-only and not applied; only B1/B2 have official
+  zone-specific 2050 limits (`SUPBCWB1` 3.605475 PJ, `SUPBCWB2` 39.918341 PJ).
+  All rows are `model_estimate`, `observed=false`, `policy_grade=false`,
+  `official_osecan_changed=false`; official OSeCAN files are hash-checked
+  before and after the build. The builder/tests fail closed on unexpected
+  `D`; none was present. No UI or public OSeCAN change.
   Added `national_facility_chain_scenarios.py` and
   `tests/test_national_facility_chain_scenarios.py`; published
   `data/derived/national/facilities/national_facility_chain_scenarios_v1/`
