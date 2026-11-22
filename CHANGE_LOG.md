@@ -2,6 +2,26 @@
 
 ## 2026-11-22
 
+- **Added the national residue supply-curve sensitivity v1.** Added
+  `workflows/national/facilities/national_residue_curve.py` and
+  `tests/test_national_residue_curve.py`; published
+  `data/derived/national/facilities/national_residue_curve_v1/` with
+  national/province curve CSVs, OSeCAN demand-context CSV, JSON summary,
+  report and SHA-256 manifest. Process residue from
+  `facility_residue_supply_v1` is 28.43 M odt / 526.01 PJ and is exposed at
+  0/25/50/75% availability by SAW/PULP/PANEL/PELLET/BIO class and total;
+  harvest residue is 9.07 M odt gross / 167.78 PJ and is exposed at
+  0.35/0.60/0.75 recovery, giving 58.72 / 100.67 / 125.83 PJ. The RSYC
+  119 Mm3 base is 7.08 M odt / 130.98 PJ; the 0.60 harvest case is 0.7686
+  of it. Process and harvest remain separate streams with no combined curve
+  row. OSeCAN `stress_119m` 2050 context is 152.923 PJ national and
+  43.524 PJ BC supply activity, with 41.108 / 11.700 PJ power dispatch; the
+  official files are read-only and hash-checked. All rows are
+  `model_estimate`, `observed=false`, `policy_grade=false`, `not_policy=true`;
+  `rsyc_comparable=true` only on harvest recoverable rows. The builder/tests
+  fail closed on unexpected `D`; none was present. No UI or public OSeCAN
+  change.
+
 - **Added facility-level residue supply v1 on assignment v3.** Added
   `workflows/national/facilities/facility_residue_supply.py` and
   `tests/test_facility_residue_supply.py`; published
