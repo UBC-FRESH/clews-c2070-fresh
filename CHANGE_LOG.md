@@ -1,5 +1,22 @@
 # Change Log
 
+## 2026-11-22
+
+- **Added the open-data BC modeled-margin layer.** `workflows/national/harvest/
+  open_data_net_value.py` combines one 2025-12 3-month published log-market
+  vintage (Coast and Interior, Interior aggregates excluded) with the open
+  logging/haul cost model and the published Interior basic silviculture CAD/m3
+  allowance by forest zone. It emits 945 `model_estimate` rows and 21
+  zone-system summaries in `open_data_net_value/`, plus a separate QC
+  purchased-wood 0.81 CAD/m3 reference. Every row is `observed=false`,
+  `policy_grade=false`, `price_basis=mill_delivered_reported_average`,
+  `cost_basis=open_proxy_model`, and `net_value_status=model_estimate`; there is
+  no combined BC+QC national total and no merged-ledger, model, UI, or public
+  OSeCAN change. Negative modeled losses (182 base rows, mostly helicopter) are
+  reported, not clipped. Added 14 focused tests and a report/manifest with
+  caveats and one-at-a-time price, cost, silviculture, and 1-month-vintage
+  sensitivities.
+
 ## 2026-11-21
 
 - **Fixed the final v2d review findings.** Materialized the confidentiality-flag
