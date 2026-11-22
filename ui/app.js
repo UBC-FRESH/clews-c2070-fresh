@@ -102,6 +102,7 @@
   TECH_FAMILIES.forEach(function (f) { TECH_FAMILY_BY_ID[f.id] = f; });
 
   var TIER_COLORS = { T1: '#d98a2b', T2: '#c17832', T3: '#9f5a32', T4: '#7e3823' };
+  var ECONOMICS_SYSTEMS = ['ground', 'cable', 'heli'];
   var SESSION_FAMILY = 'session_live';
   var LIVE_MODEL_COMMIT = '40d5b43';
   var FALLBACK_DEFAULTS = {
@@ -166,6 +167,8 @@
 
   var state = {
     core: null,
+    economics: null,
+    economicsChart: null,
     outputs: new Map(),
     outputPromises: new Map(),
     warnings: [],
@@ -517,6 +520,8 @@
     validateCore(core);
     requireTrue(core.zoneNodes && core.zoneNodes.zone_count === 13 && core.zoneNodes.anchor_count === 2 && core.zoneNodes.gap_count === 11, 'zone-node contract mismatch');
     requireTrue(Array.isArray(core.zoneNodes.zones) && core.zoneNodes.zones.length === 13, 'zone-node rows are incomplete');
+    validateEconomics(core.economics);
+    state.economics = core.economics;
     state.core = core;
     core.scenarioById = new Map();
     core.scenarios.scenarios.forEach(function (sc) { core.scenarioById.set(sc.scenario_id, sc); });
@@ -588,6 +593,7 @@
     bindAllocationControls();
     renderOsecanStatic();
     renderInputsStatic();
+    renderEconomics();
     activateTab(validTab(initialTab), { silent: true });
     updateHash();
   }
@@ -1014,7 +1020,7 @@
   }
 
   function validTab(tab) {
-    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'zones', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
+    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'zones', 'economics', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
   }
 
   function activateTab(tab, options) {
@@ -1037,6 +1043,7 @@
     if (state.tab === 'explore') renderExplore();
     if (state.tab === 'map') { initMap(); renderBreadcrumb(); renderSelectionPanel(); }
     if (state.tab === 'zones') renderZones();
+    if (state.tab === 'economics') renderEconomics();
     if (state.tab === 'overview' && state.core) renderOverview();
     if (state.tab === 'osecan') renderOsecan();
     if (state.tab === 'run') renderRunMode();
@@ -1049,6 +1056,7 @@
         if (state.compareChart) state.compareChart.resize();
       }
       if (state.tab === 'inputs' && state.harvestChart) state.harvestChart.resize();
+      if (state.tab === 'economics' && state.economicsChart) state.economicsChart.resize();
       if (state.tab === 'map' && state.mapState.map) state.mapState.map.resize();
     });
     if (!opts.silent) {
@@ -6018,6 +6026,347 @@
     $('osecan-supbcw-table').innerHTML = fileTable(links.supbcw_inputs);
   }
 
+  /* ---------------- Economics ---------------- */
+
+  function validateEconomics(econ) {
+    requireTrue(econ && econ.schema_version === 'economics/1', 'economics schema mismatch');
+    var h = econ.headline || {};
+    requireTrue(h.rows === 945 && h.zone_system_groups === 21, 'economics row count mismatch');
+    requireTrue(Math.abs(h.median_base_net_model_cad_m3 - 48.84) < 1e-9, 'stale economics median');
+    requireTrue(Math.abs(h.min_base_net_model_cad_m3 + 23.38) < 1e-9, 'stale economics minimum');
+    requireTrue(Math.abs(h.max_base_net_model_cad_m3 - 86.85) < 1e-9, 'stale economics maximum');
+    requireTrue(h.negative_net_base_rows === 168, 'stale economics negative-row count');
+    requireTrue(Array.isArray(econ.zones) && econ.zones.length === 7, 'economics zone count mismatch');
+    econ.zones.forEach(function (zone) {
+      requireTrue(Array.isArray(zone.systems) && zone.systems.length === 3, 'economics system count mismatch');
+      zone.systems.forEach(function (group) {
+        requireTrue(ECONOMICS_SYSTEMS.indexOf(group.system) !== -1, 'unknown economics system');
+        [group.low_cad_m3, group.base_cad_m3, group.high_cad_m3].forEach(function (value) {
+          requireTrue(Number.isFinite(value), 'non-finite economics value');
+        });
+      });
+    });
+    requireTrue(econ.qc_reference &&
+      econ.qc_reference.net_value_status === 'separate_reference_not_net_value', 'QC reference is not separated');
+    requireTrue(Math.abs(econ.qc_reference.cost_spread_after_transfers_cad_m3 - 0.81) < 1e-9, 'stale QC spread');
+    requireTrue(Array.isArray(econ.evidence_rows) && econ.evidence_rows.length > 0, 'evidence tier rows are missing');
+    requireTrue(econ.labels && econ.labels.evidence === 'model_estimate' &&
+      econ.labels.policy_grade === false, 'economics evidence labels mismatch');
+    requireTrue(econ.labels.forest_lp_input === false && econ.labels.public_osecan_input === false,
+      'economics must stay outside the Forest LP and public OSeCAN');
+    requireTrue(econ.downloads && econ.downloads.detail_csv && econ.downloads.model_inputs_zip,
+      'economics downloads are missing');
+  }
+
+  function economicsScale(econ) {
+    var values = [];
+    econ.zones.forEach(function (zone) {
+      zone.systems.forEach(function (group) {
+        values.push(group.low_cad_m3, group.base_cad_m3, group.high_cad_m3);
+      });
+    });
+    var low = Math.min.apply(null, values);
+    var high = Math.max.apply(null, values);
+    var padding = Math.max(5, (high - low) * 0.04);
+    return { min: Math.floor(low - padding), max: Math.ceil(high + padding) };
+  }
+
+  function economicsPct(value, scale) {
+    return ((value - scale.min) / (scale.max - scale.min)) * 100;
+  }
+
+  function economicsBadges(econ) {
+    return '<span class="badge badge--econ-public">public_reference</span>' +
+      '<span class="badge badge--econ-model">' + esc(econ.labels.evidence) + '</span>' +
+      '<span class="badge badge--econ-policy">policy_grade=' + (econ.labels.policy_grade ? 'true' : 'false') + '</span>' +
+      '<span class="badge badge--econ-readonly">reported sensitivity · read-only</span>' +
+      '<span class="badge badge--econ-readonly">no Forest LP / OSeCAN input</span>';
+  }
+
+  function renderEconomicsRange(econ) {
+    var h = econ.headline;
+    var scale = economicsScale(econ);
+    var low = economicsPct(h.min_base_net_model_cad_m3, scale);
+    var high = economicsPct(h.max_base_net_model_cad_m3, scale);
+    var median = economicsPct(h.median_base_net_model_cad_m3, scale);
+    var zero = economicsPct(0, scale);
+    var negativeWidth = Math.max(0, Math.min(high, zero) - low);
+    $('economics-range').innerHTML =
+      '<div class="economics-range-axis">' +
+        '<span class="economics-range-zero-label" style="left:' + zero + '%">0</span>' +
+      '</div>' +
+      '<div class="economics-range-track" aria-hidden="true">' +
+        '<span class="economics-range-band" style="left:' + low + '%;width:' + Math.max(0, high - low) + '%"></span>' +
+        '<span class="economics-range-negative" style="left:' + low + '%;width:' + negativeWidth + '%"></span>' +
+        '<span class="economics-range-zero" style="left:' + zero + '%"></span>' +
+        '<span class="economics-range-median" style="left:' + median + '%"></span>' +
+      '</div>' +
+      '<div class="economics-range-labels">' +
+        '<span>' + fmt(h.min_base_net_model_cad_m3, 2) + '</span>' +
+        '<span>median <strong>' + fmt(h.median_base_net_model_cad_m3, 2) + '</strong></span>' +
+        '<span>' + fmt(h.max_base_net_model_cad_m3, 2) + '</span>' +
+      '</div>' +
+      '<div class="economics-range-foot">' +
+        '<span class="economics-range-key"><i class="is-negative"></i>negative part of base range</span>' +
+        '<span class="economics-range-key"><i class="is-median"></i>median</span>' +
+        '<span class="mono small">' + fmt(h.negative_net_base_rows, 0) + ' / ' + fmt(h.rows, 0) +
+          ' rows below zero · CAD/m³</span>' +
+      '</div>';
+  }
+
+  function renderEconomicsQc(econ) {
+    var qc = econ.qc_reference;
+    $('economics-qc').innerHTML =
+      '<p class="kicker">Separate reference · QC</p>' +
+      '<h3>Not net value</h3>' +
+      '<div class="economics-qc-hero">' +
+        '<strong>' + fmt(qc.cost_spread_after_transfers_cad_m3, 2) + '</strong>' +
+        '<span>CAD/m³ after-transfer cost spread</span>' +
+      '</div>' +
+      '<span class="badge badge--econ-qc">separate_reference_not_net_value</span>' +
+      '<dl class="economics-qc-list">' +
+        '<div><dt>Purchase cost</dt><dd>' + fmt(qc.purchase_cost_cad_m3, 2) + '</dd></div>' +
+        '<div><dt>BGAD before transfers</dt><dd>' + fmt(qc.bgad_before_transfers_cad_m3, 2) + '</dd></div>' +
+        '<div><dt>Transfers</dt><dd>' + fmt(qc.transfers_total_cad_m3, 2) + '</dd></div>' +
+        '<div><dt>BGAD after transfers</dt><dd>' + fmt(qc.bgad_after_transfers_cad_m3, 2) + '</dd></div>' +
+        '<div><dt>Spread before transfers</dt><dd>' + fmt(qc.cost_spread_before_transfers_cad_m3, 2) + '</dd></div>' +
+      '</dl>' +
+      '<p class="method-note">' + esc(qc.notes) + '</p>' +
+      '<p class="method-note mono small">' + esc(qc.geography) + ' · ' + esc(qc.species_group) +
+        ' · ' + fmt(qc.price_year, 0) + ' · ' + esc(qc.evidence) + ' · policy_grade=false</p>';
+  }
+
+  function renderEconomicsTable(econ) {
+    var scale = economicsScale(econ);
+    var rows = '';
+    econ.zones.forEach(function (zone) {
+      zone.systems.forEach(function (group, index) {
+        var lowPct = economicsPct(group.low_cad_m3, scale);
+        var highPct = economicsPct(group.high_cad_m3, scale);
+        rows += '<tr class="' + (group.negative ? 'is-negative' : '') + '">' +
+          (index === 0
+            ? '<td class="economics-zone-cell" rowspan="' + zone.systems.length + '"><strong>' +
+              esc(zone.zone) + '</strong><span>' + esc(zone.price_region) + ' · ' + fmt(zone.n_rows, 0) +
+              ' rows</span></td>'
+            : '') +
+          '<td><span class="badge badge--system badge--system-' + esc(group.system) + '">' +
+            esc(group.system) + '</span></td>' +
+          '<td class="num' + (group.low_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
+            fmt(group.low_cad_m3, 2) + '</td>' +
+          '<td class="num economics-base' + (group.base_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
+            fmt(group.base_cad_m3, 2) + '</td>' +
+          '<td class="num' + (group.high_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
+            fmt(group.high_cad_m3, 2) + '</td>' +
+          '<td class="num mono">' + fmt(group.base_min_cad_m3, 2) + ' to ' + fmt(group.base_max_cad_m3, 2) + '</td>' +
+          '<td><span class="economics-range-mini" aria-hidden="true">' +
+            '<span class="economics-range-mini-fill" style="left:' + lowPct + '%;width:' +
+              Math.max(0.8, highPct - lowPct) + '%"></span>' +
+            '<span class="economics-range-mini-zero" style="left:' + economicsPct(0, scale) + '%"></span>' +
+          '</span></td>' +
+          '<td class="num' + (group.negative_rows ? ' is-negative-value' : '') + '">' +
+            fmt(group.negative_rows, 0) + ' / ' + fmt(group.n_rows, 0) + '</td>' +
+          '</tr>';
+      });
+    });
+    $('economics-table').innerHTML =
+      '<caption>Modeled base net_model by zone and system · CAD/m³ · summary medians · low/base/high are model scenarios, not observations</caption>' +
+      '<thead><tr><th>Zone</th><th>System</th><th class="num">Low</th><th class="num">Base</th>' +
+      '<th class="num">High</th><th class="num">Base range</th><th>Position</th><th class="num">Negative</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>';
+  }
+
+  function renderEconomicsEvidence(econ) {
+    var badges = econ.evidence_tiers.map(function (tier) {
+      return '<span class="badge badge--econ-tier">' + esc(tier) + '</span>';
+    }).join('');
+    var rows = econ.evidence_rows.map(function (row) {
+      var revenue = row.revenue_median_cad_m3 == null
+        ? '<span class="muted">not estimated</span>'
+        : '<span class="mono">' + fmt(row.revenue_min_cad_m3, 2) + ' / ' +
+          fmt(row.revenue_median_cad_m3, 2) + ' / ' + fmt(row.revenue_max_cad_m3, 2) + '</span>';
+      return '<tr>' +
+        '<td>' + esc(row.jurisdiction) + '</td>' +
+        '<td><span class="badge badge--econ-tier">' + esc(row.evidence_tier) + '</span></td>' +
+        '<td>' + esc(row.revenue_basis) + '<span class="economics-evidence-measure">' +
+          esc(row.revenue_measure) + '</span></td>' +
+        '<td class="num">' + revenue + '</td>' +
+        '<td><span class="badge badge--econ-status">' + esc(row.net_value_status) + '</span>' +
+          '<span class="badge badge--econ-policy">policy_grade=' + (row.policy_grade ? 'true' : 'false') + '</span></td>' +
+        '<td>' + esc(row.cost_coverage) + '</td></tr>';
+    }).join('');
+    $('economics-evidence').innerHTML =
+      '<div class="economics-tier-strip">' + badges + '</div>' +
+      '<details class="fold-block economics-evidence-fold">' +
+        '<summary>' + fmt(econ.evidence_rows.length, 0) + ' evidence rows · all not_estimated · policy_grade=false</summary>' +
+        '<div><div class="table-wrap"><table class="data-table data-table--compact economics-evidence-table">' +
+          '<caption>Separated evidence register; revenue is never combined with the QC procurement cost or a modeled margin.</caption>' +
+          '<thead><tr><th>Jurisdiction</th><th>Evidence tier</th><th>Revenue basis</th><th class="num">Min / median / max (CAD/m³)</th><th>Net value</th><th>Cost coverage</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody></table></div></div>' +
+      '</details>';
+  }
+
+  function renderEconomicsCaveat(econ) {
+    var caveats = econ.caveats || [];
+    var visible = caveats.slice(0, 6);
+    var rest = caveats.slice(6);
+    $('economics-caveat').innerHTML =
+      '<strong>Published averages + proxy cost model · not observed · not policy · no BC+QC total</strong>' +
+      '<p>Corrected reported sensitivity: published mill-delivered price averages plus a proxy logging/haul cost model and a published Interior silviculture allowance. Not observed transactions, not a mill margin, not policy grade, and never a combined BC+QC national total.</p>' +
+      '<ul>' + visible.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
+      (rest.length
+        ? '<details><summary>Full caveat register (' + fmt(rest.length, 0) + ' more)</summary><ul>' +
+          rest.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul></details>'
+        : '') +
+      '<p class="economics-nonclaims">Non-claims: ' + esc((econ.non_claims || []).join(' · ')) + '</p>';
+  }
+
+  function renderEconomicsDownloads(econ) {
+    var detail = econ.downloads.detail_csv;
+    var bundle = econ.downloads.model_inputs_zip;
+    var manifest = econ.downloads.manifest;
+    $('economics-downloads').innerHTML =
+      '<a class="economics-download" href="' + esc(DATA_ROOT + detail.path) + '" download>' +
+        '<span class="economics-download-label">' + esc(detail.label) + '</span>' +
+        '<span class="economics-download-meta">' + fmt(detail.rows, 0) + ' rows · ' +
+          fmtBytes(detail.bytes) + '</span>' +
+        '<span class="economics-download-hash mono">sha256 ' + esc(String(detail.sha256).slice(0, 16)) + '…</span>' +
+      '</a>' +
+      '<a class="economics-download" href="' + esc(DATA_ROOT + bundle.path) + '" download>' +
+        '<span class="economics-download-label">' + esc(bundle.label) + '</span>' +
+        '<span class="economics-download-meta">' + fmt(bundle.files.length, 0) + ' files · ' +
+          fmtBytes(bundle.bytes) + '</span>' +
+        '<span class="economics-download-hash mono">sha256 ' + esc(String(bundle.sha256).slice(0, 16)) + '…</span>' +
+      '</a>' +
+      '<a class="economics-download" href="' + esc(DATA_ROOT + manifest.path) + '" download>' +
+        '<span class="economics-download-label">' + esc(manifest.label) + '</span>' +
+        '<span class="economics-download-meta">source hashes · bundle hashes · validation checks</span>' +
+        '<span class="economics-download-hash mono">' + esc(manifest.media_type) + '</span>' +
+      '</a>';
+  }
+
+  function renderEconomicsChart() {
+    if (!state.economics) return;
+    var container = $('economics-chart');
+    if (!container) return;
+    if (!window.echarts) {
+      container.innerHTML = '<div class="empty-state" style="display:grid">ECharts failed to load. Check vendor/echarts.min.js.</div>';
+      return;
+    }
+    var econ = state.economics;
+    var zoneLabels = econ.zones.map(function (zone) { return zone.zone.replace(/ Zone$/, ''); });
+    var data = [];
+    var bases = [];
+    econ.zones.forEach(function (zone, zoneIndex) {
+      econ.systems.forEach(function (group, systemIndex) {
+        data.push({ value: [systemIndex, zoneIndex, group.base_cad_m3], group: group, zone: zone.zone });
+        bases.push(group.base_cad_m3);
+      });
+    });
+    var minBase = Math.min.apply(null, bases);
+    var maxBase = Math.max.apply(null, bases);
+    if (!state.economicsChart) {
+      state.economicsChart = window.echarts.init(container, null, { renderer: 'canvas' });
+    }
+    state.economicsChart.setOption({
+      animationDuration: 520,
+      textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
+      grid: { left: 158, right: 26, top: 18, bottom: 82, containLabel: false },
+      tooltip: {
+        trigger: 'item',
+        confine: true,
+        backgroundColor: '#0c1f19',
+        borderColor: '#d98a2b',
+        borderWidth: 1,
+        textStyle: { color: '#f3ead7', fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 12 },
+        formatter: function (params) {
+          var group = params.data.group;
+          return '<strong>' + esc(params.data.zone) + ' · ' + esc(group.system) + '</strong><br>' +
+            'Base median: ' + fmt(group.base_cad_m3, 2) + ' CAD/m³<br>' +
+            'Low / high: ' + fmt(group.low_cad_m3, 2) + ' / ' + fmt(group.high_cad_m3, 2) + '<br>' +
+            'Negative rows: ' + fmt(group.negative_rows, 0) + ' / ' + fmt(group.n_rows, 0);
+        }
+      },
+      xAxis: {
+        type: 'category',
+        data: ECONOMICS_SYSTEMS,
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#b8a57e' } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 10, color: '#6c786c' },
+        splitArea: { show: false }
+      },
+      yAxis: {
+        type: 'category',
+        data: zoneLabels,
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#b8a57e' } },
+        axisLabel: { fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 10, color: '#435347' },
+        splitArea: { show: false }
+      },
+      visualMap: {
+        min: minBase,
+        max: maxBase,
+        calculable: false,
+        orient: 'horizontal',
+        left: 'center',
+        bottom: 8,
+        text: ['high', 'low'],
+        textStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c' },
+        inRange: { color: ['#7e3823', '#a94f31', '#e9dcc3', '#fbf6e9', '#93a894', '#2c5746', '#17382c'] }
+      },
+      series: [{
+        name: 'Base median',
+        type: 'heatmap',
+        data: data,
+        label: {
+          show: true,
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: 9,
+          color: '#17251d',
+          formatter: function (params) { return fmt(params.value[2], 2); }
+        },
+        itemStyle: { borderColor: '#f3ead7', borderWidth: 2 },
+        emphasis: { itemStyle: { borderColor: '#d98a2b', borderWidth: 2 } }
+      }]
+    }, true);
+  }
+
+  function renderEconomics() {
+    if (!state.economics) return;
+    var econ = state.economics;
+    var h = econ.headline;
+    $('economics-badges').innerHTML = economicsBadges(econ);
+    var summarySource = econ.sources.filter(function (source) {
+      return /bc_open_net_value_summary\.csv$/.test(source.path);
+    })[0];
+    var detailSource = econ.sources.filter(function (source) {
+      return /bc_open_net_value\.csv$/.test(source.path) && !/summary/.test(source.path);
+    })[0];
+    $('economics-source-note').innerHTML = 'Display medians: <span class="mono">' +
+      esc(summarySource ? summarySource.path : 'bc_open_net_value_summary.csv') + '</span> · full detail/download: <span class="mono">' +
+      esc(detailSource ? detailSource.path : 'bc_open_net_value.csv') + '</span> · ' + fmt(h.rows, 0) + ' rows.';
+    $('economics-generated').textContent = 'Generated ' + fmtDate(econ.generated_utc) + ' · ' + econ.zones.length +
+      ' zones · ' + fmt(h.zone_system_groups, 0) + ' groups · ' + fmt(econ.downloads.model_inputs_zip.files.length, 0) +
+      ' model-input files · schema ' + econ.schema_version;
+    $('economics-headline').innerHTML =
+      metricCard('Median modeled margin', fmt(h.median_base_net_model_cad_m3, 2), 'CAD/m³',
+        fmt(h.rows, 0) + ' rows · ' + fmt(h.zone_system_groups, 0) + ' zone × system groups', true) +
+      metricCard('Base range', fmt(h.min_base_net_model_cad_m3, 2) + ' to ' + fmt(h.max_base_net_model_cad_m3, 2),
+        'CAD/m³', 'lowest and highest modeled base row', false) +
+      metricCard('Negative rows', fmt(h.negative_net_base_rows, 0) + ' / ' + fmt(h.rows, 0),
+        'rows', fmtPct(h.negative_net_base_share, 1) + ' of modeled base rows', false) +
+      metricCard('Evidence tier', econ.labels.evidence, 'not observed',
+        'source: ' + econ.labels.source_licensing + ' · policy_grade=false', false);
+    renderEconomicsRange(econ);
+    renderEconomicsQc(econ);
+    renderEconomicsTable(econ);
+    renderEconomicsEvidence(econ);
+    renderEconomicsCaveat(econ);
+    renderEconomicsDownloads(econ);
+    $('economics-loading').hidden = true;
+    $('economics-content').hidden = false;
+    if (state.tab === 'economics') renderEconomicsChart();
+  }
+
   /* ---------------- Inputs ---------------- */
 
   function renderInputsStatic() {
@@ -6169,7 +6518,8 @@
         loadJSON('inputs/supply_curve.json'),
         loadJSON('inputs/managed_landbase.json'),
         loadJSON('inputs/operable_proxy.json'),
-        loadJSON('spatial/zone_nodes.json')
+        loadJSON('spatial/zone_nodes.json'),
+        loadJSON('economics/summary.json')
       ]);
       buildCoreState({
         manifest: bundle[0],
@@ -6179,7 +6529,8 @@
         supply: bundle[4],
         landbase: bundle[5],
         operable: bundle[6],
-        zoneNodes: bundle[7]
+        zoneNodes: bundle[7],
+        economics: bundle[8]
       });
       await initLiveMode();
       if (state.warnings.length) {
@@ -6197,6 +6548,7 @@
     if (state.dispatch.chart) state.dispatch.chart.resize();
     if (state.tradeoffChart) state.tradeoffChart.resize();
     if (state.harvestChart) state.harvestChart.resize();
+    if (state.economicsChart) state.economicsChart.resize();
     if (state.mapState.map) state.mapState.map.resize();
     if (state.tab === 'explore') {
       if (state.paretoChart) state.paretoChart.resize();
