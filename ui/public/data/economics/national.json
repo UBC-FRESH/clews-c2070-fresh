@@ -1,0 +1,590 @@
+{
+  "schema_version": "economics/national/1",
+  "model_id": "national_economics_v2_1",
+  "artifact_version": "2.1.0",
+  "generated_utc": "2026-11-22T06:26:14+00:00",
+  "status": "model_estimate_base_donor_flat_sensitivity_stumpage_scaled",
+  "role": "national_model_estimate_diagnostic",
+  "base_scenario": "donor_flat",
+  "sensitivity_scenario": "stumpage_scaled",
+  "jurisdiction_count": 13,
+  "decision": {
+    "base_scenario": "donor_flat",
+    "sensitivity_scenario": "stumpage_scaled",
+    "stumpage_scaled_preferred": false,
+    "stumpage_scaled_observed": false,
+    "stumpage_scaled_policy_grade": false,
+    "reason": "v1 flat BC donor is the consistent base. The v2 stumpage-scaled proxy is a method sensitivity because dues/royalties are not delivered prices and are not comparable to the donor."
+  },
+  "labels": {
+    "evidence": "model_estimate",
+    "observed": false,
+    "policy_grade": false,
+    "combined_national_net_value": false,
+    "national_diagnostic_label": "model_estimate_not_policy",
+    "strict_open": false,
+    "forest_lp_input": false,
+    "public_osecan_input": false
+  },
+  "coverage": {
+    "province_count": 13,
+    "provinces": [
+      "BC",
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "not_estimated_count": 0,
+    "jurisdiction_rows": 13,
+    "scenario_rows": 78
+  },
+  "national_diagnostic": {
+    "allocation_volume_m3": 118977339.1,
+    "label": "model_estimate_not_policy",
+    "combined_national_net_value": false,
+    "volume_weighted": true,
+    "donor_flat": {
+      "scenario_role": "base",
+      "low_cad_m3": -94.7046,
+      "base_cad_m3": 33.1365,
+      "high_cad_m3": 81.3168
+    },
+    "stumpage_scaled": {
+      "scenario_role": "sensitivity",
+      "low_cad_m3": -130.0389,
+      "base_cad_m3": -16.122,
+      "high_cad_m3": 38.4085
+    }
+  },
+  "scenarios": [
+    {
+      "id": "donor_flat",
+      "role": "base",
+      "label": "Base · donor_flat",
+      "is_base": true,
+      "price_basis": "flat_BC_donor_delivered_proxy_not_observed",
+      "price_tier_counts": {
+        "donor_proxy": 12,
+        "reported_average": 1
+      }
+    },
+    {
+      "id": "stumpage_scaled",
+      "role": "sensitivity",
+      "label": "Sensitivity · stumpage_scaled",
+      "is_base": false,
+      "price_basis": "mixed_reported_average_and_stumpage_scaled_proxy_not_observed",
+      "price_tier_counts": {
+        "donor_proxy": 5,
+        "reported_average": 1,
+        "stumpage_scaled_proxy": 7
+      }
+    }
+  ],
+  "jurisdictions": [
+    {
+      "province": "BC",
+      "province_name": "British Columbia",
+      "allocation_volume_m3": 39978577.0,
+      "volume_share": 0.33601842,
+      "volume_reference_basis": "repo_parsed_tsa_aac",
+      "donor_flat": {
+        "low_cad_m3": -100.193,
+        "base_cad_m3": 30.938,
+        "high_cad_m3": 80.1893,
+        "price_tier": "reported_average",
+        "cost_tier": "proxy_model",
+        "price_basis": "mill_delivered_observed_report_average",
+        "stumpage_rate_type": "bcts_average_stumpage_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -100.193,
+        "base_cad_m3": 30.938,
+        "high_cad_m3": 80.1893,
+        "price_tier": "reported_average",
+        "cost_tier": "proxy_model",
+        "price_basis": "mill_delivered_observed_report_average",
+        "stumpage_rate_type": "bcts_average_stumpage_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "bcts_average_stumpage_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "AB",
+      "province_name": "Alberta",
+      "allocation_volume_m3": 22891404.0,
+      "volume_share": 0.19240138,
+      "volume_reference_basis": "crown_aac_approx",
+      "donor_flat": {
+        "low_cad_m3": -89.9629,
+        "base_cad_m3": 35.036,
+        "high_cad_m3": 82.2909,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -159.1259,
+        "base_cad_m3": -62.1313,
+        "high_cad_m3": -0.4042,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -97.1673,
+      "stumpage_rate_type": "timber_dues_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "SK",
+      "province_name": "Saskatchewan",
+      "allocation_volume_m3": 4344697.6,
+      "volume_share": 0.03651702,
+      "volume_reference_basis": "crown_aac_approx",
+      "donor_flat": {
+        "low_cad_m3": -91.8865,
+        "base_cad_m3": 34.2655,
+        "high_cad_m3": 81.8957,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -161.1806,
+        "base_cad_m3": -28.7524,
+        "high_cad_m3": 10.5475,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -63.0179,
+      "stumpage_rate_type": "timber_dues_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "MB",
+      "province_name": "Manitoba",
+      "allocation_volume_m3": 1135235.8,
+      "volume_share": 0.00954161,
+      "volume_reference_basis": "documented_range_midpoint_proxy",
+      "donor_flat": {
+        "low_cad_m3": -94.0598,
+        "base_cad_m3": 33.3948,
+        "high_cad_m3": 81.4492,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -159.0291,
+        "base_cad_m3": -60.2293,
+        "high_cad_m3": -24.5511,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_dues_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -93.6241,
+      "stumpage_rate_type": "timber_dues_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "ON",
+      "province_name": "Ontario",
+      "allocation_volume_m3": 13493596.0,
+      "volume_share": 0.11341316,
+      "volume_reference_basis": "crown_aac_approx",
+      "donor_flat": {
+        "low_cad_m3": -89.5499,
+        "base_cad_m3": 35.2015,
+        "high_cad_m3": 82.3757,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "crown_timber_charges_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -151.2866,
+        "base_cad_m3": -57.849,
+        "high_cad_m3": -22.9751,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "crown_timber_charges_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -93.0505,
+      "stumpage_rate_type": "crown_timber_charges_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "QC",
+      "province_name": "Quebec",
+      "allocation_volume_m3": 26674334.0,
+      "volume_share": 0.22419676,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -96.6814,
+        "base_cad_m3": 32.3447,
+        "high_cad_m3": 80.9107,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy_with_reported_road",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "standing_value_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -143.5218,
+        "base_cad_m3": -35.971,
+        "high_cad_m3": 35.6949,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy_with_reported_road",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "standing_value_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -68.3157,
+      "stumpage_rate_type": "standing_value_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "NB",
+      "province_name": "New Brunswick",
+      "allocation_volume_m3": 6234700.0,
+      "volume_share": 0.05240242,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -85.2473,
+        "base_cad_m3": 36.925,
+        "high_cad_m3": 83.2596,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "timber_royalty_rate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -107.7337,
+        "base_cad_m3": 5.627,
+        "high_cad_m3": 55.5035,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "timber_royalty_rate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -31.298,
+      "stumpage_rate_type": "timber_royalty_rate",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "NS",
+      "province_name": "Nova Scotia",
+      "allocation_volume_m3": 2388245.0,
+      "volume_share": 0.02007311,
+      "volume_reference_basis": "crown_plus_documented_private_aac",
+      "donor_flat": {
+        "low_cad_m3": -85.2563,
+        "base_cad_m3": 36.9214,
+        "high_cad_m3": 83.2577,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "standing_timber_value_survey"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -94.9869,
+        "base_cad_m3": 43.9234,
+        "high_cad_m3": 91.1853,
+        "price_tier": "stumpage_scaled_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "stumpage_scaled_delivered_price_proxy_not_observed",
+        "stumpage_rate_type": "standing_timber_value_survey"
+      },
+      "scaled_minus_donor_flat_cad_m3": 7.002,
+      "stumpage_rate_type": "standing_timber_value_survey",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "NL",
+      "province_name": "Newfoundland and Labrador",
+      "allocation_volume_m3": 1454037.5,
+      "volume_share": 0.01222113,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -96.6444,
+        "base_cad_m3": 32.3595,
+        "high_cad_m3": 80.9183,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -96.6444,
+        "base_cad_m3": 32.3595,
+        "high_cad_m3": 80.9183,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "PE",
+      "province_name": "Prince Edward Island",
+      "allocation_volume_m3": 302210.4,
+      "volume_share": 0.00254007,
+      "volume_reference_basis": "nfd_planning_volume_no_aac+operable_missing",
+      "donor_flat": {
+        "low_cad_m3": -85.2469,
+        "base_cad_m3": 36.9252,
+        "high_cad_m3": 83.2597,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -85.2469,
+        "base_cad_m3": 36.9252,
+        "high_cad_m3": 83.2597,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "YT",
+      "province_name": "Yukon",
+      "allocation_volume_m3": 43925.8,
+      "volume_share": 0.00036919,
+      "volume_reference_basis": "legal_crown_aac",
+      "donor_flat": {
+        "low_cad_m3": -100.6176,
+        "base_cad_m3": 30.7679,
+        "high_cad_m3": 80.1021,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -100.6176,
+        "base_cad_m3": 30.7679,
+        "high_cad_m3": 80.1021,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "NT",
+      "province_name": "Northwest Territories",
+      "allocation_volume_m3": 36376.0,
+      "volume_share": 0.00030574,
+      "volume_reference_basis": "actual_mean_proxy_no_territory_aac",
+      "donor_flat": {
+        "low_cad_m3": -101.331,
+        "base_cad_m3": 30.4821,
+        "high_cad_m3": 79.9555,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -101.331,
+        "base_cad_m3": 30.4821,
+        "high_cad_m3": 79.9555,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    },
+    {
+      "province": "NU",
+      "province_name": "Nunavut",
+      "allocation_volume_m3": 0.0,
+      "volume_share": 0.0,
+      "volume_reference_basis": "not_assessed_no_data+operable_missing",
+      "donor_flat": {
+        "low_cad_m3": -105.3059,
+        "base_cad_m3": 28.8899,
+        "high_cad_m3": 79.139,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -105.3059,
+        "base_cad_m3": 28.8899,
+        "high_cad_m3": 79.139,
+        "price_tier": "donor_proxy",
+        "cost_tier": "donor_proxy",
+        "price_basis": "donor_flat_delivered_proxy_not_observed",
+        "stumpage_rate_type": "no_provincial_rate_fallback_donor"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "stumpage_rate_type": "no_provincial_rate_fallback_donor",
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "method_change_not_observed_market_change"
+    }
+  ],
+  "tier_coverage": {
+    "basis": "volume_weighted_five_component_cells",
+    "component_count": 5,
+    "province_count": 13,
+    "cell_count": 65,
+    "volume_weighted_shares": {
+      "reported_average": 0.17924672,
+      "proxy_model": 0.13440737,
+      "donor_proxy": 0.68634592,
+      "assumption": 0.0
+    },
+    "volume_weighted_pct": {
+      "reported_average": 17.9247,
+      "proxy_model": 13.4407,
+      "donor_proxy": 68.6346,
+      "assumption": 0.0
+    },
+    "cell_counts": {
+      "reported_average": 3,
+      "proxy_model": 2,
+      "donor_proxy": 60,
+      "assumption": 0
+    },
+    "cell_shares": {
+      "reported_average": 0.04615385,
+      "proxy_model": 0.03076923,
+      "donor_proxy": 0.92307692,
+      "assumption": 0.0
+    },
+    "cell_pct": {
+      "reported_average": 4.6154,
+      "proxy_model": 3.0769,
+      "donor_proxy": 92.3077,
+      "assumption": 0.0
+    },
+    "total_harvest_volume_m3": 118977339.1,
+    "scenario_price_tiers": {
+      "donor_flat": {
+        "donor_proxy": 12,
+        "reported_average": 1
+      },
+      "stumpage_scaled": {
+        "donor_proxy": 5,
+        "reported_average": 1,
+        "stumpage_scaled_proxy": 7
+      }
+    },
+    "scenario_cost_tiers": {
+      "donor_flat": {
+        "donor_proxy": 11,
+        "donor_proxy_with_reported_road": 1,
+        "proxy_model": 1
+      },
+      "stumpage_scaled": {
+        "donor_proxy": 11,
+        "donor_proxy_with_reported_road": 1,
+        "proxy_model": 1
+      }
+    }
+  },
+  "national_comparison": {
+    "scaled_minus_donor_flat_cad_m3": -49.2585,
+    "dues_comparable_to_delivered_price": false,
+    "comparison_status": "method_change_not_observed_market_change",
+    "notes": "Volume-weighted diagnostic. A dues rate is not a delivered log price; the scaled-minus-donor-flat delta is a method effect, not an observed market change. No combined national net value is computed."
+  },
+  "caveats": [
+    "National values are volume-weighted model diagnostics, not a combined national net value.",
+    "donor_flat is the base scenario. stumpage_scaled is a method sensitivity: not preferred, not observed and not policy grade.",
+    "Stumpage, dues, royalty and standing-value rates are charges on standing timber, not delivered log prices. The scaled-minus-donor-flat delta is a method change, not an observed market change.",
+    "No jurisdiction row is an observed transaction, policy-grade value, Forest LP input or public OSeCAN input."
+  ],
+  "non_claims": [
+    "No combined national net value.",
+    "Not observed; observed=false.",
+    "Not policy grade; policy_grade=false.",
+    "Not a Forest LP objective or constraint input.",
+    "Not a public OSeCAN input.",
+    "Not a legal AAC or a policy frontier."
+  ],
+  "source_files": [
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_estimates.csv",
+      "rows": 78
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_summary.csv",
+      "rows": 28
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/scenario_comparison.csv",
+      "rows": 14
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/tier_coverage.csv",
+      "rows": 39
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_coverage.csv",
+      "rows": 65
+    }
+  ],
+  "download": {
+    "json": {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "media_type": "application/json"
+    },
+    "manifest": {
+      "path": "economics/national.manifest.json",
+      "label": "National economics manifest",
+      "media_type": "application/json"
+    }
+  }
+}

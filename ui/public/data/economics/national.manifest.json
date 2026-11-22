@@ -1,0 +1,81 @@
+{
+  "schema_version": "economics/national-manifest/1",
+  "model_id": "national_economics_v2_1",
+  "artifact_version": "2.1.0",
+  "generated_utc": "2026-11-22T06:26:14+00:00",
+  "parent_commit": "71e91b4d264f7d36ec097a94e3b7e56a73551d17",
+  "data_commit": "fb443347df5a11e0df25a42834d37beac2315d99",
+  "files": [
+    {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "bytes": 20832,
+      "sha256": "8e19110f12536050cf2ef73f0b3f7e8333e4c8187dc447cb36864f4e43870ab3"
+    }
+  ],
+  "generated": [
+    {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "bytes": 20832,
+      "sha256": "8e19110f12536050cf2ef73f0b3f7e8333e4c8187dc447cb36864f4e43870ab3"
+    }
+  ],
+  "sources": [
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_estimates.csv",
+      "rows": 78,
+      "bytes": 89582,
+      "sha256": "946fd7ee1f88face619cefb9551825cf1d077b3de5d7a0db4973c13070502833"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/national_margin_summary.csv",
+      "rows": 28,
+      "bytes": 24556,
+      "sha256": "631b17ff1cf75a8b0eb16d983f89c770487501b21a9fc8676d279dbefc22090c"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/scenario_comparison.csv",
+      "rows": 14,
+      "bytes": 12722,
+      "sha256": "a39763368fafd63e5b09220593e8b65c90d23ceea38aea7081c8b9ef6d76cc3f"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/tier_coverage.csv",
+      "rows": 39,
+      "bytes": 6418,
+      "sha256": "e467bd153ef13f9795fd1f458ed29e9acc1e48bb86348f49e9f14f329246083e"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/summary.json",
+      "rows": null,
+      "bytes": 56229,
+      "sha256": "eec8eab21e921e77ae2c75576080fa611c4179202f958dc64ed917c440e96712"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_coverage.csv",
+      "rows": 65,
+      "bytes": 32427,
+      "sha256": "d497b3db3c35640df78d7264db404a0aa4bf0015ab3d8283fd1730631135cb49"
+    }
+  ],
+  "validation": {
+    "ok": true,
+    "jurisdiction_count": 13,
+    "base_national_margin_cad_m3": 33.1365,
+    "sensitivity_national_margin_cad_m3": -16.122,
+    "tier_cell_count": 65,
+    "tier_volume_shares": {
+      "reported_average": 0.17924672,
+      "proxy_model": 0.13440737,
+      "donor_proxy": 0.68634592,
+      "assumption": 0.0
+    },
+    "observed_claim": false,
+    "policy_grade_claim": false,
+    "combined_national_net_value": false,
+    "forest_lp_input": false,
+    "public_osecan_input": false,
+    "deletions_checked": true
+  }
+}

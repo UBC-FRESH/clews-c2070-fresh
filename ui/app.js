@@ -103,6 +103,14 @@
 
   var TIER_COLORS = { T1: '#d98a2b', T2: '#c17832', T3: '#9f5a32', T4: '#7e3823' };
   var ECONOMICS_SYSTEMS = ['ground', 'cable', 'heli'];
+  var NATIONAL_SCHEMA = 'economics/national/1';
+  var NATIONAL_MANIFEST_SCHEMA = 'economics/national-manifest/1';
+  var NATIONAL_TIERS = [
+    { id: 'reported_average', label: 'Reported average', color: '#2c5746' },
+    { id: 'proxy_model', label: 'Proxy model', color: '#d98a2b' },
+    { id: 'donor_proxy', label: 'Donor proxy', color: '#a94f31' },
+    { id: 'assumption', label: 'Assumption', color: '#9d8b6c' }
+  ];
   var SESSION_FAMILY = 'session_live';
   var LIVE_MODEL_COMMIT = '40d5b43';
   var FALLBACK_DEFAULTS = {
@@ -169,6 +177,10 @@
     core: null,
     economics: null,
     economicsChart: null,
+    national: null,
+    nationalManifest: null,
+    nationalChart: null,
+    nationalScenario: 'donor_flat',
     outputs: new Map(),
     outputPromises: new Map(),
     warnings: [],
@@ -521,7 +533,10 @@
     requireTrue(core.zoneNodes && core.zoneNodes.zone_count === 13 && core.zoneNodes.anchor_count === 2 && core.zoneNodes.gap_count === 11, 'zone-node contract mismatch');
     requireTrue(Array.isArray(core.zoneNodes.zones) && core.zoneNodes.zones.length === 13, 'zone-node rows are incomplete');
     validateEconomics(core.economics);
+    validateNational(core.national, core.nationalManifest);
     state.economics = core.economics;
+    state.national = core.national;
+    state.nationalManifest = core.nationalManifest;
     state.core = core;
     core.scenarioById = new Map();
     core.scenarios.scenarios.forEach(function (sc) { core.scenarioById.set(sc.scenario_id, sc); });
@@ -591,9 +606,11 @@
     bindOsecanControls();
     bindRunControls();
     bindAllocationControls();
+    bindNationalControls();
     renderOsecanStatic();
     renderInputsStatic();
     renderEconomics();
+    renderNational();
     activateTab(validTab(initialTab), { silent: true });
     updateHash();
   }
@@ -1043,7 +1060,7 @@
     if (state.tab === 'explore') renderExplore();
     if (state.tab === 'map') { initMap(); renderBreadcrumb(); renderSelectionPanel(); }
     if (state.tab === 'zones') renderZones();
-    if (state.tab === 'economics') renderEconomics();
+    if (state.tab === 'economics') { renderEconomics(); renderNational(); }
     if (state.tab === 'overview' && state.core) renderOverview();
     if (state.tab === 'osecan') renderOsecan();
     if (state.tab === 'run') renderRunMode();
@@ -1057,6 +1074,7 @@
       }
       if (state.tab === 'inputs' && state.harvestChart) state.harvestChart.resize();
       if (state.tab === 'economics' && state.economicsChart) state.economicsChart.resize();
+      if (state.tab === 'economics' && state.nationalChart) state.nationalChart.resize();
       if (state.tab === 'map' && state.mapState.map) state.mapState.map.resize();
     });
     if (!opts.silent) {
@@ -2382,6 +2400,20 @@
       var button = event.target.closest('button[data-allocation-scenario]');
       if (!button) return;
       selectScenario(button.getAttribute('data-allocation-scenario'));
+    });
+  }
+
+  function bindNationalControls() {
+    var select = $('national-scenario');
+    if (!select || select.getAttribute('data-bound') === 'true') return;
+    select.setAttribute('data-bound', 'true');
+    select.value = state.nationalScenario;
+    select.addEventListener('change', function () {
+      var scenario = select.value;
+      if (!state.national || !nationalScenarioById(scenario)) return;
+      state.nationalScenario = scenario;
+      renderNational();
+      announce('National economics scenario: ' + nationalScenarioById(scenario).label + '.');
     });
   }
 
@@ -6367,6 +6399,498 @@
     if (state.tab === 'economics') renderEconomicsChart();
   }
 
+  /* ---------------- National economics ---------------- */
+
+  function validateNational(national, manifest) {
+    requireTrue(national && national.schema_version === NATIONAL_SCHEMA, 'national economics schema mismatch');
+    requireTrue(national.model_id === 'national_economics_v2_1', 'national economics model id mismatch');
+    var labels = national.labels || {};
+    requireTrue(labels.evidence === 'model_estimate' && labels.observed === false &&
+      labels.policy_grade === false, 'national evidence labels mismatch');
+    requireTrue(labels.combined_national_net_value === false,
+      'national economics must not claim a combined national net value');
+    requireTrue(labels.forest_lp_input === false && labels.public_osecan_input === false,
+      'national economics must stay outside the Forest LP and public OSeCAN');
+    requireTrue(labels.national_diagnostic_label === 'model_estimate_not_policy',
+      'national diagnostic label mismatch');
+
+    var decision = national.decision || {};
+    requireTrue(decision.base_scenario === 'donor_flat' && decision.sensitivity_scenario === 'stumpage_scaled',
+      'national base/sensitivity decision mismatch');
+    requireTrue(decision.stumpage_scaled_preferred === false &&
+      decision.stumpage_scaled_observed === false &&
+      decision.stumpage_scaled_policy_grade === false,
+      'national sensitivity must not be preferred, observed or policy grade');
+
+    requireTrue(Array.isArray(national.scenarios) && national.scenarios.length === 2,
+      'national scenario list is incomplete');
+    var scenarioIds = national.scenarios.map(function (scenario) { return scenario.id; });
+    requireTrue(scenarioIds.indexOf('donor_flat') !== -1 && scenarioIds.indexOf('stumpage_scaled') !== -1,
+      'national scenario list is missing base or sensitivity');
+    requireTrue(national.scenarios.filter(function (scenario) { return scenario.is_base === true; }).length === 1,
+      'national scenario list must declare exactly one base');
+
+    var diagnostic = national.national_diagnostic || {};
+    var expectedNational = { donor_flat: 33.1365, stumpage_scaled: -16.1220 };
+    ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
+      var values = diagnostic[scenario];
+      requireTrue(values && Number.isFinite(values.low_cad_m3) &&
+        Number.isFinite(values.base_cad_m3) && Number.isFinite(values.high_cad_m3),
+        'national diagnostic is incomplete for ' + scenario);
+      requireTrue(values.low_cad_m3 <= values.base_cad_m3 && values.base_cad_m3 <= values.high_cad_m3,
+        'national diagnostic is unordered for ' + scenario);
+      requireTrue(Math.abs(values.base_cad_m3 - expectedNational[scenario]) < 1e-6,
+        'stale national diagnostic for ' + scenario);
+    });
+
+    requireTrue(Array.isArray(national.jurisdictions) && national.jurisdictions.length === 13,
+      'national jurisdiction count mismatch');
+    var provinces = new Set();
+    national.jurisdictions.forEach(function (row) {
+      requireTrue(row && typeof row.province === 'string' && !provinces.has(row.province),
+        'national jurisdiction is duplicated or missing');
+      provinces.add(row.province);
+      ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
+        var values = row[scenario];
+        requireTrue(values && Number.isFinite(values.low_cad_m3) &&
+          Number.isFinite(values.base_cad_m3) && Number.isFinite(values.high_cad_m3),
+          'national jurisdiction ' + row.province + ' is missing ' + scenario);
+        requireTrue(values.low_cad_m3 <= values.base_cad_m3 && values.base_cad_m3 <= values.high_cad_m3,
+          'national jurisdiction ' + row.province + ' is unordered for ' + scenario);
+        requireTrue(typeof values.price_tier === 'string' && typeof values.cost_tier === 'string',
+          'national jurisdiction ' + row.province + ' is missing tier labels');
+      });
+      requireTrue(Number.isFinite(row.scaled_minus_donor_flat_cad_m3),
+        'national jurisdiction ' + row.province + ' is missing its delta');
+    });
+
+    var tiers = national.tier_coverage || {};
+    requireTrue(tiers.cell_count === 65 && tiers.province_count === 13 && tiers.component_count === 5,
+      'national tier coverage cell count mismatch');
+    var shares = tiers.volume_weighted_shares || {};
+    requireTrue(Math.abs((shares.reported_average || 0) - 0.17924672) < 1e-6,
+      'stale reported-average coverage share');
+    requireTrue(Math.abs((shares.proxy_model || 0) - 0.13440737) < 1e-6,
+      'stale proxy-model coverage share');
+    requireTrue(Math.abs((shares.donor_proxy || 0) - 0.68634592) < 1e-6,
+      'stale donor-proxy coverage share');
+
+    requireTrue(manifest && manifest.schema_version === NATIONAL_MANIFEST_SCHEMA,
+      'national manifest schema mismatch');
+    requireTrue(Array.isArray(manifest.generated) && manifest.generated.length === 1 &&
+      manifest.generated[0].path === 'economics/national.json' &&
+      typeof manifest.generated[0].sha256 === 'string' &&
+      manifest.generated[0].sha256.length === 64,
+      'national manifest payload hash is missing');
+    requireTrue(Array.isArray(manifest.sources) && manifest.sources.length >= 5,
+      'national manifest source hashes are missing');
+  }
+
+  function nationalScenarioById(id) {
+    if (!state.national) return null;
+    var found = null;
+    state.national.scenarios.forEach(function (scenario) {
+      if (scenario.id === id) found = scenario;
+    });
+    return found;
+  }
+
+  function nationalSelectedScenario() {
+    var selected = nationalScenarioById(state.nationalScenario);
+    if (selected) return selected;
+    return nationalScenarioById('donor_flat');
+  }
+
+  function nationalTierMeta(id) {
+    var meta = { id: id, label: String(id).replace(/_/g, ' '), color: '#9d8b6c' };
+    NATIONAL_TIERS.forEach(function (tier) {
+      if (tier.id === id) meta = tier;
+    });
+    return meta;
+  }
+
+  function nationalTierBadge(id, suffix) {
+    var meta = nationalTierMeta(id);
+    return '<span class="badge badge--national-tier badge--national-' +
+      esc(String(id).replace(/_/g, '-')) + '">' + esc(meta.label) +
+      (suffix ? ' · ' + esc(suffix) : '') + '</span>';
+  }
+
+  function nationalSigned(value, digits) {
+    var text = fmt(value, digits);
+    return value > 0 ? '+' + text : text;
+  }
+
+  function nationalScale() {
+    var values = [0];
+    var national = state.national;
+    ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
+      var diagnostic = national.national_diagnostic[scenario];
+      values.push(diagnostic.low_cad_m3, diagnostic.base_cad_m3, diagnostic.high_cad_m3);
+    });
+    national.jurisdictions.forEach(function (row) {
+      ['donor_flat', 'stumpage_scaled'].forEach(function (scenario) {
+        values.push(row[scenario].low_cad_m3, row[scenario].base_cad_m3, row[scenario].high_cad_m3);
+      });
+    });
+    var low = Math.min.apply(null, values);
+    var high = Math.max.apply(null, values);
+    var padding = Math.max(5, (high - low) * 0.04);
+    return { min: Math.floor(low - padding), max: Math.ceil(high + padding) };
+  }
+
+  function nationalPct(value, scale) {
+    return ((value - scale.min) / (scale.max - scale.min)) * 100;
+  }
+
+  function nationalRangeBar(diagnostic, scale) {
+    var low = nationalPct(diagnostic.low_cad_m3, scale);
+    var high = nationalPct(diagnostic.high_cad_m3, scale);
+    var base = nationalPct(diagnostic.base_cad_m3, scale);
+    var zero = nationalPct(0, scale);
+    var negativeWidth = Math.max(0, Math.min(high, zero) - low);
+    return '<div class="economics-range-track national-range-track" aria-hidden="true">' +
+        '<span class="economics-range-band" style="left:' + low + '%;width:' +
+          Math.max(0, high - low) + '%"></span>' +
+        '<span class="economics-range-negative" style="left:' + low + '%;width:' +
+          negativeWidth + '%"></span>' +
+        '<span class="economics-range-zero" style="left:' + zero + '%"></span>' +
+        '<span class="economics-range-median" style="left:' + base + '%"></span>' +
+      '</div>' +
+      '<div class="economics-range-labels">' +
+        '<span>' + fmt(diagnostic.low_cad_m3, 4) + '</span>' +
+        '<span>base <strong>' + nationalSigned(diagnostic.base_cad_m3, 4) + '</strong></span>' +
+        '<span>' + fmt(diagnostic.high_cad_m3, 4) + '</span>' +
+      '</div>';
+  }
+
+  function nationalDiagnosticCard(scenarioId) {
+    var national = state.national;
+    var scenario = nationalScenarioById(scenarioId);
+    var diagnostic = national.national_diagnostic[scenarioId];
+    var selected = state.nationalScenario === scenarioId;
+    var isSensitivity = scenarioId === national.decision.sensitivity_scenario;
+    return '<article class="national-diagnostic-card' + (selected ? ' is-selected' : '') +
+        (isSensitivity ? ' is-sensitivity' : ' is-base') + '">' +
+      '<div class="national-diagnostic-head">' +
+        '<span class="kicker">' + esc(scenario.label) + '</span>' +
+        '<span class="badge badge--econ-readonly">volume-weighted</span>' +
+      '</div>' +
+      '<div class="national-diagnostic-value' + (diagnostic.base_cad_m3 < 0 ? ' is-negative' : '') + '">' +
+        nationalSigned(diagnostic.base_cad_m3, 4) + '</div>' +
+      '<span class="national-diagnostic-unit">CAD/m³ central model diagnostic</span>' +
+      nationalRangeBar(diagnostic, nationalScale()) +
+      '<dl class="national-diagnostic-stats">' +
+        '<div><dt>Low</dt><dd>' + fmt(diagnostic.low_cad_m3, 4) + '</dd></div>' +
+        '<div><dt>Base</dt><dd>' + fmt(diagnostic.base_cad_m3, 4) + '</dd></div>' +
+        '<div><dt>High</dt><dd>' + fmt(diagnostic.high_cad_m3, 4) + '</dd></div>' +
+      '</dl>' +
+      '<p class="method-note">' +
+        (isSensitivity
+          ? 'Method sensitivity · not preferred · not observed · not policy grade.'
+          : 'Base scenario · the consistent donor-flat case.') +
+      '</p>' +
+    '</article>';
+  }
+
+  function renderNationalBadges() {
+    $('national-badges').innerHTML =
+      '<span class="badge badge--econ-public">national_diagnostic</span>' +
+      '<span class="badge badge--econ-model">model_estimate</span>' +
+      '<span class="badge badge--econ-policy">observed=false</span>' +
+      '<span class="badge badge--econ-policy">policy_grade=false</span>' +
+      '<span class="badge badge--econ-readonly">no combined national net value</span>' +
+      '<span class="badge badge--econ-readonly">not Forest LP/OSeCAN input</span>' +
+      '<span class="badge badge--econ-readonly">read-only</span>';
+  }
+
+  function renderNationalDiagnostics() {
+    var allocation = state.national.national_diagnostic.allocation_volume_m3;
+    $('national-diagnostics').innerHTML =
+      nationalDiagnosticCard('donor_flat') + nationalDiagnosticCard('stumpage_scaled') +
+      '<p class="national-diagnostic-basis method-note">Allocation basis: ' +
+        fmt(allocation / 1e6, 1) + ' Mm³ · 13 jurisdictions · volume-weighted model diagnostic. ' +
+        'Not a legal AAC and not a combined national net value.</p>';
+  }
+
+  function renderNationalTierCoverage() {
+    var national = state.national;
+    var coverage = national.tier_coverage;
+    var shares = coverage.volume_weighted_shares || {};
+    var cellCounts = coverage.cell_counts || {};
+    var selected = nationalSelectedScenario();
+    var stack = NATIONAL_TIERS.map(function (tier) {
+      var share = shares[tier.id] || 0;
+      if (share <= 0) return '';
+      return '<span class="national-tier-segment" style="width:' + (share * 100) +
+        '%;background:' + tier.color + '" title="' + esc(tier.label + ' ' + fmtPct(share, 1)) + '"></span>';
+    }).join('');
+    var rows = NATIONAL_TIERS.map(function (tier) {
+      var share = shares[tier.id] || 0;
+      var count = cellCounts[tier.id] || 0;
+      return '<li class="national-tier-row">' +
+        '<span class="national-tier-dot" style="background:' + tier.color + '"></span>' +
+        '<span class="national-tier-name">' + esc(tier.label) + '</span>' +
+        '<strong>' + fmtPct(share, 1) + '</strong>' +
+        '<span class="mono">' + fmt(count, 0) + ' / ' + fmt(coverage.cell_count, 0) + ' cells</span>' +
+      '</li>';
+    }).join('');
+    var priceCounts = (coverage.scenario_price_tiers || {})[selected.id] || {};
+    var priceBadges = Object.keys(priceCounts).sort().map(function (tier) {
+      return nationalTierBadge(tier, fmt(priceCounts[tier], 0) + ' jurisdictions');
+    }).join('');
+    var costCounts = (coverage.scenario_cost_tiers || {})[selected.id] || {};
+    var costBadges = Object.keys(costCounts).sort().map(function (tier) {
+      return nationalTierBadge(tier, fmt(costCounts[tier], 0));
+    }).join('');
+    $('national-tier-coverage').innerHTML =
+      '<p class="kicker">Evidence tiers · volume-weighted</p>' +
+      '<h3>Coverage shares</h3>' +
+      '<div class="national-tier-stack" role="img" aria-label="Volume-weighted tier coverage: reported average ' +
+        fmtPct(shares.reported_average || 0, 1) + ', proxy model ' +
+        fmtPct(shares.proxy_model || 0, 1) + ', donor proxy ' +
+        fmtPct(shares.donor_proxy || 0, 1) + '">' + stack + '</div>' +
+      '<ul class="national-tier-rows">' + rows + '</ul>' +
+      '<p class="method-note">Five components per jurisdiction (price, logging, haul, road, silviculture), ' +
+        'equally weighted. Shares describe evidence coverage, not margin confidence.</p>' +
+      '<h4>Selected scenario · price tiers</h4>' +
+      '<div class="national-tier-badges">' + priceBadges + '</div>' +
+      '<details class="national-cost-details"><summary>Cost tiers · ' + esc(selected.label) + '</summary>' +
+        '<div class="national-tier-badges">' + costBadges + '</div></details>';
+  }
+
+  function nationalValueCell(value, extraClass) {
+    return '<td class="num' + (extraClass ? ' ' + extraClass : '') +
+      (value < 0 ? ' is-negative-value' : '') + '">' + fmt(value, 2) + '</td>';
+  }
+
+  function renderNationalTable() {
+    var national = state.national;
+    var selected = state.nationalScenario;
+    var baseSelected = selected === 'donor_flat';
+    var sensitivitySelected = selected === 'stumpage_scaled';
+    var header =
+      '<caption>13 jurisdictions · model_estimate · observed=false · policy_grade=false · no combined national net value · ' +
+        'low/base/high CAD/m³ · base=donor_flat · sensitivity=stumpage_scaled</caption>' +
+      '<thead>' +
+        '<tr>' +
+          '<th rowspan="2">Jurisdiction</th>' +
+          '<th rowspan="2" class="num">Volume (Mm³)</th>' +
+          '<th rowspan="2" class="num">Share</th>' +
+          '<th colspan="4" class="national-group-base' + (baseSelected ? ' is-selected-scenario' : '') + '">Base · donor_flat</th>' +
+          '<th colspan="4" class="national-group-sensitivity' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Sensitivity · stumpage_scaled</th>' +
+          '<th rowspan="2" class="num">Δ base (CAD/m³)</th>' +
+        '</tr>' +
+        '<tr>' +
+          '<th class="num national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">Low</th>' +
+          '<th class="num national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">Base</th>' +
+          '<th class="num national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">High</th>' +
+          '<th class="national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">Price tier</th>' +
+          '<th class="num national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Low</th>' +
+          '<th class="num national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Base</th>' +
+          '<th class="num national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">High</th>' +
+          '<th class="national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">Price tier</th>' +
+        '</tr>' +
+      '</thead>';
+    var rows = national.jurisdictions.map(function (row) {
+      return '<tr>' +
+        '<td class="national-jurisdiction-cell"><strong>' + esc(row.province) + '</strong><span>' +
+          esc(row.province_name) + '</span></td>' +
+        '<td class="num">' + fmt(row.allocation_volume_m3 / 1e6, 2) + '</td>' +
+        '<td class="num mono">' + fmtPct(row.volume_share, 1) + '</td>' +
+        nationalValueCell(row.donor_flat.low_cad_m3, 'national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '')) +
+        nationalValueCell(row.donor_flat.base_cad_m3, 'national-scenario-col is-base-value' + (baseSelected ? ' is-selected-scenario' : '')) +
+        nationalValueCell(row.donor_flat.high_cad_m3, 'national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '')) +
+        '<td class="national-scenario-col' + (baseSelected ? ' is-selected-scenario' : '') + '">' +
+          nationalTierBadge(row.donor_flat.price_tier) + '</td>' +
+        nationalValueCell(row.stumpage_scaled.low_cad_m3, 'national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '')) +
+        nationalValueCell(row.stumpage_scaled.base_cad_m3, 'national-scenario-col is-sensitivity-value' + (sensitivitySelected ? ' is-selected-scenario' : '')) +
+        nationalValueCell(row.stumpage_scaled.high_cad_m3, 'national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '')) +
+        '<td class="national-scenario-col' + (sensitivitySelected ? ' is-selected-scenario' : '') + '">' +
+          nationalTierBadge(row.stumpage_scaled.price_tier) + '</td>' +
+        '<td class="num' + (row.scaled_minus_donor_flat_cad_m3 < 0 ? ' is-negative-value' : '') + '">' +
+          nationalSigned(row.scaled_minus_donor_flat_cad_m3, 2) + '</td>' +
+      '</tr>';
+    }).join('');
+    $('national-table').innerHTML = header + '<tbody>' + rows + '</tbody>';
+  }
+
+  function renderNationalCaveat() {
+    var national = state.national;
+    var caveats = national.caveats || [];
+    $('national-caveat').innerHTML =
+      '<strong>National diagnostic · model_estimate · observed=false · policy_grade=false · no combined national net value</strong>' +
+      '<p>13 jurisdictions, volume-weighted. Not a Forest LP input. Not a public OSeCAN input. ' +
+        'The sensitivity is not preferred, not observed and not policy grade. ' +
+        'Low/base/high are model scenarios, not observed transactions.</p>' +
+      '<ul>' + caveats.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('') + '</ul>' +
+      '<p class="economics-nonclaims">Non-claims: ' + esc((national.non_claims || []).join(' · ')) + '</p>';
+  }
+
+  function renderNationalDownloads() {
+    var national = state.national;
+    var manifest = state.nationalManifest;
+    var payload = manifest.generated[0];
+    var json = national.download.json;
+    var manifestRef = national.download.manifest;
+    $('national-downloads').innerHTML =
+      '<a class="economics-download" href="' + esc(DATA_ROOT + json.path) + '" download>' +
+        '<span class="economics-download-label">' + esc(json.label) + '</span>' +
+        '<span class="economics-download-meta">' + fmt(payload.bytes, 0) + ' bytes · static JSON · ' +
+          fmt(national.coverage.jurisdiction_rows, 0) + ' jurisdictions</span>' +
+        '<span class="economics-download-hash mono">sha256 ' + esc(String(payload.sha256).slice(0, 16)) + '…</span>' +
+      '</a>' +
+      '<a class="economics-download" href="' + esc(DATA_ROOT + manifestRef.path) + '" download>' +
+        '<span class="economics-download-label">' + esc(manifestRef.label) + '</span>' +
+        '<span class="economics-download-meta">payload hash · ' + fmt(manifest.sources.length, 0) + ' source hashes · validation</span>' +
+        '<span class="economics-download-hash mono">' + esc(manifest.schema_version) + '</span>' +
+      '</a>';
+  }
+
+  function renderNationalChart() {
+    if (!state.national) return;
+    var container = $('national-chart');
+    if (!container) return;
+    if (!window.echarts) {
+      container.innerHTML = '<div class="empty-state" style="display:grid">ECharts failed to load. Check vendor/echarts.min.js.</div>';
+      return;
+    }
+    var national = state.national;
+    var selected = nationalSelectedScenario();
+    var selectedId = selected.id;
+    var baseData = [];
+    var sensitivityData = [];
+    national.jurisdictions.forEach(function (row) {
+      baseData.push({ value: row.donor_flat.base_cad_m3, row: row, scenarioId: 'donor_flat' });
+      sensitivityData.push({ value: row.stumpage_scaled.base_cad_m3, row: row, scenarioId: 'stumpage_scaled' });
+    });
+    if (!state.nationalChart) {
+      state.nationalChart = window.echarts.init(container, null, { renderer: 'canvas' });
+    }
+    state.nationalChart.setOption({
+      animationDuration: 520,
+      textStyle: { fontFamily: 'IBM Plex Sans, Segoe UI, sans-serif', color: '#435347' },
+      grid: { left: 96, right: 60, top: 44, bottom: 38, containLabel: false },
+      legend: {
+        top: 2,
+        right: 8,
+        itemWidth: 14,
+        itemHeight: 8,
+        textStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#435347' },
+        data: ['Base · donor_flat', 'Sensitivity · stumpage_scaled']
+      },
+      tooltip: {
+        trigger: 'item',
+        confine: true,
+        backgroundColor: '#0c1f19',
+        borderColor: '#d98a2b',
+        borderWidth: 1,
+        textStyle: { color: '#f3ead7', fontFamily: 'IBM Plex Sans, sans-serif', fontSize: 12 },
+        formatter: function (params) {
+          var row = params.data && params.data.row;
+          if (!row) return '';
+          var values = params.seriesId === 'base' ? row.donor_flat : row.stumpage_scaled;
+          return '<strong>' + esc(row.province_name) + '</strong><br>' +
+            esc(params.seriesName) + ': ' + nationalSigned(values.base_cad_m3, 2) + ' CAD/m³<br>' +
+            'Low / high: ' + fmt(values.low_cad_m3, 2) + ' / ' + fmt(values.high_cad_m3, 2) + '<br>' +
+            'Price tier: ' + esc(nationalTierMeta(values.price_tier).label) + '<br>' +
+            'Volume: ' + fmt(row.allocation_volume_m3 / 1e6, 2) + ' Mm³';
+        }
+      },
+      xAxis: {
+        type: 'value',
+        name: 'CAD/m³',
+        nameTextStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c' },
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#b8a57e' } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#6c786c' },
+        splitLine: { lineStyle: { color: 'rgba(184,165,126,0.3)', type: 'dashed' } }
+      },
+      yAxis: {
+        type: 'category',
+        inverse: true,
+        data: national.jurisdictions.map(function (row) { return row.province; }),
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: '#b8a57e' } },
+        axisLabel: { fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, color: '#435347' }
+      },
+      series: [
+        {
+          id: 'base',
+          name: 'Base · donor_flat',
+          type: 'bar',
+          data: baseData,
+          barWidth: 7,
+          barGap: '25%',
+          itemStyle: { color: selectedId === 'donor_flat' ? '#2c5746' : 'rgba(44,87,70,0.25)' },
+          emphasis: { itemStyle: { color: '#2c5746' } },
+          label: {
+            show: selectedId === 'donor_flat',
+            position: 'right',
+            fontFamily: 'IBM Plex Mono, monospace',
+            fontSize: 8,
+            color: '#17382c',
+            formatter: function (params) { return fmt(params.value, 1); }
+          },
+          markLine: {
+            silent: true,
+            symbol: 'none',
+            lineStyle: { color: '#0c1f19', width: 1.2 },
+            label: { show: false },
+            data: [{ xAxis: 0 }]
+          }
+        },
+        {
+          id: 'sensitivity',
+          name: 'Sensitivity · stumpage_scaled',
+          type: 'bar',
+          data: sensitivityData,
+          barWidth: 7,
+          itemStyle: { color: selectedId === 'stumpage_scaled' ? '#a94f31' : 'rgba(169,79,49,0.22)' },
+          emphasis: { itemStyle: { color: '#a94f31' } },
+          label: {
+            show: selectedId === 'stumpage_scaled',
+            position: 'right',
+            fontFamily: 'IBM Plex Mono, monospace',
+            fontSize: 8,
+            color: '#7e3823',
+            formatter: function (params) { return fmt(params.value, 1); }
+          }
+        }
+      ]
+    }, true);
+    $('national-chart-note').textContent = 'Selected: ' + selected.label +
+      '. Central modeled margin by jurisdiction, CAD/m³. The selected series is opaque; the other is ghosted. Negative values are not clipped.';
+  }
+
+  function renderNational() {
+    if (!state.national) return;
+    var national = state.national;
+    var select = $('national-scenario');
+    if (select && select.value !== state.nationalScenario) select.value = state.nationalScenario;
+    renderNationalBadges();
+    var sources = national.source_files || [];
+    var summarySource = '';
+    var tierSource = '';
+    sources.forEach(function (source) {
+      if (/national_margin_summary\.csv$/.test(source.path)) summarySource = source.path;
+      if (/national_tier_coverage\.csv$/.test(source.path)) tierSource = source.path;
+    });
+    $('national-source-note').innerHTML = 'Display: <span class="mono">' +
+      esc(summarySource || 'national_economics_v2_1/national_margin_summary.csv') +
+      '</span> · comparisons: <span class="mono">scenario_comparison.csv</span> · tier shares: <span class="mono">' +
+      esc(tierSource || 'national_tier_coverage.csv') + '</span>.';
+    $('national-generated').textContent = 'National v' + (national.artifact_version || '2.1.0') +
+      ' · 13 jurisdictions · base donor_flat · sensitivity stumpage_scaled · generated ' +
+      fmtDate(national.generated_utc) + ' · schema ' + national.schema_version;
+    renderNationalDiagnostics();
+    renderNationalTierCoverage();
+    renderNationalTable();
+    renderNationalCaveat();
+    renderNationalDownloads();
+    if (state.tab === 'economics') renderNationalChart();
+  }
+
   /* ---------------- Inputs ---------------- */
 
   function renderInputsStatic() {
@@ -6519,7 +7043,9 @@
         loadJSON('inputs/managed_landbase.json'),
         loadJSON('inputs/operable_proxy.json'),
         loadJSON('spatial/zone_nodes.json'),
-        loadJSON('economics/summary.json')
+        loadJSON('economics/summary.json'),
+        loadJSON('economics/national.json'),
+        loadJSON('economics/national.manifest.json')
       ]);
       buildCoreState({
         manifest: bundle[0],
@@ -6530,7 +7056,9 @@
         landbase: bundle[5],
         operable: bundle[6],
         zoneNodes: bundle[7],
-        economics: bundle[8]
+        economics: bundle[8],
+        national: bundle[9],
+        nationalManifest: bundle[10]
       });
       await initLiveMode();
       if (state.warnings.length) {
@@ -6549,6 +7077,7 @@
     if (state.tradeoffChart) state.tradeoffChart.resize();
     if (state.harvestChart) state.harvestChart.resize();
     if (state.economicsChart) state.economicsChart.resize();
+    if (state.nationalChart) state.nationalChart.resize();
     if (state.mapState.map) state.mapState.map.resize();
     if (state.tab === 'explore') {
       if (state.paretoChart) state.paretoChart.resize();
