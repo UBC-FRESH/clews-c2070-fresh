@@ -3,22 +3,22 @@
   "model_id": "national_economics_v2_3",
   "artifact_version": "2.3.0",
   "generated_utc": "2026-11-22T15:36:32+00:00",
-  "parent_commit": "7ddba4174ed2162bee0eedcb4f843dac32fed8ab",
-  "data_commit": "a8fa59a77ffbdf16b695b3c1cfb543afb507c574",
+  "parent_commit": "45f09111fd42223d40a50666105f9b0b10334fe5",
+  "data_commit": "2aa904f154698a92395865fde1d20bc070c642a5",
   "files": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 188855,
-      "sha256": "57ae88fe80ac1f27b7e1c6f2ef0468271248ef7a73fda5a4a62ebf45571c8551"
+      "bytes": 192285,
+      "sha256": "09857cc37e27a3b07d1716f0fcc94fefdc0b8fae0dc9e908ea1678d2bcf3e894"
     }
   ],
   "generated": [
     {
       "path": "economics/national.json",
       "label": "National economics JSON",
-      "bytes": 188855,
-      "sha256": "57ae88fe80ac1f27b7e1c6f2ef0468271248ef7a73fda5a4a62ebf45571c8551"
+      "bytes": 192285,
+      "sha256": "09857cc37e27a3b07d1716f0fcc94fefdc0b8fae0dc9e908ea1678d2bcf3e894"
     }
   ],
   "sources": [
@@ -143,6 +143,24 @@
       "sha256": "3ac2a78aafd0eff0159e72facadbe1db9a20653c18f964239bca5a131e9c60f8"
     },
     {
+      "path": "data/derived/national/harvest_basis/province_breakeven/province_breakeven.csv",
+      "rows": 13,
+      "bytes": 13779,
+      "sha256": "ed6b4c7321e28ad0d668fcced2e21185c650683bf02471c3e2eb71110168496b"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/province_breakeven/province_breakeven_summary.json",
+      "rows": null,
+      "bytes": 45158,
+      "sha256": "a986f471587267d5b55157a93c97602850533c713eb961d7b8818a82531ba14e"
+    },
+    {
+      "path": "data/derived/national/harvest_basis/province_breakeven/manifest.json",
+      "rows": null,
+      "bytes": 2748,
+      "sha256": "38e9af2b7ca822242bb25a2a9bcfc91873e39cf98cbb21905078cb196ad7ad7f"
+    },
+    {
       "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
       "rows": 13,
       "bytes": 10854,
@@ -200,6 +218,11 @@
     "allocation_net_value_lp_lp_objective": "net_value_sensitivity",
     "allocation_net_value_lp_canonical_changed": false,
     "allocation_net_value_lp_unexpected_d_cells": 0,
+    "province_breakeven_model_id": "province_breakeven_v1",
+    "province_breakeven_province_count": 13,
+    "province_breakeven_donor_price_cad_m3": 115.828,
+    "province_breakeven_diagnostic_rank_only": true,
+    "province_breakeven_unexpected_d_cells": 0,
     "observed_claim": false,
     "policy_grade_claim": false,
     "combined_national_net_value": false,

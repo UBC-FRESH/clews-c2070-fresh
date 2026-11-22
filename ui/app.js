@@ -6812,6 +6812,7 @@
     requireTrue(Array.isArray(national.jurisdictions) && national.jurisdictions.length === 13,
       'national jurisdiction count mismatch');
     var provinces = new Set();
+    var breakEvenRanks = new Set();
     var costTierCounts = { component_stack: 0, industry_aggregate_proxy: 0, donor_fallback: 0 };
     var rateCount = 0;
     var fallbackCount = 0;
@@ -6874,6 +6875,25 @@
         'national jurisdiction ' + row.province + ' price-source direct flag mismatch');
       requireTrue(typeof row.donor_only === 'boolean' && row.ranked === false,
         'national jurisdiction ' + row.province + ' must not be ranked');
+      requireTrue(Number.isFinite(row.break_even_cad_m3) && row.break_even_cad_m3 > 0 &&
+        Number.isFinite(row.donor_margin) && Number.isFinite(row.scaled_margin) &&
+        Number.isFinite(row.donor_gap) && Number.isFinite(row.scaled_gap),
+        'national jurisdiction ' + row.province + ' is missing its break-even values');
+      requireTrue(Math.abs(row.break_even_cad_m3 - row.total_cost_base_cad_m3) < 1e-4,
+        'national jurisdiction ' + row.province + ' break-even diverges from total cost');
+      requireTrue(Math.abs(row.donor_margin - row.donor_flat.base_cad_m3) < 1e-4 &&
+        Math.abs(row.scaled_margin - row.stumpage_scaled.base_cad_m3) < 1e-4,
+        'national jurisdiction ' + row.province + ' break-even margin diverges from the ledger');
+      requireTrue(Math.abs(row.donor_gap + row.donor_margin) < 1e-4 &&
+        Math.abs(row.scaled_gap + row.scaled_margin) < 1e-4,
+        'national jurisdiction ' + row.province + ' break-even gap is not the negated margin');
+      requireTrue(['positive_margin', 'negative_margin', 'price_limited', 'cost_limited']
+        .indexOf(row.classification) !== -1,
+        'national jurisdiction ' + row.province + ' has an unknown break-even classification');
+      requireTrue(Number.isInteger(row.price_sensitivity_rank) &&
+        row.price_sensitivity_rank >= 1 && row.price_sensitivity_rank <= 13,
+        'national jurisdiction ' + row.province + ' has an invalid price-sensitivity rank');
+      breakEvenRanks.add(row.price_sensitivity_rank);
       var stumpage = row.stumpage_reference || {};
       requireTrue(typeof stumpage.has_rate === 'boolean' && stumpage.is_delivered_price === false,
         'national jurisdiction ' + row.province + ' stumpage reference is invalid');
@@ -6890,6 +6910,8 @@
       'national cost tier counts must be 2/10/1');
     requireTrue(rateCount === 8 && fallbackCount === 5,
       'national stumpage reference counts must be 8 rates and 5 explicit fallbacks');
+    requireTrue(breakEvenRanks.size === 13,
+      'break-even price-sensitivity ranks must cover 13 provinces');
 
     requireTrue(manifest && manifest.schema_version === NATIONAL_MANIFEST_SCHEMA,
       'national manifest schema mismatch');
@@ -6933,6 +6955,32 @@
   function nationalSigned(value, digits) {
     var text = fmt(value, digits);
     return value > 0 ? '+' + text : text;
+  }
+
+  function nationalBreakevenBadge(classification) {
+    var id = String(classification || 'unclassified');
+    return '<span class="national-breakeven-badge national-breakeven-badge--' +
+      esc(id.replace(/_/g, '-')) + '">' + esc(id.replace(/_/g, ' ')) + '</span>';
+  }
+
+  function nationalBreakevenRow(row) {
+    return '<div class="national-breakeven" aria-label="' + esc(row.province) + ' break-even diagnostic">' +
+      '<div class="national-breakeven-head">' +
+        '<span class="national-breakeven-title">Break-even</span>' +
+        '<span class="national-breakeven-value">' + fmt(row.break_even_cad_m3, 2) +
+          ' <span>CAD/m³</span></span>' +
+        nationalBreakevenBadge(row.classification) +
+      '</div>' +
+      '<dl class="national-breakeven-pairs">' +
+        '<div><dt>Donor gap / margin</dt><dd title="gap = break-even − price; margin = price − break-even">' +
+          nationalSigned(row.donor_gap, 2) + ' / ' + nationalSigned(row.donor_margin, 2) +
+          ' <span>CAD/m³</span></dd></div>' +
+        '<div><dt>Scaled gap / margin</dt><dd title="gap = break-even − price; margin = price − break-even">' +
+          nationalSigned(row.scaled_gap, 2) + ' / ' + nationalSigned(row.scaled_margin, 2) +
+          ' <span>CAD/m³</span></dd></div>' +
+      '</dl>' +
+      '<p class="national-breakeven-caveat">Modeled cost, not observed; donor price is a donor/flat proxy, not an observed provincial price.</p>' +
+    '</div>';
   }
 
   function nationalRange(values) {
@@ -7156,6 +7204,7 @@
               '<div><dt>Total · donor_flat</dt><dd>' + nationalSigned(row.total_margin_119m.donor_flat.total_base_m_cad, 2) + ' <span>M CAD</span></dd><dd class="mono">low ' + nationalSigned(row.total_margin_119m.donor_flat.total_low_m_cad, 2) + ' · high ' + nationalSigned(row.total_margin_119m.donor_flat.total_high_m_cad, 2) + '</dd></div>' +
               '<div><dt>Total · stumpage_scaled</dt><dd>' + nationalSigned(row.total_margin_119m.stumpage_scaled.total_base_m_cad, 2) + ' <span>M CAD</span></dd><dd class="mono">low ' + nationalSigned(row.total_margin_119m.stumpage_scaled.total_low_m_cad, 2) + ' · high ' + nationalSigned(row.total_margin_119m.stumpage_scaled.total_high_m_cad, 2) + '</dd></div>' +
             '</dl>' +
+            nationalBreakevenRow(row) +
             '<p class="method-note">No margin ranking. Aggregate-proxy rows are provisional aggregate evidence, not comparable provincial results.</p>' +
           '</section>' +
         '</div>' +

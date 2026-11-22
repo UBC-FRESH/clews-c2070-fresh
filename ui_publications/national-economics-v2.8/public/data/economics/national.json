@@ -1,0 +1,4944 @@
+{
+  "schema_version": "economics/national/3",
+  "model_id": "national_economics_v2_3",
+  "artifact_version": "2.3.0",
+  "generated_utc": "2026-11-22T15:36:32+00:00",
+  "status": "model_estimate_statcan_aggregate_cost_proxy",
+  "role": "evidence_coverage_with_national_diagnostic",
+  "default_view": "evidence_coverage",
+  "section_order": [
+    "evidence_coverage",
+    "province_ledger",
+    "province_drilldown",
+    "national_margin_diagnostic",
+    "forest_lp_net_value_sensitivity",
+    "economic_allocation_sensitivity",
+    "downloads"
+  ],
+  "base_scenario": "donor_flat",
+  "sensitivity_scenario": "stumpage_scaled",
+  "jurisdiction_count": 13,
+  "decision": {
+    "base_scenario": "donor_flat",
+    "sensitivity_scenario": "stumpage_scaled",
+    "stumpage_scaled_observed": false,
+    "stumpage_scaled_policy_grade": false,
+    "reason": "The v2.1/v2.2 price decision is retained. v2.3 changes only the cost basis outside BC and QC and does not add separate road, silviculture or haul costs to the StatCan aggregate."
+  },
+  "labels": {
+    "evidence": "model_estimate",
+    "observed": false,
+    "policy_grade": false,
+    "not_decision_grade": true,
+    "ranking_performed": false,
+    "combined_national_net_value": false,
+    "national_diagnostic_label": "model_estimate_not_policy",
+    "national_total_margin_label": "model_estimate_not_policy",
+    "total_margin_policy_result": false,
+    "strict_open": false,
+    "forest_lp_input": false,
+    "public_osecan_input": false
+  },
+  "coverage": {
+    "province_count": 13,
+    "provinces": [
+      "BC",
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "not_estimated_count": 0,
+    "jurisdiction_rows": 13,
+    "scenario_rows": 78,
+    "price_cell_count": 65,
+    "cost_cell_count": 13
+  },
+  "evidence_coverage": {
+    "default_view": "evidence_coverage",
+    "basis": "13 jurisdictions; 65 five-component price/evidence cells; one province-level cost-basis cell per jurisdiction",
+    "jurisdiction_count": 13,
+    "cell_count": 65,
+    "component_count": 5,
+    "volume_weighted": {
+      "direct_reported": {
+        "share": 0.33601842,
+        "pct": 33.6018,
+        "cells": 3,
+        "jurisdictions": [
+          "BC"
+        ],
+        "label": "direct / reported price",
+        "volume_basis": "119m_allocation_sensitivity"
+      },
+      "donor": {
+        "share": 0.66398158,
+        "pct": 66.3982,
+        "cells": 60,
+        "jurisdictions": [
+          "AB",
+          "SK",
+          "MB",
+          "ON",
+          "QC",
+          "NB",
+          "NS",
+          "NL",
+          "PE",
+          "YT",
+          "NT",
+          "NU"
+        ],
+        "label": "donor price",
+        "volume_basis": "119m_allocation_sensitivity"
+      },
+      "assumption": {
+        "share": 0.0,
+        "pct": 0.0,
+        "cells": 0,
+        "label": "assumption",
+        "volume_basis": "119m_allocation_sensitivity"
+      }
+    },
+    "price_evidence": {
+      "cell_count": 65,
+      "component_count": 5,
+      "cell_mix": {
+        "reported_average": 0.17924672,
+        "proxy_model": 0.13440737,
+        "donor_proxy": 0.68634592,
+        "assumption": 0.0
+      },
+      "cell_mix_pct": {
+        "reported_average": 17.9247,
+        "proxy_model": 13.4407,
+        "donor_proxy": 68.6346,
+        "assumption": 0.0
+      },
+      "cell_counts": {
+        "reported_average": 3,
+        "proxy_model": 2,
+        "donor_proxy": 60,
+        "assumption": 0
+      },
+      "province_volume_basis": "119m_allocation_sensitivity"
+    },
+    "cost_evidence": {
+      "basis": "province_level_cost_basis_cells",
+      "volume_basis": "observed_2024_m3",
+      "sensitivity_volume_basis": "119m_allocation_sensitivity",
+      "volume_weighted": {
+        "component_stack": {
+          "share": 0.54477285,
+          "pct": 54.4773,
+          "cells": 2,
+          "jurisdictions": [
+            "BC",
+            "QC"
+          ],
+          "label": "component stack"
+        },
+        "industry_aggregate_proxy": {
+          "share": 0.45522715,
+          "pct": 45.5227,
+          "cells": 10,
+          "jurisdictions": [
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "NB",
+            "NS",
+            "NL",
+            "PE",
+            "YT",
+            "NT"
+          ],
+          "label": "provisional aggregate"
+        },
+        "donor_fallback": {
+          "share": 0.0,
+          "pct": 0.0,
+          "cells": 1,
+          "jurisdictions": [
+            "NU"
+          ],
+          "label": "donor fallback"
+        }
+      },
+      "sensitivity_119m": {
+        "aggregate_proxy_cells": 10,
+        "component_cells": 2,
+        "donor_proxy_cells": 0,
+        "donor_fallback_cells": 1,
+        "shares": {
+          "component_stack": 0.56021518,
+          "industry_aggregate_proxy": 0.43978482,
+          "donor_fallback": 0.0,
+          "donor_proxy": 0.0
+        },
+        "pct": {
+          "component_stack": 56.0215,
+          "industry_aggregate_proxy": 43.9785,
+          "donor_fallback": 0.0,
+          "donor_proxy": 0.0
+        }
+      },
+      "before_v2_2": {
+        "aggregate_proxy_cells": 0,
+        "component_cells": 2,
+        "donor_proxy_cells": 11,
+        "donor_fallback_cells": 0,
+        "shares": {
+          "component_stack": 0.54477285,
+          "industry_aggregate_proxy": 0.0,
+          "donor_fallback": 0.0,
+          "donor_proxy": 0.45522715
+        },
+        "pct": {
+          "component_stack": 54.4773,
+          "industry_aggregate_proxy": 0.0,
+          "donor_fallback": 0.0,
+          "donor_proxy": 45.5227
+        }
+      },
+      "upgrade_count": 10,
+      "full_direct_coverage_claimed": false
+    },
+    "industry_aggregate_proxy": {
+      "share": 0.45522715,
+      "pct": 45.5227,
+      "cells": 10,
+      "jurisdictions": [
+        "AB",
+        "SK",
+        "MB",
+        "ON",
+        "NB",
+        "NS",
+        "NL",
+        "PE",
+        "YT",
+        "NT"
+      ],
+      "label": "provisional aggregate"
+    },
+    "component_stack": {
+      "share": 0.54477285,
+      "pct": 54.4773,
+      "cells": 2,
+      "jurisdictions": [
+        "BC",
+        "QC"
+      ],
+      "label": "component stack"
+    },
+    "donor_fallback": {
+      "share": 0.0,
+      "pct": 0.0,
+      "cells": 1,
+      "jurisdictions": [
+        "NU"
+      ],
+      "label": "donor fallback"
+    },
+    "direct_jurisdictions": [
+      "BC"
+    ],
+    "donor_only_jurisdictions": [
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "donor_price_jurisdictions": [
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "aggregate_proxy_jurisdictions": [
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "NB",
+      "NS",
+      "NL",
+      "PE",
+      "YT",
+      "NT"
+    ],
+    "component_stack_jurisdictions": [
+      "BC",
+      "QC"
+    ],
+    "donor_fallback_jurisdictions": [
+      "NU"
+    ],
+    "direct_cell_count": 3,
+    "proxy_cell_count": 2,
+    "donor_cell_count": 60,
+    "assumption_cell_count": 0,
+    "direct_jurisdiction_count": 1,
+    "donor_only_count": 11,
+    "donor_price_count": 12,
+    "aggregate_proxy_count": 10,
+    "donor_fallback_count": 1,
+    "not_decision_grade": true,
+    "warning": "33.6% of volume-weighted price evidence is direct/reported (BC); 45.5% of cost evidence is a provisional industry aggregate proxy. 10 jurisdictions are provisional aggregate, not direct; NU is the only donor-fallback cost. These margins are not decision-grade and are not ranked."
+  },
+  "ranking": {
+    "performed": false,
+    "ordering": "canonical_jurisdiction_order",
+    "aggregate_proxy_excluded": true,
+    "reason": "Aggregate-proxy and donor-fallback jurisdictions are provisional evidence rows. The UI does not sort or rank margins across jurisdictions."
+  },
+  "stumpage_references": {
+    "path": "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
+    "row_count": 13,
+    "rate_count": 8,
+    "fallback_count": 5,
+    "rate_provinces": [
+      "BC",
+      "AB",
+      "SK",
+      "MB",
+      "ON",
+      "QC",
+      "NB",
+      "NS"
+    ],
+    "fallback_provinces": [
+      "NL",
+      "PE",
+      "YT",
+      "NT",
+      "NU"
+    ],
+    "rates_are_charges_not_delivered_prices": true
+  },
+  "national_diagnostic": {
+    "allocation_volume_m3": 118977339.1,
+    "observed_2024_volume_m3": 118977339.0,
+    "primary_volume_basis": "observed_2024_m3",
+    "sensitivity_volume_basis": "119m_allocation_sensitivity",
+    "label": "model_estimate_not_policy",
+    "combined_national_net_value": false,
+    "not_decision_grade": true,
+    "display_role": "diagnostic_not_headline",
+    "display_position": "after_evidence_coverage_and_province_ledgers",
+    "ranking_performed": false,
+    "volume_weighted": true,
+    "warning": "National margins are volume-weighted model diagnostics shown last. They are not observed, not policy grade, not a combined national net value, and not a comparable jurisdictional ranking.",
+    "donor_flat": {
+      "low_cad_m3": -32.1594,
+      "base_cad_m3": 43.0187,
+      "high_cad_m3": 75.5834,
+      "scenario_role": "base",
+      "volume_basis": "observed_2024_m3"
+    },
+    "stumpage_scaled": {
+      "low_cad_m3": -67.1392,
+      "base_cad_m3": -5.7444,
+      "high_cad_m3": 33.0932,
+      "scenario_role": "sensitivity",
+      "volume_basis": "observed_2024_m3"
+    },
+    "sensitivity_119m": {
+      "donor_flat": {
+        "low_cad_m3": -32.4004,
+        "base_cad_m3": 43.7506,
+        "high_cad_m3": 76.8044
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -67.7346,
+        "base_cad_m3": -5.5079,
+        "high_cad_m3": 33.8962
+      }
+    },
+    "national_comparison": {
+      "scaled_minus_donor_flat_cad_m3": -48.7631,
+      "dues_comparable_to_delivered_price": false,
+      "comparison_status": "cost_method_change_not_observed",
+      "volume_basis": "observed_2024_m3",
+      "v2_2_margin_base_cad_m3": 36.7456
+    }
+  },
+  "national_margin_totals": {
+    "model_id": "national_margin_totals_v1",
+    "label": "model_estimate_not_policy",
+    "observed": false,
+    "policy_grade": false,
+    "not_policy_result": true,
+    "combined_national_net_value": false,
+    "ranking_performed": false,
+    "volume_basis": "119m_allocation",
+    "allocation_total_m3": 118977339.1,
+    "province_count": 13,
+    "scenarios": {
+      "donor_flat": {
+        "role": "base",
+        "evidence": "model_estimate",
+        "observed": false,
+        "policy_grade": false,
+        "combined_national_net_value": false,
+        "national_total_low_m_cad": -3854.908563,
+        "national_total_base_m_cad": 5205.328748,
+        "national_total_high_m_cad": 9137.988762,
+        "national_margin_low_cad_m3": -32.4004,
+        "national_margin_base_cad_m3": 43.7506,
+        "national_margin_high_cad_m3": 76.8044,
+        "positive_province_count": 12,
+        "negative_province_count": 0,
+        "zero_total_province_count": 1,
+        "counts_by_case": {
+          "low": {
+            "positive": 8,
+            "negative": 4,
+            "zero": 1
+          },
+          "base": {
+            "positive": 12,
+            "negative": 0,
+            "zero": 1
+          },
+          "high": {
+            "positive": 12,
+            "negative": 0,
+            "zero": 1
+          }
+        },
+        "negative_provinces_by_case": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "zero_volume_provinces": [
+          "NU"
+        ]
+      },
+      "stumpage_scaled": {
+        "role": "sensitivity",
+        "evidence": "model_estimate",
+        "observed": false,
+        "policy_grade": false,
+        "combined_national_net_value": false,
+        "national_total_low_m_cad": -8058.8857,
+        "national_total_base_m_cad": -655.319124,
+        "national_total_high_m_cad": 4032.87974,
+        "national_margin_low_cad_m3": -67.7346,
+        "national_margin_base_cad_m3": -5.5079,
+        "national_margin_high_cad_m3": 33.8962,
+        "positive_province_count": 7,
+        "negative_province_count": 5,
+        "zero_total_province_count": 1,
+        "counts_by_case": {
+          "low": {
+            "positive": 5,
+            "negative": 7,
+            "zero": 1
+          },
+          "base": {
+            "positive": 7,
+            "negative": 5,
+            "zero": 1
+          },
+          "high": {
+            "positive": 9,
+            "negative": 3,
+            "zero": 1
+          }
+        },
+        "negative_provinces_by_case": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "zero_volume_provinces": [
+          "NU"
+        ]
+      }
+    },
+    "national_diagnostic": {
+      "label": "model_estimate_not_policy",
+      "not_policy_result": true,
+      "observed": false,
+      "policy_grade": false,
+      "combined_national_net_value": false,
+      "ranking_performed": false,
+      "volume_basis": "119m_allocation",
+      "allocation_total_m3": 118977339.1,
+      "donor_flat": {
+        "national_total_low_m_cad": -3854.908563,
+        "national_total_base_m_cad": 5205.328748,
+        "national_total_high_m_cad": 9137.988762,
+        "national_margin_low_cad_m3": -32.4004,
+        "national_margin_base_cad_m3": 43.7506,
+        "national_margin_high_cad_m3": 76.8044,
+        "positive_province_count": 12,
+        "negative_province_count": 0,
+        "zero_total_province_count": 1
+      },
+      "stumpage_scaled": {
+        "national_total_low_m_cad": -8058.8857,
+        "national_total_base_m_cad": -655.319124,
+        "national_total_high_m_cad": 4032.87974,
+        "national_margin_low_cad_m3": -67.7346,
+        "national_margin_base_cad_m3": -5.5079,
+        "national_margin_high_cad_m3": 33.8962,
+        "positive_province_count": 7,
+        "negative_province_count": 5,
+        "zero_total_province_count": 1
+      },
+      "v2_3_119m_cross_check": {
+        "source_volume_basis": "119m_allocation_sensitivity",
+        "max_abs_delta_cad_m3": 0.0,
+        "deltas_cad_m3": {
+          "donor_flat_low": 0.0,
+          "donor_flat_base": 0.0,
+          "donor_flat_high": 0.0,
+          "stumpage_scaled_low": 0.0,
+          "stumpage_scaled_base": 0.0,
+          "stumpage_scaled_high": 0.0
+        },
+        "checked": true
+      },
+      "warning": "National totals are volume-weighted model diagnostics at the 119 Mm3 allocation. They are not observed, not policy grade, not a policy result and not a combined national net value."
+    },
+    "source_csv": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+    "source_json": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json"
+  },
+  "forest_lp_net_value_sensitivity": {
+    "schema_version": "national/forest-lp-net-value-sensitivity/1",
+    "model_id": "forest_lp_net_value_sensitivity_v1",
+    "artifact_version": "1.0.0",
+    "generated_utc": "2026-11-22T16:42:39+00:00",
+    "status": "model_estimate_not_policy",
+    "source_publication_context": "national-economics-v2.4",
+    "role": "sensitivity_report_not_lp_objective",
+    "display_role": "economics_tab_after_national_totals",
+    "labels": {
+      "net_value_label": "model_estimate",
+      "net_value_status": "model_estimate_not_policy",
+      "observed": false,
+      "policy_grade": false,
+      "lp_objective": "not_used",
+      "forest_lp_input": false,
+      "public_osecan_input": false,
+      "forest_lp_objective_changed": false,
+      "v1_outputs_changed": false,
+      "combined_national_net_value": false,
+      "ranking_performed": false,
+      "restricted_data_used": false
+    },
+    "coverage": {
+      "allocation_source": "out/forest_lp_v1/forest_lp_allocation.csv",
+      "allocation_rows": 117,
+      "expected_allocation_rows": 117,
+      "margin_source": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+      "margin_rows": 26,
+      "province_count": 13,
+      "scenario_count": 2,
+      "scenarios": [
+        "donor_flat",
+        "stumpage_scaled"
+      ],
+      "levels": [
+        "100m",
+        "119m",
+        "150m"
+      ],
+      "cap_cases": [
+        "documented_ceiling",
+        "intensity_1.0",
+        "intensity_1.2"
+      ],
+      "joined_province_scenario_rows": 234,
+      "feasible_group_count": 14,
+      "infeasible_group_count": 4,
+      "infeasible_allocation_rows": 26,
+      "group_rows": 18,
+      "national_rows": 54,
+      "documented_ceiling_rows": 6,
+      "infeasible_rows": 4,
+      "allocation_cases": [
+        "100m",
+        "119m",
+        "150m"
+      ]
+    },
+    "rows": [
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.1,
+        "net_value_low_m_cad": -3230.786923,
+        "net_value_base_m_cad": 4347.22634,
+        "net_value_high_m_cad": 7633.971898,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.1,
+        "net_value_low_m_cad": -6750.6915,
+        "net_value_base_m_cad": -559.722836,
+        "net_value_high_m_cad": 3359.095964,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.1,
+        "net_value_low_m_cad": -3854.908562,
+        "net_value_base_m_cad": 5205.328748,
+        "net_value_high_m_cad": 9137.988762,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.1,
+        "net_value_low_m_cad": -8058.885699,
+        "net_value_base_m_cad": -655.319123,
+        "net_value_high_m_cad": 4032.87974,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 150000000.2,
+        "net_value_low_m_cad": -4299.883636,
+        "net_value_base_m_cad": 6662.82395,
+        "net_value_high_m_cad": 11436.002324,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "documented_ceiling",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 150000000.2,
+        "net_value_low_m_cad": -9950.394662,
+        "net_value_base_m_cad": -1194.863823,
+        "net_value_high_m_cad": 4505.859579,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 99999998.6,
+        "net_value_low_m_cad": -3494.678442,
+        "net_value_base_m_cad": 4377.398167,
+        "net_value_high_m_cad": 7811.963398,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 99999998.6,
+        "net_value_low_m_cad": -7041.10513,
+        "net_value_base_m_cad": -588.308659,
+        "net_value_high_m_cad": 3481.717363,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -4380.974391,
+        "net_value_base_m_cad": 5144.587973,
+        "net_value_high_m_cad": 9263.984141,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -8500.784098,
+        "net_value_base_m_cad": -636.279694,
+        "net_value_high_m_cad": 4078.507445,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.0",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.6,
+        "net_value_low_m_cad": -3338.197498,
+        "net_value_base_m_cad": 4416.332373,
+        "net_value_high_m_cad": 7791.809234,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "100m",
+        "allocation_label": "100 Mm³",
+        "allocation_target_m3": 100000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 100000000.6,
+        "net_value_low_m_cad": -6938.015687,
+        "net_value_base_m_cad": -619.86799,
+        "net_value_high_m_cad": 3404.714702,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -4142.893627,
+        "net_value_base_m_cad": 5212.079155,
+        "net_value_high_m_cad": 9292.8967,
+        "negative_province_count": 0,
+        "negative_province_counts": {
+          "low": 4,
+          "base": 0,
+          "high": 0
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "119m",
+        "allocation_label": "119 Mm³",
+        "allocation_target_m3": 118977339.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "optimal",
+        "feasible": true,
+        "allocation_m3": 118977339.2,
+        "net_value_low_m_cad": -8369.501089,
+        "net_value_base_m_cad": -705.812831,
+        "net_value_high_m_cad": 4132.820518,
+        "negative_province_count": 5,
+        "negative_province_counts": {
+          "low": 7,
+          "base": 5,
+          "high": 3
+        },
+        "negative_provinces": {
+          "low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "high": [
+            "AB",
+            "MB",
+            "ON"
+          ]
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "donor_flat",
+        "scenario_role": "base",
+        "scenario_label": "base",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      },
+      {
+        "cap_case": "intensity_1.2",
+        "allocation_case": "150m",
+        "allocation_label": "150 Mm³",
+        "allocation_target_m3": 150000000.0,
+        "scenario": "stumpage_scaled",
+        "scenario_role": "sensitivity",
+        "scenario_label": "sensitivity",
+        "case_status": "infeasible",
+        "feasible": false,
+        "allocation_m3": null,
+        "net_value_low_m_cad": null,
+        "net_value_base_m_cad": null,
+        "net_value_high_m_cad": null,
+        "negative_province_count": null,
+        "negative_province_counts": {
+          "low": null,
+          "base": null,
+          "high": null
+        },
+        "negative_provinces": {
+          "low": [],
+          "base": [],
+          "high": []
+        },
+        "observed": false,
+        "policy_grade": false,
+        "net_value_status": "model_estimate_not_policy",
+        "lp_objective": "not_used"
+      }
+    ],
+    "documented_ceiling_row_count": 6,
+    "infeasible_row_count": 4,
+    "canonical_119m": {
+      "cap_case": "documented_ceiling",
+      "allocation_case": "119m",
+      "scenarios": {
+        "donor_flat": {
+          "cap_case": "documented_ceiling",
+          "allocation_case": "119m",
+          "allocation_target_m3": 118977339.0,
+          "scenario": "donor_flat",
+          "scenario_role": "base",
+          "case_status": "optimal",
+          "case_feasible": true,
+          "province_rows": 13,
+          "allocated_province_rows": 13,
+          "blank_province_rows": 0,
+          "allocation_m3": 118977339.1,
+          "net_value_low_m_cad": -3854.9085620411397,
+          "net_value_base_m_cad": 5205.32874847936,
+          "net_value_high_m_cad": 9137.98876199119,
+          "national_margin_low_cad_m3": -32.40035952393509,
+          "national_margin_base_cad_m3": 43.75058971611645,
+          "national_margin_high_cad_m3": 76.80444722596079,
+          "negative_net_value_low_count": 4,
+          "negative_net_value_base_count": 0,
+          "negative_net_value_high_count": 0,
+          "positive_net_value_low_count": 8,
+          "positive_net_value_base_count": 12,
+          "positive_net_value_high_count": 12,
+          "zero_net_value_low_count": 1,
+          "zero_net_value_base_count": 1,
+          "zero_net_value_high_count": 1,
+          "negative_provinces_low": [
+            "BC",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "negative_provinces_base": [],
+          "negative_provinces_high": [],
+          "observed": false,
+          "policy_grade": false,
+          "net_value_status": "model_estimate_not_policy",
+          "lp_objective": "not_used"
+        },
+        "stumpage_scaled": {
+          "cap_case": "documented_ceiling",
+          "allocation_case": "119m",
+          "allocation_target_m3": 118977339.0,
+          "scenario": "stumpage_scaled",
+          "scenario_role": "sensitivity",
+          "case_status": "optimal",
+          "case_feasible": true,
+          "province_rows": 13,
+          "allocated_province_rows": 13,
+          "blank_province_rows": 0,
+          "allocation_m3": 118977339.1,
+          "net_value_low_m_cad": -8058.88569946204,
+          "net_value_base_m_cad": -655.31912331146,
+          "net_value_high_m_cad": 4032.8797400337303,
+          "national_margin_low_cad_m3": -67.73462711826643,
+          "national_margin_base_cad_m3": -5.507932252213733,
+          "national_margin_high_cad_m3": 33.89620049112134,
+          "negative_net_value_low_count": 7,
+          "negative_net_value_base_count": 5,
+          "negative_net_value_high_count": 3,
+          "positive_net_value_low_count": 5,
+          "positive_net_value_base_count": 7,
+          "positive_net_value_high_count": 9,
+          "zero_net_value_low_count": 1,
+          "zero_net_value_base_count": 1,
+          "zero_net_value_high_count": 1,
+          "negative_provinces_low": [
+            "BC",
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "negative_provinces_base": [
+            "AB",
+            "MB",
+            "ON",
+            "QC",
+            "NB"
+          ],
+          "negative_provinces_high": [
+            "AB",
+            "MB",
+            "ON"
+          ],
+          "observed": false,
+          "policy_grade": false,
+          "net_value_status": "model_estimate_not_policy",
+          "lp_objective": "not_used"
+        }
+      }
+    },
+    "validation": {
+      "checks": [
+        {
+          "id": "allocation-rows",
+          "name": "Forest LP v1 allocation rows preserved",
+          "status": "pass",
+          "detail": "117 rows (expected 117)"
+        },
+        {
+          "id": "net-value-arithmetic",
+          "name": "Net value equals allocation x margin / 1e6",
+          "status": "pass",
+          "detail": "0 arithmetic mismatches"
+        },
+        {
+          "id": "infeasible-blanks",
+          "name": "Infeasible rows keep blank net values",
+          "status": "pass",
+          "detail": "0 non-blank values on infeasible rows"
+        },
+        {
+          "id": "feasible-complete",
+          "name": "Feasible rows carry all six net values",
+          "status": "pass",
+          "detail": "0 blank values on feasible rows"
+        },
+        {
+          "id": "negative-unclipped",
+          "name": "Negative values are retained without clipping",
+          "status": "pass",
+          "detail": "133 negative net-value cells; 0 sign/clipping mismatches"
+        },
+        {
+          "id": "infeasible-count",
+          "name": "Infeasible allocation rows are blank",
+          "status": "pass",
+          "detail": "26 infeasible rows"
+        },
+        {
+          "id": "group-summaries",
+          "name": "Allocation-level summaries cover cap x level x scenario",
+          "status": "pass",
+          "detail": "18 groups"
+        },
+        {
+          "id": "national-rows",
+          "name": "National totals cover every group and case",
+          "status": "pass",
+          "detail": "54 rows"
+        },
+        {
+          "id": "national-equals-province-sum",
+          "name": "National totals equal the province sum",
+          "status": "pass",
+          "detail": "0 total mismatches"
+        },
+        {
+          "id": "tier-labels",
+          "name": "Price and cost tiers match national_economics_v2_3",
+          "status": "pass",
+          "detail": "0 tier mismatches"
+        },
+        {
+          "id": "margin-total-crosscheck",
+          "name": "Canonical 119m totals match the margin-total diagnostic",
+          "status": "pass",
+          "detail": "max abs delta vs national_margin_totals.json: 0.000000959 M CAD"
+        },
+        {
+          "id": "labels",
+          "name": "Model-estimate labels are carried on every row",
+          "status": "pass",
+          "detail": "observed=false, policy_grade=false, lp_objective=not_used"
+        },
+        {
+          "id": "objective-unchanged",
+          "name": "Forest LP objective and v1 outputs are unchanged",
+          "status": "pass",
+          "detail": "5 v1 output files hashed before and after; forest_lp_v1.py hash unchanged"
+        },
+        {
+          "id": "no-restricted-data",
+          "name": "No restricted or raw data is used",
+          "status": "pass",
+          "detail": "all inputs are under data/derived or out/; restricted_data_used=false"
+        },
+        {
+          "id": "no-public-ui",
+          "name": "No UI or public OSeCAN publication is written",
+          "status": "pass",
+          "detail": "output is a derived data artifact; public_osecan_input=false"
+        }
+      ],
+      "allocation_rows": 117,
+      "expected_allocation_rows": 117,
+      "group_summaries": 18,
+      "national_rows": 54,
+      "feasible_rows": 91,
+      "infeasible_rows": 26,
+      "negative_net_value_cells": 133,
+      "national_equals_province_sum": true,
+      "net_value_arithmetic": true,
+      "infeasible_blanks": true,
+      "feasible_complete": true,
+      "negative_unclipped": true,
+      "tier_labels_match_v2_3": true,
+      "margin_total_max_abs_delta_m_cad": 9.588602551957592e-07,
+      "margin_total_deltas_m_cad": {
+        "donor_flat_low": 9.588602551957592e-07,
+        "donor_flat_base": 4.793600965058431e-07,
+        "donor_flat_high": 8.811184670776129e-09,
+        "stumpage_scaled_low": 5.379597496357746e-07,
+        "stumpage_scaled_base": 6.885400125611341e-07,
+        "stumpage_scaled_high": 3.373043000465259e-08
+      },
+      "labels_model_estimate": true,
+      "observed_claim": false,
+      "policy_grade_claim": false,
+      "lp_objective": "not_used",
+      "forest_lp_objective_changed": false,
+      "forest_lp_source_sha256": "ce28e6231fc416b2ac84f64925f14b1e6bb3aee651e4bfafe514c72ea0361dfe",
+      "v1_outputs_unchanged": true,
+      "v1_output_files_hashed": 5,
+      "public_osecan_input": false,
+      "restricted_data_used": false,
+      "unexpected_d_cells": 0
+    },
+    "statcan_d": {
+      "observed_d_cell_count": 0,
+      "unexpected_cells": [],
+      "policy": "D is a data-quality flag, not a deletion; no direct input may carry an unlisted D."
+    },
+    "caveats": [
+      "Net value is a volume-weighted model estimate: allocation_m3 times province margin_cad_m3, divided by 1e6. It is not an observed transaction, a policy result, or a combined national net value.",
+      "The Forest LP objective and every Forest LP v1 output are unchanged. Net value is used only for reporting and is not an LP objective or constraint.",
+      "Negative margins and negative net values are retained without clipping. A negative value is a model result, not a data error.",
+      "Infeasible allocation cases keep blank allocation and blank net-value fields. They are not clamped, back-filled, or allocated a zero value.",
+      "The allocation levels are alternative screening ladders, not additive years or independent jurisdictions. National totals are reported per allocation case and must not be summed across levels.",
+      "Donor-price and donor-cost provinces remain model estimates. Stumpage_scaled is a method sensitivity, not the base scenario.",
+      "Nunavut has zero allocation volume in the 119m provenance, but a non-zero unit margin. Its net value is zero by multiplication where allocated volume is zero and is not an observed zero-profit finding."
+    ],
+    "non_claims": [
+      "Not observed; observed=false.",
+      "Not policy grade; policy_grade=false.",
+      "Not a Forest LP objective or constraint input; lp_objective=not_used.",
+      "Not a change to Forest LP v1 outputs or the v1 least-deviation allocation.",
+      "Not a combined national net value.",
+      "Not a public OSeCAN input and not a UI publication.",
+      "Not a jurisdiction ranking and not an investment recommendation."
+    ],
+    "economic_allocation_sensitivity": {
+      "schema_version": "national/provincial-allocation-net-value-lp/1",
+      "model_id": "provincial_allocation_net_value_lp_v1",
+      "artifact_version": "1.0.0",
+      "generated_utc": "2026-11-22T17:55:13+00:00",
+      "status": "model_estimate screening sensitivity; not observed, not policy grade, and not a canonical allocation change",
+      "role": "report_only_not_canonical_allocation",
+      "labels": {
+        "evidence": "model_estimate",
+        "net_value_label": "model_estimate",
+        "observed": false,
+        "policy_grade": false,
+        "lp_objective": "net_value_sensitivity",
+        "canonical_changed": false,
+        "baseline_objective": "least_deviation_from_observed_2024_shares",
+        "combined_national_net_value": false,
+        "public_osecan_input": false,
+        "restricted_data_used": false,
+        "ranking_performed": false,
+        "forest_lp_input": false
+      },
+      "donor_price_caveat": "donor_flat is a donor/flat price proxy, not an observed provincial price; stumpage_scaled is a method sensitivity. Both are model_estimate, observed=false, policy_grade=false, and not policy-grade net value.",
+      "coverage": {
+        "allocation_rows": 182,
+        "delta_rows": 182,
+        "feasible_case_count": 14,
+        "summary_case_count": 18,
+        "documented_ceiling_rows": 6,
+        "province_shift_rows": 13,
+        "province_shift_level": "119m",
+        "province_count": 13,
+        "levels": [
+          "100m",
+          "119m",
+          "150m"
+        ],
+        "scenarios": [
+          "donor_flat",
+          "stumpage_scaled"
+        ]
+      },
+      "rows": [
+        {
+          "level": "100m",
+          "level_label": "100 Mm³",
+          "scenario": "donor_flat",
+          "scenario_role": "base",
+          "scenario_label": "base · donor_flat",
+          "case_status": "optimal",
+          "allocation_m3": 100000000.0,
+          "baseline_m_cad": 4347.22634,
+          "optimized_m_cad": 5546.067491,
+          "delta_m_cad": 1198.841151,
+          "net_value_low_m_cad": -2603.215515,
+          "net_value_high_m_cad": 8769.209775,
+          "evidence": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false
+        },
+        {
+          "level": "100m",
+          "level_label": "100 Mm³",
+          "scenario": "stumpage_scaled",
+          "scenario_role": "sensitivity",
+          "scenario_label": "sensitivity · stumpage_scaled",
+          "case_status": "optimal",
+          "allocation_m3": 100000000.0,
+          "baseline_m_cad": -559.722837,
+          "optimized_m_cad": 1564.428413,
+          "delta_m_cad": 2124.15125,
+          "net_value_low_m_cad": -6501.4817,
+          "net_value_high_m_cad": 5729.194845,
+          "evidence": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false
+        },
+        {
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "scenario": "donor_flat",
+          "scenario_role": "base",
+          "scenario_label": "base · donor_flat",
+          "case_status": "optimal",
+          "allocation_m3": 118977339.0,
+          "baseline_m_cad": 5205.328751,
+          "optimized_m_cad": 6166.356896,
+          "delta_m_cad": 961.028145,
+          "net_value_low_m_cad": -3195.929812,
+          "net_value_high_m_cad": 10113.751009,
+          "evidence": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false
+        },
+        {
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "scenario": "stumpage_scaled",
+          "scenario_role": "sensitivity",
+          "scenario_label": "sensitivity · stumpage_scaled",
+          "case_status": "optimal",
+          "allocation_m3": 118977339.0,
+          "baseline_m_cad": -655.319121,
+          "optimized_m_cad": 880.081002,
+          "delta_m_cad": 1535.400123,
+          "net_value_low_m_cad": -7728.444042,
+          "net_value_high_m_cad": 5943.531688,
+          "evidence": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false
+        },
+        {
+          "level": "150m",
+          "level_label": "150 Mm³",
+          "scenario": "donor_flat",
+          "scenario_role": "base",
+          "scenario_label": "base · donor_flat",
+          "case_status": "optimal",
+          "allocation_m3": 150000000.0,
+          "baseline_m_cad": 6662.823952,
+          "optimized_m_cad": 7167.753143,
+          "delta_m_cad": 504.929191,
+          "net_value_low_m_cad": -3794.954434,
+          "net_value_high_m_cad": 11940.931514,
+          "evidence": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false
+        },
+        {
+          "level": "150m",
+          "level_label": "150 Mm³",
+          "scenario": "stumpage_scaled",
+          "scenario_role": "sensitivity",
+          "scenario_label": "sensitivity · stumpage_scaled",
+          "case_status": "optimal",
+          "allocation_m3": 150000000.0,
+          "baseline_m_cad": -1194.863822,
+          "optimized_m_cad": -472.825253,
+          "delta_m_cad": 722.038569,
+          "net_value_low_m_cad": -9449.643206,
+          "net_value_high_m_cad": 5268.907979,
+          "evidence": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false
+        }
+      ],
+      "province_shifts": [
+        {
+          "province": "BC",
+          "province_name": "British Columbia",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 39978577.0,
+          "baseline_share": 0.33601842,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 45223878.0,
+              "delta_m3": 5245301.0,
+              "optimized_share": 0.38010497,
+              "delta_share_pp": 4.408656,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 45223878.0,
+              "delta_m3": 5245301.0,
+              "optimized_share": 0.38010497,
+              "delta_share_pp": 4.408656,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "AB",
+          "province_name": "Alberta",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 22891404.0,
+          "baseline_share": 0.19240138,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 30100000.0,
+              "delta_m3": 7208596.0,
+              "optimized_share": 0.25298935,
+              "delta_share_pp": 6.058797,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 8253952.2,
+              "delta_m3": -14637451.8,
+              "optimized_share": 0.06937415,
+              "delta_share_pp": -12.302722,
+              "direction": "loss"
+            }
+          }
+        },
+        {
+          "province": "SK",
+          "province_name": "Saskatchewan",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 4344697.6,
+          "baseline_share": 0.03651702,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 8940000.0,
+              "delta_m3": 4595302.4,
+              "optimized_share": 0.07514036,
+              "delta_share_pp": 3.862334,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 8940000.0,
+              "delta_m3": 4595302.4,
+              "optimized_share": 0.07514036,
+              "delta_share_pp": 3.862334,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "MB",
+          "province_name": "Manitoba",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 1135235.8,
+          "baseline_share": 0.00954161,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 7690000.0,
+              "delta_m3": 6554764.2,
+              "optimized_share": 0.06463416,
+              "delta_share_pp": 5.509254,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 7690000.0,
+              "delta_m3": 6554764.2,
+              "optimized_share": 0.06463416,
+              "delta_share_pp": 5.509254,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "ON",
+          "province_name": "Ontario",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 13493596.0,
+          "baseline_share": 0.11341316,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 0.0,
+              "delta_m3": -13493596.0,
+              "optimized_share": 0.0,
+              "delta_share_pp": -11.341316,
+              "direction": "loss"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 0.0,
+              "delta_m3": -13493596.0,
+              "optimized_share": 0.0,
+              "delta_share_pp": -11.341316,
+              "direction": "loss"
+            }
+          }
+        },
+        {
+          "province": "QC",
+          "province_name": "Quebec",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 26674334.0,
+          "baseline_share": 0.22419676,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 18503852.0,
+              "delta_m3": -8170482.0,
+              "optimized_share": 0.15552417,
+              "delta_share_pp": -6.867259,
+              "direction": "loss"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 34115200.0,
+              "delta_m3": 7440866.0,
+              "optimized_share": 0.28673696,
+              "delta_share_pp": 6.25402,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "NB",
+          "province_name": "New Brunswick",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 6234700.0,
+          "baseline_share": 0.05240242,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 0.0,
+              "delta_m3": -6234700.0,
+              "optimized_share": 0.0,
+              "delta_share_pp": -5.240242,
+              "direction": "loss"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 6234700.0,
+              "delta_m3": 0.0,
+              "optimized_share": 0.05240242,
+              "delta_share_pp": 0.0,
+              "direction": "unchanged"
+            }
+          }
+        },
+        {
+          "province": "NS",
+          "province_name": "Nova Scotia",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 2388245.0,
+          "baseline_share": 0.02007311,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 5750000.0,
+              "delta_m3": 3361755.0,
+              "optimized_share": 0.04832853,
+              "delta_share_pp": 2.825542,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 5750000.0,
+              "delta_m3": 3361755.0,
+              "optimized_share": 0.04832853,
+              "delta_share_pp": 2.825542,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "NL",
+          "province_name": "Newfoundland and Labrador",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 1454037.5,
+          "baseline_share": 0.01222113,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 2012233.0,
+              "delta_m3": 558195.5,
+              "optimized_share": 0.01691274,
+              "delta_share_pp": 0.469161,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 2012233.0,
+              "delta_m3": 558195.5,
+              "optimized_share": 0.01691274,
+              "delta_share_pp": 0.469161,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "PE",
+          "province_name": "Prince Edward Island",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 302210.4,
+          "baseline_share": 0.00254007,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 460000.0,
+              "delta_m3": 157789.6,
+              "optimized_share": 0.00386628,
+              "delta_share_pp": 0.132622,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 460000.0,
+              "delta_m3": 157789.6,
+              "optimized_share": 0.00386628,
+              "delta_share_pp": 0.132622,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "YT",
+          "province_name": "Yukon",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 43925.8,
+          "baseline_share": 0.0003692,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 261000.0,
+              "delta_m3": 217074.2,
+              "optimized_share": 0.00219369,
+              "delta_share_pp": 0.18245,
+              "direction": "gain"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 261000.0,
+              "delta_m3": 217074.2,
+              "optimized_share": 0.00219369,
+              "delta_share_pp": 0.18245,
+              "direction": "gain"
+            }
+          }
+        },
+        {
+          "province": "NT",
+          "province_name": "Northwest Territories",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 36376.0,
+          "baseline_share": 0.00030574,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 36376.0,
+              "delta_m3": 0.0,
+              "optimized_share": 0.00030574,
+              "delta_share_pp": 0.0,
+              "direction": "unchanged"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 36376.0,
+              "delta_m3": 0.0,
+              "optimized_share": 0.00030574,
+              "delta_share_pp": 0.0,
+              "direction": "unchanged"
+            }
+          }
+        },
+        {
+          "province": "NU",
+          "province_name": "Nunavut",
+          "level": "119m",
+          "level_label": "119 Mm³",
+          "baseline_m3": 0.0,
+          "baseline_share": 0.0,
+          "scenarios": {
+            "donor_flat": {
+              "optimized_m3": 0.0,
+              "delta_m3": 0.0,
+              "optimized_share": 0.0,
+              "delta_share_pp": 0.0,
+              "direction": "unchanged"
+            },
+            "stumpage_scaled": {
+              "optimized_m3": 0.0,
+              "delta_m3": 0.0,
+              "optimized_share": 0.0,
+              "delta_share_pp": 0.0,
+              "direction": "unchanged"
+            }
+          }
+        }
+      ],
+      "caveats": [
+        "donor_flat is a donor/flat price proxy, not an observed provincial price; stumpage_scaled is a method sensitivity. Both are model_estimate, observed=false, policy_grade=false, and not policy-grade net value.",
+        "Negative margins are retained unclipped. When total harvest exceeds the capacity of positive-margin provinces, the LP necessarily allocates to negative-margin provinces; it chooses the least-negative available margin.",
+        "The operable-proxy landbase is a SCANFI merchantability screen intersected with a share-based 2016 tenure proxy. It is not a legal THLB: it carries no slope, road access, age/disturbance, growth, yield, or economic constraint. Intensity caps are screening sensitivities only.",
+        "The objective is a static unit-margin times harvest sum. It has no demand, mill capacity, tenure, haul-distance, species, employment, silviculture, or discounting content.",
+        "The net-value allocation is a sensitivity, not a policy allocation, not a forecast, and not a legal AAC. The canonical least-deviation allocation is unchanged and remains the model of record.",
+        "The documented-cap sum is a mixed-basis ceiling set, not a national AAC. PE and NU have no operable proxy and are flagged operable_missing, not assigned zero area.",
+        "Net value low/base/high re-prices the central-margin allocation at the v2.3 low/base/high margins; low and high are uncertainty bounds, not separately optimized allocations."
+      ],
+      "non_claims": [
+        "Not observed; observed=false.",
+        "Not policy grade; policy_grade=false.",
+        "Not a canonical provincial-allocation change; canonical_changed=false.",
+        "Not a UI or public OSeCAN input; no public OSeCAN.",
+        "Not observed profit, net income, mill margin, or official net value.",
+        "Not a ranking or investment recommendation."
+      ],
+      "source_csv": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_net_value_lp.csv",
+      "source_delta_csv": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_delta.csv",
+      "source_json": "data/derived/national/harvest_basis/allocation_net_value_lp/summary.json"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "donor_flat",
+      "role": "base",
+      "label": "Base · donor_flat",
+      "is_base": true,
+      "price_tier_counts": {
+        "reported_average": 1,
+        "donor_proxy": 12
+      }
+    },
+    {
+      "id": "stumpage_scaled",
+      "role": "sensitivity",
+      "label": "Sensitivity · stumpage_scaled",
+      "is_base": false,
+      "price_tier_counts": {
+        "reported_average": 1,
+        "stumpage_scaled_proxy": 7,
+        "donor_proxy": 5
+      }
+    }
+  ],
+  "jurisdictions": [
+    {
+      "province": "BC",
+      "province_name": "British Columbia",
+      "break_even_cad_m3": 74.24,
+      "donor_margin": 41.588,
+      "scaled_margin": 41.588,
+      "donor_gap": -41.588,
+      "scaled_gap": -41.588,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 6,
+      "observed_2024_volume_m3": 38876568.0,
+      "allocation_volume_m3": 39978577.0,
+      "volume_share_observed": 0.32675607,
+      "volume_share_119m": 0.33601842,
+      "price_tier": "reported_average",
+      "price_basis": "mill_delivered_observed_report_average",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": true,
+        "donor_province": ""
+      },
+      "cost_tier": "component_stack",
+      "cost_tier_source": "component_mix_partial_direct",
+      "cost_tier_label": "component stack",
+      "cost_source": {
+        "source_key": "bc_qc_component_stack",
+        "title": "BC v2.2 component stack",
+        "year": "2026",
+        "source_url": "https://www.tla.ca/wp-content/uploads/2026/08/Timber-Harvest-Cost-Model-Rate-Sheet_Aug-10-2026.pdf",
+        "statcan_status": "",
+        "data_quality_flags": "",
+        "includes_overhead": false,
+        "not_logging_haul_breakdown": false,
+        "is_direct": false,
+        "provisional_aggregate": false,
+        "caveat": "Component cost stack retained from v2.2. It is not a direct observed logging cost; component tiers and donors remain visible below."
+      },
+      "cost_components": [
+        {
+          "component": "logging_haul",
+          "low_cad_m3": 29.59,
+          "base_cad_m3": 57.7,
+          "high_cad_m3": 144.04,
+          "tier": "proxy_model",
+          "cost_tier": "component_stack",
+          "source_key": "bc_open_cost_model",
+          "source": "Open-data BC logging and truck-haul cost model",
+          "source_url": "https://www.tla.ca/wp-content/uploads/2026/08/Timber-Harvest-Cost-Model-Rate-Sheet_Aug-10-2026.pdf",
+          "source_year": "2026",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "BC open proxy logging+haul distribution. No public BC logging/haul CAD/m3 allowance is materialised."
+        },
+        {
+          "component": "road",
+          "low_cad_m3": 1.0,
+          "base_cad_m3": 5.93,
+          "high_cad_m3": 9.78,
+          "tier": "appraisal_allowance",
+          "cost_tier": "component_stack",
+          "source_key": "bc_appraisal_costs_2026",
+          "source": "BC Interior Appraisal Manual 2026 Table 4-6 road maintenance (22 road groups)",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing/interior-timber-pricing/interior-appraisal-manual",
+          "source_year": "2026",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "Published appraisal allowance, not an observed cost. This is road maintenance only; IAM/CAM road construction is CAD/km and was not converted to CAD/m3. CAM scale-based road management (4.73 CAD/m3) is a cross-check only. Not a complete road construction/amortization cost."
+        },
+        {
+          "component": "silviculture",
+          "low_cad_m3": 5.84,
+          "base_cad_m3": 10.61,
+          "high_cad_m3": 11.23,
+          "tier": "reported_average",
+          "cost_tier": "component_stack",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source": "BC appraisal costs Interior Basic Silviculture 2026-10",
+          "source_url": "https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/forestry/timber-pricing/interior-timber-pricing/interior-appraisal-manual/iam_2026_master_b.pdf",
+          "source_year": "2026",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "Published BC Interior basic-silviculture CAD/m3 by forest zone. Low/median/high are the zone range. Coast CAD/ha values are not converted to CAD/m3."
+        }
+      ],
+      "total_cost_low_cad_m3": 36.43,
+      "total_cost_base_cad_m3": 74.24,
+      "total_cost_high_cad_m3": 165.05,
+      "donor_flat": {
+        "low_cad_m3": -90.077,
+        "base_cad_m3": 41.588,
+        "high_cad_m3": 94.7093,
+        "price_tier": "reported_average",
+        "price_basis": "mill_delivered_observed_report_average",
+        "cost_tier": "component_stack",
+        "cost_tier_source": "component_mix_partial_direct"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -90.077,
+        "base_cad_m3": 41.588,
+        "high_cad_m3": 94.7093,
+        "price_tier": "reported_average",
+        "price_basis": "mill_delivered_observed_report_average",
+        "cost_tier": "component_stack",
+        "cost_tier_source": "component_mix_partial_direct"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 41.588,
+        "v2_3_margin_base_cad_m3": 41.588,
+        "margin_base_delta_cad_m3": 0.0,
+        "total_cost_base_delta_cad_m3": 0.0,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 2,
+      "proxy_cell_count": 2,
+      "donor_cell_count": 1,
+      "donor_only": false,
+      "status": "partial_direct",
+      "status_label": "partial direct",
+      "is_direct": true,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 39978577.0,
+        "donor_flat": {
+          "total_low_m_cad": -3601.15028,
+          "total_base_m_cad": 1662.62906,
+          "total_high_m_cad": 3786.343043,
+          "share_of_national_total_base": 0.3194090403,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -3601.15028,
+          "total_base_m_cad": 1662.62906,
+          "total_high_m_cad": 3786.343043,
+          "share_of_national_total_base": -2.5371288569,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 34.325,
+        "rate_base_cad_m3": 34.325,
+        "rate_high_cad_m3": 34.325,
+        "year": "2025",
+        "rate_type": "bcts_average_stumpage_rate",
+        "source_title": "BC Timber Sales 2024/25 Annual Public Performance Report",
+        "source_key": "bcts_annual_2024_25",
+        "source_url": "https://gov.bc.ca/assets/gov/farming-natural-resources-and-industry/forestry/bc-timber-sales/business-plans-performance-reports/fy2024_bcts_annual_public_performance_report.pdf",
+        "fallback_donor": "",
+        "notes": "Used only as the denominator of the BC delivered-price/stumpage ratio.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "proxy_model",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "",
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        },
+        {
+          "component": "logging",
+          "tier": "proxy_model",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "",
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        },
+        {
+          "component": "price",
+          "tier": "reported_average",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "",
+          "notes": "Direct BC reported mill-delivered average. Coast and Interior report averages are volume-weighted by their published report totals; this is a reported average, not a transaction record."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        },
+        {
+          "component": "silviculture",
+          "tier": "reported_average",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "",
+          "notes": "BC logging+haul is the open proxy cost distribution; silviculture is a published BC Interior allowance; road is a QC donor because BC road CAD/m3 is not published."
+        }
+      ]
+    },
+    {
+      "province": "AB",
+      "province_name": "Alberta",
+      "break_even_cad_m3": 54.9865,
+      "donor_margin": 60.8415,
+      "scaled_margin": -36.3258,
+      "donor_gap": -60.8415,
+      "scaled_gap": 36.3258,
+      "classification": "cost_limited",
+      "price_sensitivity_rank": 8,
+      "observed_2024_volume_m3": 22260402.0,
+      "allocation_volume_m3": 22891404.0,
+      "volume_share_observed": 0.18709783,
+      "volume_share_119m": 0.19240138,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "D",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_D_acceptable_quality;contract_statcan_status_D_acceptable_quality",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 54.9865,
+          "base_cad_m3": 54.9865,
+          "high_cad_m3": 54.9865,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 54.9865,
+      "total_cost_base_cad_m3": 54.9865,
+      "total_cost_high_cad_m3": 54.9865,
+      "donor_flat": {
+        "low_cad_m3": 19.9865,
+        "base_cad_m3": 60.8415,
+        "high_cad_m3": 76.1528,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -49.1765,
+        "base_cad_m3": -36.3258,
+        "high_cad_m3": -6.5423,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": -97.1673,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 35.036,
+        "v2_3_margin_base_cad_m3": 60.8415,
+        "margin_base_delta_cad_m3": 25.8055,
+        "total_cost_base_delta_cad_m3": -25.8055,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 22891404.0,
+        "donor_flat": {
+          "total_low_m_cad": 457.519046,
+          "total_base_m_cad": 1392.747356,
+          "total_high_m_cad": 1743.244511,
+          "share_of_national_total_base": 0.2675618435,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -1125.719129,
+          "total_base_m_cad": -831.548563,
+          "total_high_m_cad": -149.762432,
+          "share_of_national_total_base": 1.2689215568,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": true,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 2.66,
+        "rate_base_cad_m3": 5.53,
+        "rate_high_cad_m3": 12.68,
+        "year": "2026-11",
+        "rate_type": "timber_dues_rate",
+        "source_title": "Timber dues rates - coniferous lumber, pulp and roundwood timber",
+        "source_key": "ab_timber_dues_2026_11",
+        "source_url": "https://www.alberta.ca/timber-dues-rates-coniferous-pulpwood-and-roundwood",
+        "fallback_donor": "",
+        "notes": "General dues rate, not the small-operator rate. Not a delivered price.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "SK",
+      "province_name": "Saskatchewan",
+      "break_even_cad_m3": 36.4209,
+      "donor_margin": 79.4071,
+      "scaled_margin": 16.3892,
+      "donor_gap": -79.4071,
+      "scaled_gap": -16.3892,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 5,
+      "observed_2024_volume_m3": 4224936.0,
+      "allocation_volume_m3": 4344697.6,
+      "volume_share_observed": 0.03551043,
+      "volume_share_119m": 0.03651702,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "E",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_E_use_with_caution",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 36.4209,
+          "base_cad_m3": 36.4209,
+          "high_cad_m3": 36.4209,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 36.4209,
+      "total_cost_base_cad_m3": 36.4209,
+      "total_cost_high_cad_m3": 36.4209,
+      "donor_flat": {
+        "low_cad_m3": 38.5521,
+        "base_cad_m3": 79.4071,
+        "high_cad_m3": 94.7184,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -30.742,
+        "base_cad_m3": 16.3892,
+        "high_cad_m3": 23.3702,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": -63.0179,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 34.2655,
+        "v2_3_margin_base_cad_m3": 79.4071,
+        "margin_base_delta_cad_m3": 45.1416,
+        "total_cost_base_delta_cad_m3": -45.1416,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 4344697.6,
+        "donor_flat": {
+          "total_low_m_cad": 167.497216,
+          "total_base_m_cad": 344.999837,
+          "total_high_m_cad": 411.522805,
+          "share_of_national_total_base": 0.0662782033,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -133.564694,
+          "total_base_m_cad": 71.206118,
+          "total_high_m_cad": 101.536452,
+          "share_of_national_total_base": -0.1086586907,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 2.6,
+        "rate_base_cad_m3": 15.65,
+        "rate_high_cad_m3": 15.65,
+        "year": "2026-Q3",
+        "rate_type": "timber_dues_rate",
+        "source_title": "2026-27 Quarter 3 Dues and Fees Table",
+        "source_key": "sk_dues_q3_2026_27",
+        "source_url": "https://publications.saskatchewan.ca/api/v1/products/129953/formats/157443/download",
+        "fallback_donor": "",
+        "notes": "Forest Management Fund fee (7.47 CAD/m3) is excluded to avoid double counting the silviculture cost donor.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "MB",
+      "province_name": "Manitoba",
+      "break_even_cad_m3": 52.8705,
+      "donor_margin": 62.9575,
+      "scaled_margin": -30.6666,
+      "donor_gap": -62.9575,
+      "scaled_gap": 30.6666,
+      "classification": "cost_limited",
+      "price_sensitivity_rank": 7,
+      "observed_2024_volume_m3": 1103943.0,
+      "allocation_volume_m3": 1135235.8,
+      "volume_share_observed": 0.0092786,
+      "volume_share_119m": 0.00954161,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "D",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_D_acceptable_quality;contract_statcan_status_E_use_with_caution",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 52.8705,
+          "base_cad_m3": 52.8705,
+          "high_cad_m3": 52.8705,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 52.8705,
+      "total_cost_base_cad_m3": 52.8705,
+      "total_cost_high_cad_m3": 52.8705,
+      "donor_flat": {
+        "low_cad_m3": 22.1025,
+        "base_cad_m3": 62.9575,
+        "high_cad_m3": 78.2688,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -42.8668,
+        "base_cad_m3": -30.6666,
+        "high_cad_m3": -27.7315,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": -93.6241,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 33.3948,
+        "v2_3_margin_base_cad_m3": 62.9575,
+        "margin_base_delta_cad_m3": 29.5627,
+        "total_cost_base_delta_cad_m3": -29.5627,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 1135235.8,
+        "donor_flat": {
+          "total_low_m_cad": 25.091549,
+          "total_base_m_cad": 71.471608,
+          "total_high_m_cad": 88.853544,
+          "share_of_national_total_base": 0.0137304696,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -48.663926,
+          "total_base_m_cad": -34.813822,
+          "total_high_m_cad": -31.481792,
+          "share_of_national_total_base": 0.0531249901,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": true,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 4.58,
+        "rate_base_cad_m3": 6.58,
+        "rate_high_cad_m3": 6.58,
+        "year": "2026-11",
+        "rate_type": "timber_dues_rate",
+        "source_title": "Crown Timber Dues for November 2026",
+        "source_key": "mb_crown_timber_dues_2026_11",
+        "source_url": "https://www.gov.mb.ca/nrnd/forest/forestry/crown_timber/history/index.html",
+        "fallback_donor": "",
+        "notes": "Standard FMU rate used; not a delivered price.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "ON",
+      "province_name": "Ontario",
+      "break_even_cad_m3": 83.7293,
+      "donor_margin": 32.0987,
+      "scaled_margin": -60.9518,
+      "donor_gap": -32.0987,
+      "scaled_gap": 60.9518,
+      "classification": "cost_limited",
+      "price_sensitivity_rank": 3,
+      "observed_2024_volume_m3": 13121645.0,
+      "allocation_volume_m3": 13493596.0,
+      "volume_share_observed": 0.11028693,
+      "volume_share_119m": 0.11341316,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "D",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_D_acceptable_quality;contract_statcan_status_E_use_with_caution;contract_statcan_status_D_acceptable_quality",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 83.7293,
+          "base_cad_m3": 83.7293,
+          "high_cad_m3": 83.7293,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 83.7293,
+      "total_cost_base_cad_m3": 83.7293,
+      "total_cost_high_cad_m3": 83.7293,
+      "donor_flat": {
+        "low_cad_m3": -8.7563,
+        "base_cad_m3": 32.0987,
+        "high_cad_m3": 47.41,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -70.493,
+        "base_cad_m3": -60.9518,
+        "high_cad_m3": -57.9408,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": -93.0505,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 35.2015,
+        "v2_3_margin_base_cad_m3": 32.0987,
+        "margin_base_delta_cad_m3": -3.1028,
+        "total_cost_base_delta_cad_m3": 3.1028,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 13493596.0,
+        "donor_flat": {
+          "total_low_m_cad": -118.153975,
+          "total_base_m_cad": 433.12689,
+          "total_high_m_cad": 639.731386,
+          "share_of_national_total_base": 0.0832083642,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -951.204063,
+          "total_base_m_cad": -822.458965,
+          "total_high_m_cad": -781.829747,
+          "share_of_national_total_base": 1.2550510658,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": true,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 6.06,
+        "rate_base_cad_m3": 6.75,
+        "rate_high_cad_m3": 6.75,
+        "year": "2026-11",
+        "rate_type": "crown_timber_charges_rate",
+        "source_title": "Stumpage matrix 2026-27, Period 8 (November 2026)",
+        "source_key": "on_stumpage_matrix_2026_27",
+        "source_url": "https://data.ontario.ca/dataset/crown-timber-charges-for-forestry-companies/resource/159952fe-22ad-4fb7-9067-8aec29964d74",
+        "fallback_donor": "",
+        "notes": "Subtotal Crown charge used; not a delivered price.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "QC",
+      "province_name": "Quebec",
+      "break_even_cad_m3": 83.37,
+      "donor_margin": 32.458,
+      "scaled_margin": -35.8577,
+      "donor_gap": -32.458,
+      "scaled_gap": 35.8577,
+      "classification": "cost_limited",
+      "price_sensitivity_rank": 4,
+      "observed_2024_volume_m3": 25939056.0,
+      "allocation_volume_m3": 26674334.0,
+      "volume_share_observed": 0.21801678,
+      "volume_share_119m": 0.22419676,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "component_stack",
+      "cost_tier_source": "component_survey_aggregate",
+      "cost_tier_label": "component stack",
+      "cost_source": {
+        "source_key": "bc_qc_component_stack",
+        "title": "QC v2.2 component stack",
+        "year": "2022",
+        "source_url": "https://cdn-contenu.quebec.ca/cdn-contenu/forets/documents/entreprises/statistiques/RA_couts_approvisionnement_transformation_revenus_2022.pdf",
+        "statcan_status": "",
+        "data_quality_flags": "",
+        "includes_overhead": false,
+        "not_logging_haul_breakdown": false,
+        "is_direct": false,
+        "provisional_aggregate": false,
+        "caveat": "Component cost stack retained from v2.2. It is not a direct observed logging cost; component tiers and donors remain visible below."
+      },
+      "cost_components": [
+        {
+          "component": "harvest",
+          "low_cad_m3": 28.27,
+          "base_cad_m3": 31.42,
+          "high_cad_m3": 34.48,
+          "tier": "reported_survey_aggregate",
+          "cost_tier": "component_stack",
+          "source_key": "qc_cost_survey_2022",
+          "source": "Quebec MRNF 2022 forest cost and revenue survey aggregates: T20 SEPM synthesis and regional range (7 regions)",
+          "source_url": "https://cdn-contenu.quebec.ca/cdn-contenu/forets/documents/entreprises/statistiques/RA_couts_approvisionnement_transformation_revenus_2022.pdf",
+          "source_year": "2022",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "Reported MRNF 2022 survey aggregate; T20 before transfers; road is gross access cost (not T5 after-PRCCM). Low/high are the published regional SEPM minimum/maximum; R09 is a three-respondent mean and remains flagged in the source. Not observed transaction data."
+        },
+        {
+          "component": "haul",
+          "low_cad_m3": 19.32,
+          "base_cad_m3": 24.76,
+          "high_cad_m3": 36.86,
+          "tier": "reported_survey_aggregate",
+          "cost_tier": "component_stack",
+          "source_key": "qc_cost_survey_2022",
+          "source": "Quebec MRNF 2022 forest cost and revenue survey aggregates: T20 SEPM synthesis and regional range (7 regions)",
+          "source_url": "https://cdn-contenu.quebec.ca/cdn-contenu/forets/documents/entreprises/statistiques/RA_couts_approvisionnement_transformation_revenus_2022.pdf",
+          "source_year": "2022",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "Reported MRNF 2022 survey aggregate; T20 before transfers; road is gross access cost (not T5 after-PRCCM). Low/high are the published regional SEPM minimum/maximum; R09 is a three-respondent mean and remains flagged in the source. Not observed transaction data."
+        },
+        {
+          "component": "road",
+          "low_cad_m3": 7.47,
+          "base_cad_m3": 16.58,
+          "high_cad_m3": 22.13,
+          "tier": "reported_survey_aggregate",
+          "cost_tier": "component_stack",
+          "source_key": "qc_cost_survey_2022",
+          "source": "Quebec MRNF 2022 forest cost and revenue survey aggregates: T20 SEPM synthesis and regional range (7 regions)",
+          "source_url": "https://cdn-contenu.quebec.ca/cdn-contenu/forets/documents/entreprises/statistiques/RA_couts_approvisionnement_transformation_revenus_2022.pdf",
+          "source_year": "2022",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "Reported MRNF 2022 survey aggregate; T20 before transfers; road is gross access cost (not T5 after-PRCCM). Low/high are the published regional SEPM minimum/maximum; R09 is a three-respondent mean and remains flagged in the source. Not observed transaction data."
+        },
+        {
+          "component": "silviculture",
+          "low_cad_m3": 5.84,
+          "base_cad_m3": 10.61,
+          "high_cad_m3": 11.23,
+          "tier": "donor_proxy",
+          "cost_tier": "component_stack",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source": "BC appraisal costs Interior Basic Silviculture 2026-10",
+          "source_url": "https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/forestry/timber-pricing/interior-timber-pricing/interior-appraisal-manual/iam_2026_master_b.pdf",
+          "source_year": "2026",
+          "includes_overhead_not_logging_haul_breakdown": false,
+          "notes": "BC Interior basic-silviculture allowance used as the national donor. No provincial silviculture cost series is materialised for the recipient jurisdiction."
+        }
+      ],
+      "total_cost_low_cad_m3": 60.9,
+      "total_cost_base_cad_m3": 83.37,
+      "total_cost_high_cad_m3": 104.7,
+      "donor_flat": {
+        "low_cad_m3": -29.727,
+        "base_cad_m3": 32.458,
+        "high_cad_m3": 70.2393,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "component_stack",
+        "cost_tier_source": "component_survey_aggregate"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -76.5674,
+        "base_cad_m3": -35.8577,
+        "high_cad_m3": 25.0235,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "component_stack",
+        "cost_tier_source": "component_survey_aggregate"
+      },
+      "scaled_minus_donor_flat_cad_m3": -68.3157,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 32.458,
+        "v2_3_margin_base_cad_m3": 32.458,
+        "margin_base_delta_cad_m3": 0.0,
+        "total_cost_base_delta_cad_m3": 0.0,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 1,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 4,
+      "donor_only": false,
+      "status": "component_stack_survey",
+      "status_label": "component stack · survey",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 26674334.0,
+        "donor_flat": {
+          "total_low_m_cad": -792.947927,
+          "total_base_m_cad": 865.795533,
+          "total_high_m_cad": 1873.586548,
+          "share_of_national_total_base": 0.1663286941,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -2042.384401,
+          "total_base_m_cad": -956.480266,
+          "total_high_m_cad": 667.485197,
+          "share_of_national_total_base": 1.4595640978,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 12.88,
+        "rate_base_cad_m3": 14.08,
+        "rate_high_cad_m3": 22.49,
+        "year": "2026-11",
+        "rate_type": "standing_value_rate",
+        "source_title": "Taux unitaires de la valeur marchande des bois sur pied, novembre 2026",
+        "source_key": "qc_tarification_2026_27",
+        "source_url": "https://cdn-contenu.quebec.ca/cdn-contenu/forets/documents/entreprises/recolte/tarification/2026-2027/GR_taux_bois_2026-2027.xlsx",
+        "fallback_donor": "",
+        "notes": "Zone distribution used because a single provincial rate does not exist. Not a delivered price.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "QC has no current delivered-log price in the materialised evidence. BC donor price used. The QC 2022 purchase cost and BMMB Crown historical rate are references only, not price inputs."
+        },
+        {
+          "component": "road",
+          "tier": "reported_average",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road is the published QC 2022 CAD/m3 allowance. QC direct harvest+haul is a cross-check, not a separate input."
+        }
+      ]
+    },
+    {
+      "province": "NB",
+      "province_name": "New Brunswick",
+      "break_even_cad_m3": 98.6665,
+      "donor_margin": 17.1615,
+      "scaled_margin": -14.1365,
+      "donor_gap": -17.1615,
+      "scaled_gap": 14.1365,
+      "classification": "price_limited",
+      "price_sensitivity_rank": 1,
+      "observed_2024_volume_m3": 9341187.0,
+      "allocation_volume_m3": 6234700.0,
+      "volume_share_observed": 0.07851232,
+      "volume_share_119m": 0.05240242,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "E",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_E_use_with_caution;contract_statcan_status_D_acceptable_quality;contract_statcan_status_E_use_with_caution",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 98.6665,
+          "base_cad_m3": 98.6665,
+          "high_cad_m3": 98.6665,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 98.6665,
+      "total_cost_base_cad_m3": 98.6665,
+      "total_cost_high_cad_m3": 98.6665,
+      "donor_flat": {
+        "low_cad_m3": -23.6935,
+        "base_cad_m3": 17.1615,
+        "high_cad_m3": 32.4728,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -46.1799,
+        "base_cad_m3": -14.1365,
+        "high_cad_m3": 4.7167,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": -31.298,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 36.925,
+        "v2_3_margin_base_cad_m3": 17.1615,
+        "margin_base_delta_cad_m3": -19.7635,
+        "total_cost_base_delta_cad_m3": 19.7635,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 6234700.0,
+        "donor_flat": {
+          "total_low_m_cad": -147.721864,
+          "total_base_m_cad": 106.996804,
+          "total_high_m_cad": 202.458166,
+          "share_of_national_total_base": 0.0205552443,
+          "negative_flag": false,
+          "total_negative_low": true,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": -287.917823,
+          "total_base_m_cad": -88.136837,
+          "total_high_m_cad": 29.407209,
+          "share_of_national_total_base": 0.1344945291,
+          "negative_flag": true,
+          "total_negative_low": true,
+          "total_negative_base": true,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 24.03,
+        "rate_base_cad_m3": 25.05,
+        "rate_high_cad_m3": 27.06,
+        "year": "2026-11",
+        "rate_type": "timber_royalty_rate",
+        "source_title": "Timber royalty rates 2026-2027",
+        "source_key": "nb_timber_royalty_2026_27",
+        "source_url": "https://gnb.ca/en/topic/environment-resources/forestry-conservation/forest-products/timber-royalty-rates-26-27.html",
+        "fallback_donor": "",
+        "notes": "Crown royalty rate, not a delivered price.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "NS",
+      "province_name": "Nova Scotia",
+      "break_even_cad_m3": 39.5231,
+      "donor_margin": 76.3049,
+      "scaled_margin": 83.3069,
+      "donor_gap": -76.3049,
+      "scaled_gap": -83.3069,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 10,
+      "observed_2024_volume_m3": 2322413.0,
+      "allocation_volume_m3": 2388245.0,
+      "volume_share_observed": 0.01951979,
+      "volume_share_119m": 0.02007311,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "E",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_E_use_with_caution;contract_statcan_status_E_use_with_caution;contract_statcan_status_F_too_unreliable",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 39.5231,
+          "base_cad_m3": 39.5231,
+          "high_cad_m3": 39.5231,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 39.5231,
+      "total_cost_base_cad_m3": 39.5231,
+      "total_cost_high_cad_m3": 39.5231,
+      "donor_flat": {
+        "low_cad_m3": 35.4499,
+        "base_cad_m3": 76.3049,
+        "high_cad_m3": 91.6162,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": 25.7193,
+        "base_cad_m3": 83.3069,
+        "high_cad_m3": 99.5438,
+        "price_tier": "stumpage_scaled_proxy",
+        "price_basis": "stumpage_scaled_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": 7.002,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 36.9214,
+        "v2_3_margin_base_cad_m3": 76.3049,
+        "margin_base_delta_cad_m3": 39.3835,
+        "total_cost_base_delta_cad_m3": -39.3835,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 2388245.0,
+        "donor_flat": {
+          "total_low_m_cad": 84.663046,
+          "total_base_m_cad": 182.234796,
+          "total_high_m_cad": 218.801932,
+          "share_of_national_total_base": 0.035009277,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 61.42399,
+          "total_base_m_cad": 198.957287,
+          "total_high_m_cad": 237.734983,
+          "share_of_national_total_base": -0.3036036638,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": true,
+        "rate_low_cad_m3": 29.87,
+        "rate_base_cad_m3": 36.4,
+        "rate_high_cad_m3": 36.4,
+        "year": "2024-07",
+        "rate_type": "standing_timber_value_survey",
+        "source_title": "Report on Prices of Standing Timber, July 2024",
+        "source_key": "ns_standing_timber_2024",
+        "source_url": "https://novascotia.ca/natr/forestry/registry/pdf/prices-standing-timber-2022.pdf",
+        "fallback_donor": "",
+        "notes": "The survey is used by the province to set Crown stumpage; it is not an observed Crown sale or a delivered price.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "NL",
+      "province_name": "Newfoundland and Labrador",
+      "break_even_cad_m3": 36.1178,
+      "donor_margin": 79.7102,
+      "scaled_margin": 79.7102,
+      "donor_gap": -79.7102,
+      "scaled_gap": -79.7102,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 11,
+      "observed_2024_volume_m3": 1413957.0,
+      "allocation_volume_m3": 1454037.5,
+      "volume_share_observed": 0.01188425,
+      "volume_share_119m": 0.01222113,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "C",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 36.1178,
+          "base_cad_m3": 36.1178,
+          "high_cad_m3": 36.1178,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 36.1178,
+      "total_cost_base_cad_m3": 36.1178,
+      "total_cost_high_cad_m3": 36.1178,
+      "donor_flat": {
+        "low_cad_m3": 38.8552,
+        "base_cad_m3": 79.7102,
+        "high_cad_m3": 95.0215,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": 38.8552,
+        "base_cad_m3": 79.7102,
+        "high_cad_m3": 95.0215,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 32.3595,
+        "v2_3_margin_base_cad_m3": 79.7102,
+        "margin_base_delta_cad_m3": 47.3507,
+        "total_cost_base_delta_cad_m3": -47.3507,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 1454037.5,
+        "donor_flat": {
+          "total_low_m_cad": 56.496918,
+          "total_base_m_cad": 115.90162,
+          "total_high_m_cad": 138.164824,
+          "share_of_national_total_base": 0.0222659558,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 56.496918,
+          "total_base_m_cad": 115.90162,
+          "total_high_m_cad": 138.164824,
+          "share_of_national_total_base": -0.1768628684,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "year": "",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "source_title": "",
+        "source_key": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "PE",
+      "province_name": "Prince Edward Island",
+      "break_even_cad_m3": 45.1715,
+      "donor_margin": 70.6565,
+      "scaled_margin": 70.6565,
+      "donor_gap": -70.6565,
+      "scaled_gap": -70.6565,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 9,
+      "observed_2024_volume_m3": 293880.0,
+      "allocation_volume_m3": 302210.4,
+      "volume_share_observed": 0.00247005,
+      "volume_share_119m": 0.00254007,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "E",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_E_use_with_caution",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 45.1715,
+          "base_cad_m3": 45.1715,
+          "high_cad_m3": 45.1715,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 45.1715,
+      "total_cost_base_cad_m3": 45.1715,
+      "total_cost_high_cad_m3": 45.1715,
+      "donor_flat": {
+        "low_cad_m3": 29.8015,
+        "base_cad_m3": 70.6565,
+        "high_cad_m3": 85.9678,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": 29.8015,
+        "base_cad_m3": 70.6565,
+        "high_cad_m3": 85.9678,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 36.9252,
+        "v2_3_margin_base_cad_m3": 70.6565,
+        "margin_base_delta_cad_m3": 33.7313,
+        "total_cost_base_delta_cad_m3": -33.7313,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 302210.4,
+        "donor_flat": {
+          "total_low_m_cad": 9.006323,
+          "total_base_m_cad": 21.353129,
+          "total_high_m_cad": 25.980363,
+          "share_of_national_total_base": 0.0041021672,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 9.006323,
+          "total_base_m_cad": 21.353129,
+          "total_high_m_cad": 25.980363,
+          "share_of_national_total_base": -0.0325843215,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "year": "",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "source_title": "",
+        "source_key": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "YT",
+      "province_name": "Yukon",
+      "break_even_cad_m3": 24.1835,
+      "donor_margin": 91.6445,
+      "scaled_margin": 91.6445,
+      "donor_gap": -91.6445,
+      "scaled_gap": -91.6445,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 12,
+      "observed_2024_volume_m3": 42715.0,
+      "allocation_volume_m3": 43925.8,
+      "volume_share_observed": 0.00035902,
+      "volume_share_119m": 0.00036919,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "E",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_E_use_with_caution;contract_statcan_status_x_suppressed;contract_logging_not_available",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 24.1835,
+          "base_cad_m3": 24.1835,
+          "high_cad_m3": 24.1835,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 24.1835,
+      "total_cost_base_cad_m3": 24.1835,
+      "total_cost_high_cad_m3": 24.1835,
+      "donor_flat": {
+        "low_cad_m3": 50.7895,
+        "base_cad_m3": 91.6445,
+        "high_cad_m3": 106.9558,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": 50.7895,
+        "base_cad_m3": 91.6445,
+        "high_cad_m3": 106.9558,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 30.7679,
+        "v2_3_margin_base_cad_m3": 91.6445,
+        "margin_base_delta_cad_m3": 60.8766,
+        "total_cost_base_delta_cad_m3": -60.8766,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 43925.8,
+        "donor_flat": {
+          "total_low_m_cad": 2.230969,
+          "total_base_m_cad": 4.025558,
+          "total_high_m_cad": 4.698119,
+          "share_of_national_total_base": 0.0007733533,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 2.230969,
+          "total_base_m_cad": 4.025558,
+          "total_high_m_cad": 4.698119,
+          "share_of_national_total_base": -0.0061428972,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "year": "",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "source_title": "",
+        "source_key": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "NT",
+      "province_name": "Northwest Territories",
+      "break_even_cad_m3": 4.5855,
+      "donor_margin": 111.2425,
+      "scaled_margin": 111.2425,
+      "donor_gap": -111.2425,
+      "scaled_gap": -111.2425,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 13,
+      "observed_2024_volume_m3": 36637.0,
+      "allocation_volume_m3": 36376.0,
+      "volume_share_observed": 0.00030793,
+      "volume_share_119m": 0.00030574,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "industry_aggregate_proxy",
+      "cost_tier_source": "industry_aggregate_proxy",
+      "cost_tier_label": "provisional aggregate",
+      "cost_source": {
+        "source_key": "statcan_16100114",
+        "title": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+        "year": "2024",
+        "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+        "statcan_status": "E",
+        "data_quality_flags": "preliminary_reference_year;energy_water_fuel_detail_not_published_since_2022;industry_statcan_status_E_use_with_caution;contract_statcan_status_x_suppressed;contract_logging_not_available;ratio_below_10pct_national_context",
+        "includes_overhead": true,
+        "not_logging_haul_breakdown": true,
+        "is_direct": false,
+        "provisional_aggregate": true,
+        "caveat": "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied."
+      },
+      "cost_components": [
+        {
+          "component": "industry_aggregate_proxy",
+          "low_cad_m3": 4.5855,
+          "base_cad_m3": 4.5855,
+          "high_cad_m3": 4.5855,
+          "tier": "industry_aggregate_proxy",
+          "cost_tier": "industry_aggregate_proxy",
+          "source_key": "statcan_16100114",
+          "source": "Statistics Canada Table 16-10-0114-01 NAICS 11331 logging industry aggregate expenses",
+          "source_url": "https://www150.statcan.gc.ca/n1/tbl/csv/16100114-eng.zip",
+          "source_year": "2024",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "NAICS 11331 total expenses divided by observed 2024 harvest. Industry aggregate proxy: includes administration, depreciation, overhead, non-logging activity and any in-forest hauling performed by logging establishments. It is not a logging or haul breakdown and does not include a separate road or silviculture add-on; adding one would double count."
+        }
+      ],
+      "total_cost_low_cad_m3": 4.5855,
+      "total_cost_base_cad_m3": 4.5855,
+      "total_cost_high_cad_m3": 4.5855,
+      "donor_flat": {
+        "low_cad_m3": 70.3875,
+        "base_cad_m3": 111.2425,
+        "high_cad_m3": 126.5538,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": 70.3875,
+        "base_cad_m3": 111.2425,
+        "high_cad_m3": 126.5538,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "industry_aggregate_proxy",
+        "cost_tier_source": "industry_aggregate_proxy"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 30.4821,
+        "v2_3_margin_base_cad_m3": 111.2425,
+        "margin_base_delta_cad_m3": 80.7604,
+        "total_cost_base_delta_cad_m3": -80.7604,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_aggregate",
+      "status_label": "provisional aggregate",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 36376.0,
+        "donor_flat": {
+          "total_low_m_cad": 2.560416,
+          "total_base_m_cad": 4.046557,
+          "total_high_m_cad": 4.603521,
+          "share_of_national_total_base": 0.0007773874,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 2.560416,
+          "total_base_m_cad": 4.046557,
+          "total_high_m_cad": 4.603521,
+          "share_of_national_total_base": -0.0061749411,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": false
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "year": "",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "source_title": "",
+        "source_key": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    },
+    {
+      "province": "NU",
+      "province_name": "Nunavut",
+      "break_even_cad_m3": 86.9381,
+      "donor_margin": 28.8899,
+      "scaled_margin": 28.8899,
+      "donor_gap": -28.8899,
+      "scaled_gap": -28.8899,
+      "classification": "positive_margin",
+      "price_sensitivity_rank": 2,
+      "observed_2024_volume_m3": 0.0,
+      "allocation_volume_m3": 0.0,
+      "volume_share_observed": 0.0,
+      "volume_share_119m": 0.0,
+      "price_tier": "donor_proxy",
+      "price_basis": "donor_flat_price_proxy_not_observed",
+      "price_source": {
+        "source_key": "bc_log_market_2025_12",
+        "title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+        "publication_date": "2025-12",
+        "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+        "is_direct": false,
+        "donor_province": "BC"
+      },
+      "cost_tier": "donor_fallback",
+      "cost_tier_source": "donor_fallback_total",
+      "cost_tier_label": "donor fallback",
+      "cost_source": {
+        "source_key": "national_economics_v2_2",
+        "title": "National economics v2.2 donor total fallback",
+        "year": "2026",
+        "source_url": "data/derived/national/harvest_basis/national_economics_v2_2",
+        "statcan_status": "undefined_zero_harvest_denominator",
+        "data_quality_flags": "",
+        "includes_overhead": false,
+        "not_logging_haul_breakdown": false,
+        "is_direct": false,
+        "provisional_aggregate": false,
+        "fallback_used": true,
+        "caveat": "StatCan reports zero expenses and zero harvest for Nunavut, so no CAD/m3 ratio exists. The explicit v2.2 donor-total fallback is retained; no StatCan value is fabricated."
+      },
+      "cost_components": [
+        {
+          "component": "total_cost_fallback",
+          "low_cad_m3": 52.0003,
+          "base_cad_m3": 86.9381,
+          "high_cad_m3": 180.2789,
+          "tier": "donor_fallback_total",
+          "cost_tier": "donor_fallback",
+          "source_key": "national_economics_v2_2",
+          "source": "National economics v2.2 donor total fallback",
+          "source_url": "data/derived/national/harvest_basis/national_economics_v2_2",
+          "source_year": "2026",
+          "includes_overhead_not_logging_haul_breakdown": true,
+          "notes": "StatCan aggregate is blank because both reported expenses and the 2024 harvest denominator are zero. Explicit donor-total fallback from v2.2 BC logging/haul + QC road + BC silviculture; no StatCan value is fabricated. NU has zero modelled allocation volume."
+        }
+      ],
+      "total_cost_low_cad_m3": 52.0003,
+      "total_cost_base_cad_m3": 86.9381,
+      "total_cost_high_cad_m3": 180.2789,
+      "donor_flat": {
+        "low_cad_m3": -105.3059,
+        "base_cad_m3": 28.8899,
+        "high_cad_m3": 79.139,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "donor_fallback",
+        "cost_tier_source": "donor_fallback_total"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -105.3059,
+        "base_cad_m3": 28.8899,
+        "high_cad_m3": 79.139,
+        "price_tier": "donor_proxy",
+        "price_basis": "donor_flat_price_proxy_not_observed",
+        "cost_tier": "donor_fallback",
+        "cost_tier_source": "donor_fallback_total"
+      },
+      "scaled_minus_donor_flat_cad_m3": 0.0,
+      "v2_2_to_v2_3": {
+        "v2_2_margin_base_cad_m3": 28.8899,
+        "v2_3_margin_base_cad_m3": 28.8899,
+        "margin_base_delta_cad_m3": 0.0,
+        "total_cost_base_delta_cad_m3": 0.0,
+        "status": "cost_method_change_not_observed"
+      },
+      "direct_cell_count": 0,
+      "proxy_cell_count": 0,
+      "donor_cell_count": 5,
+      "donor_only": true,
+      "status": "provisional_donor_fallback",
+      "status_label": "provisional donor fallback",
+      "is_direct": false,
+      "ranked": false,
+      "total_margin_119m": {
+        "volume_basis": "119m_allocation",
+        "allocation_m3": 0.0,
+        "donor_flat": {
+          "total_low_m_cad": 0.0,
+          "total_base_m_cad": 0.0,
+          "total_high_m_cad": 0.0,
+          "share_of_national_total_base": 0.0,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": true
+        },
+        "stumpage_scaled": {
+          "total_low_m_cad": 0.0,
+          "total_base_m_cad": 0.0,
+          "total_high_m_cad": 0.0,
+          "share_of_national_total_base": 0.0,
+          "negative_flag": false,
+          "total_negative_low": false,
+          "total_negative_base": false,
+          "total_negative_high": false,
+          "zero_volume": true
+        }
+      },
+      "stumpage_reference": {
+        "has_rate": false,
+        "rate_low_cad_m3": null,
+        "rate_base_cad_m3": null,
+        "rate_high_cad_m3": null,
+        "year": "",
+        "rate_type": "no_provincial_rate_fallback_donor",
+        "source_title": "",
+        "source_key": "",
+        "source_url": "",
+        "fallback_donor": "BC",
+        "notes": "PE/NL/YT/NT have no verified current commercial stumpage series in the source map. For NU the open.canada record cited by the research map is an Ontario data mirror, not a Nunavut rate, so it is not used. BC flat donor applies in both price scenarios.",
+        "is_delivered_price": false
+      },
+      "price_evidence": [
+        {
+          "component": "haul",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "logging",
+          "tier": "donor_proxy",
+          "basis": "logging_haul_combined_distribution",
+          "source_key": "bc_open_cost_model",
+          "source_title": "bc_open_cost_model",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "price",
+          "tier": "donor_proxy",
+          "basis": "mill_delivered_price_panel",
+          "source_key": "bc_log_market_2025_12",
+          "source_title": "BC Coast and Interior log-market reports, 2025-12 3-month",
+          "source_publication_date": "2025-12",
+          "source_url": "https://www2.gov.bc.ca/gov/content/industry/forestry/competitive-forest-industry/timber-pricing",
+          "donor_province": "BC",
+          "notes": "BC donor price proxy. No current provincial delivered-log price series is materialised; no wage/diesel index is applied."
+        },
+        {
+          "component": "road",
+          "tier": "donor_proxy",
+          "basis": "road_allowance_cad_m3",
+          "source_key": "qc_cost_survey_2022",
+          "source_title": "qc_cost_survey_2022",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "QC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        },
+        {
+          "component": "silviculture",
+          "tier": "donor_proxy",
+          "basis": "silviculture_allowance_cad_m3",
+          "source_key": "bc_appraisal_silviculture_2026_10",
+          "source_title": "bc_appraisal_silviculture_2026_10",
+          "source_publication_date": "",
+          "source_url": "",
+          "donor_province": "BC",
+          "notes": "BC donor logging+haul adjusted by terrain and road factors; road and silviculture are donor allowances. No provincial wage or diesel index is materialised."
+        }
+      ]
+    }
+  ],
+  "tier_coverage": {
+    "basis": "volume_weighted_five_component_price_cells",
+    "component_count": 5,
+    "province_count": 13,
+    "cell_count": 65,
+    "volume_weighted_shares": {
+      "reported_average": 0.17924672,
+      "proxy_model": 0.13440737,
+      "donor_proxy": 0.68634592,
+      "assumption": 0.0
+    },
+    "volume_weighted_pct": {
+      "reported_average": 17.9247,
+      "proxy_model": 13.4407,
+      "donor_proxy": 68.6346,
+      "assumption": 0.0
+    },
+    "cell_counts": {
+      "reported_average": 3,
+      "proxy_model": 2,
+      "donor_proxy": 60,
+      "assumption": 0
+    },
+    "total_harvest_volume_m3": 118977339.1,
+    "cost": {
+      "basis": "province_level_cost_basis_cells",
+      "cell_count": 13,
+      "primary_volume_basis": "observed_2024_m3",
+      "sensitivity_volume_basis": "119m_allocation_sensitivity",
+      "volume_bases": {
+        "observed_2024_m3": {
+          "aggregate_proxy_cells": 10,
+          "component_cells": 2,
+          "donor_proxy_cells": 0,
+          "donor_fallback_cells": 1,
+          "shares": {
+            "component_stack": 0.54477285,
+            "industry_aggregate_proxy": 0.45522715,
+            "donor_fallback": 0.0,
+            "donor_proxy": 0.0
+          },
+          "pct": {
+            "component_stack": 54.4773,
+            "industry_aggregate_proxy": 45.5227,
+            "donor_fallback": 0.0,
+            "donor_proxy": 0.0
+          }
+        },
+        "119m_allocation_sensitivity": {
+          "aggregate_proxy_cells": 10,
+          "component_cells": 2,
+          "donor_proxy_cells": 0,
+          "donor_fallback_cells": 1,
+          "shares": {
+            "component_stack": 0.56021518,
+            "industry_aggregate_proxy": 0.43978482,
+            "donor_fallback": 0.0,
+            "donor_proxy": 0.0
+          },
+          "pct": {
+            "component_stack": 56.0215,
+            "industry_aggregate_proxy": 43.9785,
+            "donor_fallback": 0.0,
+            "donor_proxy": 0.0
+          }
+        }
+      },
+      "before": {
+        "observed_2024_m3": {
+          "aggregate_proxy_cells": 0,
+          "component_cells": 2,
+          "donor_proxy_cells": 11,
+          "donor_fallback_cells": 0,
+          "shares": {
+            "component_stack": 0.54477285,
+            "industry_aggregate_proxy": 0.0,
+            "donor_fallback": 0.0,
+            "donor_proxy": 0.45522715
+          },
+          "pct": {
+            "component_stack": 54.4773,
+            "industry_aggregate_proxy": 0.0,
+            "donor_fallback": 0.0,
+            "donor_proxy": 45.5227
+          }
+        },
+        "119m_allocation_sensitivity": {
+          "aggregate_proxy_cells": 0,
+          "component_cells": 2,
+          "donor_proxy_cells": 11,
+          "donor_fallback_cells": 0,
+          "shares": {
+            "component_stack": 0.56021518,
+            "industry_aggregate_proxy": 0.0,
+            "donor_fallback": 0.0,
+            "donor_proxy": 0.43978482
+          },
+          "pct": {
+            "component_stack": 56.0215,
+            "industry_aggregate_proxy": 0.0,
+            "donor_fallback": 0.0,
+            "donor_proxy": 43.9785
+          }
+        }
+      },
+      "upgrade_count": 10,
+      "upgrades": [
+        {
+          "province": "AB",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "SK",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "MB",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "ON",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "NB",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "NS",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "NL",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "PE",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "YT",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        },
+        {
+          "province": "NT",
+          "tier_before": "donor_proxy",
+          "tier_after": "industry_aggregate_proxy"
+        }
+      ],
+      "full_direct_coverage_claimed": false
+    }
+  },
+  "statcan_d_status": {
+    "policy": "D is an acceptable-quality flag, not a deletion; unexpected D fails closed.",
+    "allowed_cell_count": 16,
+    "observed_d_cell_count": 16,
+    "unexpected_cells": []
+  },
+  "caveats": [
+    "Evidence coverage comes first. Price evidence and cost evidence are separate overlays: 65 five-component price cells and 13 province-level cost-basis cells.",
+    "Price direct/reported coverage is 33.6% of the 119 Mm3 allocation; the remaining 66.4% uses a donor price.",
+    "Ten jurisdictions use a provisional StatCan NAICS 11331 industry aggregate cost proxy, 45.5% of observed 2024 harvest. It is not direct coverage.",
+    "The StatCan NAICS 11331 total expense includes administration, depreciation, overhead and non-logging activity, plus any in-forest haul performed by logging establishments. It is not a logging-only or haul-only cost curve and no separate road, silviculture or haul add-on is applied.",
+    "Nunavut is the only donor-fallback cost jurisdiction; StatCan reports zero expenses and zero harvest, so no CAD/m3 ratio is fabricated.",
+    "National values are volume-weighted model diagnostics shown last, not a combined national net value.",
+    "donor_flat is the base scenario. stumpage_scaled is the method sensitivity: the sensitivity, not the base; not observed and not policy grade.",
+    "Stumpage, dues, royalty and standing-value rates are charges on standing timber, not delivered log prices.",
+    "No jurisdiction row is an observed transaction, policy-grade value, Forest LP input or public OSeCAN input."
+  ],
+  "non_claims": [
+    "No combined national net value.",
+    "Not observed; observed=false.",
+    "Not policy grade; policy_grade=false.",
+    "Not a Forest LP objective or constraint input.",
+    "Not a public OSeCAN input.",
+    "Not a legal AAC or a policy frontier.",
+    "The StatCan aggregate is not a logging or haul cost curve."
+  ],
+  "source_files": [
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/national_margin_estimates.csv",
+      "rows": 78
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/national_margin_summary.csv",
+      "rows": 30
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/v2_2_v2_3_comparison.csv",
+      "rows": 30
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/tier_coverage.csv",
+      "rows": 42
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/national_cost_inputs.csv",
+      "rows": 18
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_3/summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_coverage.csv",
+      "rows": 65
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_tier_coverage/national_tier_summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2_1/sources.csv",
+      "rows": 12
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_economics_v2/provincial_stumpage_references.csv",
+      "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/provincial_allocation/119m.csv",
+      "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+      "rows": 26
+    },
+    {
+      "path": "data/derived/national/harvest_basis/national_margin_totals/national_margin_totals.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value.csv",
+      "rows": 117
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/allocation_net_value_summary.csv",
+      "rows": 18
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/national_net_value_summary.csv",
+      "rows": 54
+    },
+    {
+      "path": "data/derived/national/harvest_basis/forest_lp_net_value_sensitivity/summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_net_value_lp.csv",
+      "rows": 182
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_delta.csv",
+      "rows": 182
+    },
+    {
+      "path": "data/derived/national/harvest_basis/allocation_net_value_lp/summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/province_breakeven/province_breakeven.csv",
+      "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/province_breakeven/province_breakeven_summary.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/province_breakeven/manifest.json",
+      "rows": null
+    },
+    {
+      "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/provincial_logging_cost_proxy.csv",
+      "rows": 13
+    },
+    {
+      "path": "data/derived/national/harvest_basis/statcan_logging_cost_proxy/sources.csv",
+      "rows": 2
+    }
+  ],
+  "download": {
+    "json": {
+      "path": "economics/national.json",
+      "label": "National economics JSON",
+      "media_type": "application/json"
+    },
+    "manifest": {
+      "path": "economics/national.manifest.json",
+      "label": "National economics manifest",
+      "media_type": "application/json"
+    }
+  }
+}

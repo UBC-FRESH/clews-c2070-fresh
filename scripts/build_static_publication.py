@@ -392,6 +392,37 @@ def main() -> None:
         if abs(row["delta_m_cad"] - (row["optimized_m_cad"] - row["baseline_m_cad"])) > 1e-3:
             fail("allocation LP net-value delta does not reconcile")
 
+    break_even_fields = (
+        "break_even_cad_m3",
+        "donor_margin",
+        "scaled_margin",
+        "donor_gap",
+        "scaled_gap",
+        "classification",
+        "price_sensitivity_rank",
+    )
+    break_even_rows = [
+        row
+        for row in national["jurisdictions"]
+        if all(field in row for field in break_even_fields)
+    ]
+    if len(break_even_rows) != 13:
+        fail("national economics must carry break-even fields for 13 provinces")
+    if {row["price_sensitivity_rank"] for row in break_even_rows} != set(range(1, 14)):
+        fail("national break-even price-sensitivity ranks must cover 1..13")
+    for row in break_even_rows:
+        if row["classification"] not in {
+            "positive_margin",
+            "negative_margin",
+            "price_limited",
+            "cost_limited",
+        }:
+            fail("national break-even classification is unknown")
+        if abs(row["donor_gap"] + row["donor_margin"]) > 1e-4:
+            fail("national break-even donor gap is not the negated margin")
+        if abs(row["scaled_gap"] + row["scaled_margin"]) > 1e-4:
+            fail("national break-even scaled gap is not the negated margin")
+
     scenarios = load_json(destination / "public/data/scenarios.json")
     families = {scenario["family"] for scenario in scenarios["scenarios"]}
     pareto_eligible = sum(1 for scenario in scenarios["scenarios"] if scenario.get("pareto_eligible"))
@@ -454,6 +485,7 @@ def main() -> None:
             "forest_lp_net_value_infeasible_rows": len(infeasible),
             "allocation_net_value_lp_rows": len(allocation_rows),
             "allocation_net_value_lp_province_shifts": len(allocation_shifts),
+            "province_break_even_rows": len(break_even_rows),
             "payload_manifest_files": len(manifest["files"]),
         },
         "economics": {

@@ -26,6 +26,9 @@ TIER_SOURCE = (
 ALLOCATION_LP = (
     ROOT / "data/derived/national/harvest_basis/allocation_net_value_lp"
 )
+BREAKEVEN = (
+    ROOT / "data/derived/national/harvest_basis/province_breakeven"
+)
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -190,6 +193,117 @@ def test_bc_qc_and_national_margins_match_v23(built):
     assert diagnostic["national_comparison"][
         "scaled_minus_donor_flat_cad_m3"
     ] == pytest.approx(-48.7631)
+
+
+def test_province_break_even_fields_cover_all_13(built):
+    payload, _ = built
+    expected_fields = (
+        "break_even_cad_m3",
+        "donor_margin",
+        "scaled_margin",
+        "donor_gap",
+        "scaled_gap",
+        "classification",
+        "price_sensitivity_rank",
+    )
+    classifications = {
+        "positive_margin",
+        "negative_margin",
+        "price_limited",
+        "cost_limited",
+    }
+    ranks = set()
+    for row in payload["jurisdictions"]:
+        for field in expected_fields:
+            assert field in row, f"{row['province']} is missing {field}"
+        assert row["break_even_cad_m3"] > 0
+        assert row["break_even_cad_m3"] == pytest.approx(
+            row["total_cost_base_cad_m3"], abs=1e-4
+        )
+        assert row["donor_margin"] == pytest.approx(
+            row["donor_flat"]["base_cad_m3"], abs=1e-4
+        )
+        assert row["scaled_margin"] == pytest.approx(
+            row["stumpage_scaled"]["base_cad_m3"], abs=1e-4
+        )
+        assert row["donor_gap"] == pytest.approx(-row["donor_margin"], abs=1e-4)
+        assert row["scaled_gap"] == pytest.approx(-row["scaled_margin"], abs=1e-4)
+        assert row["classification"] in classifications
+        assert isinstance(row["price_sensitivity_rank"], int)
+        ranks.add(row["price_sensitivity_rank"])
+    assert len(payload["jurisdictions"]) == 13
+    assert ranks == set(range(1, 14))
+
+
+def test_break_even_values_for_nb_on_ab_qc(built):
+    payload, _ = built
+    expected = {
+        "NB": (98.6665, 17.1615, -14.1365, -17.1615, 14.1365, "price_limited", 1),
+        "ON": (83.7293, 32.0987, -60.9518, -32.0987, 60.9518, "cost_limited", 3),
+        "QC": (83.37, 32.458, -35.8577, -32.458, 35.8577, "cost_limited", 4),
+        "AB": (54.9865, 60.8415, -36.3258, -60.8415, 36.3258, "cost_limited", 8),
+    }
+    for province, values in expected.items():
+        row = _province(payload, province)
+        break_even, donor_margin, scaled_margin, donor_gap, scaled_gap, classification, rank = values
+        assert row["break_even_cad_m3"] == pytest.approx(break_even, abs=1e-4)
+        assert row["donor_margin"] == pytest.approx(donor_margin, abs=1e-4)
+        assert row["scaled_margin"] == pytest.approx(scaled_margin, abs=1e-4)
+        assert row["donor_gap"] == pytest.approx(donor_gap, abs=1e-4)
+        assert row["scaled_gap"] == pytest.approx(scaled_gap, abs=1e-4)
+        assert row["classification"] == classification
+        assert row["price_sensitivity_rank"] == rank
+
+
+def test_break_even_is_drilldown_only_without_new_panel_or_chart():
+    html = (ROOT / "ui/index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "ui/app.js").read_text(encoding="utf-8")
+
+    assert 'id="national-breakeven"' not in html
+    assert "national-breakeven-chart" not in html
+    assert "national-breakeven-chart" not in app_js
+    assert "nationalBreakevenRow" in app_js
+
+    drilldown = app_js.split(
+        "function renderNationalDrilldown", 1
+    )[1].split("function nationalNetValueCell", 1)[0]
+    assert "nationalBreakevenRow(row)" in drilldown
+    assert "break_even_cad_m3" in app_js
+    assert "donor_gap" in app_js and "scaled_gap" in app_js
+
+    table_renderer = app_js.split(
+        "function renderNationalTable", 1
+    )[1].split("function nationalCostDetail", 1)[0]
+    assert "break_even_cad_m3" not in table_renderer
+    assert "nationalBreakevenRow" not in table_renderer
+
+    ns = html.split('id="national-economics"', 1)[1].split(
+        "</section>", 1
+    )[0]
+    assert ns.count("<button") == 0
+    assert ns.count("<form") == 0
+    assert ns.count("<select") == 0
+
+
+def test_unexpected_d_in_break_even_input_fails_closed():
+    rows = _read_csv(BREAKEVEN / "province_breakeven.csv")
+    summary = json.loads(
+        (BREAKEVEN / "province_breakeven_summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    manifest = json.loads(
+        (BREAKEVEN / "manifest.json").read_text(encoding="utf-8")
+    )
+    provinces = [
+        "BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "NL", "PE", "YT", "NT", "NU"
+    ]
+    exporter._province_breakeven(rows, summary, manifest, provinces)
+
+    mutated = [dict(row) for row in rows]
+    mutated[0]["donor_margin_class"] = "D"
+    with pytest.raises(exporter.NationalEconomicsUiError, match="unexpected D"):
+        exporter._province_breakeven(mutated, summary, manifest, provinces)
 
 
 def test_margins_are_recomputed_from_the_committed_csvs(built):
@@ -390,6 +504,9 @@ def test_manifest_hashes_v23_payload_and_sources(built):
         "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_net_value_lp.csv",
         "data/derived/national/harvest_basis/allocation_net_value_lp/allocation_delta.csv",
         "data/derived/national/harvest_basis/allocation_net_value_lp/summary.json",
+        "data/derived/national/harvest_basis/province_breakeven/province_breakeven.csv",
+        "data/derived/national/harvest_basis/province_breakeven/province_breakeven_summary.json",
+        "data/derived/national/harvest_basis/province_breakeven/manifest.json",
     }
     assert {item["path"] for item in manifest["sources"]} == expected
     for item in manifest["sources"]:

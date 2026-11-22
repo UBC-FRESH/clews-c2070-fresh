@@ -68,6 +68,10 @@ ALLOCATION_LP_DIR = HARVEST_BASIS_DIR / "allocation_net_value_lp"
 ALLOCATION_LP_CSV = ALLOCATION_LP_DIR / "allocation_net_value_lp.csv"
 ALLOCATION_LP_DELTA_CSV = ALLOCATION_LP_DIR / "allocation_delta.csv"
 ALLOCATION_LP_SUMMARY_JSON = ALLOCATION_LP_DIR / "summary.json"
+BREAKEVEN_DIR = HARVEST_BASIS_DIR / "province_breakeven"
+BREAKEVEN_CSV = BREAKEVEN_DIR / "province_breakeven.csv"
+BREAKEVEN_SUMMARY_JSON = BREAKEVEN_DIR / "province_breakeven_summary.json"
+BREAKEVEN_MANIFEST_JSON = BREAKEVEN_DIR / "manifest.json"
 OUT_JSON = REPO_ROOT / "ui/public/data/economics/national.json"
 OUT_MANIFEST = REPO_ROOT / "ui/public/data/economics/national.manifest.json"
 
@@ -113,6 +117,15 @@ COST_INPUTS_CSV = "national_cost_inputs.csv"
 SUMMARY_JSON = "summary.json"
 STATCAN_CSV = "provincial_logging_cost_proxy.csv"
 STATCAN_SOURCES_CSV = "sources.csv"
+
+BREAKEVEN_MODEL_ID = "province_breakeven_v1"
+BREAKEVEN_SCHEMA_VERSION = "national/province-breakeven/1"
+BREAKEVEN_CLASSIFICATIONS = (
+    "positive_margin",
+    "negative_margin",
+    "price_limited",
+    "cost_limited",
+)
 
 NET_VALUE_MODEL_ID = "forest_lp_net_value_sensitivity_v1"
 NET_VALUE_SCHEMA_VERSION = "national/forest-lp-net-value-sensitivity/1"
@@ -343,6 +356,166 @@ def _validate_statcan_d(
         "observed_d_cell_count": len(observed),
         "unexpected_cells": [],
     }
+
+
+def _json_d_paths(value: Any, prefix: str = "") -> list[str]:
+    """Return JSON paths whose value is the literal quality flag D."""
+    if isinstance(value, dict):
+        return [
+            path
+            for key, item in value.items()
+            for path in _json_d_paths(item, f"{prefix}.{key}" if prefix else key)
+        ]
+    if isinstance(value, list):
+        return [
+            path
+            for index, item in enumerate(value)
+            for path in _json_d_paths(item, f"{prefix}[{index}]")
+        ]
+    if isinstance(value, str) and value.strip() == "D":
+        return [prefix]
+    return []
+
+
+def _province_breakeven(
+    rows: list[dict[str, str]],
+    summary: dict[str, Any],
+    manifest: dict[str, Any],
+    provinces: list[str],
+) -> dict[str, dict[str, Any]]:
+    """Read the province break-even diagnostic and fail closed on drift or D."""
+    if summary.get("model_id") != BREAKEVEN_MODEL_ID:
+        _fail(f"unexpected break-even model_id {summary.get('model_id')!r}")
+    if summary.get("schema_version") != BREAKEVEN_SCHEMA_VERSION:
+        _fail("unexpected break-even schema version")
+    if summary.get("province_count") != 13 or summary.get("scenario_count") != 2:
+        _fail("break-even province or scenario count changed")
+    if (
+        summary.get("observed") is not False
+        or summary.get("policy_grade") is not False
+        or summary.get("combined_national_net_value") is not False
+        or summary.get("ranking_performed") is not False
+    ):
+        _fail("break-even labels must stay model-only and unranked")
+
+    unexpected_d = [
+        f"{path}"
+        for path in _json_d_paths(summary)
+        if path
+    ]
+    unexpected_d.extend(
+        f"{row.get('province', '?')}:{field}"
+        for row in rows
+        for field, value in row.items()
+        if value.strip() == "D"
+    )
+    if unexpected_d:
+        _fail(f"unexpected D status in province break-even input: {unexpected_d}")
+
+    validation = manifest.get("validation") or {}
+    if validation.get("statcan_unexpected_d_cells") not in (0, None):
+        _fail(
+            "province break-even manifest reports unexpected StatCan D cells: "
+            f"{validation['statcan_unexpected_d_cells']!r}"
+        )
+    cross_checks = summary.get("cross_checks") or {}
+    if cross_checks.get("statcan_unexpected_d_cells") not in (None, []):
+        _fail("province break-even summary reports unexpected StatCan D cells")
+    derived_d = cross_checks.get("derived_cost_d") or {}
+    if derived_d.get("unexpected_derived_d_cells") not in (None, []):
+        _fail("province break-even summary reports unexpected derived cost D cells")
+
+    if len(rows) != 13:
+        _fail(f"break-even table has {len(rows)} rows, expected 13")
+    permitted = set(provinces)
+    seen: set[str] = set()
+    try:
+        donor_price = float(summary["donor_price_cad_m3"])
+    except (KeyError, TypeError, ValueError):
+        _fail("break-even summary is missing its numeric donor price")
+    classification_counts: Counter[str] = Counter()
+    by_province: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        province = _text(row, "province", "break-even row")
+        if province in seen or province not in permitted:
+            _fail(f"unexpected or duplicate break-even province {province!r}")
+        seen.add(province)
+        classification = _text(row, "classification", f"break-even {province}")
+        if classification not in BREAKEVEN_CLASSIFICATIONS:
+            _fail(
+                f"break-even {province}: unexpected classification "
+                f"{classification!r}"
+            )
+        classification_counts[classification] += 1
+        if row.get("evidence", "").strip() not in {"", "model_estimate"}:
+            _fail(f"break-even {province}: unexpected evidence label")
+        for field in ("observed", "policy_grade"):
+            if row.get(field, "").strip().lower() not in {"", "false"}:
+                _fail(f"break-even {province}: {field} must be false")
+        break_even = _number(
+            row, "break_even_price_cad_m3", f"break-even {province}"
+        )
+        donor_margin = _number(
+            row, "donor_margin_cad_m3", f"break-even {province}"
+        )
+        scaled_margin = _number(
+            row, "scaled_margin_cad_m3", f"break-even {province}"
+        )
+        donor_gap = _number(
+            row, "donor_gap_to_breakeven_cad_m3", f"break-even {province}"
+        )
+        scaled_gap = _number(
+            row, "scaled_gap_to_breakeven_cad_m3", f"break-even {province}"
+        )
+        row_donor_price = _number(
+            row, "donor_price_cad_m3", f"break-even {province}"
+        )
+        if abs(row_donor_price - donor_price) > 1e-4:
+            _fail(f"break-even {province}: donor price diverges from summary")
+        if abs(donor_gap + donor_margin) > 1e-4:
+            _fail(f"break-even {province}: donor gap is not the negated margin")
+        if abs(scaled_gap + scaled_margin) > 1e-4:
+            _fail(f"break-even {province}: scaled gap is not the negated margin")
+        if not math.isfinite(break_even) or break_even <= 0:
+            _fail(f"break-even {province}: break-even must be positive")
+        by_province[province] = {
+            "break_even_cad_m3": _round(break_even, 4),
+            "donor_margin": _round(donor_margin, 4),
+            "scaled_margin": _round(scaled_margin, 4),
+            "donor_gap": _round(donor_gap, 4),
+            "scaled_gap": _round(scaled_gap, 4),
+            "classification": classification,
+        }
+    if seen != permitted:
+        _fail("break-even table does not cover the 13 summary provinces")
+    expected_counts = summary.get("classification_counts") or {}
+    observed_counts = {
+        classification: classification_counts.get(classification, 0)
+        for classification in BREAKEVEN_CLASSIFICATIONS
+    }
+    if observed_counts != {
+        classification: expected_counts.get(classification, 0)
+        for classification in BREAKEVEN_CLASSIFICATIONS
+    }:
+        _fail("break-even classification counts diverge from the summary")
+
+    sensitivity = summary.get("price_sensitivity") or {}
+    if sensitivity.get("diagnostic_order_not_policy_ranking") is not True:
+        _fail("break-even sensitivity ordering must declare diagnostic-not-merit")
+    ordered = sensitivity.get("closest_to_break_even") or []
+    if len(ordered) != 13:
+        _fail("break-even price-sensitivity ordering must cover 13 provinces")
+    rank_by_province: dict[str, int] = {}
+    for rank, item in enumerate(ordered, start=1):
+        province = _text(item, "province", "price sensitivity")
+        if province in rank_by_province or province not in permitted:
+            _fail(f"unexpected or duplicate price-sensitivity province {province!r}")
+        if item.get("classification") != by_province[province]["classification"]:
+            _fail(f"price-sensitivity classification mismatch for {province}")
+        rank_by_province[province] = rank
+    for province, values in by_province.items():
+        values["price_sensitivity_rank"] = rank_by_province[province]
+    return by_province
 
 
 def _cost_coverage(rows: list[dict[str, str]]) -> dict[str, Any]:
@@ -1800,6 +1973,9 @@ def build_export(
     allocation_lp_rows = _read_csv(ALLOCATION_LP_CSV)
     allocation_lp_delta_rows = _read_csv(ALLOCATION_LP_DELTA_CSV)
     allocation_lp_summary = _read_json(ALLOCATION_LP_SUMMARY_JSON)
+    breakeven_rows = _read_csv(BREAKEVEN_CSV)
+    breakeven_summary = _read_json(BREAKEVEN_SUMMARY_JSON)
+    breakeven_manifest = _read_json(BREAKEVEN_MANIFEST_JSON)
 
     coverage = summary.get("coverage") or {}
     provinces = list(coverage.get("provinces") or [])
@@ -1899,6 +2075,9 @@ def build_export(
     net_value_sensitivity["economic_allocation_sensitivity"] = (
         allocation_lp_sensitivity
     )
+    breakeven_by_province = _province_breakeven(
+        breakeven_rows, breakeven_summary, breakeven_manifest, provinces
+    )
 
     jurisdictions: list[dict[str, Any]] = []
     for province in provinces:
@@ -1984,10 +2163,32 @@ def build_export(
         status, status_label = _jurisdiction_status(
             cost["tier"], province, donor_only
         )
+        breakeven = breakeven_by_province[province]
+        if abs(breakeven["break_even_cad_m3"] - cost["base_cad_m3"]) > 1e-4:
+            _fail(
+                f"break-even {province}: value diverges from the v2.3 total cost"
+            )
+        if abs(
+            breakeven["donor_margin"]
+            - scenario_values[base_scenario]["base_cad_m3"]
+        ) > 1e-4:
+            _fail(f"break-even {province}: donor margin diverges from v2.3")
+        if abs(
+            breakeven["scaled_margin"]
+            - scenario_values[sensitivity_scenario]["base_cad_m3"]
+        ) > 1e-4:
+            _fail(f"break-even {province}: scaled margin diverges from v2.3")
         jurisdictions.append(
             {
                 "province": province,
                 "province_name": first_row["province_name"],
+                "break_even_cad_m3": breakeven["break_even_cad_m3"],
+                "donor_margin": breakeven["donor_margin"],
+                "scaled_margin": breakeven["scaled_margin"],
+                "donor_gap": breakeven["donor_gap"],
+                "scaled_gap": breakeven["scaled_gap"],
+                "classification": breakeven["classification"],
+                "price_sensitivity_rank": breakeven["price_sensitivity_rank"],
                 "observed_2024_volume_m3": _round(
                     _number(first_row, "observed_2024_volume_m3", province), 1
                 ),
@@ -2300,6 +2501,9 @@ def build_export(
         (ALLOCATION_LP_CSV, len(allocation_lp_rows)),
         (ALLOCATION_LP_DELTA_CSV, len(allocation_lp_delta_rows)),
         (ALLOCATION_LP_SUMMARY_JSON, None),
+        (BREAKEVEN_CSV, len(breakeven_rows)),
+        (BREAKEVEN_SUMMARY_JSON, None),
+        (BREAKEVEN_MANIFEST_JSON, None),
         (STATCAN_DIR / STATCAN_CSV, len(statcan_rows)),
         (STATCAN_DIR / STATCAN_SOURCES_CSV, len(statcan_source_rows)),
     ]
@@ -2602,6 +2806,13 @@ def build_export(
                 "labels"
             ]["canonical_changed"],
             "allocation_net_value_lp_unexpected_d_cells": 0,
+            "province_breakeven_model_id": BREAKEVEN_MODEL_ID,
+            "province_breakeven_province_count": len(breakeven_by_province),
+            "province_breakeven_donor_price_cad_m3": _round(
+                float(breakeven_summary["donor_price_cad_m3"]), 4
+            ),
+            "province_breakeven_diagnostic_rank_only": True,
+            "province_breakeven_unexpected_d_cells": 0,
             "observed_claim": False,
             "policy_grade_claim": False,
             "combined_national_net_value": False,

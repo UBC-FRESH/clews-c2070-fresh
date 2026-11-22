@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forest Ledger — CLEWS/C2070 iteration-0 scenario explorer</title>
+  <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="styles.css?v=f1cd6226be79">
+  <script defer src="vendor/echarts.min.js"></script>
+  <script defer src="vendor/maplibre-gl.js"></script>
+  <script defer src="publication-mode.js?v=c84639751cef"></script>
+  <script defer src="api.js"></script>
+  <script defer src="app.js?v=18fe1c3cbf68"></script>
+</head>
+<body>
+  <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
+
+  <header class="site-header">
+    <div class="header-contours" aria-hidden="true">
+      <svg viewBox="0 0 760 340" preserveAspectRatio="xMidYMid slice">
+        <g fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M-40 280C90 150 160 330 310 205S540 60 800 155"/>
+          <path d="M-40 250C80 135 180 300 320 180S560 45 800 125"/>
+          <path d="M-40 320C100 205 200 360 350 245S600 115 800 190"/>
+          <path d="M-30 205C100 90 210 240 340 140S590 5 810 85"/>
+          <path d="M40 355C170 265 250 390 390 290S610 175 800 230"/>
+        </g>
+      </svg>
+    </div>
+    <div class="header-sun" aria-hidden="true"></div>
+    <div class="header-inner">
+      <div class="brand-block">
+        <p class="eyebrow">UBC FRESH · CLEWS-C2070 · forest biomass supply</p>
+        <h1>Forest <em>Ledger</em></h1>
+        <p class="subtitle">Iteration-0 scenario explorer for harvest, bioenergy, and the national supply curve.</p>
+      </div>
+      <div class="header-aside">
+        <p class="provisional-banner"><span class="pulse-dot" aria-hidden="true"></span>FRESH-side provisional — not C2070 official</p>
+        <p class="mode-badge is-checking" id="mode-badge"><span class="mode-dot" aria-hidden="true"></span><span id="mode-badge-text">Checking live API…</span></p>
+        <p class="role-badge is-checking" id="role-badge" hidden><span class="role-dot" aria-hidden="true"></span><span id="role-badge-text">Role · checking</span></p>
+        <dl class="header-stats">
+          <div><dt>Scenarios</dt><dd id="header-scenario-count">—</dd></div>
+          <div><dt>Pareto eligible</dt><dd id="header-eligible-count">—</dd></div>
+          <div><dt>Fleet run</dt><dd class="mono">2026-11-20</dd></div>
+          <div><dt>Horizon</dt><dd class="mono">2021—2070</dd></div>
+        </dl>
+        <p class="header-note" id="header-generated">Loading data contract…</p>
+      </div>
+    </div>
+  </header>
+
+  <div id="fatal-banner" class="fatal-banner" role="alert" hidden></div>
+  <div id="role-notice" class="role-notice" role="status" hidden></div>
+
+  <div class="app-shell">
+    <aside class="rail" id="scenario-navigator" aria-label="Scenario navigator">
+      <button class="rail-toggle" id="rail-toggle" type="button" aria-expanded="false" aria-controls="rail-body">
+        <span>Scenario ledger</span>
+        <span class="rail-toggle-count" id="rail-toggle-count">—</span>
+        <span class="rail-toggle-icon" aria-hidden="true"></span>
+      </button>
+      <div class="rail-inner" id="rail-body">
+        <div class="rail-head">
+          <p class="rail-kicker">Scenario ledger</p>
+          <p class="rail-count" id="rail-count">—</p>
+        </div>
+        <div class="search-field">
+          <label for="scenario-search">Search scenarios</label>
+          <input id="scenario-search" type="search" placeholder="name, family, id…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="family-filter" id="family-filter" role="group" aria-label="Filter by scenario family"></div>
+        <div class="rail-divider" aria-hidden="true"></div>
+        <ol class="scenario-list" id="scenario-list" aria-label="Scenarios"></ol>
+        <p class="rail-foot">The fleet-corrected 119 Mm³ run is the only Pareto-eligible case. The 150/200 Mm³ ladder rows and the 119/150 Mm³ allocation-LP rows are sensitivity/comparison only; pre-fleet rows remain visible for audit but are not comparable.</p>
+      </div>
+    </aside>
+
+    <main class="workspace" id="workspace">
+      <div class="tabbar-wrap">
+        <div class="tabbar" role="tablist" aria-label="Explorer views">
+          <button class="tab is-active" id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" data-tab="overview" type="button">Overview</button>
+          <button class="tab" id="tab-dispatch" role="tab" aria-selected="false" aria-controls="panel-dispatch" data-tab="dispatch" tabindex="-1" type="button">Dispatch</button>
+          <button class="tab" id="tab-tradeoff" role="tab" aria-selected="false" aria-controls="panel-tradeoff" data-tab="tradeoff" tabindex="-1" type="button">Trade-off</button>
+          <button class="tab" id="tab-explore" role="tab" aria-selected="false" aria-controls="panel-explore" data-tab="explore" tabindex="-1" type="button">Explore</button>
+          <button class="tab" id="tab-map" role="tab" aria-selected="false" aria-controls="panel-map" data-tab="map" tabindex="-1" type="button">Map</button>
+          <button class="tab" id="tab-zones" role="tab" aria-selected="false" aria-controls="panel-zones" data-tab="zones" tabindex="-1" type="button">Zones</button>
+          <button class="tab" id="tab-economics" role="tab" aria-selected="false" aria-controls="panel-economics" data-tab="economics" tabindex="-1" type="button">Economics</button>
+          <button class="tab" id="tab-osecan" role="tab" aria-selected="false" aria-controls="panel-osecan" data-tab="osecan" tabindex="-1" type="button">OSeCAN Links</button>
+          <button class="tab" id="tab-run" role="tab" aria-selected="false" aria-controls="panel-run" data-tab="run" tabindex="-1" type="button">Run</button>
+          <button class="tab" id="tab-inputs" role="tab" aria-selected="false" aria-controls="panel-inputs" data-tab="inputs" tabindex="-1" type="button">Inputs</button>
+        </div>
+        <div class="tab-meta" id="tab-scenario-meta" aria-live="polite"></div>
+      </div>
+
+      <div class="time-deck" id="time-deck" role="group" aria-label="Shared year control">
+        <button class="time-play" id="year-play" type="button" aria-label="Play years" aria-pressed="false">▶</button>
+        <div class="time-slider-wrap">
+          <div class="time-head">
+            <span class="time-kicker">Shared year</span>
+            <output class="time-readout" id="year-global-out" for="year-global">2050</output>
+            <span class="time-window" id="year-window-note">window 2021—2070</span>
+          </div>
+          <input id="year-global" type="range" min="2021" max="2070" step="1" value="2050" aria-label="Shared year, 2021 to 2070">
+          <div class="time-scale" aria-hidden="true"><span>2021</span><span>2035</span><span>2050</span><span>2060</span><span>2070</span></div>
+        </div>
+        <button class="time-reset" id="year-reset" type="button">Reset to 2050</button>
+      </div>
+
+      <section class="panel is-active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div id="overview-content">
+          <div class="skeleton-block">Reading scenario ledger…</div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-dispatch" role="tabpanel" aria-labelledby="tab-dispatch" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Electricity vs fuel</p>
+            <h2>Dispatch, 2021—2070</h2>
+          </div>
+          <p class="panel-deck">Stacked annual energy by technology family. Electricity and fuel are separate ledgers — categories are never summed across units.</p>
+        </div>
+        <div class="control-deck" role="group" aria-label="Dispatch controls">
+          <fieldset class="segmented">
+            <legend>Energy ledger</legend>
+            <label><input type="radio" name="energy-ledger" value="electricity" checked><span>Electricity</span></label>
+            <label><input type="radio" name="energy-ledger" value="fuel"><span>Fuel</span></label>
+          </fieldset>
+          <label class="select-field">Zone
+            <select id="dispatch-zone"></select>
+          </label>
+          <div class="range-field">
+            <span class="range-title">Years <span class="mono" id="year-range-label">2021—2070</span></span>
+            <label class="range-row">From <input id="year-min" type="range" min="2021" max="2070" step="1" value="2021"><output id="year-min-out">2021</output></label>
+            <label class="range-row">To <input id="year-max" type="range" min="2021" max="2070" step="1" value="2070"><output id="year-max-out">2070</output></label>
+          </div>
+        </div>
+        <div class="chart-frame chart-frame--dispatch">
+          <div class="chart-loading" id="dispatch-loading">Loading scenario output…</div>
+          <div class="chart" id="dispatch-chart" role="img" aria-label="Stacked area chart of annual dispatch by technology family"></div>
+          <div class="empty-state" id="dispatch-empty" hidden></div>
+        </div>
+        <div class="chart-foot">
+          <p id="dispatch-source-note" class="method-note">Source category and units will appear after the scenario output loads.</p>
+          <div class="swatch-legend" id="dispatch-legend" aria-label="Technology family colours"></div>
+        </div>
+
+        <section class="year-snapshot" aria-labelledby="snapshot-title">
+          <div class="year-snapshot-head">
+            <div>
+              <p class="kicker">Shared-year slice</p>
+              <h3 id="snapshot-title">Dispatch snapshot</h3>
+            </div>
+            <p class="year-snapshot-caption" id="dispatch-snapshot-caption">The shared year control selects the snapshot year. The year-window sliders above still control the chart extent.</p>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table data-table--compact" id="dispatch-snapshot" aria-live="polite"></table>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-tradeoff" role="tabpanel" aria-labelledby="tab-tradeoff" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Eligible frontier</p>
+            <h2>Objective vs cumulative emissions</h2>
+          </div>
+          <p class="panel-deck">Only the canonical fleet-corrected 119 Mm³ scenario is Pareto eligible. The 100/150/200 Mm³ harvest ladder is sensitivity/compare only: harvest is exogenous and unpriced in the energy objective. The allocation-LP family reallocates 119/150 Mm³ under documented caps but is comparison/context only. Pre-fleet, superseded, and diagnostic scenarios remain excluded.</p>
+        </div>
+        <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates the status-quo mix under documented caps, but the 1.0 m³/ha/yr operable-proxy screen fails by 16.296 Mm³ and 1.2 is still 4.492 Mm³ short; the national operable envelope alone clears at 1.2. Harvest is exogenous and free, so neither the ladder nor the allocation-LP variants can define an energy Pareto front.</p>
+        </div>
+        <div id="tradeoff-guard" class="guard-note" hidden></div>
+        <div class="chart-frame chart-frame--scatter">
+          <div class="chart" id="tradeoff-chart" role="img" aria-label="Scatter plot of objective cost versus cumulative emissions for eligible scenarios"></div>
+        </div>
+        <div class="chart-foot chart-foot--split">
+          <p class="method-note">X: objective, M$ (million USD). Y: cumulative emissions, Mt CO₂. Colour: scenario family. Hover for labels; click a point or select in the rail to load that scenario.</p>
+          <p class="mono small" id="tradeoff-count"></p>
+        </div>
+
+        <section class="explore-block allocation-block" id="allocation-block" aria-labelledby="allocation-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Comparison only</p>
+              <h3 id="allocation-title">Observed vs LP-reallocated allocation</h3>
+            </div>
+            <p class="explore-hint">Observed rows keep the 2024 provincial shares. LP rows reallocate the same national total under documented provincial caps with the 2024-share L1 objective. Neither row is policy-grade, and the allocation-LP family is excluded from the energy Pareto.</p>
+          </div>
+          <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+            <strong>Operable-proxy intensity caveat — screening landbase, not a THLB</strong>
+            <p id="allocation-caveat">The intensity screen uses the SCANFI operable merchantable-forest proxy, not a legal THLB. 150 Mm³ fails the 1.0 m³/ha/yr per-province screen by 16.296 Mm³ and is still 4.492 Mm³ short at 1.2 because documented caps bind; the national operable envelope alone clears at 1.2. 119 Mm³ passes both.</p>
+          </div>
+          <div id="allocation-operable"></div>
+          <div class="table-wrap">
+            <table class="data-table data-table--compact" id="allocation-table"></table>
+          </div>
+          <div id="allocation-province"></div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-explore" role="tabpanel" aria-labelledby="tab-explore" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Multi-criteria workspace</p>
+            <h2>Explore the trade space</h2>
+          </div>
+          <p class="panel-deck">The 119 Mm³ canonical/base run, the 100/150/200 Mm³ harvest sensitivity ladder, and the 119/150 Mm³ allocation-LP comparison rows remain visible. Only the canonical 119 Mm³ case enters the default Pareto front; pre-fleet, superseded, live, and allocation-LP runs stay screening/context only.</p>
+        </div>
+        <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+          <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
+          <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. The LP reallocates 150 Mm³ under documented caps but fails the 1.0 m³/ha/yr operable-proxy screen by 16.296 Mm³; 1.2 is still 4.492 Mm³ short because documented caps bind. Harvest is exogenous and free, so the ladder and the allocation-LP family are sensitivity/compare context, not a Pareto frontier.</p>
+        </div>
+        <div id="explore-mode-note" class="guard-note" hidden></div>
+
+        <section class="explore-block explore-block--pc" aria-labelledby="pc-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Eleven dimensions</p>
+              <h3 id="pc-title">Parallel coordinates</h3>
+            </div>
+            <p class="explore-hint">Drag vertically on an axis to brush; click an axis to clear. Lines break where a metric is absent — nothing is imputed. Absent PWRBIO/nuclear caps plot at 0, which also means an explicit zero cap; the axis unit says so.</p>
+          </div>
+          <div class="pc-legend" id="pc-legend" aria-label="Scenario family colours"></div>
+          <div class="pc-scroll">
+            <div class="pc-chart" id="pc-chart" role="img" aria-describedby="pc-status" aria-label="Parallel coordinates plot of eligible scenarios across objective, emissions, national biomass, power biomass, bio share, harvest, carbon price, recovery, PWRBIO cap, nuclear cap, and wind cap"></div>
+          </div>
+          <div class="pc-controls">
+            <div class="filter-chips" id="pc-chips" role="group" aria-label="Active parallel-coordinate filters"></div>
+            <form class="filter-form" id="pc-filter-form" aria-label="Add a parallel-coordinate range filter">
+              <label>Axis <select id="pc-axis-select"></select></label>
+              <label>Min <input id="pc-min" type="number" step="any" inputmode="decimal"></label>
+              <label>Max <input id="pc-max" type="number" step="any" inputmode="decimal"></label>
+              <button class="button button--quiet" type="submit">Apply filter</button>
+              <button class="button button--quiet" type="button" id="pc-reset">Reset filters</button>
+            </form>
+          </div>
+          <p class="mono small explore-status" id="pc-status" aria-live="polite"></p>
+        </section>
+
+        <section class="explore-block" aria-labelledby="pareto-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Nondominated set</p>
+              <h3 id="pareto-title">Pareto front</h3>
+            </div>
+            <p class="explore-hint">Dominance uses min–max normalized metrics, so no unit dominates by scale. Only scenarios flagged Pareto eligible are evaluated — currently the canonical 119 Mm³ fleet case. The harvest ladder and allocation-LP variants remain visible as context but are excluded because harvest is exogenous, 150 Mm³ is conditional, and the allocation-LP family is screening/compare only.</p>
+          </div>
+          <div class="pareto-controls">
+            <label>Projection X <select id="pareto-x"></select></label>
+            <label>Projection Y <select id="pareto-y"></select></label>
+            <label>Third objective <select id="pareto-z"></select></label>
+            <button class="button button--quiet" id="pareto-export" type="button">Export front CSV</button>
+          </div>
+          <div id="pareto-guard" class="guard-note" hidden></div>
+          <div class="chart-frame chart-frame--scatter">
+            <div class="chart" id="pareto-chart" role="img" aria-describedby="pareto-count pareto-selected" aria-label="Pareto scatter plot with nondominated scenarios highlighted"></div>
+          </div>
+          <div class="chart-foot chart-foot--split">
+            <p class="method-note" id="pareto-selected" aria-live="polite">Select a point to load its scenario.</p>
+            <p class="mono small" id="pareto-count"></p>
+          </div>
+        </section>
+
+        <section class="explore-block" aria-labelledby="compare-title">
+          <div class="explore-block-head">
+            <div>
+              <p class="kicker">Side by side</p>
+              <h3 id="compare-title">Scenario comparison &amp; deltas</h3>
+            </div>
+            <p class="explore-hint">Absolute and relative deltas are computed from the committed metrics. Differing dimensions are listed explicitly rather than hidden in the table.</p>
+          </div>
+          <div class="compare-controls">
+            <label class="compare-pick">Scenario A <select id="compare-a"></select></label>
+            <label class="compare-pick">Scenario B <select id="compare-b"></select></label>
+          </div>
+          <div class="harvest-caveat harvest-caveat--feasibility" role="note">
+            <strong>200 Mm³ not admissible · 150 Mm³ conditional · harvest exogenous · allocation screening</strong>
+            <p>200 Mm³ is not admissible under the documented AAC/NFD screen; 150 Mm³ is a national bound only. Allocation-LP rows compare observed 2024 shares with the LP reallocation; the 1.0 m³/ha/yr operable-proxy screen fails at 150 Mm³ by 16.296 Mm³ and 1.2 is still 4.492 Mm³ short. Comparisons are sensitivity/context, not a policy frontier.</p>
+          </div>
+          <div id="compare-grade" class="compare-grade"></div>
+          <div class="table-wrap" id="compare-table-wrap">
+            <table class="data-table compare-table" id="compare-table"></table>
+          </div>
+          <div class="compare-dims" id="compare-dims" aria-live="polite"></div>
+          <div class="compare-overlay-controls">
+            <button class="button button--quiet" id="compare-overlay-toggle" type="button" aria-pressed="false" aria-controls="compare-overlay-frame">Show dispatch overlay</button>
+            <label class="select-field">Ledger
+              <select id="compare-energy">
+                <option value="electricity">Electricity · PJ electricity</option>
+                <option value="fuel">Fuel · PJ fuel</option>
+              </select>
+            </label>
+          </div>
+          <div class="chart-frame chart-frame--dispatch compare-overlay" id="compare-overlay-frame" hidden>
+            <div class="chart" id="compare-overlay-chart" role="img" aria-label="Dispatch overlay for the two compared scenarios"></div>
+            <p class="mono small" id="compare-overlay-note"></p>
+          </div>
+          <p class="mono small explore-status" id="compare-status" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-map" role="tabpanel" aria-labelledby="tab-map" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Spatial bundle</p>
+            <h2>Provinces, ecoprovinces &amp; RSYC tiles</h2>
+          </div>
+          <p class="panel-deck">Tile choropleth shows recoverable base energy. Click through Canada → province → ecoprovince → tile. C2070 zone polygons are not invented: only B1 and B2 have authoritative anchors.</p>
+        </div>
+        <nav class="map-breadcrumb" id="map-breadcrumb" aria-label="Spatial drill-down"></nav>
+        <div class="map-layout">
+          <div class="map-stage">
+            <div id="map" aria-label="Map of Canada with provinces, ecoprovinces, and RSYC supply tiles"></div>
+            <div id="map-load-state" class="map-state">Spatial bundle loads when this tab opens.</div>
+            <div class="map-year-gauge" id="map-year-gauge" aria-hidden="true">
+              <span class="map-year-gauge-title">Year</span>
+              <div class="map-year-gauge-track"><i id="map-year-gauge-dot"></i></div>
+              <span class="map-year-gauge-label" id="map-year-gauge-label">2050</span>
+            </div>
+            <div class="map-legend" id="map-legend" hidden>
+              <span class="map-legend-title">Recoverable base (PJ)</span>
+              <div id="map-legend-items"></div>
+            </div>
+          </div>
+          <aside class="map-side" aria-label="Map selection, layers and spatial caveats">
+            <section class="map-selection" id="map-selection" aria-live="polite"></section>
+            <h3>Layers</h3>
+            <div class="layer-toggles">
+              <label><input type="checkbox" id="layer-provinces" checked><span>Provinces <span class="mono muted">13</span></span></label>
+              <label><input type="checkbox" id="layer-ecoprovinces" checked><span>Ecoprovinces <span class="mono muted">36</span></span></label>
+              <label><input type="checkbox" id="layer-tiles" checked><span>RSYC tiles <span class="mono muted">385</span></span></label>
+              <label><input type="checkbox" id="layer-anchors" checked><span>B1 / B2 anchors <span class="mono muted">2</span></span></label>
+            </div>
+            <div class="map-button-row">
+              <button class="button button--quiet" id="map-fit" type="button">Fit to Canada</button>
+              <button class="button button--quiet" id="map-reset" type="button">Reset selection</button>
+            </div>
+            <div class="spatial-gap-note">
+              <strong>11 C2070 zones lack polygons</strong>
+              <p>No authoritative geometry exists in the repository. Nothing is fabricated. Gap zones:</p>
+              <div class="chip-row" id="gap-zones"></div>
+            </div>
+            <dl class="mini-stats" id="map-stats"></dl>
+            <p class="method-note">Choropleth classes are quantiles of <span class="mono">recoverable_pj_base</span> across 385 RSYC tiles. Click a tile for its record.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-zones" role="tabpanel" aria-labelledby="tab-zones" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">13 zones · no invented polygons</p>
+            <h2>Zone table &amp; year heatmap</h2>
+          </div>
+          <p class="panel-deck">The v1 fallback for C2070 zone reporting: one row per zone, a separate national <span class="mono">CAN</span> row, and a year × zone heatmap for one selected ledger. Electricity and fuel are never summed. Only B1/B2 have authoritative point anchors; the other 11 zones are explicit gaps.</p>
+        </div>
+
+        <div class="control-deck" role="group" aria-label="Zone table and heatmap controls">
+          <fieldset class="segmented">
+            <legend>Heatmap ledger</legend>
+            <label><input type="radio" name="zone-energy" value="electricity" checked><span>Electricity</span></label>
+            <label><input type="radio" name="zone-energy" value="fuel"><span>Fuel</span></label>
+          </fieldset>
+          <label class="select-field">Heatmap metric
+            <select id="zones-metric"></select>
+          </label>
+          <label class="select-field">Table year
+            <select id="zones-year"></select>
+          </label>
+        </div>
+
+        <div id="zones-summary" class="zone-summary" aria-live="polite"></div>
+        <div id="zones-loading" class="chart-loading">Loading zone rows…</div>
+        <div id="zones-empty" class="empty-state" hidden></div>
+        <div id="zones-content" hidden>
+          <div class="table-wrap zone-table-wrap">
+            <table class="data-table zone-table" id="zones-table"></table>
+          </div>
+          <p class="method-note" id="zones-source-note"></p>
+
+          <section class="zone-heatmap-block" aria-labelledby="zones-heatmap-title">
+            <div class="section-heading">
+              <h3 id="zones-heatmap-title">Year × zone heatmap</h3>
+              <p id="zones-heatmap-legend" class="zone-heat-legend"></p>
+            </div>
+            <div class="table-wrap zone-heatmap-wrap">
+              <table class="zone-heatmap" id="zones-heatmap"></table>
+            </div>
+            <p class="method-note">One colour scale per selected metric and ledger. The <span class="mono">CAN</span> row is a national aggregate and is never added to zone rows. A dot (·) means no row for that zone/year; it is not zero and nothing is imputed.</p>
+          </section>
+
+          <div class="spatial-gap-note zone-gap-note">
+            <strong>11 C2070 zones lack polygons</strong>
+            <p>No authoritative geometry exists in the repository. The table is a reporting fallback, not a boundary. B1/B2 anchors are point nodes only; the remaining zones are gaps:</p>
+            <div class="chip-row" id="zone-gap-chips"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-economics" role="tabpanel" aria-labelledby="tab-economics" tabindex="0" hidden>
+        <div class="economics-subtabs" role="tablist" aria-label="Economics views">
+          <button class="economics-subtab is-active" id="economics-subtab-national" role="tab" aria-selected="true" aria-controls="economics-view-national" data-economics-view="national" type="button">
+            <span class="economics-subtab-label">National</span>
+            <span class="economics-subtab-note">13 jurisdictions · evidence coverage</span>
+          </button>
+          <button class="economics-subtab" id="economics-subtab-bc" role="tab" aria-selected="false" aria-controls="economics-view-bc" data-economics-view="bc" tabindex="-1" type="button">
+            <span class="economics-subtab-label">BC detail</span>
+            <span class="economics-subtab-note">Zone × system modeled margin</span>
+          </button>
+        </div>
+
+        <section class="economics-view" id="economics-view-national" role="tabpanel" aria-labelledby="economics-subtab-national" tabindex="0">
+          <div class="national-economics" id="national-economics" aria-labelledby="national-economics-title">
+            <header class="national-header">
+              <div>
+                <p class="kicker">Read-only · v2.3 cost model</p>
+                <h2 id="national-economics-title">National forest economics</h2>
+              </div>
+              <p class="national-deck">Modeled national margins at the 119 Mm³ allocation: a screening estimate, not observed, not policy grade, and not a combined net value.</p>
+            </header>
+            <div id="national-loading" class="chart-loading">Reading national economics bundle…</div>
+            <div id="national-content" hidden>
+              <div class="national-headline" id="national-headline" aria-live="polite"></div>
+              <section class="national-evidence-strip" id="national-evidence-strip" aria-label="Volume-weighted price and cost evidence coverage"></section>
+
+              <section class="national-block" aria-labelledby="national-table-title">
+                <div class="national-block-head">
+                  <h3 id="national-table-title">Province ledger</h3>
+                  <p>Canonical order · totals at the 119 Mm³ allocation · no ranking</p>
+                </div>
+                <div class="table-wrap national-table-wrap">
+                  <table class="data-table economics-table national-table" id="national-table"></table>
+                </div>
+              </section>
+
+              <section class="national-block" aria-labelledby="national-drilldown-title">
+                <div class="national-block-head">
+                  <h3 id="national-drilldown-title">Province detail</h3>
+                  <p>Collapsed by default · one province open at a time</p>
+                </div>
+                <div class="national-drilldown" id="national-drilldown"></div>
+              </section>
+
+              <section class="national-block national-net-value" id="national-net-value" aria-labelledby="national-net-value-title">
+                <div class="national-block-head">
+                  <h3 id="national-net-value-title">Forest LP net-value table</h3>
+                  <p>Documented-ceiling screening cases · model_estimate_not_policy · no LP/OSeCAN input</p>
+                </div>
+                <div class="table-wrap national-net-value-table-wrap">
+                  <table class="data-table economics-table national-net-value-table" id="national-net-value-table"></table>
+                </div>
+                <p class="national-net-value-footnote" id="national-net-value-footnote">150 Mm³ at intensity 1.0 and 1.2 is infeasible: values are blank, not zero.</p>
+
+                <div class="national-allocation-sensitivity" id="national-allocation-sensitivity" aria-labelledby="national-allocation-title">
+                  <div class="national-allocation-head">
+                    <h4 id="national-allocation-title">Economic allocation sensitivity</h4>
+                    <p>Documented ceilings · canonical least-deviation baseline vs net-value optimum · model_estimate · lp_objective=net_value_sensitivity · canonical_changed=false · no LP controls</p>
+                  </div>
+                  <div class="table-wrap national-allocation-table-wrap">
+                    <table class="data-table economics-table national-allocation-table" id="national-allocation-table"></table>
+                  </div>
+                  <p class="national-net-value-footnote" id="national-allocation-footnote">Model estimate only. Delta = optimized − canonical baseline. Donor-price caveat: donor_flat is a donor/flat price proxy, not an observed provincial price; stumpage_scaled is a method sensitivity. canonical_changed=false · no LP/OSeCAN input.</p>
+                  <details class="national-allocation-shifts" id="national-allocation-shifts">
+                    <summary><span>Province allocation shifts</span><span class="national-allocation-summary-note">13 provinces · 119 Mm³ · baseline vs optimized</span></summary>
+                    <div class="table-wrap national-allocation-shift-wrap">
+                      <table class="data-table economics-table national-allocation-shift-table" id="national-allocation-shift-table"></table>
+                    </div>
+                  </details>
+                </div>
+              </section>
+
+              <p class="national-caveat" id="national-caveat" role="note"></p>
+
+              <details class="national-methods" id="national-methods">
+                <summary>Methods, sources &amp; downloads</summary>
+                <div class="national-methods-body">
+                  <p class="method-note" id="national-source-note">Loading national economics bundle…</p>
+                  <p class="method-note mono small" id="national-generated"></p>
+                  <div class="economics-downloads national-downloads" id="national-downloads"></div>
+                </div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section class="economics-view" id="economics-view-bc" role="tabpanel" aria-labelledby="economics-subtab-bc" tabindex="0" hidden>
+          <div class="panel-heading economics-panel-heading">
+            <div>
+              <p class="kicker">Reported sensitivity · read-only</p>
+              <h2>BC modeled margin</h2>
+            </div>
+            <p class="panel-deck">Corrected open-data BC mill-delivered margin from published price averages, proxy logging and haul costs, and an Interior silviculture allowance. This is a reported sensitivity, not a Forest LP objective input, not a public OSeCAN input, and not policy grade. No run controls are exposed.</p>
+          </div>
+          <div class="economics-badges masthead-flags" id="economics-badges" aria-label="Evidence, licensing and policy labels"></div>
+          <div class="economics-provenance">
+            <p class="method-note" id="economics-source-note">Loading corrected economics bundle…</p>
+            <p class="method-note mono small" id="economics-generated"></p>
+          </div>
+          <div id="economics-loading" class="chart-loading">Reading corrected economics bundle…</div>
+          <div id="economics-content" hidden>
+            <div class="metric-grid economics-metric-grid" id="economics-headline" aria-live="polite"></div>
+
+            <section class="economics-range-card" aria-labelledby="economics-range-title">
+              <div class="economics-range-head">
+                <div>
+                  <p class="kicker">Base net_model · all modeled rows</p>
+                  <h3 id="economics-range-title">Low · median · high</h3>
+                </div>
+                <p class="method-note">The rust band is the negative part of the range. The zero line is drawn explicitly; nothing is clipped.</p>
+              </div>
+              <div id="economics-range" class="economics-range"></div>
+            </section>
+
+            <div class="economics-layout">
+              <section class="economics-chart-card" aria-labelledby="economics-chart-title">
+                <div class="section-heading">
+                  <h3 id="economics-chart-title">Zone × system base median</h3>
+                  <p id="economics-chart-note">Modeled net_model, CAD/m³. Negative cells are rust; hover for low/base/high and the negative row count.</p>
+                </div>
+                <div class="chart-frame chart-frame--economics">
+                  <div class="chart" id="economics-chart" role="img" aria-label="Heatmap of modeled base net margin by BC forest zone and harvesting system"></div>
+                </div>
+                <p class="method-note">Seven forest zones map to two appraisal-price regions. South West is Coast-priced; the other six are Interior-priced. Coast silviculture is not deducted because the source publishes CAD/ha only.</p>
+              </section>
+              <aside class="economics-qc-card" id="economics-qc" aria-label="QC reference, not net value"></aside>
+            </div>
+
+            <section class="section-block" aria-labelledby="economics-table-title">
+              <div class="section-heading">
+                <h3 id="economics-table-title">Zone × system ledger</h3>
+                <p>Low and high are medians of the conservative and optimistic envelopes, not observed transactions. Base is the primary modeled case.</p>
+              </div>
+              <div class="table-wrap economics-table-wrap">
+                <table class="data-table economics-table" id="economics-table"></table>
+              </div>
+            </section>
+
+            <section class="section-block" aria-labelledby="economics-evidence-title">
+              <div class="section-heading">
+                <h3 id="economics-evidence-title">Evidence tiers</h3>
+                <p>Revenue, cost, and procurement evidence stay separated. Every row is <span class="mono">not_estimated</span> and <span class="mono">policy_grade=false</span>; no monetary net value is reported here.</p>
+              </div>
+              <div id="economics-evidence"></div>
+            </section>
+
+            <div class="harvest-caveat economics-caveat" id="economics-caveat" role="note"></div>
+
+            <section class="section-block" aria-labelledby="economics-downloads-title">
+              <div class="section-heading">
+                <h3 id="economics-downloads-title">Bundle &amp; downloads</h3>
+                <p>Generated from the committed CSVs. Hashes are recorded in the economics manifest and are not re-hashed in the browser.</p>
+              </div>
+              <div class="economics-downloads" id="economics-downloads"></div>
+            </section>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-osecan" role="tabpanel" aria-labelledby="tab-osecan" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Supply-curve workbench</p>
+            <h2>OSeCAN links &amp; SUPBCW inputs</h2>
+          </div>
+          <p class="panel-deck">A transparent screening calculator over the committed supply curve. The exports are illustrative inputs; when the live API is available, the same levers can create a screening-only run.</p>
+        </div>
+        <div class="needs-run-banner" id="osecan-run-banner" role="status"><span class="needs-run-mark">!</span><strong>Static mode — no live solver.</strong> Static exports are illustrative inputs, not solved CLEWS results.</div>
+
+        <div class="osecan-grid">
+          <div class="control-card">
+            <h3>Lever calculator</h3>
+            <label class="select-field">Harvest lever
+              <select id="osecan-harvest"></select>
+            </label>
+            <label class="select-field">Recovery fraction
+              <select id="osecan-recovery"></select>
+            </label>
+            <label class="select-field">Cost basis
+              <select id="osecan-cost"></select>
+            </label>
+            <div class="validation-strip" id="osecan-validation"></div>
+            <div class="export-row">
+              <button class="button" id="export-limits" type="button">Export activity limits CSV</button>
+              <button class="button" id="export-costs" type="button">Export variable cost CSV</button>
+              <button class="button button--quiet" id="osecan-queue" type="button" disabled>Queue this scenario</button>
+            </div>
+            <p class="method-note" id="export-note">REGION,TECHNOLOGY,YEAR,VALUE · national tier rows, 2021—2070.</p>
+            <p class="method-note" id="osecan-live-note">Live queueing is unavailable in static mode.</p>
+          </div>
+          <div class="result-card">
+            <h3>2050 screening result</h3>
+            <div class="result-grid">
+              <div class="result"><span>National</span><strong id="osecan-national">—</strong><small>PJ fuel / yr</small></div>
+              <div class="result"><span>BC zonal</span><strong id="osecan-bc">—</strong><small>PJ fuel / yr</small></div>
+              <div class="result"><span>Rest of Canada</span><strong id="osecan-rest">—</strong><small>PJ fuel / yr</small></div>
+              <div class="result"><span>Supply cost</span><strong id="osecan-cost-value">—</strong><small>USD/GJ</small></div>
+            </div>
+            <p class="result-note" id="osecan-result-note"></p>
+            <h4>Tier allocation</h4>
+            <div class="tier-stack" id="osecan-tier-stack"></div>
+            <table class="data-table data-table--compact" id="osecan-tier-table"></table>
+            <p class="method-note">Proportional screening model: national PJ = reference 2050 cap × (harvest ÷ 119 Mm³) × (recovery ÷ 0.60). BC scales from the committed BC zonal total. Tier sum is validated against the committed curve; over-cap requests are clamped and flagged.</p>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>File &amp; check ledger</h3>
+            <p>Recorded by the exporter — hashes are snapshots, not re-hashed in the browser.</p>
+          </div>
+          <div id="osecan-family-table"></div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>Input files</h3>
+            <p>Source inventory behind harvest basis, supply curve, landbase, and spatial layers.</p>
+          </div>
+          <div id="osecan-input-table"></div>
+        </div>
+
+        <details class="fold-block">
+          <summary>SUPBCW input file inventory</summary>
+          <div id="osecan-supbcw-table"></div>
+        </details>
+      </section>
+
+      <section class="panel" id="panel-run" role="tabpanel" aria-labelledby="tab-run" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Live screening runner</p>
+            <h2>Create, queue, watch</h2>
+          </div>
+          <p class="panel-deck">Create a <span class="mono">clews.scenario.v1</span> snapshot, queue it on the FastAPI runner, and follow the SSE log. <span class="mono">screening_v0</span> is <strong>screening_only</strong>; <span class="mono">policy_test_v1</span> is a <strong>draft</strong>; both are <strong>policy_grade=false</strong> and neither is Pareto eligible.</p>
+        </div>
+        <div class="run-mode-banner" id="run-mode-banner" role="status">
+          <span class="run-mode-mark" aria-hidden="true">…</span>
+          <div><strong id="run-mode-title">Checking live API…</strong><p id="run-mode-text">Static views remain available if no backend responds.</p></div>
+        </div>
+
+        <div class="run-layout">
+          <form class="run-form" id="run-form" novalidate>
+            <div class="run-form-head">
+              <h3>Scenario inputs</h3>
+              <p>Lever defaults come from <span class="mono">screening_v0</span>; the constraint selector chooses <span class="mono">screening_v0</span> or draft <span class="mono">policy_test_v1</span>. The scenario is snapshotted when queued, so later edits cannot change the run.</p>
+            </div>
+            <div class="run-form-grid">
+              <label class="field field--wide">Scenario label
+                <input id="run-label" name="label" type="text" maxlength="200" placeholder="e.g. 150 Mm³ · high recovery · $200 carbon" required>
+              </label>
+              <label class="field field--wide">Constraint set
+                <select id="run-constraint-set" name="constraint_set">
+                  <option value="screening_v0">screening_v0 — screening only</option>
+                  <option value="policy_test_v1" disabled>policy_test_v1 — unavailable in static mode</option>
+                </select>
+                <span class="field-hint" id="run-constraint-badge">screening_only · policy_grade=false</span>
+              </label>
+              <label class="field">Harvest (Mm³/yr)
+                <select id="run-harvest" name="harvest">
+                  <option value="100">100 — scenario low</option>
+                  <option value="119">119 — observed 2024 base</option>
+                  <option value="150">150 — scenario high (conditional)</option>
+                  <option value="custom">Custom…</option>
+                </select>
+              </label>
+              <label class="field" id="run-harvest-custom-field" hidden>Custom harvest (m³/yr)
+                <input id="run-harvest-custom" name="harvest_custom" type="number" min="1" step="1000000" inputmode="decimal">
+              </label>
+              <label class="field">Recovery fraction
+                <select id="run-recovery" name="recovery">
+                  <option value="0.35">0.35 — low</option>
+                  <option value="0.6">0.60 — base</option>
+                  <option value="0.75">0.75 — high</option>
+                </select>
+              </label>
+              <label class="field">Cost basis
+                <select id="run-cost" name="cost">
+                  <option value="adopted_rest_of_canada_curve">Adopted rest-of-Canada curve</option>
+                  <option value="base">Base</option>
+                  <option value="low">Low</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+              <label class="field">Carbon price 2026 (USD/t CO₂)
+                <input id="run-carbon" name="carbon" type="number" min="0" step="1" inputmode="decimal">
+              </label>
+              <label class="field">Hydro mode
+                <select id="run-hydro" name="hydro">
+                  <option value="cap_2021">Cap 2021 (upper bound)</option>
+                  <option value="fixed_2021">Fixed 2021</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+              <label class="field">PWRBIO cap (fraction)
+                <input id="run-pwrbio" name="pwrbio" type="number" min="0" max="1" step="0.01" inputmode="decimal">
+              </label>
+              <label class="field">Nuclear cap (GW)
+                <input id="run-nuclear" name="nuclear" type="number" min="0" step="0.1" inputmode="decimal">
+              </label>
+              <label class="field">Wind cost (USD/GJ)
+                <input id="run-wind-cost" name="wind_cost" type="number" min="0" step="0.01" inputmode="decimal">
+              </label>
+              <label class="field">Wind cap (fraction)
+                <input id="run-wind-cap" name="wind_cap" type="number" min="0" max="1" step="0.01" inputmode="decimal">
+              </label>
+              <label class="field">T3 cap (PJ)
+                <input id="run-t3" name="t3" type="number" min="0" step="0.001" inputmode="decimal">
+              </label>
+              <label class="field">T4 cap (PJ)
+                <input id="run-t4" name="t4" type="number" min="0" step="0.001" inputmode="decimal">
+              </label>
+            </div>
+            <p class="run-form-note">Supply curve is <span class="mono">tiered</span>. Carbon uses the 2021 baseline of $95/t plus the 2026 step entered here. PWRBIO and wind caps are fractions of the zonal 2050 reference. Harvest above 150 Mm³/yr is rejected by the runner; 150 Mm³ is conditional, not a feasible provincial-mix claim.</p>
+            <div class="run-actions">
+              <button class="button" id="run-create" type="submit">Create scenario</button>
+              <button class="button button--quiet" id="run-queue" type="button" disabled>Queue run</button>
+            </div>
+            <p class="run-form-status" id="run-form-status" role="status">Live API not checked yet.</p>
+            <p class="run-form-error" id="run-form-error" role="alert" hidden></p>
+          </form>
+
+          <aside class="run-status-card" aria-label="Run status and event log">
+            <div class="run-status-head">
+              <div>
+                <p class="kicker">Run state</p>
+                <p class="run-state" id="run-state">idle</p>
+              </div>
+              <span class="run-state-badge" id="run-state-badge">no run</span>
+            </div>
+            <dl class="run-meta" id="run-meta">
+              <div><dt>Scenario</dt><dd id="run-meta-scenario">—</dd></div>
+              <div><dt>Run</dt><dd id="run-meta-run">—</dd></div>
+              <div><dt>Elapsed</dt><dd id="run-meta-elapsed">—</dd></div>
+            </dl>
+            <p class="run-status-note" id="run-status-note">No progress estimate is shown; elapsed time is the only clock.</p>
+            <div class="run-status-actions" id="run-status-actions">
+              <button class="button button--quiet run-cancel" id="run-cancel" type="button" hidden>Cancel run</button>
+            </div>
+            <div class="run-policy-flag" id="run-policy-flag" hidden>
+              <strong id="run-policy-flag-title">screening_only · policy_grade=false</strong>
+              <p id="run-policy-flag-text">No reserve margin, transmission, curtailment, or build-rate constraints. Never policy or forecast.</p>
+            </div>
+            <div class="run-log-head">
+              <h3>Event log</h3>
+              <span class="mono" id="run-log-count">0 events</span>
+            </div>
+            <pre class="run-log" id="run-log" aria-live="polite">No live run yet.</pre>
+          </aside>
+        </div>
+
+        <div class="run-output" id="run-output-summary" hidden></div>
+
+        <section class="run-history" aria-labelledby="run-history-title">
+          <div class="run-history-head">
+            <div>
+              <p class="kicker">Persisted on the server</p>
+              <h3 id="run-history-title">Run history</h3>
+            </div>
+            <span class="mono" id="run-history-count">0 runs</span>
+          </div>
+          <p class="run-history-note">Completed runs are re-added to the session rail after reload. Queued and running jobs reconnect to SSE; failed, cancelled, and interrupted jobs offer Retry.</p>
+          <div class="run-history-list" id="run-history-list">
+            <p class="run-history-empty">No live runs loaded yet.</p>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-inputs" role="tabpanel" aria-labelledby="tab-inputs" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Basis &amp; caveats</p>
+            <h2>Input ledger</h2>
+          </div>
+          <p class="panel-deck">Harvest reference paths, supply-curve tiers, and the operable-proxy screening landbase — with the caveats attached. The 166.28 Mha managed proxy remains as a comparison column, not the intensity basis.</p>
+        </div>
+        <div id="inputs-summary" class="metric-grid metric-grid--four"></div>
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>Harvest reference paths</h3>
+            <p>m³/year, 2021—2070. Low-100M and high-150M are scenario bounds, not forecasts.</p>
+          </div>
+          <div class="chart-frame chart-frame--harvest">
+            <div class="chart" id="harvest-chart" role="img" aria-label="Line chart of national harvest reference paths"></div>
+          </div>
+          <div class="caveat-inline" id="harvest-caveats"></div>
+        </div>
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>National supply-curve tiers</h3>
+            <p>Committed incremental caps and variable costs. Tier sum must equal the terminal upper bound.</p>
+          </div>
+          <div class="tier-bar" id="input-tier-bar" aria-hidden="true"></div>
+          <div id="input-tier-table"></div>
+        </div>
+        <div class="section-block">
+          <div class="section-heading">
+            <h3>Operable-proxy landbase screen</h3>
+            <p id="landbase-status"></p>
+          </div>
+          <div class="caveat-callout">
+            <strong>Screening landbase — not a legal THLB or AAC landbase.</strong>
+            <ul id="landbase-caveats"></ul>
+          </div>
+          <div id="managed-table"></div>
+          <p class="method-note" id="managed-supply-note"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <p><span class="footer-mark" aria-hidden="true"></span> Forest Ledger · iteration-0 static UI · no build step · optional live screening runner.</p>
+    <p class="mono" id="footer-contract">Data contract: loading…</p>
+  </footer>
+
+  <div class="live-region" id="live-region" aria-live="polite"></div>
+</body>
+</html>
