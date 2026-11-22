@@ -321,7 +321,14 @@ class Observation:
             raise ValueError(f"unknown observation source: {self.source_key!r}")
         if not math.isfinite(self.value):
             raise ValueError(f"non-finite observation {self.observation_id}: {self.value!r}")
-        if self.unit not in {"index", "CAD/hour", "CAD/litre", "CAD/year", "persons", "CAD"}:
+        if self.unit not in {
+            "index",
+            "CAD/hour",
+            "cents/litre",
+            "CAD/year",
+            "persons",
+            "CAD",
+        }:
             raise ValueError(f"unsupported observation unit: {self.unit!r}")
 
     def as_row(self) -> dict[str, str]:
@@ -424,7 +431,7 @@ OBSERVATIONS: tuple[Observation, ...] = (
             "16.6.0.0.0.0.0.0.0.0",
             period,
             value,
-            "CAD/litre",
+            "cents/litre",
             "fuel price low/base/high",
         )
         for period, value in (
