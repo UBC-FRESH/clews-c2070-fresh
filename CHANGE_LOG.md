@@ -2,6 +2,32 @@
 
 ## 2026-11-22
 
+- **Added public AB/ON/QC mill-capacity extracts, capacity v3 and assignment
+  v5.** Added `workflows/national/facilities/national_facility_capacity_v3.py`,
+  `national_facility_assignment_v5.py`, and three test modules; published
+  `data/derived/national/facilities/public_mill_capacity_2026/`,
+  `national_facility_capacity_v3/` and `national_facility_assignment_v5/` with
+  CSV/JSON summaries, reports and SHA-256 manifests. The Quebec MRNF June 2026
+  register supplies 242 permitted mills; 19 category-8 paper rows have no
+  permitted wood volume and are excluded rather than imputed, leaving 223
+  volume-bearing rows (216 in relevant classes). Matching to inventory v1 is
+  one-to-one by province, class, normalised name and distance: 49 Quebec mills
+  matched existing records and 167 were added. Ontario's 2026 MNRF mill list
+  (94 facilities) has no facility capacity and is used only for names, types,
+  cities and coordinates. Five per-mill company disclosures add four
+  GreenFirst Ontario sawmills and Tolko High Level, Alberta (2 matched, 3 new);
+  their sawn-lumber output is converted at 2.36 m3/Mfbm and explicitly labelled
+  output-basis. Capacity v3 carries 689 records: published 212 -> 433, proxy
+  292 -> 241, published capacity 100.29 -> 166.61 Mm3/yr, proxy capacity
+  120.24 -> 104.73 Mm3/yr; published share of capacity 45.5% -> 61.4%.
+  Assignment v5 reproduces the 119 Mm3 case: assigned 118.977 Mm3, published
+  m3 49.43 -> 78.66 Mm3, proxy m3 69.55 -> 40.32 Mm3, proxy share 58.5% ->
+  33.9%, cross-border 23.69 -> 21.90 Mm3 (19.9% -> 18.4%), HHI 0.00737 ->
+  0.00755. All rows remain `model_estimate`, `observed=false`,
+  `policy_grade=false`; no legal/AAC claim is made; no restricted data and no
+  UI/public OSeCAN change. The builder/tests fail closed on unexpected `D`;
+  none was present. 19 new tests pass.
+
 - **Added multi-scenario forestry residue OSeCAN handoff v1.** Added
   `workflows/national/facilities/forestry_osecan_scenarios.py` and
   `tests/test_forestry_osecan_scenarios.py`; published
