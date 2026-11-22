@@ -6257,7 +6257,7 @@
     var data = [];
     var bases = [];
     econ.zones.forEach(function (zone, zoneIndex) {
-      econ.systems.forEach(function (group, systemIndex) {
+      zone.systems.forEach(function (group, systemIndex) {
         data.push({ value: [systemIndex, zoneIndex, group.base_cad_m3], group: group, zone: zone.zone });
         bases.push(group.base_cad_m3);
       });
