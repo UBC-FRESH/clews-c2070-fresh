@@ -2,6 +2,26 @@
 
 ## 2026-11-23
 
+- **Packaged the 12 D1/D2 OSeCAN candidate cases as read-only files.** Added
+  `osecan_candidate_cases_v1.py`, its focused test, and
+  `data/derived/national/facilities/osecan_candidate_cases_v1/`. The package
+  crosses harvest recovery 0.35/0.60/0.75 with process availability
+  0/25/50/75% at the 119 Mm3 planning allocation: 12 cases, 2 streams, 13
+  zones, 312 candidate rows. `case_index.csv` carries the D1/D2 grid and
+  stream-separated national PJ/tier; `candidate_activity_limits.csv` carries
+  zone PJ/ODT, SUPBCW technology suggestion, the B1/B2 official 2050 limits
+  and ratio/headroom where a zone-specific official limit exists, and
+  `candidate_status=read_only_candidate_not_applied`; and
+  `comparison_supply_curve.csv` compares each case/stream with the national
+  T1-T4 supply curve, the 2050 OSeCAN national context, and the B1/B2 zonal
+  limits. Every row is `model_estimate=true`, `observed=false`,
+  `policy_grade=false`, and `official_osecan_changed=false`. Process and
+  harvest remain separate and are never summed. The build fail-closes on
+  unexpected `D`, reconciles zone sums to `forestry_osecan_handoff_v8`, and
+  hash-checks the derived OSeCAN tree plus the three official SUPBCW schema
+  files before/after. 9 focused tests pass; ruff passes. No UI or official
+  OSeCAN change; no policy claim. No unexpected `D`.
+
 - **Added the v4 energy decision-impact matrix.** Added
   `energy_decision_matrix_v1.py`, its focused test, `docs/energy-decision-matrix.md`,
   and `data/derived/national/facilities/energy_decision_matrix_v1/`. D1
