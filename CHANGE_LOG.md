@@ -2,6 +2,30 @@
 
 ## 2026-11-23
 
+- **Added node-level transport-aware assignment v10.** Added
+  `national_facility_assignment_v10.py`, focused conservation/capacity/
+  arithmetic/comparison/label tests, and
+  `data/derived/national/facilities/national_facility_assignment_v10/`.
+  V10 replaces the v9 province-centroid origin with the 525 committed RSYC
+  supply nodes (486 positive-volume nodes, 39 zero-volume NU nodes) and solves
+  a bipartite node-to-facility transportation LP with the same capacity v3
+  finite limits, 1.2x provincial floor, 118.977 Mm3 harvest total, transport
+  cost v1 curve, and 500 km cross-border preference penalty. Node-facility
+  distance is haversine x facility-province road factor; the committed
+  81-pair public OSRM sample is reused as an external check, with no full OSRM
+  routing. V10 transport is 3.392 billion CAD/yr at 270.3 km mean distance,
+  48.62% at or above 150 km and 30.16% at or above 300 km, with 296 facilities
+  and 54.08% proxy share. The v9 facility allocation held fixed at node origins
+  reproduces the committed 677.5 km node mean; v10 reduces that mean by
+  407.2 km (60.11%) and transport cost by 4.839 billion CAD/yr. A diagnostic
+  distance-only LP with the same capacities reaches 255.8 km, and the
+  unconstrained nearest-facility weighted mean is 191.5 km, so facility
+  geography and capacity still set the residual floor. Capacity, floor,
+  products, residue, UI and official OSeCAN are unchanged; no greenfield siting
+  or policy claim is made. Every row is `model_estimate`, `observed=false`,
+  `policy_grade=false`, `national_claim=false`. Nine focused tests and ruff
+  pass; no unexpected `D`.
+
 - **Added supply-node distance v1.** Added
   `supply_node_distance_v1.py`, focused node/conservation/distance/band/label
   tests, and `data/derived/national/facilities/supply_node_distance_v1/`.
