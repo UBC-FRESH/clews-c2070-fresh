@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Added the national truck transport cost component v1.** Added
+  `transport_cost_v1.py`, its focused arithmetic/unit/range/label tests, and
+  `data/derived/national/facilities/transport_cost_v1/`. The component is a
+  bottom-up 2026 CAD model of a loaded trip with an empty return: StatCan
+  Vancouver diesel (12-month min/mean/max), StatCan BC transport-operator wages
+  with CPI escalation and low/high occupation anchors, fuel burn, driver hours,
+  maintenance, tires, capital (strict-open tractor + trailer, MEPI-escalated),
+  interest, insurance and overhead. It reports CAD/m3, CAD/ODT, CAD/ODT-km and
+  CAD/GJ for 50/100/150/300/500 km one-way and 45/52.5/60 m3 payloads, with a
+  stacked low/base/high stress envelope. Base cost is 6.51 CAD/m3 at 50 km and
+  51.45 CAD/m3 at 500 km (52.5 m3). Against the adopted supply-curve tiers at
+  face value, base transport alone exceeds T1/T2 beyond 84.9 km, T3 beyond
+  115.0 km and T4 beyond 127.4 km; by 500 km every modelled scenario and payload
+  exceeds all four tiers. The comparison carries an explicit undocumented-
+  currency/parity caveat because the interface has no FX or price-year basis.
+  A public 63,500 kg GVW / 45,500 kg payload screen shows the modelled residue
+  loads are volume-limited, not mass-limited. Assignment v6 and road-distance
+  factors are context only. Every row is `model_estimate`, `observed=false`,
+  `policy_grade=false`, `assignment_change=false`, `national_claim=false`; no
+  UI or official OSeCAN input is changed. 14 focused tests pass; ruff and mypy
+  pass. No unexpected `D`.
+
 - **Expanded the OSRM audit and reran local assignment v8 with province
   road factors.** Added `facility_road_distance_audit_v2.py`,
   `national_facility_assignment_v8.py`, focused tests, and the two data
