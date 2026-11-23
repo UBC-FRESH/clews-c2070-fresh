@@ -7619,6 +7619,59 @@
     return state.facilities.scenariosById;
   }
 
+  function validateNationalChain(chain) {
+    requireTrue(chain && typeof chain === 'object', 'national chain summary is missing');
+    requireTrue(chain.artifact === 'national_facility_chain_scenarios_v7',
+      'unexpected national chain artifact ' + chain.artifact);
+    requireTrue(chain.labels && chain.labels.model_estimate === true &&
+      chain.labels.observed === false && chain.labels.policy_grade === false &&
+      chain.labels.national_claim === false && chain.labels.official_osecan_changed === false,
+      'national chain labels must stay model-only, unclaimed, and outside official OSeCAN');
+    var rows = chain.rows;
+    requireTrue(Array.isArray(rows) && rows.length === 3, 'expected three national chain rows');
+    requireTrue(rows.map(function (row) { return row.id; }).join(',') === '100m,119m,150m',
+      'national chain rows are not 100m/119m/150m');
+    var numericFields = [
+      'harvest_m3', 'solid_m3', 'pulp_odt', 'process_pj',
+      'harvest_gross_pj', 'harvest_recoverable_pj', 'total_gross_pj'
+    ];
+    rows.forEach(function (row) {
+      numericFields.forEach(function (field) {
+        requireTrue(Number.isFinite(row[field]) && row[field] >= 0,
+          'national chain ' + row.id + ' has an invalid ' + field);
+      });
+      requireTrue(Math.abs(row.total_gross_pj - (row.process_pj + row.harvest_gross_pj)) <= 1e-6,
+        'national chain total gross does not conserve for ' + row.id);
+    });
+    var provenance = chain.coefficient_provenance;
+    requireTrue(provenance && provenance.e1 && provenance.e1.count === 4 &&
+      provenance.e1.provinces.length === 4 && provenance.e2c && provenance.e2c.count === 9 &&
+      provenance.e2c.provinces.length === 9 && provenance.donor_product_coefficients === 0,
+      'national chain E1/E2c provenance counts changed');
+    requireTrue(Array.isArray(chain.columns) && chain.columns.length === 6,
+      'national chain must carry six summary columns');
+    chain.columns.forEach(function (column) {
+      requireTrue(column.field && typeof column.label === 'string' &&
+        Number.isFinite(column.scale) && column.scale > 0 &&
+        Number.isInteger(column.decimals) && column.decimals >= 0,
+        'national chain column is invalid: ' + column.id);
+    });
+    var reference = chain.reference;
+    requireTrue(reference && reference.scenario === '119m' &&
+      Number.isFinite(reference.process_availability_fraction) &&
+      Number.isFinite(reference.harvest_recovery_fraction),
+      'national chain reference fractions are missing');
+    requireTrue(Array.isArray(reference.tiers) && reference.tiers.length === 2,
+      'expected two OSeCAN tier badges');
+    var tierStreams = reference.tiers.map(function (tier) { return tier.stream; }).sort().join(',');
+    requireTrue(tierStreams === 'harvest,process', 'OSeCAN tier badges must cover harvest and process');
+    reference.tiers.forEach(function (tier) {
+      requireTrue(typeof tier.tier === 'string' && tier.tier.length > 0 &&
+        Number.isFinite(tier.fraction) && tier.fraction > 0 && tier.fraction <= 1,
+        'national chain tier badge is invalid for ' + tier.stream);
+    });
+  }
+
   function validateFacilities(data, manifest) {
     requireTrue(data && typeof data === 'object', 'facilities.json is missing');
     requireTrue(data.schema_version === 'facilities/1', 'unexpected facilities schema_version ' + data.schema_version);
@@ -7631,6 +7684,9 @@
       'proxy capacity caveat is missing');
     requireTrue(data.caveats && typeof data.caveats.assignment === 'string' && data.caveats.assignment.length > 0,
       'assignment caveat is missing');
+    requireTrue(data.caveats && typeof data.caveats.national_chain === 'string' &&
+      data.caveats.national_chain.length > 0, 'national chain caveat is missing');
+    validateNationalChain(data.national_chain);
     requireTrue(Array.isArray(data.facilities), 'facility rows are missing');
     requireTrue(data.coverage && data.coverage.record_count === 689, 'expected 689 facility records');
     requireTrue(data.facilities.length === data.coverage.record_count,
@@ -7692,6 +7748,7 @@
   async function initFacilities() {
     if (state.facilities.initialized) {
       renderFacilityStats();
+      renderFacilityChain();
       renderFacilityTable();
       if (state.facilities.map) state.facilities.map.resize();
       return;
@@ -7824,6 +7881,7 @@
 
   function renderFacilities() {
     renderFacilityStats();
+    renderFacilityChain();
     renderFacilityLegend();
     renderFacilityTable();
     updateFacilityMapCount();
@@ -7879,6 +7937,68 @@
         ' · payload <a href="' + esc(DATA_ROOT + FACILITY_DATA_PATH) + '" download>facilities/facilities.json</a>' +
         ' · generated ' + esc(fmtDate(data.generated_utc)) + '. No LP, OSeCAN, or run control is present in this view.';
     }
+  }
+
+  function renderFacilityChain() {
+    var data = state.facilities.data;
+    if (!data || !data.national_chain) return;
+    var chain = data.national_chain;
+    var table = $('facility-chain-table');
+    var badges = $('facility-chain-badges');
+    var tiersEl = $('facility-chain-tiers');
+    var foot = $('facility-chain-foot');
+    if (!table || !badges || !tiersEl || !foot) return;
+    var referenceRow = chain.rows.filter(function (row) {
+      return row.id === chain.reference.scenario;
+    })[0];
+    var referenceLabel = referenceRow ? referenceRow.label : chain.reference.scenario;
+    var tierByStream = {};
+    chain.reference.tiers.forEach(function (tier) { tierByStream[tier.stream] = tier; });
+    function tierCaseLabel(tier) {
+      return tier.stream === 'process'
+        ? fmtPct(tier.fraction, 0) + ' process'
+        : fmt(tier.fraction, 2) + ' harvest';
+    }
+    function columnHeader(column) {
+      var tier = column.tier_stream ? tierByStream[column.tier_stream] : null;
+      var note = tier
+        ? '<small class="facility-chain-ref">' +
+          esc(tierCaseLabel(tier) + ' · ' + referenceLabel) + '</small>'
+        : '';
+      return '<th class="num" scope="col"><span class="facility-chain-th-label">' + esc(column.label) + '</span>' +
+        '<small class="facility-chain-th-unit">' + esc(column.unit) + '</small>' + note + '</th>';
+    }
+    var header = '<thead><tr><th class="facility-chain-case-head" scope="col">Harvest case</th>' +
+      chain.columns.map(columnHeader).join('') + '</tr></thead>';
+    var body = chain.rows.map(function (row) {
+      var cells = chain.columns.map(function (column) {
+        var value = Number(row[column.field]);
+        var text = Number.isFinite(value) ? fmt(value / column.scale, column.decimals) : '—';
+        return '<td class="num" data-label="' + esc(column.label + ' · ' + column.unit) + '">' + text + '</td>';
+      }).join('');
+      return '<tr data-scenario="' + esc(row.id) + '"><th scope="row" class="facility-chain-case">' +
+        esc(row.label) + '</th>' + cells + '</tr>';
+    }).join('');
+    table.innerHTML = '<caption>Frozen v4 national chain · ' + esc(chain.artifact) +
+      ' · values from committed CSVs. Tier badges mark the ' + esc(referenceLabel) +
+      ' reference case only.</caption>' + header + '<tbody>' + body + '</tbody>';
+    tiersEl.innerHTML = '<span class="facility-chain-tiers-label">OSeCAN tier · ' +
+      esc(referenceLabel) + '</span>' + chain.reference.tiers.map(function (tier) {
+        return '<span class="facility-tier-badge" data-tier="' + esc(tier.tier) + '">' +
+          esc(tierCaseLabel(tier)) + ' · ' + esc(tier.label) + '</span>';
+      }).join('') + '<small class="facility-chain-tiers-note">model estimate · not official OSeCAN</small>';
+    var provenance = chain.coefficient_provenance;
+    badges.innerHTML =
+      '<span class="badge badge--facility-model">' + esc(provenance.e1.label) + ' · ' +
+        fmt(provenance.e1.count, 0) + '</span>' +
+      '<span class="badge badge--facility-e2c">' + esc(provenance.e2c.label) + ' · ' +
+        fmt(provenance.e2c.count, 0) + '</span>' +
+      '<span class="badge badge--ink">donor product coefficients ' +
+        fmt(provenance.donor_product_coefficients, 0) + '</span>' +
+      '<span class="badge badge--ink">model_estimate</span>' +
+      '<span class="badge badge--ink">observed=false</span>' +
+      '<span class="badge badge--ink">policy_grade=false</span>';
+    foot.textContent = data.caveats.national_chain;
   }
 
   function renderFacilityLegend() {

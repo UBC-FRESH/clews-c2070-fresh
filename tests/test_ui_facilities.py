@@ -21,6 +21,12 @@ BUNDLE = ROOT / "ui/public/data/facilities"
 CAPACITY = ROOT / "data/derived/national/facilities/national_facility_capacity_v3"
 ASSIGNMENT = ROOT / "data/derived/national/facilities/national_facility_assignment_v6"
 CHAIN = ROOT / "data/derived/national/facilities/national_facility_chain_scenarios_v6"
+V4_CHAIN = ROOT / "data/derived/national/facilities/national_facility_chain_scenarios_v7"
+V4_PRODUCT_CHAIN = ROOT / "data/derived/national/facilities/national_product_chain_v5"
+V4_RESIDUE = ROOT / "data/derived/national/facilities/facility_residue_supply_v7"
+V4_CURVE = ROOT / "data/derived/national/facilities/national_residue_curve_v7"
+V4_HANDOFF = ROOT / "data/derived/national/facilities/forestry_osecan_handoff_v8"
+V4_SCENARIOS = ROOT / "data/derived/national/facilities/forestry_osecan_scenarios_v7"
 APP_JS = ROOT / "ui/app.js"
 INDEX_HTML = ROOT / "ui/index.html"
 STYLES_CSS = ROOT / "ui/styles.css"
@@ -149,6 +155,182 @@ def test_scenarios_reproduce_chain_and_assignment_v6(payload: dict) -> None:
     assert set(scenario_119["facility_assignments"]) == {row["facility_id"] for row in base}
 
 
+def test_national_chain_summary_reproduces_v4_csvs(payload: dict) -> None:
+    chain = payload["national_chain"]
+    assert chain["artifact"] == "national_facility_chain_scenarios_v7"
+    assert chain["artifact_version"] == "7.0.0"
+    assert [row["id"] for row in chain["rows"]] == ["100m", "119m", "150m"]
+    source_rows = _read_csv(V4_CHAIN / "scenario_summary.csv")
+    assert [row["scenario"] for row in source_rows] == ["100m", "119m", "150m"]
+    expected_rounded = {
+        "100m": (31.693, 10.137, 419.238, 373.244, 223.946, 792.482),
+        "119m": (37.674, 12.066, 498.751, 444.411, 266.646, 943.162),
+        "150m": (46.137, 15.551, 626.865, 573.125, 343.875, 1_199.991),
+    }
+    for chain_row, source_row in zip(chain["rows"], source_rows, strict=True):
+        solid = float(source_row["sawlog_product_m3"]) + float(source_row["panel_product_m3"])
+        assert chain_row["harvest_m3"] == pytest.approx(float(source_row["harvest_m3"]), abs=1e-6)
+        assert chain_row["solid_m3"] == pytest.approx(solid, abs=1e-6)
+        assert chain_row["pulp_odt"] == pytest.approx(float(source_row["pulp_product_odt"]), abs=1e-6)
+        assert chain_row["process_pj"] == pytest.approx(
+            float(source_row["process_residue_pj"]), abs=1e-6
+        )
+        assert chain_row["harvest_gross_pj"] == pytest.approx(
+            float(source_row["harvest_residue_gross_pj"]), abs=1e-6
+        )
+        assert chain_row["harvest_recoverable_pj"] == pytest.approx(
+            float(source_row["harvest_residue_recoverable_pj"]), abs=1e-6
+        )
+        assert chain_row["total_gross_pj"] == pytest.approx(
+            float(source_row["total_residue_gross_pj"]), abs=1e-6
+        )
+        assert chain_row["total_gross_pj"] == pytest.approx(
+            chain_row["process_pj"] + chain_row["harvest_gross_pj"], abs=1e-6
+        )
+        assert (
+            round(chain_row["solid_m3"] / 1e6, 3),
+            round(chain_row["pulp_odt"] / 1e6, 3),
+            round(chain_row["process_pj"], 3),
+            round(chain_row["harvest_gross_pj"], 3),
+            round(chain_row["harvest_recoverable_pj"], 3),
+            round(chain_row["total_gross_pj"], 3),
+        ) == expected_rounded[chain_row["id"]]
+    reference = chain["rows"][1]
+    assert reference["harvest_m3"] == pytest.approx(118_977_339.1, abs=1e-3)
+    assert reference["solid_m3"] / 1e6 == pytest.approx(37.674, abs=5e-4)
+    assert reference["pulp_odt"] / 1e6 == pytest.approx(12.066, abs=5e-4)
+    assert reference["process_pj"] == pytest.approx(498.751, abs=5e-4)
+    assert reference["harvest_gross_pj"] == pytest.approx(444.411, abs=5e-4)
+    assert reference["harvest_recoverable_pj"] == pytest.approx(266.646, abs=5e-4)
+    assert reference["total_gross_pj"] == pytest.approx(943.162, abs=5e-4)
+
+
+def test_national_chain_tiers_and_provenance_labels(payload: dict) -> None:
+    chain = payload["national_chain"]
+    assert chain["labels"] == {
+        "model_estimate": True,
+        "observed": False,
+        "policy_grade": False,
+        "national_claim": False,
+        "official_osecan_changed": False,
+    }
+    provenance = chain["coefficient_provenance"]
+    assert provenance["e1"]["label"] == "E1 measured"
+    assert provenance["e1"]["count"] == 4
+    assert provenance["e1"]["provinces"] == ["BC", "QC", "NB", "YT"]
+    assert provenance["e2c"]["label"] == "E2c imputed"
+    assert provenance["e2c"]["count"] == 9
+    assert provenance["e2c"]["provinces"] == ["AB", "SK", "MB", "ON", "NS", "PE", "NL", "NT", "NU"]
+    assert provenance["donor_product_coefficients"] == 0
+    assert [tier["case"] for tier in chain["reference"]["tiers"]] == [
+        "process_availability_050",
+        "harvest_recovery_060",
+    ]
+    assert [tier["stream"] for tier in chain["reference"]["tiers"]] == ["process", "harvest"]
+    assert [tier["tier"] for tier in chain["reference"]["tiers"]] == ["above_T4", "above_T4"]
+    assert [tier["fraction"] for tier in chain["reference"]["tiers"]] == [0.5, 0.6]
+    assert chain["reference"]["scenario"] == "119m"
+    caveat = payload["caveats"]["national_chain"]
+    for phrase in (
+        "E1 measured",
+        "E2c imputed",
+        "donor product coefficients = 0",
+        "model_estimate",
+        "observed=false",
+        "policy_grade=false",
+        "No official OSeCAN change",
+        "no new proxy capacity",
+    ):
+        assert phrase in caveat
+    source_tiers = _read_csv(V4_HANDOFF / "tier_positions_v3_2_vs_v4.csv")
+    tiers = {row["case"]: row["v4_e2c_tier"] for row in source_tiers}
+    assert tiers["process_availability_050"] == "above_T4"
+    assert tiers["harvest_recovery_060"] == "above_T4"
+    scenario_tiers = _read_csv(V4_SCENARIOS / "tier_positions_v3_2_vs_v4.csv")
+    reference_tiers = {
+        row["case"]: row["v4_e2c_tier"]
+        for row in scenario_tiers
+        if row["scenario"] == "119m"
+    }
+    assert reference_tiers["process_availability_050"] == "above_T4"
+    assert reference_tiers["harvest_recovery_060"] == "above_T4"
+
+
+def test_national_chain_summary_is_data_driven_and_read_only() -> None:
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    assert 'id="facility-chain-summary"' not in html
+    assert 'class="facility-chain-summary"' in html
+    assert 'id="facility-chain-title"' in html
+    assert 'id="facility-chain-table"' in html
+    assert 'id="facility-chain-tiers"' in html
+    assert 'id="facility-chain-foot"' in html
+    panel = html[html.index('id="panel-facilities"') : html.index('id="panel-zones"')]
+    for numeric in (
+        "31.693",
+        "37.674",
+        "46.137",
+        "10.137",
+        "12.066",
+        "15.551",
+        "419.238",
+        "498.751",
+        "626.865",
+        "373.244",
+        "444.411",
+        "573.125",
+        "223.946",
+        "266.646",
+        "343.875",
+        "792.482",
+        "943.162",
+        "1,199.991",
+    ):
+        assert numeric not in panel, f"facility panel hard-codes {numeric}"
+    app = APP_JS.read_text(encoding="utf-8")
+    assert "function renderFacilityChain()" in app
+    assert "data.national_chain" in app
+    assert "facility-chain-table" in app
+    assert "facility-tier-badge" in app
+    chain_code = app[app.index("function renderFacilityChain()") : app.index("function renderFacilityLegend()")]
+    for numeric in ("31.693", "37.674", "46.137", "498.751", "444.411", "266.646", "943.162"):
+        assert numeric not in chain_code, f"renderFacilityChain hard-codes {numeric}"
+    assert "fetch(" not in chain_code
+    assert "apiFetch" not in chain_code
+    assert ".solve" not in chain_code
+
+
+def test_national_chain_summary_manifest_hashes_sources(payload: dict, manifest: dict) -> None:
+    assert len(manifest["sources"]) == len(payload["source_files"]) == 26
+    paths = {source["path"] for source in payload["source_files"]}
+    expected = {
+        (V4_CHAIN / "scenario_summary.csv").relative_to(ROOT).as_posix(),
+        (V4_CHAIN / "summary.json").relative_to(ROOT).as_posix(),
+        (V4_CHAIN / "manifest.json").relative_to(ROOT).as_posix(),
+        (V4_PRODUCT_CHAIN / "summary.json").relative_to(ROOT).as_posix(),
+        (V4_PRODUCT_CHAIN / "manifest.json").relative_to(ROOT).as_posix(),
+        (V4_PRODUCT_CHAIN / "e1_coefficient_replacement.csv").relative_to(ROOT).as_posix(),
+        (V4_PRODUCT_CHAIN / "e2c_density_evidence.csv").relative_to(ROOT).as_posix(),
+        (V4_RESIDUE / "national_residue_summary.csv").relative_to(ROOT).as_posix(),
+        (V4_RESIDUE / "summary.json").relative_to(ROOT).as_posix(),
+        (V4_RESIDUE / "manifest.json").relative_to(ROOT).as_posix(),
+        (V4_CURVE / "national_residue_curve.csv").relative_to(ROOT).as_posix(),
+        (V4_CURVE / "summary.json").relative_to(ROOT).as_posix(),
+        (V4_CURVE / "manifest.json").relative_to(ROOT).as_posix(),
+        (V4_HANDOFF / "tier_positions_v3_2_vs_v4.csv").relative_to(ROOT).as_posix(),
+        (V4_HANDOFF / "summary.json").relative_to(ROOT).as_posix(),
+        (V4_HANDOFF / "manifest.json").relative_to(ROOT).as_posix(),
+        (V4_SCENARIOS / "summary.json").relative_to(ROOT).as_posix(),
+        (V4_SCENARIOS / "manifest.json").relative_to(ROOT).as_posix(),
+    }
+    assert expected.issubset(paths)
+    for source in payload["source_files"]:
+        if source["path"] in expected:
+            path = ROOT / source["path"]
+            assert path.is_file()
+            assert source["bytes"] == path.stat().st_size
+            assert source["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def test_province_and_class_filters_conserve_records(payload: dict) -> None:
     scenario = next(item for item in payload["scenarios"] if item["id"] == "119m")
     capacity_rows = _read_csv(CAPACITY / "national_facility_capacity_v3.csv")
@@ -185,7 +367,7 @@ def test_manifest_hashes_cover_payload_and_sources(payload: dict, manifest: dict
     data = (BUNDLE / "facilities.json").read_bytes()
     assert generated[0]["bytes"] == len(data)
     assert generated[0]["sha256"] == hashlib.sha256(data).hexdigest()
-    assert len(manifest["sources"]) == len(payload["source_files"]) == 8
+    assert len(manifest["sources"]) == len(payload["source_files"]) == 26
     for source in manifest["sources"]:
         path = ROOT / source["path"]
         assert path.is_file()
@@ -257,3 +439,17 @@ def test_mobile_facility_table_stacks_without_horizontal_scroll() -> None:
     assert '"evidence evidence"' in block
     assert "min-width: 0" in block
     assert "min-width: 780px" not in block
+
+
+def test_mobile_national_chain_summary_stacks_without_horizontal_scroll() -> None:
+    css = STYLES_CSS.read_text(encoding="utf-8")
+    marker = "/* Mobile stacked national chain summary: no horizontal table scroll. */"
+    assert marker in css
+    block = css[css.index(marker) : css.index("@media (max-width: 440px)", css.index(marker))]
+    assert ".table-wrap.facility-chain-table-wrap" in block
+    assert "overflow: visible" in block
+    assert ".facility-chain-table thead { display: none; }" in block
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in block
+    assert "td[data-label]::before" in block
+    assert "min-width: 0" in block
+    assert "min-width: 760px" not in block

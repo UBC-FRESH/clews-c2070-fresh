@@ -7,12 +7,12 @@
   <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="styles.css?v=2568d44daa92">
+  <link rel="stylesheet" href="styles.css?v=3128ff6e0c05">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=b220c4361d2f"></script>
+  <script defer src="app.js?v=46625738aadf"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -369,6 +369,21 @@
           </div>
           <p><strong>Proxy capacity caveat.</strong> Published capacity mixes infeed proxies, permitted input volume, finished-pellet bulk volume, and converted sawn output; the bases are not interchangeable. Class-median proxy capacity is a placeholder, not a measurement. Assignment is a local-first planning allocation, not an AAC or observed harvest. Read-only: no LP, OSeCAN, or run controls.</p>
         </div>
+
+        <section class="facility-chain-summary" aria-labelledby="facility-chain-title">
+          <div class="facility-chain-head">
+            <div>
+              <p class="kicker">Frozen v4 · E1 + E2c</p>
+              <h3 id="facility-chain-title">National chain summary</h3>
+            </div>
+            <div class="facility-chain-badges" id="facility-chain-badges" aria-live="polite"></div>
+          </div>
+          <div class="facility-chain-tiers" id="facility-chain-tiers" aria-label="OSeCAN tier positions"></div>
+          <div class="table-wrap facility-chain-table-wrap">
+            <table class="data-table facility-chain-table" id="facility-chain-table" aria-live="polite"></table>
+          </div>
+          <p class="facility-chain-foot" id="facility-chain-foot"></p>
+        </section>
 
         <div class="facility-stat-strip" id="facility-stat-strip" aria-live="polite">
           <div class="facility-stat"><span>Records</span><strong id="facility-stat-records">—</strong><small id="facility-stat-records-note">loading</small></div>
