@@ -928,6 +928,37 @@ decide what blocks production readiness after the conceptual alpha.
   `86ad555`. Updated the model card and added
   `docs/handoff-national-facility-chain-v5.md`.
 
+- [x] P7.36 Extend node transport-aware assignment v10 to 100 and 150 Mm3 and
+  freeze v5.1. Completed: added `national_facility_assignment_v10_cases`
+  (v10 case extension case files; 119 primary CSVs byte-identical), `facility_residue_supply_v9`,
+  `national_residue_curve_v9`, `national_facility_chain_scenarios_v9`,
+  `forestry_osecan_handoff_v10`, `forestry_osecan_scenarios_v9`, and six data
+  artifacts. All three cases use the same 525 supply nodes, capacity-v3
+  facilities/1.2x floor and transport cost v1 curve; the 100/150 node vectors
+  scale each province's 119 Mm3 allocation. Transport cost is 2.702 / 3.392 /
+  5.018 billion CAD/yr at 100/119/150 Mm3 versus 3.900 / 4.958 / 6.793 for
+  assignment-v6 local-first, and mean road distance is 255.33 / 270.29 /
+  319.79 km versus 375.33 / 402.12 / 438.28 km. Facilities used are 270 / 296
+  / 333; cross-border volume 1.161 / 2.325 / 11.036 Mm3; proxy share 54.13 /
+  54.08 / 52.97%. National products and residue are invariant at each case:
+  process residue 419.238 / 498.751 / 626.865 PJ, harvest gross 373.244 /
+  444.411 / 573.125 PJ, harvest recoverable 60% 223.946 / 266.646 / 343.875
+  PJ. Facility process-residue HHI falls from 0.032562 to 0.023893 at 100 Mm3
+  and 0.028928 to 0.019132 at 150 Mm3; positive-residue facilities rise from
+  164 to 248 and 215 to 303. Curve v9 keeps 119 files byte-identical and adds
+  all-case rows. Handoff v10 adds 100/119/150 case zone summaries and
+  reproduces handoff v9 at 119; all 21 OSeCAN tier positions are unchanged and
+  `transport_cost_in_osecan=false`. Pre-freeze checks: six v5.1 manifests
+  verify 68/68 entries; 119 assignment/chain/facility/curve/handoff/scenario
+  invariance guards pass; all 30 product/residue invariance rows have zero
+  delta; the official OSeCAN tree is unchanged (146 files,
+  `80caa91c...`); no unexpected `D`. Labels remain `model_estimate` /
+  `observed=false` / `policy_grade=false` with `national_claim=false`; no UI
+  or official OSeCAN change. Created annotated tag
+  `national-facility-chain-v5.1` at the documentation commit, recording model
+  commit `2775317` and data commit `0d3b2ff`, and added
+  `docs/handoff-national-facility-chain-v5.1.md`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

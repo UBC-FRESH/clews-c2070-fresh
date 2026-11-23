@@ -1,16 +1,33 @@
-# Model card — National facility chain v5 (assignment v10 node transport-aware)
+# Model card — National facility chain v5.1 (assignment v10 node transport-aware, all cases)
 
 | Field | Value |
 |---|---|
-| Package | National facility chain v5 (frozen assignment-v10 screening package) |
-| Freeze tag (documentation) | `national-facility-chain-v5` |
+| Package | National facility chain v5.1 (frozen all-case assignment-v10 screening package) |
+| Freeze tag (documentation) | `national-facility-chain-v5.1` |
 | Date | 2026-11-23 |
 | Parent commit at model freeze | recorded after the code/data commit (see freeze record) |
-| Data commit | `86ad55506d6ef10bcd60a6b6701d4d06c0026d12` (`UBC-FRESH/clews-c2070-fresh-data`) |
-| Stage artifacts | Inventory v1 → capacity v3 → assignment v10 → product-chain v5 → facility residue v8 → residue curve v8 → chain scenarios v8 → OSeCAN handoff v9 → OSeCAN scenarios v8 |
+| Data commit | `0d3b2ff4c27f18bad2f93fd6c269c180c4dbcadc` (`UBC-FRESH/clews-c2070-fresh-data`) |
+| Stage artifacts | Inventory v1 → capacity v3 → assignment v10 (100/119/150) → product-chain v5 → facility residue v9 → residue curve v9 → chain scenarios v9 → OSeCAN handoff v10 → OSeCAN scenarios v9 |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
 | Energy-side status | Read-only handoff; `official_osecan_changed=false`; transport cost is not in official tiers |
 | Scope boundary | Documentation/tag freeze only; no code, model artifact, UI, or public OSeCAN change at the freeze commit; no legal/AAC claim; no data request, DUA, or approval dependency |
+
+## v5.1 supersession summary
+
+Version 5.1 extends assignment v10 to the 100 and 150 Mm³ sensitivity cases;
+frozen v5 had solved v10 only at 119 Mm³. All three cases use the same 525
+supply nodes, eligible capacity-v3 facilities, 1.2× floor and transport cost v1
+curve. The 119 Mm³ results are invariant from v5. At 100 Mm³, truck transport
+cost is 2.702 billion CAD/yr (versus 3.900 billion for v6 local-first, −30.73%)
+and mean road distance is 255.33 km (versus 375.33 km, −31.97%). At 150 Mm³,
+cost is 5.018 billion CAD/yr (versus 6.793 billion, −26.13%) and mean distance
+is 319.79 km (versus 438.28 km, −27.04%). National products and residue are
+invariant at each case: process residue 419.238 / 498.751 / 626.865 PJ and
+harvest gross 373.244 / 444.411 / 573.125 PJ. Facility process-residue HHI
+falls from 0.032562 to 0.023893 at 100 Mm³ and from 0.028928 to 0.019132 at
+150 Mm³. OSeCAN handoff v10 adds explicit 100/119/150 case zone summaries; all
+21 tier positions are unchanged and transport cost is not an OSeCAN input. No
+UI or official OSeCAN change is made.
 
 ## v5 supersession summary
 

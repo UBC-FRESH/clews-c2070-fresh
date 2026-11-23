@@ -2,6 +2,30 @@
 
 ## 2026-11-23
 
+- **Extended assignment v10 to 100/150 Mm3 and froze chain v5.1.** Added
+  `national_facility_assignment_v10_cases` (v10 case extension case files; 119 primary
+  CSVs byte-identical), `facility_residue_supply_v9`,
+  `national_residue_curve_v9`, `national_facility_chain_scenarios_v9`,
+  `forestry_osecan_handoff_v10`, `forestry_osecan_scenarios_v9`, and six data
+  artifacts. All three cases use the same 525 nodes, capacity-v3 facilities
+  and 1.2x floor, and transport cost v1 curve; 100/150 scale each province's
+  119 Mm3 node vector. Transport cost is 2.702 / 3.392 / 5.018 billion CAD/yr
+  versus 3.900 / 4.958 / 6.793 for assignment-v6 local-first; mean road
+  distance is 255.33 / 270.29 / 319.79 km versus 375.33 / 402.12 / 438.28 km.
+  National products and residue are invariant at each case (process residue
+  419.238 / 498.751 / 626.865 PJ). Facility process-residue HHI falls from
+  0.032562 to 0.023893 at 100 Mm3 and 0.028928 to 0.019132 at 150 Mm3.
+  OSeCAN handoff v10 adds explicit all-case zone summaries, reproduces
+  handoff v9 at 119, and keeps all 21 tier positions unchanged;
+  `transport_cost_in_osecan=false`. Six v5.1 manifests verify 68/68 entries;
+  119 assignment/chain/facility/curve/handoff/scenario guards pass; official
+  OSeCAN tree unchanged (146 files, `80caa91c...`); no unexpected `D`. All
+  rows are `model_estimate`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`. Created annotated tag
+  `national-facility-chain-v5.1` at the documentation commit, recording model
+  commit `2775317` and data commit `0d3b2ff`. No UI or official OSeCAN
+  change.
+
 - **Integrated assignment v10 into facility chain v5 and froze it.** Added
   `facility_residue_supply_v8`, `national_residue_curve_v8`,
   `national_facility_chain_scenarios_v8`, `forestry_osecan_handoff_v9`,
