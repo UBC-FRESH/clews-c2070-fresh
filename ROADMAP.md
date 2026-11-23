@@ -594,6 +594,20 @@ decide what blocks production readiness after the conceptual alpha.
   `national-facility-chain-v1` at parent `94c7501` and recorded data commit
   `6ca272e`. No code/model/UI change, no public OSeCAN change, and no
   unexpected `D`.
+- [x] P7.20 Freeze and document the national facility chain v2. Completed:
+  updated `docs/model-card-national-facility-chain.md` for the inventory v1 →
+  capacity v3 → assignment v6 → product-chain v3 → residue curve v5 →
+  facility residue v5 → chain scenarios v5 → OSeCAN handoff v6 chain. The card
+  records the measured BC/QC/NB/YT coefficient replacement (4 of 13
+  jurisdictions; 591 measured stems), stem + branch/foliage total residue with
+  0.35/0.60/0.75 recovery scenarios and no chosen recovery factor, the
+  119 Mm³ results (gross harvest residue 313.640 PJ, reference-recoverable
+  195.433 PJ, process residue 514.614 PJ, total gross residue 828.254 PJ),
+  OSeCAN harvest tier shifts from T1/T1/T2 to T3/T4/above_T4 with process
+  tiers unchanged, taper-coverage and branch/foliage proxy limitations, and
+  non-claims. Created annotated tag `national-facility-chain-v2` at parent
+  `64a6b83` and recorded data commit `e9fc837`. Documentation and tag only; no
+  code/model/UI change, no public OSeCAN change, and no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

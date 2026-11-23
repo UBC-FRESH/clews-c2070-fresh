@@ -2,6 +2,20 @@
 
 ## 2026-11-23
 
+- **Froze and documented the national facility chain v2.** Replaced
+  `docs/model-card-national-facility-chain.md` with the v2 measured
+  total-residue card covering the inventory v1 → capacity v3 → assignment v6 →
+  product-chain v3 → residue curve v5 → facility residue v5 → chain scenarios
+  v5 → OSeCAN handoff v6 chain. The card records the BC/QC/NB/YT measured
+  product-share and harvest-residue replacement, stem + branch/foliage total
+  residue with 0.35/0.60/0.75 recovery scenarios and no chosen factor, the
+  119 Mm³ results (harvest gross 313.640 PJ, reference-recoverable 195.433 PJ,
+  process 514.614 PJ, total gross 828.254 PJ), the OSeCAN harvest tier shifts
+  T1/T1/T2 → T3/T4/above_T4, taper and allometry proxy limitations, and
+  non-claims. Created annotated tag `national-facility-chain-v2` at parent
+  `64a6b83` and recorded data commit `e9fc837`. Documentation and tag only; no
+  code, model, UI, or official OSeCAN change; no unexpected `D`.
+
 - **Integrated four-province branch/foliage total residue and recovery
   scenarios into the measured facility chain.** Added
   `four_province_biomass_allometry.py`, the four-province CFS equation map, a
