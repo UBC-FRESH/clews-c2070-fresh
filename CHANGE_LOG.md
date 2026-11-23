@@ -2,6 +2,29 @@
 
 ## 2026-11-23
 
+- **Added supply-node distance v1.** Added
+  `supply_node_distance_v1.py`, focused node/conservation/distance/band/label
+  tests, and `data/derived/national/facilities/supply_node_distance_v1/`.
+  The artifact replaces province-centroid origins with 525 open RSYC 150-km
+  tile x province harvest nodes, assigns the unchanged 118.977 Mm3 provincial
+  harvest in proportion to located RSYC age-100 standing volume, and carries
+  SCANFI forest area as a transparency and sensitivity weight. RSYC
+  district-fallback area with no province intersection (16.26 Mm3, 0.03% of
+  raw RSYC production) is excluded rather than given a fabricated location.
+  At the unchanged v9 assignment, assigned-volume-weighted mean distance rises
+  from 522.0 km at centroids to 677.5 km at nodes (+29.8%); the >150 km share
+  rises from 83.5% to 92.7% (+9.21 pp) and the >300 km share from 49.3% to
+  79.1% (+29.79 pp); modelled base transport cost rises 28.96% (53.64 to
+  69.18 CAD/m3). The all-facility distribution and the assigned-facility band
+  table are reported separately. A paired 81/81 public OSRM demo sample at the
+  highest-weight node gives median road/haversine 1.4562 versus 1.4672 at
+  centroids, but province-level factor transfer ranges from -39.8% (QC) to
+  +31.7% (NB), so the centroid-fitted factor is not node-invariant; no factor
+  is changed. Every row is `model_estimate`, `observed=false`,
+  `policy_grade=false`, `national_claim=false`, `assignment_change=false` and
+  `official_osecan_changed=false`; no UI or official OSeCAN surface is changed.
+  Eleven focused tests and ruff pass; no unexpected `D`.
+
 - **Added transport-radius capacity gap v1.** Added
   `transport_capacity_gap_v1.py`, focused band/capacity/conservation/label
   tests, and `data/derived/national/facilities/transport_capacity_gap_v1/`.
