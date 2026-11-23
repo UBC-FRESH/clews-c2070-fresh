@@ -235,6 +235,24 @@ asset life, fixed operating cost, feedstock cost, processing cost, product
 revenue, or financing assumption is introduced. The saving includes re-routing
 and existing-facility effects, not a module-only revenue stream.
 
+### 7.5 Class-specific follow-up (post-freeze, 2026-11-23)
+
+The frozen v1 screen above is class-agnostic. A separate post-freeze screen,
+`greenfield_class_siting_v1`, applies the v5.1 E1/E2c province/class feedstock
+shares to the node harvest, partitions the same capacity-v3 facilities by
+class, and selects k = 0..5 unlimited-throughput modules **per class**. It
+remains a transport-only screen and adds no class capacity, technology,
+capital, permitting, landbase, national, policy, UI, or official OSeCAN claim.
+
+At 119 Mm³ the class-specific existing-only cost is **5.181 B CAD/yr** and
+420.9 km; at k=5 per class (25 modules) it is **3.179 B CAD/yr**, 252.4 km, with
+27.9% module-served volume and a 2.002 B CAD/yr (38.6%) reduction versus k=0.
+At the exact 20-module count match (class k=4 versus generic k=20), the
+class-specific screen is **3.314 B CAD/yr** and 263.7 km versus **1.749 B
+CAD/yr** and 132.0 km for the generic screen. The class restriction therefore
+raises transport cost materially at a fixed module count; the comparison is a
+screen diagnostic, not an investment or policy result.
+
 ## 8. Key results
 
 - **V10 node assignment:** 118.977 Mm³ assigned across 296 facilities;
@@ -267,9 +285,11 @@ and existing-facility effects, not a module-only revenue stream.
 - **Siting is heuristic.** The k-median screen is a greedy forward prefix with a
   top-10 shortlist and exact LP re-evaluation, not a global optimum. The
   capacity-relaxed gap is a bound diagnostic only.
-- **Modules are generic.** The candidate is class-agnostic, has unlimited
-  throughput, and asserts no technology, product, residue, cost, or facility
-  design. There is **no class capacity** and no class-specific siting.
+- **Modules are generic in the frozen screen.** The v1 candidate is
+  class-agnostic, has unlimited throughput, and asserts no technology, product,
+  residue, cost, or facility design. The separate class-specific follow-up v1
+  partitions the chain by class but still asserts no class capacity,
+  technology, capital, or facility design.
 - **No capital or permitting.** The break-even threshold is not a capex,
   operating, landbase, procurement, permitting, financing, or investment
   estimate. No revenue or net-value result is produced. The screen is

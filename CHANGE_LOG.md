@@ -2,6 +2,27 @@
 
 ## 2026-11-23
 
+- **Added class-specific greenfield siting screen v1.** Added
+  `greenfield_class_siting_v1`, its focused regression test, planning note, a
+  post-freeze model-card subsection, and
+  `data/derived/national/facilities/greenfield_class_siting_v1/`. The screen
+  splits the 118.977 Mm3 node harvest by v5.1 E1/E2c province/class feedstock
+  shares (SAW 45.617, PULP 52.680, PANEL 7.467, PELLET 10.925, BIO 2.287
+  Mm3), partitions the 591 capacity-v3 facilities by class (405/55/32/54/45),
+  and chooses k=0..5 unlimited-throughput class modules per class with exact
+  capacitated transport-LP re-evaluation (255 solves; 2047 candidate nodes).
+  Aggregate k=0 is 5.181 B CAD/yr at 420.9 km; k=5 (25 modules) is 3.179 B at
+  252.4 km, 27.87% module share, 63.33% >=150 km and 29.51% >=300 km, saving
+  2.002 B (38.64%) versus k=0. At the exact 20-module count match (class k=4),
+  cost is 3.314 B at 263.7 km versus generic k=20 1.749 B at 132.0 km
+  (+89.51%); class k=0 is 60.90% above generic k=0. All 129 validation checks
+  pass; 9 new tests and 29 existing greenfield tests pass; ruff passes; the
+  manifest verifies its outputs and inputs. Every row is `model_estimate`,
+  `observed=false`, `policy_grade=false`, `transport_only_siting_screen`,
+  `not_investment_advice`; no capital, permitting, technology, landbase,
+  class-capacity, national, policy, UI or official OSeCAN claim. No unexpected
+  `D`.
+
 - **Documented and froze the national transport/siting layer v1.** Added
   `docs/model-card-national-transport-siting.md` and a companion-card
   cross-reference plus refreshed transport limitation in

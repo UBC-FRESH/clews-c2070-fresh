@@ -993,6 +993,25 @@ decide what blocks production readiness after the conceptual alpha.
   `5b7d717` (break-even), and `068787d` (case screen). No code, model artifact,
   UI, or official OSeCAN change.
 
+- [x] P7.39 Add class-specific greenfield siting screen v1.
+  Completed: added `greenfield_class_siting_v1`, its focused test, planning
+  note, and `data/derived/national/facilities/greenfield_class_siting_v1/`.
+  The screen applies v5.1 E1/E2c province/class feedstock shares to the
+  118.977 Mm3 node harvest (SAW 45.617, PULP 52.680, PANEL 7.467, PELLET
+  10.925, BIO 2.287 Mm3), partitions the 591 capacity-v3 facilities by class
+  (405/55/32/54/45), and runs k=0..5 unlimited-throughput class modules per
+  class with exact capacitated transport-LP re-evaluation (255 solves).
+  Candidate nodes are 392/421/392/421/421. Aggregate k=0 is 5.181 B CAD/yr at
+  420.9 km; k=5 (25 modules) is 3.179 B at 252.4 km, with 27.87% module
+  share, 63.33% >=150 km and 29.51% >=300 km, saving 2.002 B (38.64%) versus
+  k=0. At the exact 20-module count match (class k=4), cost is 3.314 B at
+  263.7 km versus generic k=20 1.749 B at 132.0 km (+89.51%); class k=0 is
+  60.90% above generic k=0. All 129 validation checks pass; 9 new tests and
+  29 existing greenfield tests pass; ruff passes. Labels remain
+  `model_estimate` / `transport_only_siting_screen` / `not_investment_advice`;
+  no capital, permitting, technology, landbase, class-capacity, national,
+  policy, UI or official OSeCAN claim. No unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
