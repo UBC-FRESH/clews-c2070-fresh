@@ -608,6 +608,20 @@ decide what blocks production readiness after the conceptual alpha.
   non-claims. Created annotated tag `national-facility-chain-v2` at parent
   `64a6b83` and recorded data commit `e9fc837`. Documentation and tag only; no
   code/model/UI change, no public OSeCAN change, and no unexpected `D`.
+- [x] P7.21 Write the national facility chain v2 handoff and the MAGPlot Tier
+  2/3 / NFI ground-plot data-request draft. Completed:
+  `docs/handoff-national-facility-chain-v2.md` records the frozen tags and
+  stage artifacts, the measured BC/QC/NB/YT coverage versus the nine
+  synthetic/donor jurisdictions, the 100/119/150 Mm³ results, the stem-only
+  versus measured total residue recovery cases at 0.35/0.60/0.75, the OSeCAN
+  handoff paths and tier shifts, the 16-run global sensitivity ranking, the
+  priority questions for the Taco/energy team (recovery basis, process
+  availability, biomass/waste incineration assumptions, industrial feedstock
+  demand), and non-claims. `docs/data-request-magplot-tier2.md` is a
+  **draft, not sent** request for MAGPlot Tier 2/3 and NFI ground plots in AB,
+  SK, MB, and ON, with fields, purpose, licence/DUA, storage boundary, and
+  open questions. Documentation only; no code/model/UI change, no new tag, no
+  public OSeCAN change, and no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

@@ -2,6 +2,27 @@
 
 ## 2026-11-23
 
+- **Wrote the national facility chain v2 handoff and the MAGPlot Tier 2/3 /
+  NFI ground-plot data-request draft.** Added
+  `docs/handoff-national-facility-chain-v2.md` covering the frozen
+  `national-facility-chain-v2`, `national-facility-chain-v2.1`, and
+  `national-chain-sensitivity-v1` tags and stage artifacts; the measured
+  BC/QC/NB/YT coverage (591 stems) versus the nine synthetic/donor
+  jurisdictions; the 100/119/150 Mm³ assignment, product, and residue results;
+  the stem-only versus measured total residue recovery cases at 0.35/0.60/0.75
+  (119 Mm³: 127.860 / 313.640 PJ gross; 44.751/76.716/95.895 versus
+  109.774/188.184/235.230 PJ recoverable); the OSeCAN handoff paths, 119 Mm³
+  tiers (process T1/T3/above_T4/above_T4; harvest T3/T4/above_T4), and the
+  trade-v5 BC process shift; the 16-run global sensitivity ranking (process
+  availability, residue basis, price scenario, harvest recovery, product
+  coefficients, capacity/assignment, zone weights); the priority questions for
+  the Taco/energy team; and non-claims. Added
+  `docs/data-request-magplot-tier2.md` as a **draft, not sent** request for
+  MAGPlot Tier 2/3 and NFI ground plots in AB, SK, MB, and ON, with requested
+  fields, purpose, licence/DUA, storage boundary, and open questions.
+  Documentation only; no code/model/UI change, no new tag, no public OSeCAN
+  change, and no unexpected `D`.
+
 - **Rebuilt the trade-enabled assignment-v5 chain with measured total residue
   and froze the v2.1 addendum.** Added
   `national_facility_chain_scenarios_v5_trade.py`,
