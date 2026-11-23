@@ -1,16 +1,36 @@
-# Model card — National facility chain v4 (E1 measured + E2c density-calibrated)
+# Model card — National facility chain v5 (assignment v10 node transport-aware)
 
 | Field | Value |
 |---|---|
-| Package | National facility chain v4 (frozen E2c screening package) |
-| Freeze tag (documentation) | `national-facility-chain-v4` |
+| Package | National facility chain v5 (frozen assignment-v10 screening package) |
+| Freeze tag (documentation) | `national-facility-chain-v5` |
 | Date | 2026-11-23 |
-| Parent commit at model freeze | `60409639b57d3aa6ff614dfba8e4c2bdb8b28247` |
-| Data commit | `f0f77a0e6cfeb3fbbcafd685beedcd7324dbc9c8` (`UBC-FRESH/clews-c2070-fresh-data`) |
-| Stage artifacts | Inventory v1 → capacity v3 → assignment v6 → product-chain v5 → facility residue v7 → residue curve v7 → chain scenarios v7 → OSeCAN handoff v8 → OSeCAN scenarios v7 |
+| Parent commit at model freeze | recorded after the code/data commit (see freeze record) |
+| Data commit | `86ad55506d6ef10bcd60a6b6701d4d06c0026d12` (`UBC-FRESH/clews-c2070-fresh-data`) |
+| Stage artifacts | Inventory v1 → capacity v3 → assignment v10 → product-chain v5 → facility residue v8 → residue curve v8 → chain scenarios v8 → OSeCAN handoff v9 → OSeCAN scenarios v8 |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
-| Energy-side status | Read-only handoff; `official_osecan_changed=false` |
+| Energy-side status | Read-only handoff; `official_osecan_changed=false`; transport cost is not in official tiers |
 | Scope boundary | Documentation/tag freeze only; no code, model artifact, UI, or public OSeCAN change at the freeze commit; no legal/AAC claim; no data request, DUA, or approval dependency |
+
+## v5 supersession summary
+
+Version 5 keeps the v4 E1 measured + E2c density-calibrated product chain and
+replaces the 119 Mm³ facility distribution with assignment v10 node-to-facility
+transport-aware flows. At 119 Mm³, assigned volume is still 118.977 Mm³ and
+national products/residue are invariant (process residue 498.751 PJ; harvest
+gross 444.411 PJ; recoverable 60% 266.646 PJ). Assignment v10 uses 296
+facilities rather than 208, raises cross-border volume from 0.036 to 2.325 Mm³
+and lowers modelled truck transport cost from 4.958 to 3.392 billion CAD/yr
+(−31.59%). Assigned-volume-weighted mean road distance falls from 402.12 to
+270.29 km; the ≥150 km share falls from 83.83% to 48.62% and the ≥300 km share
+from 52.65% to 30.16%. Facility process-residue concentration falls (HHI
+0.028873→0.023211, top-5 29.51%→24.67%) but proxy residue share rises
+(37.78%→56.60%). OSeCAN national tiers are unchanged at all 21
+scenario/stream/case positions; process-residue PJ shifts between zones
+because facility provinces change (process 50%: Q1 −5.505, Q2 −3.509, L1
++6.708, T1 +2.634 PJ). Transport cost remains a separate chain summary and is
+not part of official OSeCAN tiers. V10 is solved at the 119 Mm³ reference;
+100 and 150 Mm³ remain assignment-v6 local-first sensitivity cases.
 
 ## 1. Purpose
 
@@ -752,7 +772,13 @@ approval. `not_available` open-volume status is not a validation pass.
 - `data/derived/national/facilities/forestry_osecan_handoff_v8/FORESTRY_OSECAN_HANDOFF_V8.md`
 - `data/derived/national/facilities/forestry_osecan_scenarios_v7/FORESTRY_OSECAN_SCENARIOS_V7.md`
 - `data/derived/national/bucking/open_data_imputation_v3/`
+- `data/derived/national/facilities/facility_residue_supply_v8/FACILITY_RESIDUE_SUPPLY_V8.md`
+- `data/derived/national/facilities/national_residue_curve_v8/NATIONAL_RESIDUE_CURVE_V8.md`
+- `data/derived/national/facilities/national_facility_chain_scenarios_v8/NATIONAL_FACILITY_CHAIN_SCENARIOS_V8.md`
+- `data/derived/national/facilities/forestry_osecan_handoff_v9/FORESTRY_OSECAN_HANDOFF_V9.md`
+- `data/derived/national/facilities/forestry_osecan_scenarios_v8/FORESTRY_OSECAN_SCENARIOS_V8.md`
 - `docs/handoff-national-facility-chain-v4.md`
+- `docs/handoff-national-facility-chain-v5.md`
 - `docs/handoff-e2-v3-density-calibrated-tree-lists.md`
 - `docs/four-province-biomass-allometry.md`
 - `docs/bc-biomass-allometry.md`
@@ -772,9 +798,12 @@ not move v3. Annotated tag `national-facility-chain-v3.2` marks the
 manifest-integrity fix and records data commit
 `ef64c903f57c2e89f12eca62a0c9a2be49d8a28d`; it changes manifest metadata
 only. Annotated tag `national-facility-chain-v4` marks the documentation commit
-carrying this card and the v4 handoff, records model commit
+carrying the v4 card and handoff, records model commit
 `60409639b57d3aa6ff614dfba8e4c2bdb8b28247` and data commit
 `f0f77a0e6cfeb3fbbcafd685beedcd7324dbc9c8`, and does not move any earlier
-tag. The freeze commit is documentation and tag only; no code, model artifact,
-UI, or official OSeCAN file changed at that commit. The tags are the immutable
-references for the frozen numbers.
+tag. Annotated tag `national-facility-chain-v5` marks the v5 documentation
+commit, records model commit `0943b12027f9eb994bda3646d9e3fe7548454fb0` and data commit
+`86ad55506d6ef10bcd60a6b6701d4d06c0026d12`, and does not move v4 or any
+earlier tag. The freeze commits are documentation and tag only; no code, model
+artifact, UI, or official OSeCAN file changed at those commits. The tags are the
+immutable references for the frozen numbers.

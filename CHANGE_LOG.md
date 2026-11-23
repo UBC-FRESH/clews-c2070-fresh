@@ -2,6 +2,31 @@
 
 ## 2026-11-23
 
+- **Integrated assignment v10 into facility chain v5 and froze it.** Added
+  `facility_residue_supply_v8`, `national_residue_curve_v8`,
+  `national_facility_chain_scenarios_v8`, `forestry_osecan_handoff_v9`,
+  `forestry_osecan_scenarios_v8`, their focused contract test, and the five
+  data artifacts. The 119 Mm3 reference now uses assignment v10 node
+  transport-aware flows; 100/150 Mm3 remain assignment-v6 local-first
+  sensitivity cases. National products and residue are invariant (process
+  residue 498.751 PJ, harvest gross 444.411 PJ, recoverable 60% 266.646 PJ).
+  Assignment v10 uses 296 facilities versus 208, cross-border volume rises
+  0.036 to 2.325 Mm3, transport cost falls 4.958 to 3.392 billion CAD/yr
+  (-31.59%), mean road distance falls 402.12 to 270.29 km, and the >=150 km
+  share falls 83.83% to 48.62%. Process-residue cross-border share rises
+  5.22% to 8.50% while facility HHI falls 0.028873 to 0.023211. OSeCAN tiers
+  are unchanged at all 21 scenario/stream/case positions; process-residue PJ
+  shifts between zones (process 50%: Q1 -5.505, Q2 -3.509, L1 +6.708, T1
+  +2.634 PJ) because facility provinces change. Transport cost is a separate
+  chain summary and is not in official OSeCAN tiers. All rows are
+  `model_estimate`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`. Eight focused tests and 37 existing tests pass;
+  five v5 manifests (46 entries) plus three upstream manifests (27 entries)
+  verify 73/73; the official OSeCAN tree is unchanged (146 files,
+  `80caa91c...`); no unexpected `D`. Created annotated tag
+  `national-facility-chain-v5` at the documentation commit, recording model
+  commit `0943b12` and data commit `86ad555`. No UI or official OSeCAN change.
+
 - **Added node-level transport-aware assignment v10.** Added
   `national_facility_assignment_v10.py`, focused conservation/capacity/
   arithmetic/comparison/label tests, and

@@ -895,6 +895,39 @@ decide what blocks production readiness after the conceptual alpha.
   national claim, no UI or official OSeCAN change. Fifteen focused tests pass;
   111 existing assignment/audit/UI tests pass. No unexpected `D`.
 
+- [x] P7.35 Integrate transport-aware assignment v10 into facility chain v5 and
+  freeze v5. Completed: added `facility_residue_supply_v8`,
+  `national_residue_curve_v8`, `national_facility_chain_scenarios_v8`,
+  `forestry_osecan_handoff_v9`, `forestry_osecan_scenarios_v8`,
+  `tests/test_national_facility_chain_v5.py`, and five data artifacts. The
+  119 Mm3 reference uses assignment v10 node transport-aware flows; the 100
+  and 150 Mm3 sensitivity cases remain assignment-v6 local-first because v10
+  is solved on the 119 Mm3 allocation. National products and residue are
+  invariant: process residue 498.751 PJ, harvest gross 444.411 PJ, harvest
+  recoverable 60% 266.646 PJ, total gross 943.162 PJ. Assignment v10 uses 296
+  facilities versus 208, cross-border volume rises 0.036 to 2.325 Mm3
+  (0.031% to 1.954%), proxy share rises 39.89% to 54.08%, transport cost falls
+  4.958 to 3.392 billion CAD/yr (-31.59%), mean road distance falls 402.12 to
+  270.29 km (-32.78%), the >=150 km share falls 83.83% to 48.62% (-35.21 pp)
+  and the >=300 km share falls 52.65% to 30.16% (-22.49 pp). Facility
+  process-residue distribution uses 271 positive-residue facilities versus
+  186; cross-border residue rises 5.22% to 8.50%, HHI falls 0.028873 to
+  0.023211 and top-5 share falls 29.51% to 24.67%. OSeCAN handoff v9 and
+  scenarios v8 keep all 21 tier positions unchanged; process-residue PJ
+  shifts between zones (process 50%: Q1 -5.505, Q2 -3.509, O1 -0.878,
+  L1 +6.708, T1 +2.634 PJ), while harvest zone PJ is unchanged. Transport
+  cost is reported only in the facility chain and is not in OSeCAN official
+  tiers. Pre-freeze checks: 8 focused v5 tests and 37 existing tests pass (45
+  total); five v5 manifests (46 entries) plus assignment v10, product-chain
+  v5 and capacity v3 manifests (27 entries) verify 73/73; the official
+  OSeCAN tree is unchanged (146 files, `80caa91c...`, 0 changed files); no
+  unexpected `D`. Labels remain `model_estimate` / `observed=false` /
+  `policy_grade=false` with `national_claim=false`; no UI or official OSeCAN
+  change. Created annotated tag `national-facility-chain-v5` at the
+  documentation commit, recording model commit `0943b12` and data commit
+  `86ad555`. Updated the model card and added
+  `docs/handoff-national-facility-chain-v5.md`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
