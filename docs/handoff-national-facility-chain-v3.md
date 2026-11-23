@@ -3,16 +3,16 @@
 | Field | Value |
 |---|---|
 | Prepared | 2026-11-23 |
-| Status | Handoff and interpretation note; documentation only |
+| Status | Handoff and interpretation note; documentation plus v3.2 manifest metadata fix |
 | Base freeze | `national-facility-chain-v3` |
-| Documentation tag | `national-facility-chain-v3.1` |
+| Documentation tags | `national-facility-chain-v3.1`; `national-facility-chain-v3.2` (manifest integrity fix) |
 | Freeze commit | `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` |
-| Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` |
+| Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` for the v3 numbers; `ef64c903f57c2e89f12eca62a0c9a2be49d8a28d` for the v3.2 manifest fix |
 | Supersedes | `national-facility-chain-v2` (donor product coefficients for nine provinces) |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
 | Data dependency | Open data only; no DUA, request, or approval required |
 | OSeCAN status | Read-only handoff; `official_osecan_changed=false` |
-| Scope boundary | No code, model, UI, or official OSeCAN change in this handoff |
+| Scope boundary | No code, model-value, UI, or official OSeCAN change; v3.2 corrects only manifest metadata |
 
 This note is the short transfer document for a reader who needs to use the
 frozen national facility chain v3 without re-deriving it. The authoritative
@@ -23,6 +23,12 @@ truth.
 Tag `national-facility-chain-v3.1` is a documentation-only publication of this
 note, the v3 model card, and the data pointer. It does not move v3, rebuild an
 artifact, or change a number.
+
+Tag `national-facility-chain-v3.2` fixes the sole stale manifest metadata
+entry in the v3 data commit: the `facility_residue_supply_v6` manifest now
+records the committed `summary.json` size and SHA-256. All 66 output entries
+across the nine v3 artifact manifests verify. No numeric artifact, code, UI,
+or official OSeCAN file changed, and v3/v3.1 are not moved.
 
 ## 1. What changed in v3
 
@@ -57,11 +63,15 @@ entry/exit, or interprovincial trade. All results are screening estimates.
 | `national-facility-chain-v2.1` | `cd0562c` | `c91ee9b` | Trade-v5 measured rebuild and local-v6 comparison addendum |
 | `national-chain-sensitivity-v1` | `006e84e` | `ec2f7fc` | 16-run global screening of the 119 Mm³ chain |
 | `national-facility-chain-v3` | `029eef1` | `d77472c` | 13-province E1/E2 open-data chain; current model base |
-| `national-facility-chain-v3.1` | v3.1 docs commit | `d77472c` | Documentation superset: v3 model card, v3 handoff, data pointer; no artifact change |
+| `national-facility-chain-v3.1` | `0ecc1d2` | `d77472c` | Documentation superset: v3 model card, v3 handoff, data pointer; no artifact change |
+| `national-facility-chain-v3.2` | v3.2 fix commit | `ef64c90` | Manifest integrity fix: correct `facility_residue_supply_v6/summary.json` metadata; no number change |
 
 The v3 tag is the immutable reference for the v3 numbers. Documentation-only
 commits after the tag do not change the frozen artifacts. v3.1 publishes the
-v3 documentation at its own commit and does not move v3.
+v3 documentation at its own commit and does not move v3. v3.2 corrects only
+the stale `facility_residue_supply_v6` manifest entry left by the v3 data
+commit; it does not move v3 or v3.1, rebuild the numeric artifacts, or change
+a number.
 
 ### 2.2 Stage artifacts
 
@@ -79,7 +89,11 @@ v3 documentation at its own commit and does not move v3.
 
 Each published artifact directory contains a report, a JSON summary, and a
 SHA-256 manifest. Rebuild against data commit `d77472c` to reproduce the frozen
-numbers.
+numbers. At v3.2, all 66 output entries across the nine manifests verify; the
+v3.2 data commit `ef64c90` changes only the
+`facility_residue_supply_v6/manifest.json` `summary.json` metadata entry. A
+rebuild still regenerates identical numeric files and the same pre-wrapper
+manifest metadata, so the committed v3.2 manifest is the integrity reference.
 
 ## 3. Province coverage: E1 measured and E2 imputed
 
@@ -381,3 +395,7 @@ is documentation only; no code or model test is required to read it.
 annotated documentation tag at the commit that publishes this handoff, the v3
 model card, and the data pointer; it records parent `029eef1` and data commit
 `d77472c`. It does not move v3 or change an artifact.
+`national-facility-chain-v3.2` is an annotated tag at the manifest-integrity
+fix commit; it records that commit, data commit
+`ef64c903f57c2e89f12eca62a0c9a2be49d8a28d`, and the unchanged v3/v3.1
+references. It changes manifest metadata only and moves neither v3 nor v3.1.

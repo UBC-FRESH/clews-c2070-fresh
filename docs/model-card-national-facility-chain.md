@@ -4,10 +4,10 @@
 |---|---|
 | Package | National facility chain v3 (frozen screening package) |
 | Freeze tag (model numbers) | `national-facility-chain-v3` |
-| Documentation tag | `national-facility-chain-v3.1` |
+| Documentation tags | `national-facility-chain-v3.1`; `national-facility-chain-v3.2` (manifest integrity fix) |
 | Date | 2026-11-23 |
 | Parent commit at model freeze | `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` |
-| Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` (`UBC-FRESH/clews-c2070-fresh-data`) |
+| Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` for the v3 numbers; `ef64c903f57c2e89f12eca62a0c9a2be49d8a28d` for the v3.2 manifest fix (`UBC-FRESH/clews-c2070-fresh-data`) |
 | Stage artifacts | Inventory v1 → capacity v3 → assignment v6 → product-chain v4 → facility residue v6 → residue curve v6 → chain scenarios v6 → OSeCAN handoff v7 |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
 | Energy-side status | Read-only handoff; `official_osecan_changed=false` |
@@ -47,6 +47,15 @@ documentation-only superset of the v3 model freeze. It publishes this model
 card, the v3 handoff, and the data pointer at a documentation commit after
 v3. It does not move `national-facility-chain-v3`, rebuild any artifact, or
 change any number in this card.
+
+**v3.2 manifest-integrity note.** Tag `national-facility-chain-v3.2` corrects
+the sole stale manifest metadata entry in the v3 data commit. The
+`facility_residue_supply_v6` manifest now records the committed
+`summary.json` size and SHA-256, and all 66 output entries across the nine v3
+artifact manifests verify. The fix changes manifest metadata only; no
+artifact number, coefficient, validation result, code, UI, or official
+OSeCAN file changed, and `national-facility-chain-v3` and
+`national-facility-chain-v3.1` are not moved.
 
 ## 2. Chain and scope
 
@@ -668,7 +677,7 @@ Evidence inputs for the coefficient tiers:
 | `national_facility_capacity_v3` | `data/derived/national/facilities/national_facility_capacity_v3/manifest.json` | 6 | `a77233d39d049834…` |
 | `national_facility_assignment_v6` | `data/derived/national/facilities/national_facility_assignment_v6/manifest.json` | 13 | `fb1f5be7b2a185ad…` |
 | `national_product_chain_v4` | `data/derived/national/facilities/national_product_chain_v4/manifest.json` | 8 | `f484288cddacbe88…` |
-| `facility_residue_supply_v6` | `data/derived/national/facilities/facility_residue_supply_v6/manifest.json` | 5 | `f53c37376c83d6b5…` |
+| `facility_residue_supply_v6` | `data/derived/national/facilities/facility_residue_supply_v6/manifest.json` | 5 | `56ea55a53e9c6ca0…` |
 | `national_residue_curve_v6` | `data/derived/national/facilities/national_residue_curve_v6/manifest.json` | 5 | `0a846adca2502537…` |
 | `national_facility_chain_scenarios_v6` | `data/derived/national/facilities/national_facility_chain_scenarios_v6/manifest.json` | 8 | `9003ea44a144c15e…` |
 | `forestry_osecan_handoff_v7` | `data/derived/national/facilities/forestry_osecan_handoff_v7/manifest.json` | 8 | `74780c8d3a4879e3…` |
@@ -676,19 +685,23 @@ Evidence inputs for the coefficient tiers:
 
 Every published artifact directory contains its report, JSON summary, and
 SHA-256 manifest. The handoff manifest records the OSeCAN tree hash check and
-the exact input hashes. At v3.1 publication, the official OSeCAN tree hash is
+the exact input hashes. At v3.2 publication, the official OSeCAN tree hash is
 `80caa91c3e91c89006b8d5e3ad78232eade70a298a83657510fffa26924bc64a`
 (146 files, unchanged).
 
-**Known manifest metadata exception.** The v3 data commit's
-`facility_residue_supply_v6/manifest.json` records the pre-wrapper size and
-hash of `summary.json`; the v6 wrapper rewrites that summary after the shared
-v4 builder writes the manifest. Across the nine manifests, 65 of 66 output
-entries verify. The numeric artifact content passes its own 14 validation
-checks and the contract tests, but the `summary.json` entry does not verify
-against the committed file. This is a metadata defect in data commit
-`d77472c`, not a model or number change. v3.1 does not rewrite the data commit
-or move the v3 tag.
+**Manifest integrity (v3.2).** The v3 data commit's
+`facility_residue_supply_v6/manifest.json` had recorded the pre-wrapper size
+and hash of `summary.json`; the v6 wrapper rewrites that summary after the
+shared v4 builder writes the manifest. The v3.2 data commit
+`ef64c903f57c2e89f12eca62a0c9a2be49d8a28d` corrects that entry to the
+committed file (`23,643` bytes;
+`778a02eb3334865db1168e90b7ff44ec57bbaf2ed6525b471617b246b03becd7`), and
+all 66 output entries across the nine manifests verify. The numeric artifact
+files, summaries, reports, and 14 validation checks are unchanged from v3.
+The v6 builder itself is not changed by this metadata-only fix; a rebuild
+regenerates identical numeric outputs and the same pre-wrapper manifest
+metadata, so the committed v3.2 manifest remains the integrity reference.
+v3.2 does not move the v3 or v3.1 tags.
 
 Focused regression tests:
 
@@ -750,6 +763,10 @@ data commit `c91ee9bd19442d239b15dadf2818d96bd1b6c253`. Annotated tag
 this card, the v3 handoff, and the data pointer; it records model parent commit
 `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` and data commit
 `d77472c7ac877b60c3c7833d718a3e1bafe593a7`. It does not move
-`national-facility-chain-v3`. The tags are the immutable references for the
-frozen numbers. Documentation-only commits after a tag do not change the frozen
-artifacts.
+`national-facility-chain-v3`. Annotated tag `national-facility-chain-v3.2`
+marks the manifest-integrity fix commit and records that commit, data commit
+`ef64c903f57c2e89f12eca62a0c9a2be49d8a28d`, and the unchanged v3/v3.1
+references. It changes manifest metadata only. The tags are the immutable
+references for the frozen numbers. Documentation-only commits after a tag do
+not change the frozen artifacts; the v3.2 manifest correction is the only
+post-v3 change to an artifact manifest and changes no number.

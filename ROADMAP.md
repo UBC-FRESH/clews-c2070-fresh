@@ -727,6 +727,22 @@ decide what blocks production readiness after the conceptual alpha.
   is in `manifest.csv`; no full layer was ingested, no request/DUA/restricted
   data was used, and no synthetic or model attribute is claimed. No unexpected
   `D`.
+- [x] P7.27 Fix the v3 manifest integrity exception and publish v3.2.
+  Completed: corrected the `facility_residue_supply_v6/manifest.json`
+  `summary.json` entry to the committed file (23,643 bytes; SHA-256
+  `778a02eb…`) in data commit `ef64c90`; no numeric artifact, coefficient,
+  validation result, code, UI, or official OSeCAN file changed. All 66 output
+  entries across the nine v3 manifests verify (previously 65/66). Focused
+  regression tests passed (29 passed):
+  `test_e1_e2_facility_chain_v6.py`, `test_open_data_imputation.py`,
+  `test_four_province_bucking_pilot.py`, and
+  `test_four_province_biomass_allometry.py`. The official OSeCAN tree is
+  unchanged (146 files, tree SHA-256 `80caa91c…`); no unexpected `D`. Updated
+  the model card, v3 handoff, ROADMAP, and CHANGE_LOG to v3.2 and removed the
+  known exception note. Created annotated tag `national-facility-chain-v3.2`
+  at the fix commit, recording that commit and data commit `ef64c90`; v3 and
+  v3.1 were not moved. Manifest metadata and documentation only; no
+  model-value, code, UI, or official OSeCAN change.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

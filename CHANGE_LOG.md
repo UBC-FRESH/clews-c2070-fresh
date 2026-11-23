@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Fixed the v3 manifest integrity exception and published national facility
+  chain v3.2.** Corrected the `facility_residue_supply_v6/manifest.json`
+  `summary.json` entry to the committed file (23,643 bytes; SHA-256
+  `778a02eb3334865db1168e90b7ff44ec57bbaf2ed6525b471617b246b03becd7`) in
+  data commit `ef64c903f57c2e89f12eca62a0c9a2be49d8a28d`. The v6 wrapper had
+  rewritten the summary after the shared v4 builder wrote the manifest, so the
+  v3 data commit recorded pre-wrapper size and hash; the manifest SHA-256 is
+  now `56ea55a53e9c6ca0ceb877d44a56f3bca1a51e87df43cb44a6b76e4b98c8e410`.
+  All 66 output entries across the nine v3 artifact manifests verify
+  (previously 65/66); the numeric artifact files, summaries, reports, and 14
+  validation checks are unchanged. Focused regression tests passed (29
+  passed): `test_e1_e2_facility_chain_v6.py`, `test_open_data_imputation.py`,
+  `test_four_province_bucking_pilot.py`, and
+  `test_four_province_biomass_allometry.py`. The official OSeCAN tree is
+  unchanged (146 files, tree SHA-256
+  `80caa91c3e91c89006b8d5e3ad78232eade70a298a83657510fffa26924bc64a`); no
+  unexpected `D`. Updated the model card, v3 handoff, ROADMAP, and this change
+  log to v3.2 and removed the known exception note. Created annotated tag
+  `national-facility-chain-v3.2` at the fix commit, recording that commit and
+  data commit `ef64c90`; v3 and v3.1 were not moved. Manifest metadata and
+  documentation only; no model-value, code, UI, or official OSeCAN change.
+
 - **Audited open provincial forest inventories for the nine E2 provinces.**
   Added `workflows/national/inventory/provincial_open_inventory_audit.py`,
   `tests/test_provincial_open_inventory_audit.py`, and
