@@ -870,6 +870,28 @@ decide what blocks production readiness after the conceptual alpha.
   (skip imports) pass on new files; manifests verify; no UI/official OSeCAN
   change and no policy/national claim. Created tag
   `national-chain-sensitivity-v2`. No unexpected `D`.
+- [x] P7.34 Expand the OSRM road-distance audit and rerun the local-processing
+  assignment with province factors. Completed: added
+  `facility_road_distance_audit_v2.py`, `national_facility_assignment_v8.py`,
+  their focused tests, and the two data artifacts. The audit sampled 81 pairs
+  across 11 jurisdictions with eligible located facilities (10 per province
+  where available; SK/MB/PE/YT sampled in full; NT/NU have no eligible located
+  facility) at deterministic equal-frequency haversine quantiles, with 81/81
+  OSRM demo routes at 1.2 s spacing and no paid key. Eleven province median
+  road/haversine factors were fitted (BC 1.474, AB 1.305, SK 1.397, MB 1.456,
+  ON 1.359, QC 2.418, NB 1.488, NS 1.204, PE 1.110, NL 2.004, YT 1.725),
+  with n, IQR, 90% bootstrap CI, physical/Tukey outlier flags and a [1.0, 3.0]
+  cap reported. Mean absolute proxy error improves from 18.86% (global 1.3) to
+  8.87% (province factors); within-10% improves from 37.0% to 67.9%. V8 keeps
+  capacity v3, the 1.2x floor, products and residue unchanged. At 119 Mm3 it
+  assigns 118.977 Mm3 with 118.941 Mm3 local, 36,376 m3 cross-border, 39.89%
+  proxy, 208 facilities and HHI 0.01287, identical to v6 because a uniform
+  province factor cannot reorder local candidates; the NT residual recipient
+  did not switch. Volume-weighted mean road distance rises 402.12 to 558.54 km
+  (+38.9%). Labels remain `model_estimate` / `observed=false` /
+  `policy_grade=false`; no national single factor, no national claim, no UI or
+  official OSeCAN change. Fourteen focused tests pass; 111 existing
+  assignment/audit/UI tests pass. No unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

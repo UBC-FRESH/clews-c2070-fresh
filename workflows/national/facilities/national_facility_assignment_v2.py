@@ -603,7 +603,10 @@ def _candidate(
         facility.location.lat,
         facility.location.lon,
     )
-    road_distance = distance * config.road_factor
+    road_distance = distance * config.road_factor_for(
+        origin_province=offer.province,
+        facility_province=facility.province,
+    )
     cross_border = facility.province != offer.province
     penalty = config.cross_border_penalty_km if cross_border else 0.0
     return Candidate(

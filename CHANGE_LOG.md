@@ -2,6 +2,29 @@
 
 ## 2026-11-23
 
+- **Expanded the OSRM audit and reran local assignment v8 with province
+  road factors.** Added `facility_road_distance_audit_v2.py`,
+  `national_facility_assignment_v8.py`, focused tests, and the two data
+  artifacts. The audit sampled 81 deterministic equal-frequency haversine
+  quantile pairs across 11 jurisdictions with eligible located facilities
+  (10 per province where available; SK/MB/PE/YT in full; NT/NU have none) and
+  completed 81/81 OSRM demo routes at 1.2 s spacing with no paid key. Eleven
+  province median road/haversine factors were fitted with n, IQR, 90%
+  bootstrap CI, physical/Tukey outlier flags and a [1.0, 3.0] cap: BC 1.474,
+  AB 1.305, SK 1.397, MB 1.456, ON 1.359, QC 2.418, NB 1.488, NS 1.204,
+  PE 1.110, NL 2.004, YT 1.725. Mean absolute proxy error improves from
+  18.86% to 8.87%; within-10% from 37.0% to 67.9%. Assignment v8 applies the
+  facility-province factor to the v6 geometry and keeps capacity v3, the 1.2x
+  floor, products and residue unchanged. At 119 Mm3 it assigns 118.977 Mm3
+  (118.941 local, 36,376 cross-border), 39.89% proxy, 208 facilities, HHI
+  0.01287, identical to v6 because a uniform province factor cannot reorder
+  local candidates; the NT residual recipient did not switch. Volume-weighted
+  mean road distance rises 402.12 to 558.54 km (+38.9%). Labels remain
+  `model_estimate` / `observed=false` / `policy_grade=false`; no national
+  single factor, no national claim, no UI or official OSeCAN change. Fourteen
+  focused tests pass and 111 existing assignment/audit/UI tests pass. No
+  unexpected `D`.
+
 - **Packaged the 12 D1/D2 OSeCAN candidate cases as read-only files.** Added
   `osecan_candidate_cases_v1.py`, its focused test, and
   `data/derived/national/facilities/osecan_candidate_cases_v1/`. The package

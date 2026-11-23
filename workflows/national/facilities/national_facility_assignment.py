@@ -48,10 +48,11 @@ import hashlib
 import json
 import math
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 from shapely.geometry import shape
@@ -402,10 +403,21 @@ class ProvinceOffer:
 
 @dataclass(frozen=True, slots=True)
 class AllocationConfig:
-    """Documented screening assumptions."""
+    """Documented screening assumptions.
+
+    ``province_road_factors`` is optional.  When set, the road distance for a
+    candidate is the haversine distance multiplied by the factor of the
+    **facility's** province.  This is the province in which the sampled
+    centroid-to-facility road route runs when the candidate is local.  For a
+    cross-border candidate the destination-province factor is a documented
+    screening extension, not an observed border-route factor.  When the
+    mapping is absent, the single global ``road_factor`` is used and every
+    historical assignment version reproduces unchanged.
+    """
 
     road_factor: float = ROAD_FACTOR
     cross_border_penalty_km: float = CROSS_BORDER_PENALTY_KM
+    province_road_factors: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
         road_factor = float(self.road_factor)
@@ -416,8 +428,40 @@ class AllocationConfig:
             raise AssignmentError(
                 "cross_border_penalty_km must be finite and non-negative"
             )
+        factors = self.province_road_factors
+        if factors is not None:
+            validated: dict[str, float] = {}
+            for province, value in factors.items():
+                if province not in PROVINCES:
+                    raise AssignmentError(
+                        f"unexpected province road factor key {province!r}"
+                    )
+                factor = float(value)
+                if not math.isfinite(factor) or factor <= 0.0:
+                    raise AssignmentError(
+                        f"{province}: province road factor must be finite "
+                        "and positive"
+                    )
+                validated[province] = factor
+            factors = MappingProxyType(validated)
         object.__setattr__(self, "road_factor", road_factor)
         object.__setattr__(self, "cross_border_penalty_km", penalty)
+        object.__setattr__(self, "province_road_factors", factors)
+
+    def road_factor_for(
+        self, *, origin_province: str, facility_province: str
+    ) -> float:
+        """Return the screening road factor for one candidate pair."""
+
+        if self.province_road_factors is None:
+            return self.road_factor
+        factor = self.province_road_factors.get(facility_province)
+        if factor is None:
+            raise AssignmentError(
+                "no province road factor for candidate facility province "
+                f"{facility_province!r} (origin {origin_province!r})"
+            )
+        return float(factor)
 
 
 @dataclass(frozen=True, slots=True)
@@ -752,7 +796,10 @@ def _candidate(
         facility.location.lat,
         facility.location.lon,
     )
-    road_distance = distance * config.road_factor
+    road_distance = distance * config.road_factor_for(
+        origin_province=offer.province,
+        facility_province=facility.province,
+    )
     cross_border = facility.province != offer.province
     penalty = config.cross_border_penalty_km if cross_border else 0.0
     return Candidate(
