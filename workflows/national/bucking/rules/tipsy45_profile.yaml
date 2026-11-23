@@ -1,0 +1,59 @@
+# Separate TIPSY-compatible bucking profile.
+#
+# This profile is deliberately not the repository default.  The default
+# BuckingProfile(log_lengths_m=(5.0, 7.5, 10.0)) is unchanged.
+#
+# Geometry source:
+#   TIPSY 4.5 CHM, Log Grades, industrial, interior
+#   (workflows/national/bucking/rules/tipsy45_industrial_sorts.csv)
+#   The nominal target lengths are 13.0, 11.0, 8.0, 6.3, 5.1, and 5.0 m.
+#   TIPSY 4.5 Log Tables state that scaled logs are 2.5 m (8 ft) or longer,
+#   which is the documented deciduous base length because the published
+#   deciduous length cell is "--".
+#
+# Price scenario source:
+#   FAN$IER 4.5 Help documents that TIPSY merchantable boles are bucked to
+#   length (8 ft minimum) to maximise value using FAN$IER default log prices,
+#   but the numeric default log price table is not published in the help: the
+#   help directs users to the in-application Activity Costs & Product Prices
+#   viewer.  No published numeric FAN$IER relativity by TIPSY industrial sort
+#   was found in the FEMIC/FAN$IER reference corpus.  This profile therefore
+#   does not invent sort-specific FAN$IER relativities.  It retains the
+#   published BC Interior Log Market Report product-class prices that the
+#   default profile already uses.  That is a documented scenario, not a
+#   FAN$IER default-table claim.
+profile: tipsy45
+status: assumption
+geometry_basis: published_tipsy45_industrial_sort_lengths
+price_basis: published_product_class_prices_no_fansier_numeric_defaults
+
+log_lengths_m:
+  - 13.0
+  - 11.0
+  - 8.0
+  - 6.3
+  - 5.1
+  - 5.0
+  - 2.5
+min_top_diameter_cm: 12.5
+min_log_length_m: 2.5
+stump_height_m: 0.3
+# Retained from the default profile so a profile comparison changes the
+# nominal target lengths only; this is not a TIPSY numerical-integration claim.
+section_m: 0.5
+allow_partial_top: false
+
+price_scenario:
+  name: published_product_class_only
+  evidence: assumption
+  price_profile: nemora/config/log_prices/bc_interior_2026q3.yaml
+  fansier_numeric_defaults: not_published
+  published_sort_relativities: null
+  note: >
+    FAN$IER 4.5 Help (Logs; Log Prices; Hardwood Economics) does not publish a
+    numeric default log price table or a numeric relativity by TIPSY industrial
+    sort.  No invented sort-specific prices are applied.  The scenario keeps
+    the TIPSY-aligned rule set's product assignment and the published BC
+    Interior Log Market Report product averages.  D125L51 remains sawlog-priced
+    because no group-specific pulp price is published for every market group;
+    D125L50 remains pulpwood; deciduous sorts remain other.

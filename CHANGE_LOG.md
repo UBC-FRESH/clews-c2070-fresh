@@ -2,6 +2,32 @@
 
 ## 2026-11-23
 
+- **Added a separate TIPSY 4.5 bucking profile and reran TSA24 sort validation.**
+  Added `workflows/national/bucking/profiles.py`,
+  `workflows/national/bucking/rules/tipsy45_profile.yaml`, and
+  `tests/test_bucking_profiles.py`. The profile is opt-in
+  (`bc_psp_validation.py --bucking-profile tipsy45`) and does not change the
+  default `BuckingProfile(5.0, 7.5, 10.0)`. Geometry uses the published TIPSY
+  4.5 nominal target lengths 13/11/8/6.3/5.1/5.0 m plus the 2.5 m documented
+  deciduous base. FAN$IER 4.5 Help publishes no numeric default log prices or
+  sort-specific relativities, so the price scenario is explicitly labelled
+  `assumption`: it keeps the published BC Interior Log Market Report
+  product-class prices and invents no sort-specific values. The full TSA24
+  rerun writes `data/derived/national/bucking/bc_psp_validation_tipsy45_v1/`
+  and the sort validation writes
+  `data/derived/national/bucking/tsa24_sort_validation_tipsy45_v1/`. Compared
+  with the default v1 result, pooled TVD rises 0.4329 to 0.4404 and mean
+  per-plot TVD rises 0.5052 to 0.5354: the gap does **not** close. The profile
+  removes all 7.5 m and 10.0 m non-nominal logs (4,171 logs), but the
+  value-only dynamic program without a published FAN$IER length/grade price
+  surface over-selects 13/11 m logs and under-selects the 8 m and 5.1 m
+  classes. Volume bias remains positive (+2.9% TIPSY/bucked). A descriptive
+  comparison is in
+  `data/derived/national/bucking/tsa24_sort_validation_profile_comparison_v1/`;
+  it is `not_assigned`, makes no official grade claim, and was not tuned.
+  Tests: profile contract and comparison tests passed. No UI/public OSeCAN
+  change and no unexpected `D`.
+
 - **Added national bucking pilot v2 with a measured BC TSA24 PSP tree list.**
   Added `workflows/national/bucking/national_bucking_pilot_v2.py` and
   `tests/test_national_bucking_pilot_v2.py`. The v2 list replaces the ten

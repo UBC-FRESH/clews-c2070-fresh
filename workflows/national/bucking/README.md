@@ -98,6 +98,18 @@ sweep, knot, rot, and product quality are not represented.  `max_length_m` and
 length and does not apply a trim allowance.  `grade_status` is
 `not_assigned`.
 
+### Bucking profiles
+
+`profiles.py` adds named, auditable profiles without changing nemora's default
+`BuckingProfile(5.0, 7.5, 10.0)`. `--bucking-profile tipsy45` uses the
+published TIPSY 4.5 nominal target lengths 13/11/8/6.3/5.1/5.0 m and the
+documented 2.5 m deciduous base from `rules/tipsy45_profile.yaml`.
+FAN$IER 4.5 Help does not publish numeric default log prices or sort-specific
+relativities, so the profile's price scenario is labelled `assumption` and
+keeps the published BC Interior Log Market Report product-class prices; no
+sort-specific value is invented. The comparison of the default and tipsy45
+TSA24 runs is written by `compare_sort_profiles.py`.
+
 ## 5. BC pilot scope
 
 `tree_lists.py` adapts the archived FAIB PSP tables under

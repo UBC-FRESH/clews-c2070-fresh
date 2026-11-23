@@ -51,6 +51,7 @@ from .bucking import (
     load_grade_rules,
     load_price_profile,
 )
+from .profiles import ProfileError, ProfileSpec, load_bucking_profile
 from .schema import TreeRecord
 from .taper import (
     TaperDomainError,
@@ -583,12 +584,14 @@ def _init_bucking_worker(
     rules_path: str,
     price_path: str,
     density_by_species: dict[str, float],
+    profile: Any = None,
 ) -> None:
     _WORKER.clear()
     _WORKER["registry"] = TaperRegistry(parameter_path=Path(parameter_path))
     _WORKER["rules"] = load_grade_rules(Path(rules_path))
     _WORKER["prices"] = load_price_profile(Path(price_path))
     _WORKER["density"] = dict(density_by_species)
+    _WORKER["profile"] = profile
 
 
 def _density_for(species: str) -> tuple[float, str]:
@@ -603,6 +606,7 @@ def _buck_one(tree: TreeRecord) -> dict[str, Any]:
     registry: TaperRegistry = _WORKER["registry"]
     rules = _WORKER["rules"]
     prices = _WORKER["prices"]
+    profile = _WORKER.get("profile")
     density, density_evidence = _density_for(tree.species)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
@@ -613,6 +617,7 @@ def _buck_one(tree: TreeRecord) -> dict[str, Any]:
                 model,
                 rules,
                 prices,
+                profile=profile,
                 basic_density_odt_m3=density,
                 moisture_wet_basis=DEFAULT_MOISTURE_GREEN,
                 chip_yield_fraction=DEFAULT_CHIP_YIELD,
@@ -679,6 +684,7 @@ def buck_population(
     density_table: Mapping[str, Mapping[str, Any]],
     workers: int,
     deadline: Deadline,
+    profile: Any = None,
 ) -> BuckingOutputs:
     """Buck every taper-supported tree, parallelised but deterministically ordered."""
     started = time.monotonic()
@@ -711,7 +717,11 @@ def buck_population(
     results: list[dict[str, Any]] = []
     if workers == 1:
         _init_bucking_worker(
-            str(parameter_path), str(rules_path), str(price_path), density_by_species
+            str(parameter_path),
+            str(rules_path),
+            str(price_path),
+            density_by_species,
+            profile,
         )
         for index, tree in enumerate(buckable, start=1):
             results.append(_buck_one(tree))
@@ -728,6 +738,7 @@ def buck_population(
                 str(rules_path),
                 str(price_path),
                 density_by_species,
+                profile,
             ),
         ) as executor:
             iterator = executor.map(_buck_one, buckable, chunksize=128)
@@ -1847,6 +1858,7 @@ def _build_report(
     rsyc: Mapping[str, Any],
     elapsed_seconds: float,
     args: argparse.Namespace,
+    profile_spec: ProfileSpec,
 ) -> str:
     stats = population.stats
     total_12_5 = utilization_table[utilization_table["utilization_cm"] == 12.5].iloc[0]
@@ -1871,6 +1883,10 @@ def _build_report(
     lines.append(f"| Elapsed | {elapsed_seconds:.1f} s |")
     lines.append(
         "| Status | full-population dimension validation; grade not assigned |"
+    )
+    lines.append(
+        f"| Bucking profile | `{profile_spec.name}` "
+        f"(target lengths {', '.join(f'{value:g}' for value in profile_spec.profile.log_lengths_m)} m) |"
     )
     lines.append("")
     lines.append(
@@ -1950,6 +1966,22 @@ def _build_report(
         lines.append("Skipped rows by species (unsupported taper or bucker balance):")
         lines.append("")
         lines.append(_markdown_table(skipped_table.head(12), digits=3))
+    lines.append("")
+    lines.append("### Bucking profile")
+    lines.append("")
+    lines.append(
+        f"Profile `{profile_spec.name}` is applied only to this run; the repository "
+        "default profile is unchanged. Geometry basis: "
+        f"`{profile_spec.document.get('geometry_basis')}`. Price basis: "
+        f"`{profile_spec.document.get('price_basis')}`. "
+    )
+    scenario = profile_spec.document.get("price_scenario") or {}
+    if scenario.get("fansier_numeric_defaults") == "not_published":
+        lines.append(
+            "FAN$IER 4.5 Help does not publish numeric default log prices or a "
+            "sort-specific relativity; no such values are invented here. The run "
+            "keeps the published BC Interior Log Market Report product-class prices."
+        )
     lines.append("")
     lines.append("## 2. Volume comparison")
     lines.append("")
@@ -2251,7 +2283,7 @@ def _build_manifest(
     rsyc: Mapping[str, Any],
     elapsed_seconds: float,
     registry: TaperRegistry,
-    paths: Mapping[str, Path],
+    paths: Mapping[str, Any],
 ) -> dict[str, Any]:
     inputs = [
         _hash_record(
@@ -2309,6 +2341,11 @@ def _build_manifest(
         _hash_record("grade_rules", paths["rules_path"], "workflows/national/bucking/rules/bc_interior.yaml"),
         _hash_record("basic_density", paths["density_path"], "workflows/national/bucking/rules/bc_basic_density.csv"),
         _hash_record("price_profile", paths["price_path"], "nemora/config/log_prices/bc_interior_2026q3.yaml"),
+        _hash_record(
+            "bucking_profile",
+            paths["profile_spec"].source_path,
+            "workflows/national/bucking/rules/tipsy45_profile.yaml",
+        ),
         _hash_record(
             "rsyc_models",
             repo_root / "data" / "raw" / "national" / "rsyc" / "RSYC_models.zip",
@@ -2371,6 +2408,7 @@ def _build_manifest(
                 "basis": "dimension_only",
                 "grade_status": "not_assigned",
             },
+            "bucking_profile": paths["profile_spec"].manifest(),
             "residue_assumptions": {
                 "basic_density": (
                     "species table rules/bc_basic_density.csv where available; "
@@ -2449,6 +2487,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     registry = TaperRegistry(parameter_path=parameter_path)
     density_table = load_basic_density_table(density_path)
+    profile_spec: ProfileSpec = load_bucking_profile(args.bucking_profile)
 
     print("Loading TSA24 latest live visits...", file=sys.stderr)
     population = load_tsa24_latest_visit(
@@ -2478,6 +2517,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         density_table=density_table,
         workers=args.workers,
         deadline=deadline,
+        profile=profile_spec.profile,
     )
     print(
         f"Bucked {len(bucking.logs):,} logs; residue rows {len(bucking.residue):,}; "
@@ -2612,6 +2652,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "rsyc": rsyc,
         "taper_warnings": list(bucking.taper_warnings),
         "validation_checks": validation_checks,
+        "bucking_profile": profile_spec.manifest(),
         "status": "dimension_validation_complete_grade_not_assigned",
         "assumptions": {
             "population": "latest live visit per SITE_IDENTIFIER",
@@ -2621,6 +2662,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "residue": "stem only; branches/foliage not estimated",
             "sort_basis": "dimension_only",
             "grade_status": "not_assigned",
+            "bucking_profile": profile_spec.name,
         },
     }
 
@@ -2659,6 +2701,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         rsyc,
         elapsed,
         args,
+        profile_spec,
     )
     (out_dir / "VALIDATION_REPORT.md").write_text(report, encoding="utf-8")
 
@@ -2685,6 +2728,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "price_path": price_path,
             "crosswalk_path": crosswalk_path,
             "femic_root": femic_root,
+            "profile_spec": profile_spec,
         },
     )
     (out_dir / "manifest.json").write_text(
@@ -2747,6 +2791,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_WORKERS,
         help="Bucking worker processes (default: min(32, CPU count)).",
     )
+    parser.add_argument(
+        "--bucking-profile",
+        choices=("default", "tipsy45"),
+        default="default",
+        help=(
+            "Named bucking profile. The default keeps nemora's 5.0/7.5/10.0 m "
+            "profile; tipsy45 uses the published TIPSY 4.5 nominal lengths."
+        ),
+    )
     return parser
 
 
@@ -2758,7 +2811,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except TimeboxExceeded as exc:
         print(f"TIMEBOX EXCEEDED: {exc}", file=sys.stderr)
         return 2
-    except (BCPSPValidationError, FileNotFoundError) as exc:
+    except (BCPSPValidationError, FileNotFoundError, ProfileError) as exc:
         print(f"VALIDATION FAILED: {exc}", file=sys.stderr)
         return 1
     return 0
