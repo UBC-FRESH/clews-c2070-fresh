@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Added transport-aware assignment v9 and facility transport costs.** Added
+  `national_facility_assignment_v9.py`, focused arithmetic/conservation/
+  capacity/comparison tests, and
+  `data/derived/national/facilities/national_facility_assignment_v9/`. The run
+  prices every v8 assignment row with the committed transport cost v1 curves
+  (52.5 m3 base payload, empty return, 2026 CAD), aggregates facility and
+  origin-province totals, and compares transport-only CAD/GJ with the four
+  face-value supply-curve tiers under an explicit undocumented-currency caveat.
+  V8 primary transport is 6.817 billion CAD/yr (57.30 CAD/m3, 14.078 CAD/GJ,
+  558.5 km weighted mean). V9 is a bipartite transportation linear program that
+  minimises transport cost plus the v8 500 km cross-border rule expressed in
+  cost (51.45 CAD/m3), subject to capacity v3, the 1.2x floor, and the 119 Mm3
+  offers. V9 transport is 6.382 billion CAD/yr (53.64 CAD/m3, 13.180 CAD/GJ,
+  522.0 km mean, 203 facilities), 6.4% below v8, with unchanged local/cross
+  volume (36,376 m3 cross from NT only) but a higher proxy share (0.3989 to
+  0.5287) reported as an evidence trade-off. Under the transport-only face-value
+  screen, 112.2 million m3 (94.3%) exceeds T1/T2 and 110.0 million m3 (92.4%)
+  exceeds T3/T4; no policy claim is made. Every row is `model_estimate`,
+  `observed=false`, `policy_grade=false`, `official_osecan_changed=false`; no UI
+  or official OSeCAN surface is changed. 10 new tests pass; ruff passes; no
+  unexpected `D`.
+
 - **Added the national truck transport cost component v1.** Added
   `transport_cost_v1.py`, its focused arithmetic/unit/range/label tests, and
   `data/derived/national/facilities/transport_cost_v1/`. The component is a
