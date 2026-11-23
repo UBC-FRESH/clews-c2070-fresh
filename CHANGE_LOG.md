@@ -2,6 +2,19 @@
 
 ## 2026-11-23
 
+- **Published national portal v3.2 with Facilities v5.1 transport-aware
+  assignment.** Built `ui_publications/national-portal-v3.2/` from live UI
+  commit `59318fd`: a 92-file, 13,339,368-byte static bundle with the
+  689-record/608-mapped facilities ledger, 100/119/150 Mm3 assignment-v10
+  scenarios (270/296/333 facilities used), transport cost 2.702/3.392/5.018
+  billion CAD/yr and mean distance 255.3/270.3/319.8 km, and the frozen v5.1
+  chain v9 summary at `facilities/2`. The publication guard rejects `/api`;
+  `/api/probe` returns 404. Desktop/mobile Chromium smoke: 0 console, page,
+  failed-request or HTTP>=400 errors, no horizontal overflow at 390 px, and
+  the "not official OSeCAN" badge present. Switched the port-8131 static
+  origin to v3.2 and tagged `ui-national-portal-v3.2`. No official OSeCAN
+  change; no unexpected `D`.
+
 - **Updated the Facilities view to v5.1 transport-aware assignment.** The
   100/119/150 Mm3 facility scenarios and province x class ledger now read the
   assignment-v10 facility utilization/province CSVs instead of chain v6;
