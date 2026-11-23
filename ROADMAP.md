@@ -626,6 +626,22 @@ decide what blocks production readiness after the conceptual alpha.
   note and is **not** a milestone, gate, or dependency. Documentation only; no
   code/model/UI change, no new tag, no public OSeCAN change, and no unexpected
   `D`.
+- [x] P7.22 Implement open-data tree-list imputation for the nine
+  non-measured provinces. Completed: added
+  `workflows/national/bucking/open_data_imputation.py` and
+  `tests/test_open_data_imputation.py`; wrote
+  `data/derived/national/bucking/open_data_imputation_v1/`. The artifact
+  covers 13 provinces: BC/QC/NB/YT remain E1 measured (591 stems), and
+  AB/SK/MB/ON/NS/PE/NL/NT/NU are E2 `open_data_imputation` lists (324 stems)
+  built from SCANFI v2 province composition, deterministic donor DBH/height
+  draws from BC/QC/NB/YT measured stems, and labelled BC Kozak or QC
+  Schneider donor tapers. Imputed rows are `measured=false`, `imputed=true`,
+  `synthetic=false`, with stem-only residue. Tests enforce 13-province
+  coverage, E1/E2 provenance, taper labels, volume/residue balance, no NaN or
+  negative core numeric outputs, and deterministic regeneration. Facility
+  coefficient and RSYC comparisons flag where donor coefficients and E2
+  imputation diverge; no calibration or national claim. No DUA, request,
+  restricted data, UI change, or official OSeCAN change; no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

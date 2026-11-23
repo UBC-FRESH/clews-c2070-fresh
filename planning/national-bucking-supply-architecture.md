@@ -146,3 +146,29 @@ Phase 1 is a validation gate, not a demonstration. VDYP7 checks volume, TIPSY/FA
   `assumption`. Row-level `evidence` is the weakest component.
 - Scope: Phase 0/2 pilot only. No national aggregation, official grade
   assignment, or operational supply claim is made.
+
+## 9. Open-data imputation status (2026-11-23)
+
+- Implemented `workflows/national/bucking/open_data_imputation.py` and
+  `tests/test_open_data_imputation.py`. The artifact is
+  `data/derived/national/bucking/open_data_imputation_v1/`.
+- Coverage: 13 jurisdictions. BC, QC, NB and YT keep the E1 measured tree
+  lists (591 stems). AB, SK, MB, ON, NS, PE, NL, NT and NU get E2
+  `open_data_imputation` lists (324 stems, 36 per province).
+- Method: SCANFI v2 province species composition; deterministic weighted
+  quantile draws from measured BC/QC/NB/YT DBH/height pairs; published BC
+  Kozak (2004) or QC Schneider (2013) tapers used as labelled
+  cross-jurisdiction donors; national dimension-only sorts; the existing
+  bucking/residue engine. Imputed expansion totals 1000 stems/ha, a round
+  representative density, not a calibrated inventory.
+- Labels: E2 rows carry `measured=false`, `imputed=true`, `synthetic=false`,
+  `model_estimate=true`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`. Imputed residue is stem-only; measured residue
+  keeps branch and foliage.
+- Checks: exactly 13 provinces; 4 E1 + 9 E2; taper `local_published` or
+  `donor_published`; per-tree volume/residue balance; no NaN or negative core
+  numeric fields; deterministic regeneration; facility coefficient and RSYC
+  aggregate comparisons written as screening checks only.
+- No DUA, request, restricted data, UI change or official OSeCAN change is
+  required or used. The facility comparison flags where the existing donor
+  coefficients and the E2 imputation diverge; it does not tune them.

@@ -2,6 +2,24 @@
 
 ## 2026-11-23
 
+- **Implemented the nine-province open-data imputation tree list and residue
+  comparison.** Added `workflows/national/bucking/open_data_imputation.py`
+  and `tests/test_open_data_imputation.py`; published
+  `data/derived/national/bucking/open_data_imputation_v1/`. The artifact
+  covers 13 provinces. BC/QC/NB/YT remain E1 measured (591 stems); AB/SK/MB/
+  ON/NS/PE/NL/NT/NU are E2 `open_data_imputation` lists (324 stems, 36 per
+  province) built from SCANFI v2 province species composition, deterministic
+  weighted donor DBH/height draws from the measured BC/QC/NB/YT tree lists,
+  and labelled BC Kozak or QC Schneider donor tapers. Imputed expansion is
+  1000 stems/ha, a round representative density; imputed residue is
+  stem-only. Every imputed row is `measured=false`, `imputed=true`,
+  `synthetic=false`; no national claim, official grade, restricted data,
+  DUA or request dependency. Tests enforce 13-province coverage, E1/E2
+  provenance, local/donor taper labels, per-tree volume/residue balance, no
+  NaN or negative core numeric fields, and deterministic regeneration.
+  Facility coefficient and RSYC comparisons are screening checks and flag
+  donor-vs-imputation divergence without calibration.
+
 - **Corrected the national-chain plan to an open-data completion path.** Replaced
   `docs/data-request-magplot-tier2.md` with an optional, non-blocking note; it
   is not a roadmap milestone, gate, or model dependency. Updated
