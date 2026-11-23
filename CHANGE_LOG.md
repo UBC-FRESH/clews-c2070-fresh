@@ -2,6 +2,25 @@
 
 ## 2026-11-23
 
+- **Integrated E2 imputed coefficients and branch/foliage residue into the
+  13-province facility chain.** Added `e2_biomass_allometry.py` and
+  `rules/e2_biomass_allometry_map.csv`; E2 stems now carry CFS branch and
+  foliage ODT with explicit species/group proxies. Added
+  `product_coefficients.csv` to `open_data_imputation_v1`, the
+  `national_product_chain_v4` E1/E2 coefficient chain, and the downstream
+  `facility_residue_supply_v6`, `national_residue_curve_v6`,
+  `national_facility_chain_scenarios_v6`, `forestry_osecan_handoff_v7` and
+  `forestry_osecan_scenarios_v6` artifacts. E1 measured coefficients cover
+  BC/QC/NB/YT; E2 imputed coefficients cover AB/SK/MB/ON/NS/PE/NL/NT/NU; no
+  donor provincial product coefficient is used. At 119 Mm³ the E1/E2 chain
+  gives process residue 505.333 PJ, gross harvest residue 390.418 PJ,
+  reference-recoverable harvest residue 234.251 PJ and total gross residue
+  895.751 PJ, versus the prior donor-product chain's 514.614 / 313.640 /
+  195.433 / 828.254 PJ. OSeCAN harvest 60% moves from T4 to above_T4; process
+  tiers are unchanged. All rows remain `model_estimate=true`,
+  `observed=false`, `policy_grade=false`, `national_claim=false`. No DUA,
+  restricted data, UI change, or official OSeCAN change; no unexpected `D`.
+
 - **Implemented the nine-province open-data imputation tree list and residue
   comparison.** Added `workflows/national/bucking/open_data_imputation.py`
   and `tests/test_open_data_imputation.py`; published

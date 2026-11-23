@@ -573,6 +573,7 @@ def _parse_product_chain() -> tuple[dict[str, ProvinceChain], dict[str, Any]]:
             "bc_anchor_species_group",
             "donor_coefficient",
             "measured_bucking_pilot",
+            "e2_open_data_imputation",
         }:
             raise FacilityResidueSupplyError(
                 f"{province} unexpected coefficient tier {coefficient_tier!r}"

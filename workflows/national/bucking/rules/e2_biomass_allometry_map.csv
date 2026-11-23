@@ -1,0 +1,9 @@
+species_nfi,common_name,species_group,equation_species,species_specific,proxy,proxy_reason,dbh_min_cm,dbh_max_cm,height_min_m,height_max_m,domain_basis
+ABIE.BAL,balsam fir,conifer,Balsam fir,True,False,,1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+BROADLEAF,broadleaf aggregate,deciduous,Deciduous,False,True,"SCANFI broadleaf aggregate has no single species; published deciduous group equation used",1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+CONIFEROUS,other coniferous aggregate,conifer,Conifers,False,True,"SCANFI other-coniferous aggregate has no single species; published conifer group equation used",1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+LARI.LAR,tamarack larch,conifer,Tamarack larch,True,False,,1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+PICE.MAR,black spruce,conifer,Black spruce,True,False,,1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+PINU.BAN,jack pine,conifer,Jack pine,True,False,,1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+PINU.CON,lodgepole pine,conifer,Lodgepole pine,True,False,,1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"
+PINU.STR,white and red pine aggregate,conifer,Eastern white pine,False,True,"PINU.STR combines white and red pine; eastern white pine equation applied and may not represent red pine",1.3,100.0,1.3,60.0,"E2 application guardrail; donor DBH/height inside the CFS domain"

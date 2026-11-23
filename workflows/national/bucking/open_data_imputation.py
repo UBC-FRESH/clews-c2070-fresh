@@ -42,6 +42,7 @@ import numpy as np
 import pandas as pd
 from nemora.workflows.taper import load_kozak_parameters
 
+from . import e2_biomass_allometry as _e2_allometry
 from .national_bucking_pilot_v1 import (
     DECIDUOUS_CODES,
     NFI_TO_BC,
@@ -529,6 +530,7 @@ def _resolve_taper(
 def _imputed_tree_rows(
     kozak_parameters: Mapping[tuple[str, str], Any],
     qc_registry: SchneiderTaperRegistry,
+    allometry: _e2_allometry.AllometryLookup,
 ) -> tuple[
     list[PilotTree],
     dict[str, PilotTaper],
@@ -597,6 +599,15 @@ def _imputed_tree_rows(
                 )
                 trees.append(tree)
                 tapers[tree_id] = taper
+                components = _e2_allometry.compute_e2_components(
+                    tree_id=tree_id,
+                    species=resolution.donor_species,
+                    species_nfi=species,
+                    species_group=tree.species_group,
+                    dbh_cm=dbh,
+                    height_m=height,
+                    lookup=allometry,
+                )
                 extras[tree_id] = {
                     "species_nfi": species,
                     "donor_species": resolution.donor_species,
@@ -611,6 +622,26 @@ def _imputed_tree_rows(
                     "taper_evidence": taper.evidence,
                     "taper_id": taper.taper_id,
                     "taper_source": taper.source,
+                    "branch_odt": components.branch_odt,
+                    "foliage_odt": components.foliage_odt,
+                    "branch_foliage_odt": components.branch_foliage_odt,
+                    "branch_foliage_estimated": True,
+                    "branch_foliage_evidence": components.evidence,
+                    "branch_foliage_equation_id": components.equation_id,
+                    "branch_foliage_equation_species": components.equation_species,
+                    "branch_foliage_reference": components.reference,
+                    "branch_foliage_species_specific": components.species_specific,
+                    "branch_foliage_proxy": components.proxy,
+                    "branch_foliage_proxy_reason": (
+                        components.branch_equation.proxy_reason
+                    ),
+                    "branch_foliage_source": components.branch_equation.source_dataset,
+                    "branch_foliage_source_licence": (
+                        components.branch_equation.source_licence
+                    ),
+                    "allometry_map_jurisdiction": province,
+                    "allometry_species_nfi": species,
+                    "residue_component_scope": "stem_plus_branch_foliage",
                     "expansion_factor": expansion,
                     "expansion_factor_basis": (
                         f"representative_{REPRESENTATIVE_STEMS_PER_HA:.0f}_stems_per_ha"
@@ -662,6 +693,26 @@ def _imputed_tree_rows(
             ),
             "donor_taper_jurisdictions": ";".join(sorted(donor_jurisdictions)),
             "tree_list_basis": "scanfi_v2_composition_plus_measured_donor_geometry",
+            "allometry_equations": ";".join(
+                sorted(
+                    {
+                        str(extras[tree.tree_id]["branch_foliage_equation_species"])
+                        for tree in trees
+                        if tree.jurisdiction == province
+                    }
+                )
+            ),
+            "n_allometry_proxy_trees": sum(
+                1
+                for tree in trees
+                if tree.jurisdiction == province
+                and extras[tree.tree_id]["branch_foliage_proxy"]
+            ),
+            "branch_foliage_odt": math.fsum(
+                extras[tree.tree_id]["branch_foliage_odt"]
+                for tree in trees
+                if tree.jurisdiction == province
+            ),
         }
     if len(trees) != len(IMPUTED_PROVINCES) * N_TREES_PER_PROVINCE:
         raise ImputationError(
@@ -740,42 +791,60 @@ def _buck_imputed_trees(
                 "taper_total_m3_expanded": residue.taper_total_m3 * expansion,
                 "stem_residue_odt": residue.residue_odt,
                 "stem_residue_odt_expanded": residue.residue_odt * expansion,
-                "branch_odt": 0.0,
-                "foliage_odt": 0.0,
-                "branch_foliage_odt": 0.0,
-                "branch_odt_expanded": 0.0,
-                "foliage_odt_expanded": 0.0,
-                "branch_foliage_odt_expanded": 0.0,
-                "total_residue_odt": residue.residue_odt,
-                "total_residue_odt_expanded": residue.residue_odt * expansion,
+                "branch_odt": extra["branch_odt"],
+                "foliage_odt": extra["foliage_odt"],
+                "branch_foliage_odt": extra["branch_foliage_odt"],
+                "branch_odt_expanded": extra["branch_odt"] * expansion,
+                "foliage_odt_expanded": extra["foliage_odt"] * expansion,
+                "branch_foliage_odt_expanded": (
+                    extra["branch_foliage_odt"] * expansion
+                ),
+                "total_residue_odt": (
+                    residue.residue_odt + extra["branch_foliage_odt"]
+                ),
+                "total_residue_odt_expanded": (
+                    residue.residue_odt + extra["branch_foliage_odt"]
+                )
+                * expansion,
                 "recovery_factor_reference": 0.60,
                 "recovery_scenario_basis": (
-                    "0.35|0.60|0.75 scenarios; stem-only imputed residue; "
-                    "no calibrated factor"
+                    "0.35|0.60|0.75 scenarios; total residue includes "
+                    "CFS branch and foliage allometry; no calibrated factor"
                 ),
-                "branch_foliage_estimated": False,
-                "branch_foliage_evidence": "not_computed",
-                "branch_foliage_equation_id": "not_computed",
-                "branch_foliage_equation_species": "not_computed",
-                "branch_foliage_reference": "not_computed",
-                "branch_foliage_species_specific": False,
-                "branch_foliage_proxy": False,
-                "branch_foliage_proxy_reason": "stem-only imputed residue",
-                "branch_foliage_source": "not_computed",
-                "branch_foliage_source_licence": "not_computed",
-                "allometry_map_jurisdiction": "not_applicable",
+                "branch_foliage_estimated": True,
+                "branch_foliage_evidence": extra["branch_foliage_evidence"],
+                "branch_foliage_equation_id": extra[
+                    "branch_foliage_equation_id"
+                ],
+                "branch_foliage_equation_species": extra[
+                    "branch_foliage_equation_species"
+                ],
+                "branch_foliage_reference": extra["branch_foliage_reference"],
+                "branch_foliage_species_specific": extra[
+                    "branch_foliage_species_specific"
+                ],
+                "branch_foliage_proxy": extra["branch_foliage_proxy"],
+                "branch_foliage_proxy_reason": extra[
+                    "branch_foliage_proxy_reason"
+                ],
+                "branch_foliage_source": extra["branch_foliage_source"],
+                "branch_foliage_source_licence": extra[
+                    "branch_foliage_source_licence"
+                ],
+                "allometry_map_jurisdiction": extra["allometry_map_jurisdiction"],
                 "allometry_species_nfi": extra["species_nfi"],
-                "residue_component_scope": "stem_only",
+                "residue_component_scope": "stem_plus_branch_foliage",
                 "model_estimate": True,
                 "observed": False,
                 "policy_grade": False,
                 "national_claim": False,
             }
         )
+        total_residue_odt = residue.residue_odt + extra["branch_foliage_odt"]
         for factor in (0.35, 0.60, 0.75):
             field = f"recoverable_residue_odt_r{round(factor * 100):03d}"
-            row[field] = residue.residue_odt * factor
-            row[f"{field}_expanded"] = residue.residue_odt * factor * expansion
+            row[field] = total_residue_odt * factor
+            row[f"{field}_expanded"] = total_residue_odt * factor * expansion
         residue_rows.append(row)
     return log_rows, residue_rows
 
@@ -897,11 +966,35 @@ def _province_summary(
         balance = float(
             (province_residue["recovered_log_m3_expanded"] + province_residue["residue_volume_m3_expanded"] - province_residue["taper_total_m3_expanded"]).abs().max()
         )
+        branch_foliage_odt = branch_odt + foliage_odt
+        coefficient_tier = (
+            "measured_bucking_pilot" if measured else "e2_open_data_imputation"
+        )
+        allometry_equations = ";".join(
+            sorted(
+                {
+                    str(value)
+                    for value in province_trees.get(
+                        "branch_foliage_equation_species", pd.Series(dtype=str)
+                    ).dropna()
+                    if str(value) not in {"", "not_computed", "not_applicable"}
+                }
+            )
+        )
+        proxy_trees = int(
+            province_trees.get(
+                "branch_foliage_proxy", pd.Series(False, index=province_trees.index)
+            )
+            .fillna(False)
+            .astype(bool)
+            .sum()
+        )
         rows.append(
             {
                 "province": province,
                 "province_name": PROVINCE_NAMES[province],
                 "provenance_tier": tier,
+                "coefficient_tier": coefficient_tier,
                 "measured": measured,
                 "imputed": imputed,
                 "synthetic": False,
@@ -918,7 +1011,7 @@ def _province_summary(
                 "stem_residue_odt_expanded": stem_odt,
                 "branch_odt_expanded": branch_odt,
                 "foliage_odt_expanded": foliage_odt,
-                "branch_foliage_odt_expanded": branch_odt + foliage_odt,
+                "branch_foliage_odt_expanded": branch_foliage_odt,
                 "total_residue_odt_expanded": total_odt,
                 "sawlog_m3_expanded": product["sawlog"],
                 "pulpwood_m3_expanded": product["pulpwood"],
@@ -929,7 +1022,32 @@ def _province_summary(
                 "solid_share_of_recovered": _safe_div(solid, recovered),
                 "residue_m3_per_recovered_m3": _safe_div(residue_m3, recovered),
                 "residue_odt_per_recovered_m3": _safe_div(stem_odt, recovered),
+                "stem_residue_odt_per_recovered_m3": _safe_div(stem_odt, recovered),
+                "branch_foliage_odt_per_recovered_m3": _safe_div(
+                    branch_foliage_odt, recovered
+                ),
                 "total_residue_odt_per_recovered_m3": _safe_div(total_odt, recovered),
+                "recoverable_odt_per_recovered_m3_r035": _safe_div(
+                    total_odt * 0.35, recovered
+                ),
+                "recoverable_odt_per_recovered_m3_r060": _safe_div(
+                    total_odt * 0.60, recovered
+                ),
+                "recoverable_odt_per_recovered_m3_r075": _safe_div(
+                    total_odt * 0.75, recovered
+                ),
+                "product_coefficient_source": (
+                    "E1_four_province_bucking_pilot_measured"
+                    if measured
+                    else "E2_open_data_imputation"
+                ),
+                "residue_coefficient_source": (
+                    "E1_measured_stem_plus_CFS_branch_foliage"
+                    if measured
+                    else "E2_taper_stem_plus_CFS_branch_foliage"
+                ),
+                "allometry_equation_species": allometry_equations,
+                "n_allometry_proxy_trees": proxy_trees,
                 "local_taper_trees": local_trees,
                 "donor_taper_trees": donor_trees,
                 "local_taper_expansion_share": _safe_div(
@@ -942,9 +1060,7 @@ def _province_summary(
                 ),
                 "volume_balance_m3": balance,
                 "max_tree_balance_error_m3": float(province_residue["balance_error_m3"].max()),
-                "residue_component_scope": (
-                    "stem_plus_branch_foliage" if measured else "stem_only"
-                ),
+                "residue_component_scope": "stem_plus_branch_foliage",
                 "included_in_119m_case": bool(province_trees["included_in_119m_case"].all()),
                 "model_estimate": True,
                 "observed": False,
@@ -954,6 +1070,82 @@ def _province_summary(
         )
     if len(rows) != len(PROVINCES):
         raise ImputationError(f"expected 13 province rows, got {len(rows)}")
+    return rows
+
+
+def _product_coefficients(
+    summary: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build the 13-province E1/E2 product and residue coefficient table."""
+
+    rows: list[dict[str, Any]] = []
+    for province_row in summary:
+        province = str(province_row["province"])
+        recovered = float(province_row["recovered_gross_m3_expanded"])
+        sawlog = float(province_row["sawlog_share_of_recovered"])
+        pulp = float(province_row["pulpwood_share_of_recovered"])
+        other = float(province_row["other_share_of_recovered"])
+        if recovered > 0.0 and abs(sawlog + pulp + other - 1.0) > 1e-9:
+            raise ImputationError(
+                f"{province}: product shares sum to {sawlog + pulp + other}"
+            )
+        stem = float(province_row["stem_residue_odt_per_recovered_m3"])
+        branch = float(province_row["branch_foliage_odt_per_recovered_m3"])
+        total = float(province_row["total_residue_odt_per_recovered_m3"])
+        if abs(total - stem - branch) > 1e-9 * max(1.0, total):
+            raise ImputationError(f"{province}: residue coefficient conservation")
+        for factor in (0.35, 0.60, 0.75):
+            field = f"recoverable_odt_per_recovered_m3_r{round(factor * 100):03d}"
+            if abs(float(province_row[field]) - total * factor) > 1e-9 * max(
+                1.0, total
+            ):
+                raise ImputationError(f"{province}: recovery scenario {factor}")
+        rows.append(
+            {
+                "province": province,
+                "province_name": province_row["province_name"],
+                "provenance_tier": province_row["provenance_tier"],
+                "coefficient_tier": province_row["coefficient_tier"],
+                "n_trees": province_row["n_trees"],
+                "reference_recovered_m3_expanded": recovered,
+                "solid_share": sawlog,
+                "pulp_share": pulp,
+                "other_share": other,
+                "stem_residue_odt_per_m3": stem,
+                "branch_foliage_odt_per_m3": branch,
+                "total_residue_odt_per_m3": total,
+                "stem_residue_m3_per_m3": province_row[
+                    "residue_m3_per_recovered_m3"
+                ],
+                "recoverable_odt_per_m3_r035": float(
+                    province_row["recoverable_odt_per_recovered_m3_r035"]
+                ),
+                "recoverable_odt_per_m3_r060": float(
+                    province_row["recoverable_odt_per_recovered_m3_r060"]
+                ),
+                "recoverable_odt_per_m3_r075": float(
+                    province_row["recoverable_odt_per_recovered_m3_r075"]
+                ),
+                "product_coefficient_source": province_row[
+                    "product_coefficient_source"
+                ],
+                "residue_coefficient_source": province_row[
+                    "residue_coefficient_source"
+                ],
+                "allometry_equation_species": province_row[
+                    "allometry_equation_species"
+                ],
+                "n_allometry_proxy_trees": province_row["n_allometry_proxy_trees"],
+                "local_taper_trees": province_row["local_taper_trees"],
+                "donor_taper_trees": province_row["donor_taper_trees"],
+                "model_estimate": True,
+                "observed": False,
+                "policy_grade": False,
+                "national_claim": False,
+            }
+        )
+    if len(rows) != len(PROVINCES):
+        raise ImputationError(f"expected 13 coefficient rows, got {len(rows)}")
     return rows
 
 
@@ -1045,10 +1237,12 @@ def _facility_comparison(
                 "policy_grade": False,
                 "national_claim": False,
                 "notes": (
-                    "Facility shares are feedstock coefficients; harvest residue "
-                    "and process residue are different streams. E2 provinces use "
-                    "stem-only residue, so the residue comparison is a lower-bound "
-                    "screening check. No calibration or national claim."
+                    "Facility shares are donor feedstock coefficients; E2 "
+                    "shares are the imputed product coefficients. Harvest and "
+                    "process residue are different streams. E2 residue now "
+                    "includes CFS branch and foliage, so the residue comparison "
+                    "is a like-for-like screening check. No calibration or "
+                    "national claim."
                 ),
             }
         )
@@ -1160,6 +1354,9 @@ def _provenance_coverage(
                     "tree_list_basis": "four_province_bucking_pilot_v0_measured",
                     "species_source": "measured FAIB PSP / MAGPlot Tier 1 tree lists",
                     "taper_source": "local BC/QC or donor QC/BC published taper",
+                    "allometry_source": (
+                        "CFS tree-level DBH+height branch/foliage (E1 measured stems)"
+                    ),
                     "included_in_119m_case": province_row["included_in_119m_case"],
                     "notes": "E1 measured donor tree list; no imputation used.",
                 }
@@ -1182,12 +1379,17 @@ def _provenance_coverage(
                 "taper_source": (
                     "donor published tapers: " + audit["donor_taper_jurisdictions"]
                 ),
+                "allometry_source": (
+                    "CFS tree-level DBH+height branch/foliage; "
+                    + audit["allometry_equations"]
+                ),
                 "included_in_119m_case": province != "NU",
                 "notes": (
                     "Open-data imputation from SCANFI composition and measured "
                     "BC/QC/NB/YT donor DBH/height pairs; 1000 stems/ha "
-                    "representative expansion; no DUA, request or restricted data. "
-                    "NU has no modelled harvest in the 119 Mm3 case."
+                    "representative expansion; CFS branch/foliage allometry "
+                    "with documented proxies; no DUA, request or restricted "
+                    "data. NU has no modelled harvest in the 119 Mm3 case."
                 ),
             }
         )
@@ -1201,6 +1403,7 @@ def _summary_payload(
     logs: Sequence[Mapping[str, Any]],
     residues: Sequence[Mapping[str, Any]],
     summary: Sequence[Mapping[str, Any]],
+    coefficients: Sequence[Mapping[str, Any]],
     facility: Sequence[Mapping[str, Any]],
     provenance: Sequence[Mapping[str, Any]],
     rsyc: Sequence[Mapping[str, Any]],
@@ -1250,7 +1453,52 @@ def _summary_payload(
         "volume_balance": all(
             abs(float(row["volume_balance_m3"])) <= 1e-6 for row in summary
         ),
-        "no_national_claim": all(not row["national_claim"] for row in trees),
+        "e2_branch_foliage_estimated": all(
+            row["residue_component_scope"] == "stem_plus_branch_foliage"
+            and float(row["branch_foliage_odt_expanded"]) > 0.0
+            for row in summary
+        ),
+        "coefficient_sources": all(
+            row["coefficient_tier"]
+            == (
+                "measured_bucking_pilot"
+                if row["province"] in MEASURED_PROVINCES
+                else "e2_open_data_imputation"
+            )
+            for row in summary
+        ),
+        "total_residue_conservation": all(
+            abs(
+                float(row["total_residue_odt_expanded"])
+                - float(row["stem_residue_odt_expanded"])
+                - float(row["branch_foliage_odt_expanded"])
+            )
+            <= 1e-6 * max(1.0, float(row["total_residue_odt_expanded"]))
+            for row in summary
+        ),
+        "no_donor_product_coefficients": all(
+            row["product_coefficient_source"]
+            in {
+                "E1_four_province_bucking_pilot_measured",
+                "E2_open_data_imputation",
+            }
+            for row in summary
+        ),
+        "thirteen_coefficient_rows": {
+            row["province"] for row in coefficients
+        }
+        == set(PROVINCES),
+        "coefficient_scenarios": all(
+            abs(
+                float(row["recoverable_odt_per_m3_r060"])
+                - float(row["total_residue_odt_per_m3"]) * 0.60
+            )
+            <= 1e-9 * max(1.0, float(row["total_residue_odt_per_m3"]))
+            for row in coefficients
+        ),
+        "no_national_claim": all(not row["national_claim"] for row in trees)
+        and all(not row["national_claim"] for row in summary)
+        and all(not row["national_claim"] for row in coefficients),
         "no_dua_dependency": True,
     }
     if not all(checks.values()):
@@ -1278,6 +1526,7 @@ def _summary_payload(
         },
         "checks": checks,
         "province_summary": list(summary),
+        "product_coefficients": list(coefficients),
         "facility_comparison": list(facility),
         "provenance_coverage": list(provenance),
         "rsyc_aggregate_check": list(rsyc),
@@ -1285,7 +1534,8 @@ def _summary_payload(
         "notes": [
             "E2 is an open-data evidence upgrade, not E1 measurement.",
             "No restricted, DUA, request-only or official OSeCAN input is used.",
-            "Imputed residue is stem-only; measured residue includes branch/foliage.",
+            "E2 residue includes CFS branch and foliage allometry; measured E1 residue includes measured-tree branch/foliage allometry.",
+            "All 13 product coefficients are E1 measured or E2 imputed; no donor product coefficient is used.",
             "RSYC is an aggregate context check, never a calibration target.",
             "No national supply or official grade claim is made.",
         ],
@@ -1312,17 +1562,45 @@ def _report(payload: Mapping[str, Any]) -> str:
         "Each imputed province has 36 representative stems. Expansion totals "
         "1000 stems/ha, a round representative density, so expanded volume is "
         "a per-hectare quantity without calibration. Product shares and residue "
-        "per recovered m3 are scale-free. Imputed residue is stem-only.",
+        "per recovered m3 are scale-free. E2 residue includes CFS branch and "
+        "foliage allometry; the 13-province coefficient table is E1 measured "
+        "for BC/QC/NB/YT and E2 imputed for the other nine.",
         "",
         "## Coverage",
         "",
-        "| Province | Tier | Trees | Basis | Taper donor |",
-        "|---|---|---:|---|---|",
+        "| Province | Tier | Trees | Basis | Taper donor | Allometry |",
+        "|---|---|---:|---|---|---|",
     ]
     for row in payload["provenance_coverage"]:
         lines.append(
             f"| {row['province']} | {row['provenance_tier']} | {row['n_trees']} | "
-            f"{row['tree_list_basis']} | {row['taper_source']} |"
+            f"{row['tree_list_basis']} | {row['taper_source']} | "
+            f"{row['allometry_source']} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## E1/E2 product coefficients",
+            "",
+            "Solid is the sawlog-grade share, pulp is the pulpwood share, and "
+            "other is other roundwood. Within-class SAW/PANEL and PELLET/BIO "
+            "splits and mill conversion ratios remain documented donor "
+            "assumptions.",
+            "",
+            "| Province | Tier | Solid | Pulp | Other | Stem ODT/m3 | "
+            "Branch+foliage ODT/m3 | Total ODT/m3 | Rec 0.60 ODT/m3 |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for row in payload["product_coefficients"]:
+        lines.append(
+            f"| {row['province']} | {row['coefficient_tier']} | "
+            f"{row['solid_share']:.4f} | {row['pulp_share']:.4f} | "
+            f"{row['other_share']:.4f} | "
+            f"{row['stem_residue_odt_per_m3']:.6f} | "
+            f"{row['branch_foliage_odt_per_m3']:.6f} | "
+            f"{row['total_residue_odt_per_m3']:.6f} | "
+            f"{row['recoverable_odt_per_m3_r060']:.6f} |"
         )
     lines.extend(
         [
@@ -1368,10 +1646,11 @@ def _report(payload: Mapping[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "Facility shares are feedstock coefficients; harvest and process "
-            "residue are different streams. E2 residue is stem-only, so the "
-            "residue comparison is a lower-bound screening check. Divergence is "
-            "reported, not tuned away.",
+            "Facility shares are donor feedstock coefficients; E2 shares are "
+            "the imputed product coefficients. Harvest and process residue are "
+            "different streams. E2 residue now includes CFS branch and foliage, "
+            "so the residue comparison is like-for-like. Divergence is reported, "
+            "not tuned away.",
             "",
             "## Aggregate checks",
             "",
@@ -1404,10 +1683,11 @@ def generate(
     kozak_path = Path(kozak_parameters_path or default_kozak_parameter_path())
     kozak_parameters = load_kozak_parameters(kozak_path)
     qc_registry = load_taper_registry(QC_TAPER_PATH)
+    allometry = _e2_allometry.load_e2_biomass_allometry()
 
     measured_trees, measured_logs, measured_residue = _load_measured_rows()
     imputed_trees, tapers, extras, imputed_audit = _imputed_tree_rows(
-        kozak_parameters, qc_registry
+        kozak_parameters, qc_registry, allometry
     )
     imputed_logs, imputed_residue = _buck_imputed_trees(imputed_trees, tapers, extras)
     imputed_tree_rows = [
@@ -1417,6 +1697,7 @@ def generate(
     log_rows = _combine_rows(measured_logs, imputed_logs)
     residue_rows = _combine_rows(measured_residue, imputed_residue)
     summary_rows = _province_summary(tree_rows, log_rows, residue_rows)
+    coefficient_rows = _product_coefficients(summary_rows)
     facility_rows = _facility_comparison(summary_rows)
     provenance_rows = _provenance_coverage(summary_rows, imputed_audit)
     rsyc_rows = _rsyc_check(summary_rows)
@@ -1427,6 +1708,7 @@ def generate(
         log_rows,
         residue_rows,
         summary_rows,
+        coefficient_rows,
         facility_rows,
         provenance_rows,
         rsyc_rows,
@@ -1438,6 +1720,7 @@ def generate(
     log_columns = sorted({key for row in log_rows for key in row})
     residue_columns = sorted({key for row in residue_rows for key in row})
     summary_columns = list(summary_rows[0])
+    coefficient_columns = list(coefficient_rows[0])
     facility_columns = list(facility_rows[0])
     provenance_columns = list(provenance_rows[0])
     rsyc_columns = list(rsyc_rows[0])
@@ -1446,6 +1729,11 @@ def generate(
     _write_csv(out_dir / "bucked_logs.csv", log_rows, log_columns)
     _write_csv(out_dir / "residue_ledger.csv", residue_rows, residue_columns)
     _write_csv(out_dir / "province_summary.csv", summary_rows, summary_columns)
+    _write_csv(
+        out_dir / "product_coefficients.csv",
+        coefficient_rows,
+        coefficient_columns,
+    )
     _write_csv(out_dir / "facility_coefficient_comparison.csv", facility_rows, facility_columns)
     _write_csv(out_dir / "provenance_coverage.csv", provenance_rows, provenance_columns)
     _write_csv(out_dir / "rsyc_aggregate_check.csv", rsyc_rows, rsyc_columns)
@@ -1466,6 +1754,7 @@ def generate(
             "bucked_logs.csv",
             "residue_ledger.csv",
             "province_summary.csv",
+            "product_coefficients.csv",
             "facility_coefficient_comparison.csv",
             "provenance_coverage.csv",
             "rsyc_aggregate_check.csv",
@@ -1486,6 +1775,8 @@ def generate(
                 MEASURED_LOG_PATH,
                 MEASURED_RESIDUE_PATH,
                 QC_TAPER_PATH,
+                _e2_allometry.E2_MAP_PATH,
+                _e2_allometry.CFS_DBH_HEIGHT_PATH,
                 FACILITY_PATH,
                 RSYC_LIBRARY_PATH,
                 NFI_VOLUME_PATH,

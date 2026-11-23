@@ -643,6 +643,24 @@ decide what blocks production readiness after the conceptual alpha.
   imputation diverge; no calibration or national claim. No DUA, request,
   restricted data, UI change, or official OSeCAN change; no unexpected `D`.
 
+- [x] P7.23 Integrate E2 imputed coefficients and branch/foliage residue into
+  the 13-province facility chain. Completed: added CFS branch/foliage allometry
+  for the 324 E2 stems with explicit species/group proxies, and a 13-province
+  E1/E2 coefficient table; E1 measured covers BC/QC/NB/YT and E2 imputed
+  covers AB/SK/MB/ON/NS/PE/NL/NT/NU with no donor product coefficients.
+  Rebuilt the product chain as `national_product_chain_v4` and propagated it
+  through `facility_residue_supply_v6`, `national_residue_curve_v6`,
+  `national_facility_chain_scenarios_v6`, `forestry_osecan_handoff_v7` and
+  `forestry_osecan_scenarios_v6` for the 100/119/150 Mm³ cases and
+  0.35/0.60/0.75 recovery scenarios. At 119 Mm³ E1/E2 gives process residue
+  505.333 PJ, gross harvest residue 390.418 PJ, reference-recoverable harvest
+  residue 234.251 PJ and total gross residue 895.751 PJ; prior donor-product
+  v5 gives 514.614 / 313.640 / 195.433 / 828.254 PJ. OSeCAN harvest 60% moves
+  from T4 to above_T4; process tiers are unchanged. Labels remain
+  `model_estimate=true`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`; no DUA, restricted data, UI change, official OSeCAN
+  change, or unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
