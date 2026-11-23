@@ -2,6 +2,21 @@
 
 ## 2026-11-23
 
+- **Added the v4 energy decision-impact matrix.** Added
+  `energy_decision_matrix_v1.py`, its focused test, `docs/energy-decision-matrix.md`,
+  and `data/derived/national/facilities/energy_decision_matrix_v1/`. D1
+  reconciles harvest recovery 0.35/0.60/0.75 to 155.544/266.646/333.308 PJ at
+  T4/above_T4/above_T4; D2 reconciles process availability 0/25/50/75% to
+  0.000/124.688/249.375/374.063 PJ at T1/T3/above_T4/above_T4. D3
+  (biomass/waste incineration, Rubino storage-mix context) and D4 (industrial
+  feedstock competition, Pehl context) are qualitative with no invented
+  numbers. Screening defaults are labelled not policy: 0.60 reference-only for
+  D1 and 25% conservative non-zero for D2. Every row carries
+  `model_estimate=true`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`, and `official_osecan_changed=false`; no UI or
+  official OSeCAN change; no policy claim. 8 focused tests pass; ruff passes.
+  No unexpected `D`.
+
 - **Refreshed the national chain Plackett-Burman sensitivity on v4 E1+E2c.**
   Added `national_chain_global_sensitivity_v2.py`,
   `facility_residue_supply_v7_trade.py`, their focused tests, and
