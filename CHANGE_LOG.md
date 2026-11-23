@@ -2,6 +2,21 @@
 
 ## 2026-11-23
 
+- **Audited open provincial forest inventories for the nine E2 provinces.**
+  Added `workflows/national/inventory/provincial_open_inventory_audit.py`,
+  `tests/test_provincial_open_inventory_audit.py`, and
+  `data/derived/national/inventory/provincial_open_inventory_audit_v1/`.
+  The audit covers AB, SK, MB, ON, NS, PE, NL, NT and NU with exact source
+  URLs, licences, access modes, coverage, format, vintage, spatial level,
+  field coverage and gaps. Verified samples: AB AVI Crown (402), SK FRI (500),
+  MB 1970s FRI (316), NS Forest Inventory (299), PE CLUI 2010 (500), PE EFI2020
+  (500), NL Land Cover (200), ON FRI catalogue (50, metadata only) and NT
+  Wooded Areas (100, broad class only). Sample and full-download SHA-256
+  provenance is recorded. ON stand attributes require a LIDS account/order, NT
+  has no open territory-wide stand inventory, and NU has no territorial
+  inventory; these are labelled gaps, not inferred attributes. No full layer
+  was ingested, no request/DUA/restricted data was used, and no synthetic or
+  model attribute is claimed. No unexpected `D`.
 - **Published national facility chain v3.1 and corrected the v3 publication
   ordering.** Confirmed `national-facility-chain-v3` remains at model commit
   `029eef1` and that its documentation commit `e279371` is after it. Added

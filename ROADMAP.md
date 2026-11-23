@@ -707,6 +707,26 @@ decide what blocks production readiness after the conceptual alpha.
   commit, recording model parent `029eef1` and data commit `d77472c`; v3 was
   not moved. Documentation and tag only; no code/model/UI change, no official
   OSeCAN change, and no unexpected `D`.
+- [x] P7.26 Audit open provincial forest inventories for the nine E2
+  provinces. Completed: added
+  `workflows/national/inventory/provincial_open_inventory_audit.py` and
+  `tests/test_provincial_open_inventory_audit.py`, and wrote
+  `data/derived/national/inventory/provincial_open_inventory_audit_v1/` for
+  AB/SK/MB/ON/NS/PE/NL/NT/NU. The source table records 10 sources (PE has two
+  complementary products) with exact URLs, licences, access modes, coverage,
+  format, year and stand-vs-cell level, plus field coverage and gaps. Small
+  verified samples cover AB AVI Crown (402 polygons; species/height/age, no
+  volume), SK FRI Forest Stands (500; height/volume, no explicit species/age),
+  MB 1970s FRI (316; species/age, no height/volume), NS Forest Inventory (299;
+  species/height/volume, no age), PE CLUI 2010 (500; species/height, no
+  volume/age) with PE EFI2020 (500; height/volume, no species/age), and NL Land
+  Cover (200; broad class only). ON FRI stand attributes require a LIDS
+  account/order, NT exposes only community wooded-area classes, and NU has no
+  territorial inventory; those are recorded as access/coverage gaps and were
+  not sampled as stand attributes. Sample and full-artifact SHA-256 provenance
+  is in `manifest.csv`; no full layer was ingested, no request/DUA/restricted
+  data was used, and no synthetic or model attribute is claimed. No unexpected
+  `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 
