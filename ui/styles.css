@@ -1551,8 +1551,144 @@ svg { display: block; }
   .facility-map-stage { min-height: 420px; }
   .facility-map-counter { top: 8px; left: 8px; right: 48px; font-size: 0.52rem; }
   .facility-legend { top: 42px; left: 8px; width: 172px; }
-  .facilities-table { min-width: 780px; }
+  /* Mobile stacked facility ledger: no horizontal table scroll. */
+  .table-wrap.facilities-table-wrap {
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  .table-wrap table.facilities-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
   .facilities-table caption { display: none; }
+  .facilities-table thead { display: none; }
+  .facilities-table tbody { display: grid; gap: 9px; }
+  .facilities-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "province class"
+      "records assigned"
+      "utilization utilization"
+      "published proxy"
+      "evidence evidence";
+    gap: 0 12px;
+    padding: 11px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-card);
+  }
+  .facilities-table tbody tr:nth-child(even) { background: var(--card); }
+  .facilities-table tbody td,
+  .facilities-table tbody td.num {
+    display: block;
+    padding: 4px 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+  .facilities-table tbody td[data-label]::before,
+  .facilities-table tfoot td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    font-weight: 400;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+  }
+  .facilities-table tbody td.facility-province-cell,
+  .facilities-table tbody td.facility-class-cell {
+    padding: 0 0 7px;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .facilities-table tbody td.facility-province-cell::before,
+  .facilities-table tbody td.facility-class-cell::before { display: none; }
+  .facilities-table tbody td.facility-province-cell { grid-area: province; }
+  .facilities-table tbody td.facility-class-cell { grid-area: class; }
+  .facilities-table tbody td.facility-records-cell { grid-area: records; }
+  .facilities-table tbody td.facility-published-cell { grid-area: published; }
+  .facilities-table tbody td.facility-proxy-cell { grid-area: proxy; }
+  .facilities-table tbody td.facility-assigned-cell { grid-area: assigned; font-size: 0.8rem; font-weight: 500; }
+  .facilities-table tbody td.facility-utilization-cell {
+    grid-area: utilization;
+    padding-top: 7px;
+    margin-top: 3px;
+    border-top: 1px solid var(--line);
+    font-size: 0.8rem;
+  }
+  .facilities-table tbody td.facility-evidence-cell {
+    grid-area: evidence;
+    padding-top: 7px;
+    margin-top: 3px;
+    border-top: 1px solid var(--line);
+  }
+  .facilities-table tbody td.facility-evidence-cell .evidence-pill { font-size: 0.54rem; }
+  .facilities-table tbody td.facility-evidence-cell .facility-subnote { font-size: 0.53rem; }
+  .facilities-table tbody td.facility-empty { grid-column: 1 / -1; padding: 12px 0; text-align: center; }
+  .facilities-table tfoot { display: block; margin-top: 9px; }
+  .facilities-table tfoot tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "total total"
+      "records assigned"
+      "utilization utilization"
+      "published proxy"
+      "evidence evidence";
+    gap: 0 12px;
+    padding: 11px 12px;
+    background: var(--paper-deep);
+    border: 1px solid var(--line-strong);
+  }
+  .facilities-table tfoot th {
+    grid-area: total;
+    display: block;
+    padding: 0 0 7px;
+    margin-bottom: 3px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    font-size: 0.6rem;
+    text-align: left;
+  }
+  .facilities-table tfoot td,
+  .facilities-table tfoot td.num {
+    display: block;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    white-space: normal;
+    font-family: var(--body);
+    font-size: 0.72rem;
+  }
+  .facilities-table tfoot td.facility-records-cell { grid-area: records; }
+  .facilities-table tfoot td.facility-published-cell { grid-area: published; }
+  .facilities-table tfoot td.facility-proxy-cell { grid-area: proxy; }
+  .facilities-table tfoot td.facility-assigned-cell { grid-area: assigned; font-weight: 500; }
+  .facilities-table tfoot td.facility-utilization-cell {
+    grid-area: utilization;
+    padding-top: 7px;
+    margin-top: 3px;
+    border-top: 1px solid var(--line);
+  }
+  .facilities-table tfoot td.facility-evidence-cell {
+    grid-area: evidence;
+    padding-top: 7px;
+    margin-top: 3px;
+    border-top: 1px solid var(--line);
+  }
   .facility-side { display: block; }
   .facility-side h3, .facility-side .mini-stats, .facility-side .facility-unlocated-note,
   .facility-side .facility-legend-caveat, .facility-side .method-note { grid-column: auto; }

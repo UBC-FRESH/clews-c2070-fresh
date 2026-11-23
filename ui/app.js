@@ -7915,14 +7915,10 @@
     var totalProxyRecords = rows.reduce(function (sum, row) { return sum + row.proxy_count; }, 0);
     var totalNoneRecords = rows.reduce(function (sum, row) { return sum + row.not_published_count; }, 0);
     var utilization = totalEligibleCapacity > 0 ? totalAssigned / totalEligibleCapacity : null;
-    var tableHint = window.matchMedia(MOBILE_RAIL_QUERY).matches
-      ? ' Swipe the table sideways for assigned, utilization and evidence.'
-      : '';
     $('facility-table-status').textContent =
       'Showing ' + rows.length + ' province × class rows · ' + fmt(totalRecords, 0) + ' records · ' +
       esc(scenario ? scenario.id : '—') + ' assignment · province ' +
-      (province === 'all' ? 'all' : province) + ' · class ' + (facilityClass === 'all' ? 'all' : facilityClass) + '.' +
-      tableHint;
+      (province === 'all' ? 'all' : province) + ' · class ' + (facilityClass === 'all' ? 'all' : facilityClass) + '.';
 
     var bodyRows = rows.map(function (row) {
       var color = facilityClassColor(row.facility_class);
@@ -7930,18 +7926,24 @@
         ? '<small class="facility-subnote">cross-border ' + fmt(row.cross_border_m3_y / 1e6, 3) + '</small>'
         : '<small class="facility-subnote">local-first</small>';
       return '<tr data-province="' + esc(row.province) + '" data-class="' + esc(row.facility_class) + '">' +
-        '<td>' + esc(row.province_label) + ' <span class="mono muted">' + esc(row.province) + '</span></td>' +
-        '<td><span class="facility-class-dot" style="background:' + esc(color) + '"></span>' + esc(row.class_label) +
-          ' <span class="mono muted">' + esc(row.facility_class) + '</span></td>' +
-        '<td class="num">' + fmt(row.record_count, 0) + '</td>' +
-        '<td class="num">' + fmt(row.published_capacity_m3_y / 1e6, 3) + '</td>' +
-        '<td class="num">' + fmt(row.proxy_capacity_m3_y / 1e6, 3) + '</td>' +
-        '<td class="num">' + fmt(row.assigned_m3_y / 1e6, 3) + crossBorder + '</td>' +
-        '<td class="num">' + (row.utilization === null ? '—' : fmtPct(row.utilization, 1)) + '</td>' +
-        '<td><span class="evidence-pill evidence-pill--pub" title="Published capacity records">PUB ' + fmt(row.published_count, 0) + '</span>' +
-        '<span class="evidence-pill evidence-pill--proxy" title="Class-median proxy capacity records">PRX ' + fmt(row.proxy_count, 0) + '</span>' +
-        '<span class="evidence-pill evidence-pill--none" title="No accepted capacity evidence">N/A ' + fmt(row.not_published_count, 0) + '</span>' +
-        '<small class="facility-subnote">model_estimate</small></td>' +
+        '<td class="facility-province-cell" data-label="Province">' + esc(row.province_label) +
+          ' <span class="mono muted">' + esc(row.province) + '</span></td>' +
+        '<td class="facility-class-cell" data-label="Class"><span class="facility-class-dot" style="background:' + esc(color) + '"></span>' +
+          esc(row.class_label) + ' <span class="mono muted">' + esc(row.facility_class) + '</span></td>' +
+        '<td class="num facility-records-cell" data-label="Records">' + fmt(row.record_count, 0) + '</td>' +
+        '<td class="num facility-published-cell" data-label="Published capacity · Mm³/yr">' +
+          fmt(row.published_capacity_m3_y / 1e6, 3) + '</td>' +
+        '<td class="num facility-proxy-cell" data-label="Proxy capacity · Mm³/yr">' +
+          fmt(row.proxy_capacity_m3_y / 1e6, 3) + '</td>' +
+        '<td class="num facility-assigned-cell" data-label="Assigned · Mm³/yr">' +
+          fmt(row.assigned_m3_y / 1e6, 3) + crossBorder + '</td>' +
+        '<td class="num facility-utilization-cell" data-label="Utilization">' +
+          (row.utilization === null ? '—' : fmtPct(row.utilization, 1)) + '</td>' +
+        '<td class="facility-evidence-cell" data-label="Evidence">' +
+          '<span class="evidence-pill evidence-pill--pub" title="Published capacity records">PUB ' + fmt(row.published_count, 0) + '</span>' +
+          '<span class="evidence-pill evidence-pill--proxy" title="Class-median proxy capacity records">PRX ' + fmt(row.proxy_count, 0) + '</span>' +
+          '<span class="evidence-pill evidence-pill--none" title="No accepted capacity evidence">N/A ' + fmt(row.not_published_count, 0) + '</span>' +
+          '<small class="facility-subnote">model_estimate</small></td>' +
         '</tr>';
     }).join('');
     if (!rows.length) {
@@ -7954,12 +7956,12 @@
       '<th class="num">Assigned<br>Mm³/yr</th><th class="num">Utilization</th><th>Evidence</th></tr></thead>' +
       '<tbody>' + bodyRows + '</tbody>' +
       '<tfoot><tr><th colspan="2">Visible total</th>' +
-      '<td class="num">' + fmt(totalRecords, 0) + '</td>' +
-      '<td class="num">' + fmt(totalPublished / 1e6, 3) + '</td>' +
-      '<td class="num">' + fmt(totalProxy / 1e6, 3) + '</td>' +
-      '<td class="num">' + fmt(totalAssigned / 1e6, 3) + '</td>' +
-      '<td class="num">' + (utilization === null ? '—' : fmtPct(utilization, 1)) + '</td>' +
-      '<td><span class="evidence-pill evidence-pill--pub">PUB ' + fmt(totalPublishedRecords, 0) + '</span>' +
+      '<td class="num facility-records-cell" data-label="Records">' + fmt(totalRecords, 0) + '</td>' +
+      '<td class="num facility-published-cell" data-label="Published capacity · Mm³/yr">' + fmt(totalPublished / 1e6, 3) + '</td>' +
+      '<td class="num facility-proxy-cell" data-label="Proxy capacity · Mm³/yr">' + fmt(totalProxy / 1e6, 3) + '</td>' +
+      '<td class="num facility-assigned-cell" data-label="Assigned · Mm³/yr">' + fmt(totalAssigned / 1e6, 3) + '</td>' +
+      '<td class="num facility-utilization-cell" data-label="Utilization">' + (utilization === null ? '—' : fmtPct(utilization, 1)) + '</td>' +
+      '<td class="facility-evidence-cell" data-label="Evidence"><span class="evidence-pill evidence-pill--pub">PUB ' + fmt(totalPublishedRecords, 0) + '</span>' +
       '<span class="evidence-pill evidence-pill--proxy">PRX ' + fmt(totalProxyRecords, 0) + '</span>' +
       '<span class="evidence-pill evidence-pill--none">N/A ' + fmt(totalNoneRecords, 0) + '</span></td>' +
       '</tr></tfoot>';

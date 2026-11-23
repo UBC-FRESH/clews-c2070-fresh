@@ -23,6 +23,7 @@ ASSIGNMENT = ROOT / "data/derived/national/facilities/national_facility_assignme
 CHAIN = ROOT / "data/derived/national/facilities/national_facility_chain_scenarios_v6"
 APP_JS = ROOT / "ui/app.js"
 INDEX_HTML = ROOT / "ui/index.html"
+STYLES_CSS = ROOT / "ui/styles.css"
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -234,3 +235,25 @@ def test_facilities_ui_is_single_purpose_and_read_only(payload: dict) -> None:
     assert ".solve" not in facility_code
     assert "runId" not in facility_code
     assert payload["caveats"]["no_ranking"].startswith("This ledger")
+
+
+def test_mobile_facility_table_stacks_without_horizontal_scroll() -> None:
+    app = APP_JS.read_text(encoding="utf-8")
+    for label in ("Province", "Class", "Records", "Published capacity", "Proxy capacity", "Assigned", "Utilization", "Evidence"):
+        assert f'data-label="{label}' in app
+    assert "Swipe the table sideways" not in app
+    css = STYLES_CSS.read_text(encoding="utf-8")
+    marker = "/* Mobile stacked facility ledger: no horizontal table scroll. */"
+    assert marker in css
+    block = css[css.index(marker) : css.index("@media (max-width: 440px)", css.index(marker))]
+    assert ".table-wrap.facilities-table-wrap" in block
+    assert "overflow: visible" in block
+    assert ".facilities-table thead { display: none; }" in block
+    assert "grid-template-areas:" in block
+    assert '"province class"' in block
+    assert '"records assigned"' in block
+    assert '"utilization utilization"' in block
+    assert '"published proxy"' in block
+    assert '"evidence evidence"' in block
+    assert "min-width: 0" in block
+    assert "min-width: 780px" not in block
