@@ -1408,6 +1408,16 @@ def _scenario_totals(
         for row in gap_rows
         if row["scenario"] == scenario
     )
+    access_gap_150 = math.fsum(
+        float(row["local_access_gap_within_150_m3_y"])
+        for row in gap_rows
+        if row["scenario"] == scenario
+    )
+    access_gap_300 = math.fsum(
+        float(row["local_access_gap_within_300_m3_y"])
+        for row in gap_rows
+        if row["scenario"] == scenario
+    )
     avoidable_distance = math.fsum(
         float(row["avoidable_distance_gt150_m3_km"])
         for row in gap_rows
@@ -1461,8 +1471,8 @@ def _scenario_totals(
         "eligible_local_capacity_m3_y": local_capacity,
         "eligible_local_capacity_within_150_m3_y": capacity_150,
         "eligible_local_capacity_within_300_m3_y": capacity_300,
-        "local_access_gap_within_150_m3_y": max(0.0, assigned - capacity_150),
-        "local_access_gap_within_300_m3_y": max(0.0, assigned - capacity_300),
+        "local_access_gap_within_150_m3_y": access_gap_150,
+        "local_access_gap_within_300_m3_y": access_gap_300,
         "mean_road_distance_km": (
             volume_distance / assigned if assigned > 0.0 else 0.0
         ),
