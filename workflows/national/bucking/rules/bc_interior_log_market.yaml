@@ -1,0 +1,61 @@
+# BC interior dimension sorts with a published BC log-market product surface.
+#
+# Geometry source: TIPSY 4.5, Log Grades, industrial, interior (public CHM page
+# `TIPSY_no_econ/Log_Grades_industrial_interior.htm`), extracted table
+# `tipsy45_industrial_sorts.csv`.  The geometry is identical to
+# `bc_interior.yaml`; only the product/price_key assignment changes for the
+# market-surface scenario.
+#
+# Product mapping source: BC Interior Log Market Report species x end-use
+# averages in `data/derived/national/harvest_basis/bc_log_market/`.  TIPSY
+# sort groups map to published end uses as follows:
+#
+#   Sawlog/Peeler, Large Gang, Small Gang, Chip'n'saw -> sawlog
+#   Pulp                                                -> pulpwood
+#   Deciduous Sawlog/Peeler                             -> sawlog
+#   Deciduous Pulp                                      -> pulpwood
+#
+# Peeler prices are not assigned: peeler quality is not represented by the
+# dimension bucker.  Coast grade letters are not mapped: no coast-grade to
+# TIPSY-sort crosswalk is documented.  Missing species x product cells are
+# gaps, not substituted values.
+#
+# These are dimension-based sorts, NOT official BC log grades.  Defect, sweep,
+# knot, rot, and product-quality rules are not represented.
+#
+# `max_length_m` and `trim_m` remain contract bounds: the reference bucker
+# selects by minimum length and does not apply a trim allowance.  No log may
+# exceed max_length_m.
+jurisdiction: BC
+authority: "TIPSY 4.5 industrial interior dimensions + BC log-market product mapping"
+version: "2026-11-23-bc-log-market-surface-v1"
+basis: dimension_only
+grade_status: not_assigned
+note: >
+  Sawlog/Peeler, Large Gang, Small Gang, Chip'n'saw, Pulp, and deciduous
+  sorts.  Conifer rules apply to the SPF, Df-Larch, Hem-Bal, Cedar, White
+  Pine, and Yellow Pine market groups.  Deciduous rules apply to the Deciduous
+  market group.  Deciduous sort minima are not published; the documented
+  2.5 m TIPSY base log length is used as the geometry floor.
+
+sorts:
+  - {species_class: conifer, sort_code: D38L13, product: sawlog, min_top_cm: 38.0, min_length_m: 13.0, max_length_m: 13.0, trim_m: 0.0, priority: 1, price_key: sawlog, tipsy_group: "Sawlog/Peeler"}
+  - {species_class: conifer, sort_code: D38L11, product: sawlog, min_top_cm: 38.0, min_length_m: 11.0, max_length_m: 13.0, trim_m: 0.0, priority: 2, price_key: sawlog, tipsy_group: "Sawlog/Peeler"}
+  - {species_class: conifer, sort_code: D38L8,  product: sawlog, min_top_cm: 38.0, min_length_m: 8.0,  max_length_m: 13.0, trim_m: 0.0, priority: 3, price_key: sawlog, tipsy_group: "Sawlog/Peeler"}
+  - {species_class: conifer, sort_code: D30L13, product: sawlog, min_top_cm: 30.0, min_length_m: 13.0, max_length_m: 13.0, trim_m: 0.0, priority: 4, price_key: sawlog, tipsy_group: "Large Gang"}
+  - {species_class: conifer, sort_code: D30L11, product: sawlog, min_top_cm: 30.0, min_length_m: 11.0, max_length_m: 13.0, trim_m: 0.0, priority: 5, price_key: sawlog, tipsy_group: "Large Gang"}
+  - {species_class: conifer, sort_code: D30L8,  product: sawlog, min_top_cm: 30.0, min_length_m: 8.0,  max_length_m: 13.0, trim_m: 0.0, priority: 6, price_key: sawlog, tipsy_group: "Large Gang"}
+  - {species_class: conifer, sort_code: D20L13, product: sawlog, min_top_cm: 20.0, min_length_m: 13.0, max_length_m: 13.0, trim_m: 0.0, priority: 7, price_key: sawlog, tipsy_group: "Small Gang"}
+  - {species_class: conifer, sort_code: D20L11, product: sawlog, min_top_cm: 20.0, min_length_m: 11.0, max_length_m: 13.0, trim_m: 0.0, priority: 8, price_key: sawlog, tipsy_group: "Small Gang"}
+  - {species_class: conifer, sort_code: D20L8,  product: sawlog, min_top_cm: 20.0, min_length_m: 8.0,  max_length_m: 13.0, trim_m: 0.0, priority: 9, price_key: sawlog, tipsy_group: "Small Gang"}
+  - {species_class: conifer, sort_code: D125L13, product: sawlog, min_top_cm: 12.5, min_length_m: 13.0, max_length_m: 13.0, trim_m: 0.0, priority: 10, price_key: sawlog, tipsy_group: "Chip'n'saw"}
+  - {species_class: conifer, sort_code: D125L11, product: sawlog, min_top_cm: 12.5, min_length_m: 11.0, max_length_m: 13.0, trim_m: 0.0, priority: 11, price_key: sawlog, tipsy_group: "Chip'n'saw"}
+  - {species_class: conifer, sort_code: D125L8,  product: sawlog, min_top_cm: 12.5, min_length_m: 8.0,  max_length_m: 13.0, trim_m: 0.0, priority: 12, price_key: sawlog, tipsy_group: "Chip'n'saw"}
+  - {species_class: conifer, sort_code: D125L63, product: sawlog, min_top_cm: 12.5, min_length_m: 6.3,  max_length_m: 13.0, trim_m: 0.0, priority: 13, price_key: sawlog, tipsy_group: "Chip'n'saw"}
+  - {species_class: conifer, sort_code: D125L51, product: pulpwood, min_top_cm: 12.5, min_length_m: 5.1, max_length_m: 13.0, trim_m: 0.0, priority: 14, price_key: pulpwood, tipsy_group: "Pulp"}
+  - {species_class: conifer, sort_code: D125L50, product: pulpwood, min_top_cm: 12.5, min_length_m: 5.0, max_length_m: 13.0, trim_m: 0.0, priority: 15, price_key: pulpwood, tipsy_group: "Pulp"}
+  - {species_class: deciduous, sort_code: D305, product: sawlog, min_top_cm: 30.5, min_length_m: 2.5, max_length_m: 13.0, trim_m: 0.0, priority: 16, price_key: sawlog, tipsy_group: "Deciduous Sawlog/Peeler"}
+  - {species_class: deciduous, sort_code: D254, product: sawlog, min_top_cm: 25.4, min_length_m: 2.5, max_length_m: 13.0, trim_m: 0.0, priority: 17, price_key: sawlog, tipsy_group: "Deciduous Sawlog/Peeler"}
+  - {species_class: deciduous, sort_code: D203, product: pulpwood, min_top_cm: 20.3, min_length_m: 2.5, max_length_m: 13.0, trim_m: 0.0, priority: 18, price_key: pulpwood, tipsy_group: "Deciduous Pulp"}
+  - {species_class: deciduous, sort_code: D178, product: pulpwood, min_top_cm: 17.8, min_length_m: 2.5, max_length_m: 13.0, trim_m: 0.0, priority: 19, price_key: pulpwood, tipsy_group: "Deciduous Pulp"}
+  - {species_class: deciduous, sort_code: D152, product: pulpwood, min_top_cm: 15.2, min_length_m: 2.5, max_length_m: 13.0, trim_m: 0.0, priority: 20, price_key: pulpwood, tipsy_group: "Deciduous Pulp"}

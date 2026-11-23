@@ -128,38 +128,44 @@ def _aggregate_sorts(run: Mapping[str, Any]) -> pd.DataFrame:
     )
 
 
-def build_comparison(
+METRIC_KEYS = [
+    "pooled_tvd",
+    "pooled_overlap",
+    "mean_plot_tvd",
+    "median_plot_tvd",
+    "volume_weighted_tvd",
+    "diameter_marginal_tvd",
+    "length_marginal_tvd",
+    "bias_sum_m3ha",
+    "relative_bias",
+    "ratio_predicted_observed",
+    "mae_m3ha",
+    "rmse_m3ha",
+]
+
+
+def _gap_closes(before: Mapping[str, Any], after: Mapping[str, Any]) -> bool:
+    pooled_delta = _delta(after.get("pooled_tvd"), before.get("pooled_tvd"))
+    mean_plot_delta = _delta(after.get("mean_plot_tvd"), before.get("mean_plot_tvd"))
+    return bool(
+        pooled_delta is not None
+        and mean_plot_delta is not None
+        and pooled_delta < 0
+        and mean_plot_delta < 0
+    )
+
+
+def _merge_sort_shares(
     default_run: Mapping[str, Any],
     tipsy45_run: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Build the pre-declared default-vs-tipsy45 comparison surface."""
-    before = _scope_metrics(default_run)
-    after = _scope_metrics(tipsy45_run)
-    keys = [
-        "pooled_tvd",
-        "pooled_overlap",
-        "mean_plot_tvd",
-        "median_plot_tvd",
-        "volume_weighted_tvd",
-        "diameter_marginal_tvd",
-        "length_marginal_tvd",
-        "bias_sum_m3ha",
-        "relative_bias",
-        "ratio_predicted_observed",
-        "mae_m3ha",
-        "rmse_m3ha",
-    ]
-    metrics = {
-        "default": {"label": default_run["label"], **before},
-        "tipsy45": {"label": tipsy45_run["label"], **after},
-        "delta": {
-            key: _delta(after.get(key), before.get(key)) for key in keys
-        },
-    }
-
-    default_sorts = _aggregate_sorts(default_run)
-    tipsy_sorts = _aggregate_sorts(tipsy45_run)
-    merged = default_sorts.merge(tipsy_sorts, on="code", how="outer").fillna(0.0)
+    market_run: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    merged = _aggregate_sorts(default_run).merge(
+        _aggregate_sorts(tipsy45_run), on="code", how="outer"
+    )
+    if market_run is not None:
+        merged = merged.merge(_aggregate_sorts(market_run), on="code", how="outer")
+    merged = merged.fillna(0.0)
     merged["default_difference"] = (
         merged["default_pilot_share"] - merged["default_tipsy_share"]
     )
@@ -171,13 +177,35 @@ def build_comparison(
     merged["abs_difference_change"] = (
         merged["abs_tipsy45_difference"] - merged["abs_default_difference"]
     )
-    merged = merged.sort_values("abs_tipsy45_difference", ascending=False)
-    sort_rows = merged.to_dict(orient="records")
+    if market_run is not None:
+        merged["market_surface_difference"] = (
+            merged["market_surface_pilot_share"] - merged["market_surface_tipsy_share"]
+        )
+        merged["abs_market_surface_difference"] = merged[
+            "market_surface_difference"
+        ].abs()
+        merged["abs_market_vs_default_change"] = (
+            merged["abs_market_surface_difference"] - merged["abs_default_difference"]
+        )
+        merged["abs_market_vs_tipsy45_change"] = (
+            merged["abs_market_surface_difference"] - merged["abs_tipsy45_difference"]
+        )
+        merged = merged.sort_values("abs_market_surface_difference", ascending=False)
+    else:
+        merged = merged.sort_values("abs_tipsy45_difference", ascending=False)
+    return merged.to_dict(orient="records")
 
+
+def _merge_au(
+    default_run: Mapping[str, Any],
+    tipsy45_run: Mapping[str, Any],
+    market_run: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
     default_au = pd.read_csv(Path(default_run["run_dir"]) / "au_sort_summary.csv")
     tipsy_au = pd.read_csv(Path(tipsy45_run["run_dir"]) / "au_sort_summary.csv")
-    au = default_au[["au_id", "n_plots", "pooled_tvd", "mean_plot_tvd"]].merge(
-        tipsy_au[["au_id", "pooled_tvd", "mean_plot_tvd"]],
+    columns = ["au_id", "pooled_tvd", "mean_plot_tvd"]
+    au = default_au[columns].merge(
+        tipsy_au[columns],
         on="au_id",
         how="outer",
         suffixes=("_default", "_tipsy45"),
@@ -186,31 +214,95 @@ def build_comparison(
     au["mean_plot_tvd_delta"] = (
         au["mean_plot_tvd_tipsy45"] - au["mean_plot_tvd_default"]
     )
+    if market_run is not None:
+        market_au = pd.read_csv(Path(market_run["run_dir"]) / "au_sort_summary.csv")
+        market_au = market_au[columns].rename(
+            columns={
+                "pooled_tvd": "pooled_tvd_market_surface",
+                "mean_plot_tvd": "mean_plot_tvd_market_surface",
+            }
+        )
+        au = au.merge(market_au, on="au_id", how="outer")
+        au["pooled_tvd_delta_vs_default"] = (
+            au["pooled_tvd_market_surface"] - au["pooled_tvd_default"]
+        )
+        au["mean_plot_tvd_delta_vs_default"] = (
+            au["mean_plot_tvd_market_surface"] - au["mean_plot_tvd_default"]
+        )
+        au["pooled_tvd_delta_vs_tipsy45"] = (
+            au["pooled_tvd_market_surface"] - au["pooled_tvd_tipsy45"]
+        )
+        au["mean_plot_tvd_delta_vs_tipsy45"] = (
+            au["mean_plot_tvd_market_surface"] - au["mean_plot_tvd_tipsy45"]
+        )
+    n_plots = default_au.set_index("au_id")["n_plots"]
+    au["n_plots"] = au["au_id"].map(n_plots).fillna(0).astype(int)
     au = au.sort_values("n_plots", ascending=False)
+    return au.to_dict(orient="records")
 
-    pooled_delta = metrics["delta"]["pooled_tvd"]
-    mean_plot_delta = metrics["delta"]["mean_plot_tvd"]
-    gap_closes = bool(
-        pooled_delta is not None
-        and mean_plot_delta is not None
-        and pooled_delta < 0
-        and mean_plot_delta < 0
-    )
+
+def build_comparison(
+    default_run: Mapping[str, Any],
+    tipsy45_run: Mapping[str, Any],
+    market_run: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the pre-declared profile comparison surface."""
+    before = _scope_metrics(default_run)
+    after = _scope_metrics(tipsy45_run)
+    metrics = {
+        "default": {"label": default_run["label"], **before},
+        "tipsy45": {"label": tipsy45_run["label"], **after},
+        "delta": {
+            key: _delta(after.get(key), before.get(key)) for key in METRIC_KEYS
+        },
+    }
+    compared_profiles = [default_run["label"], tipsy45_run["label"]]
+    if market_run is not None:
+        market = _scope_metrics(market_run)
+        metrics["market_surface"] = {"label": market_run["label"], **market}
+        metrics["delta_market_vs_default"] = {
+            key: _delta(market.get(key), before.get(key)) for key in METRIC_KEYS
+        }
+        metrics["delta_market_vs_tipsy45"] = {
+            key: _delta(market.get(key), after.get(key)) for key in METRIC_KEYS
+        }
+        compared_profiles.append(market_run["label"])
+
+    gap_closes = _gap_closes(before, after)
+    if market_run is None:
+        verdict = (
+            "gap_closes_on_both_pooled_and_mean_plot_tvd"
+            if gap_closes
+            else "gap_does_not_close_on_both_pooled_and_mean_plot_tvd"
+        )
+        market_gap = None
+    else:
+        market = metrics["market_surface"]
+        market_gap_vs_default = _gap_closes(before, market)
+        market_gap_vs_tipsy45 = _gap_closes(after, market)
+        market_gap = {
+            "vs_default": market_gap_vs_default,
+            "vs_tipsy45": market_gap_vs_tipsy45,
+        }
+        if market_gap_vs_default:
+            verdict = "market_surface_closes_gap_vs_default"
+        elif market_gap_vs_tipsy45:
+            verdict = "market_surface_closes_gap_vs_tipsy45_but_not_default"
+        else:
+            verdict = "market_surface_does_not_close_gap"
+
     return {
         "status": "descriptive_not_tuned",
         "label": "industrial_sort_validation",
         "grade_status": "not_assigned",
         "official_grade_validation": False,
-        "compared_profiles": [default_run["label"], tipsy45_run["label"]],
+        "compared_profiles": compared_profiles,
         "metrics": metrics,
         "gap_closes": gap_closes,
-        "verdict": (
-            "gap_closes_on_both_pooled_and_mean_plot_tvd"
-            if gap_closes
-            else "gap_does_not_close_on_both_pooled_and_mean_plot_tvd"
-        ),
-        "sort_shares": sort_rows,
-        "by_au": au.to_dict(orient="records"),
+        "market_gap": market_gap,
+        "verdict": verdict,
+        "sort_shares": _merge_sort_shares(default_run, tipsy45_run, market_run),
+        "by_au": _merge_au(default_run, tipsy45_run, market_run),
         "caveats": [
             "The profiles are pre-declared; no parameter was tuned to improve TVD.",
             "Industrial sort recovery is not official BC log grade.",
@@ -218,6 +310,11 @@ def build_comparison(
             (
                 "FAN$IER 4.5 does not publish numeric default log prices or sort "
                 "relativities; the tipsy45 price scenario is documented as an assumption."
+            ),
+            (
+                "The market-surface profile uses published BC Interior species x "
+                "product averages. Coast grade letters are not mapped; peeler "
+                "prices are not assigned; missing cells remain gaps."
             ),
         ],
     }
@@ -252,110 +349,176 @@ def build_report(comparison: Mapping[str, Any]) -> str:
     metrics = comparison["metrics"]
     default = metrics["default"]
     tipsy = metrics["tipsy45"]
+    market = metrics.get("market_surface")
     delta = metrics["delta"]
+    has_market = market is not None
+    profile_names = "`default` vs `tipsy45`"
+    if has_market:
+        profile_names = "`default` vs `tipsy45` vs `market_surface`"
     lines: list[str] = []
-    lines.append("# TSA24 default vs tipsy45 bucking-profile comparison\n")
+    lines.append("# TSA24 default vs tipsy45 vs market-surface bucking comparison\n")
     lines.append("| Field | Value |\n|---|---|\n")
     lines.append("| Validation | `industrial_sort_validation` |\n")
     lines.append("| Grade status | `not_assigned` |\n")
     lines.append("| Official grade validation | no |\n")
-    lines.append("| Profiles | `default` vs `tipsy45` |\n")
+    lines.append(f"| Profiles | {profile_names} |\n")
     lines.append(f"| Verdict | `{comparison['verdict']}` |\n\n")
     lines.append(
         "> The profiles were declared before the comparison. No profile value was "
         "tuned to improve TVD. This is an industrial sort recovery check, not an "
         "official BC log-grade validation.\n\n"
     )
-    rows = [
-        {
+    metric_names = (
+        "pooled_tvd",
+        "pooled_overlap",
+        "mean_plot_tvd",
+        "median_plot_tvd",
+        "volume_weighted_tvd",
+        "diameter_marginal_tvd",
+        "length_marginal_tvd",
+        "bias_sum_m3ha",
+        "relative_bias",
+        "ratio_predicted_observed",
+        "mae_m3ha",
+        "rmse_m3ha",
+    )
+    rows = []
+    for key in metric_names:
+        row = {
             "metric": key,
             "default": default.get(key),
             "tipsy45": tipsy.get(key),
-            "delta": delta.get(key),
+            "tipsy45_delta": delta.get(key),
         }
-        for key in (
-            "pooled_tvd",
-            "pooled_overlap",
-            "mean_plot_tvd",
-            "median_plot_tvd",
-            "volume_weighted_tvd",
-            "diameter_marginal_tvd",
-            "length_marginal_tvd",
-            "bias_sum_m3ha",
-            "relative_bias",
-            "ratio_predicted_observed",
-            "mae_m3ha",
-            "rmse_m3ha",
-        )
-    ]
+        if has_market:
+            row["market_surface"] = market.get(key)
+            row["market_vs_default"] = metrics["delta_market_vs_default"].get(key)
+            row["market_vs_tipsy45"] = metrics["delta_market_vs_tipsy45"].get(key)
+        rows.append(row)
     lines.append("## 1. Before/after metrics\n\n")
-    lines.append(_markdown_table(rows, ["metric", "default", "tipsy45", "delta"]))
+    columns = ["metric", "default", "tipsy45", "tipsy45_delta"]
+    if has_market:
+        columns = [
+            "metric",
+            "default",
+            "tipsy45",
+            "market_surface",
+            "tipsy45_delta",
+            "market_vs_default",
+            "market_vs_tipsy45",
+        ]
+    lines.append(_markdown_table(rows, columns))
     lines.append(
         f"\nPilot logs: default **{default['n_logs']:,}**, tipsy45 "
-        f"**{tipsy['n_logs']:,}** on the same **{default['n_plots']}** comparable "
-        f"AU-matched plots and **{default['n_trees']:,}** trees.\n\n"
+        f"**{tipsy['n_logs']:,}**"
     )
+    if has_market:
+        lines.append(f", market_surface **{market['n_logs']:,}**")
+    lines.append(
+        f" on the same **{default['n_plots']}** comparable AU-matched plots and "
+        f"**{default['n_trees']:,}** trees.\n\n"
+    )
+    if has_market:
+        gap = comparison.get("market_gap") or {}
+        lines.append(
+            "Market-surface gap check: "
+            f"vs default `{gap.get('vs_default')}`, "
+            f"vs tipsy45 `{gap.get('vs_tipsy45')}`. "
+            "A gap closes only when both pooled and mean per-plot TVD decline.\n\n"
+        )
+
     lines.append("## 2. Sort shares\n\n")
     lines.append(
         "`abs_difference_change` is the tipsy45 absolute pilot-vs-TIPSY share "
-        "difference minus the default difference; negative values are improvements.\n\n"
+        "difference minus the default difference; negative values are improvements. "
+        "For the market surface, `abs_market_vs_default_change` and "
+        "`abs_market_vs_tipsy45_change` use the same sign convention.\n\n"
     )
     sort_rows = comparison["sort_shares"][:12]
-    lines.append(
-        _markdown_table(
-            sort_rows,
-            [
-                "code",
-                "default_pilot_share",
-                "default_tipsy_share",
-                "tipsy45_pilot_share",
-                "tipsy45_tipsy_share",
-                "abs_difference_change",
-            ],
-        )
-    )
+    sort_columns = [
+        "code",
+        "default_pilot_share",
+        "default_tipsy_share",
+        "tipsy45_pilot_share",
+        "tipsy45_tipsy_share",
+        "abs_difference_change",
+    ]
+    if has_market:
+        sort_columns = [
+            "code",
+            "default_pilot_share",
+            "default_tipsy_share",
+            "tipsy45_pilot_share",
+            "tipsy45_tipsy_share",
+            "market_surface_pilot_share",
+            "market_surface_tipsy_share",
+            "abs_market_vs_default_change",
+            "abs_market_vs_tipsy45_change",
+        ]
+    lines.append(_markdown_table(sort_rows, sort_columns))
     lines.append("\n## 3. Non-TIPSY nominal lengths\n\n")
     lines.append(
         "Counts of bucked logs whose exact length is outside the nominal TIPSY "
         "length list. This diagnostic is descriptive; TIPSY sort codes are "
         "minimum-length classes, so it is not a grade claim.\n\n"
     )
-    length_rows = [
-        {
+    length_keys = set(default["non_tipsy_lengths"] or {}) | set(
+        tipsy["non_tipsy_lengths"] or {}
+    )
+    if has_market:
+        length_keys |= set(market["non_tipsy_lengths"] or {})
+    length_rows = []
+    for length in sorted(length_keys):
+        row = {
             "length_m": length,
             "default_logs": (default["non_tipsy_lengths"] or {}).get(length, 0),
             "tipsy45_logs": (tipsy["non_tipsy_lengths"] or {}).get(length, 0),
         }
-        for length in sorted(
-            set(default["non_tipsy_lengths"] or {})
-            | set(tipsy["non_tipsy_lengths"] or {})
-        )
-    ]
-    lines.append(_markdown_table(length_rows, ["length_m", "default_logs", "tipsy45_logs"]))
+        if has_market:
+            row["market_surface_logs"] = (market["non_tipsy_lengths"] or {}).get(length, 0)
+        length_rows.append(row)
+    length_columns = ["length_m", "default_logs", "tipsy45_logs"]
+    if has_market:
+        length_columns.append("market_surface_logs")
+    lines.append(_markdown_table(length_rows, length_columns))
     lines.append("\n## 4. Per-AU TVD\n\n")
     au_rows = comparison["by_au"][:20]
-    lines.append(
-        _markdown_table(
-            au_rows,
-            [
-                "au_id",
-                "n_plots",
-                "pooled_tvd_default",
-                "pooled_tvd_tipsy45",
-                "pooled_tvd_delta",
-                "mean_plot_tvd_delta",
-            ],
-        )
-    )
+    au_columns = [
+        "au_id",
+        "n_plots",
+        "pooled_tvd_default",
+        "pooled_tvd_tipsy45",
+        "pooled_tvd_delta",
+        "mean_plot_tvd_delta",
+    ]
+    if has_market:
+        au_columns = [
+            "au_id",
+            "n_plots",
+            "pooled_tvd_default",
+            "pooled_tvd_tipsy45",
+            "pooled_tvd_market_surface",
+            "pooled_tvd_delta_vs_default",
+            "pooled_tvd_delta_vs_tipsy45",
+        ]
+    lines.append(_markdown_table(au_rows, au_columns))
     lines.append("\n## 5. What remains\n\n")
     lines.append(
-        "- The tipsy45 geometry removes every non-nominal 7.5 m and 10.0 m log, "
-        "but the pooled and mean-per-plot TVD do not improve.\n"
+        "- The tipsy45 geometry removes every non-nominal 7.5 m and 10.0 m log. "
+        "The market surface changes the product prices and product assignment, "
+        "not the geometry.\n"
     )
     lines.append(
-        "- The value-maximising dynamic program without a published FAN$IER "
-        "length/grade price surface over-selects 13 m and 11 m logs and "
-        "under-selects the 8 m and 5.1 m classes that dominate the TIPSY curves.\n"
+        "- The value-maximising dynamic program over-selects 13 m and 11 m logs "
+        "and under-selects the 8 m and 5.1 m classes when the published price is "
+        "a per-cubic-metre product average with no length premium.\n"
+    )
+    lines.append(
+        "- BC log-market reports publish species x product averages, not "
+        "TIPSY-sort-specific or grade-specific prices. Coast grade letters have "
+        "no documented crosswalk to TIPSY industrial dimension sorts; peeler "
+        "prices cannot be assigned without quality. Those cells remain gaps, not "
+        "invented values.\n"
     )
     lines.append(
         "- FAN$IER 4.5 Help does not publish numeric default log prices or a "
@@ -394,6 +557,12 @@ def build_parser() -> argparse.ArgumentParser:
         / "tsa24_sort_validation_tipsy45_v1",
     )
     parser.add_argument(
+        "--market-dir",
+        type=Path,
+        default=None,
+        help="Optional market-surface validation run to include in a three-way comparison.",
+    )
+    parser.add_argument(
         "--out-dir",
         type=Path,
         default=REPO_ROOT
@@ -410,7 +579,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     default_run = load_run(args.default_dir, label="default")
     tipsy45_run = load_run(args.tipsy45_dir, label="tipsy45")
-    comparison = build_comparison(default_run, tipsy45_run)
+    market_run = (
+        load_run(args.market_dir, label="market_surface")
+        if args.market_dir is not None
+        else None
+    )
+    comparison = build_comparison(default_run, tipsy45_run, market_run)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "comparison.json").write_text(
         json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8"

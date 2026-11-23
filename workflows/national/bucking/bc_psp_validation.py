@@ -1859,6 +1859,7 @@ def _build_report(
     elapsed_seconds: float,
     args: argparse.Namespace,
     profile_spec: ProfileSpec,
+    rules_label: str,
 ) -> str:
     stats = population.stats
     total_12_5 = utilization_table[utilization_table["utilization_cm"] == 12.5].iloc[0]
@@ -2119,7 +2120,7 @@ def _build_report(
     )
     lines.append(
         "- Sorts: **TIPSY 4.5 interior industrial dimensions** "
-        "(`rules/bc_interior.yaml`). Logs are selected by minimum top diameter "
+        f"(`{rules_label}`). Logs are selected by minimum top diameter "
         "and minimum length. This is dimension-only geometry, **not official BC "
         "grade**; `grade_status = not_assigned` and `sort_basis = dimension_only` "
         "on every log."
@@ -2268,6 +2269,13 @@ def _git_state(repo_root: Path) -> dict[str, Any]:
     }
 
 
+def _logical_path(repo_root: Path, path: Path) -> str:
+    resolved = Path(path)
+    if resolved.is_relative_to(repo_root):
+        return str(resolved.relative_to(repo_root))
+    return str(resolved)
+
+
 def _build_manifest(
     args: argparse.Namespace,
     repo_root: Path,
@@ -2338,9 +2346,17 @@ def _build_manifest(
             paths["crosswalk_path"],
             "nemora/config/species/bc_psp_to_group.csv",
         ),
-        _hash_record("grade_rules", paths["rules_path"], "workflows/national/bucking/rules/bc_interior.yaml"),
+        _hash_record(
+            "grade_rules",
+            paths["rules_path"],
+            _logical_path(repo_root, paths["rules_path"]),
+        ),
         _hash_record("basic_density", paths["density_path"], "workflows/national/bucking/rules/bc_basic_density.csv"),
-        _hash_record("price_profile", paths["price_path"], "nemora/config/log_prices/bc_interior_2026q3.yaml"),
+        _hash_record(
+            "price_profile",
+            paths["price_path"],
+            _logical_path(repo_root, paths["price_path"]),
+        ),
         _hash_record(
             "bucking_profile",
             paths["profile_spec"].source_path,
@@ -2403,10 +2419,17 @@ def _build_manifest(
             "taper": registry.manifest_record(),
             "models_used": list(bucking.models),
             "grade_rules": {
-                "path": "workflows/national/bucking/rules/bc_interior.yaml",
-                "authority": "TIPSY 4.5 industrial interior dimensions",
-                "basis": "dimension_only",
-                "grade_status": "not_assigned",
+                "path": _logical_path(repo_root, paths["rules_path"]),
+                "authority": paths["rules"].authority,
+                "version": paths["rules"].version,
+                "basis": paths["rules"].basis,
+                "grade_status": paths["rules"].grade_status,
+            },
+            "price_profile": {
+                "path": _logical_path(repo_root, paths["price_path"]),
+                "source": paths["price_profile"].get("source"),
+                "period": paths["price_profile"].get("period"),
+                "market_region": paths["price_profile"].get("market_region"),
             },
             "bucking_profile": paths["profile_spec"].manifest(),
             "residue_assumptions": {
@@ -2488,6 +2511,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     registry = TaperRegistry(parameter_path=parameter_path)
     density_table = load_basic_density_table(density_path)
     profile_spec: ProfileSpec = load_bucking_profile(args.bucking_profile)
+    rules = load_grade_rules(rules_path)
+    price_profile = load_price_profile(price_path)
 
     print("Loading TSA24 latest live visits...", file=sys.stderr)
     population = load_tsa24_latest_visit(
@@ -2702,6 +2727,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         elapsed,
         args,
         profile_spec,
+        _logical_path(repo_root, rules_path),
     )
     (out_dir / "VALIDATION_REPORT.md").write_text(report, encoding="utf-8")
 
@@ -2724,8 +2750,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "data_root": data_root,
             "parameter_path": parameter_path,
             "rules_path": rules_path,
+            "rules": rules,
             "density_path": density_path,
             "price_path": price_path,
+            "price_profile": price_profile,
             "crosswalk_path": crosswalk_path,
             "femic_root": femic_root,
             "profile_spec": profile_spec,

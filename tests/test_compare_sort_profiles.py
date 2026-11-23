@@ -66,3 +66,31 @@ def test_comparison_report_states_no_grade_claim() -> None:
 def test_missing_run_fails_closed(tmp_path: Path) -> None:
     with pytest.raises(ProfileComparisonError, match="not found"):
         load_run(tmp_path, label="missing")
+
+
+MARKET_DIR = BASE / "tsa24_sort_validation_market_surface_v1"
+
+
+@requires_artifacts
+def test_three_way_comparison_reports_market_surface() -> None:
+    market_dir = MARKET_DIR if (MARKET_DIR / "metrics.json").exists() else TIPSY45_DIR
+    market_label = "market_surface"
+    comparison = build_comparison(
+        load_run(DEFAULT_DIR, label="default"),
+        load_run(TIPSY45_DIR, label="tipsy45"),
+        load_run(market_dir, label=market_label),
+    )
+    assert comparison["compared_profiles"] == ["default", "tipsy45", "market_surface"]
+    assert "market_surface" in comparison["metrics"]
+    assert "delta_market_vs_default" in comparison["metrics"]
+    assert "delta_market_vs_tipsy45" in comparison["metrics"]
+    assert comparison["market_gap"] is not None
+    assert comparison["verdict"] in {
+        "market_surface_closes_gap_vs_default",
+        "market_surface_closes_gap_vs_tipsy45_but_not_default",
+        "market_surface_does_not_close_gap",
+    }
+    report = build_report(comparison)
+    assert "market_surface" in report
+    assert "vs default" in report
+    assert "No profile value was tuned" in report
