@@ -63,6 +63,19 @@ from nemora.workflows.taper import (
     params_for,
 )
 
+from .bc_biomass_allometry import (
+    ALLOMETRY_MAP_PATH,
+    BRANCH_FOLIAGE_COLUMNS,
+    CFS_BIOMASS_DIR,
+    CFS_DBH_HEIGHT_PATH,
+    CFS_DBH_PATH,
+    DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+    BiomassComponents,
+    add_bc_component_fields,
+    add_not_estimated_component_fields,
+    load_bc_biomass_allometry,
+    tree_components_for_bc,
+)
 from .bucking import (
     buck_tree as buck_bc_tree,
 )
@@ -663,6 +676,7 @@ def buck_bc_tipsy(
     extras: Mapping[str, Mapping[str, Any]],
     *,
     rules_path: Path = BC_RULES_PATH,
+    components: Mapping[str, BiomassComponents] | None = None,
 ) -> dict[str, Any]:
     """Rerun the BC measured list through the BC interior TIPSY sort set."""
     registry = TaperRegistry(parameter_path=default_kozak_parameter_path())
@@ -755,6 +769,13 @@ def buck_bc_tipsy(
                 "height_m": tree.height_m,
             }
         )
+        if components is not None:
+            residue_row = add_bc_component_fields(
+                residue_row,
+                components[tree.tree_id],
+                weight=weight,
+                stem_residue_odt=residue.residue_odt,
+            )
         residues.append(residue_row)
         reconciliations.append(
             {
@@ -808,6 +829,52 @@ def buck_bc_tipsy(
         logs_frame.groupby("product")["volume_m3_expanded"].sum().to_dict()
     )
     solid = float(product_totals.get("sawlog", 0.0) + product_totals.get("other", 0.0))
+    component_summary: dict[str, Any] = {}
+    if components is not None:
+        stem_odt = float(residue_frame["stem_residue_odt_expanded"].sum())
+        branch_odt = float(residue_frame["branch_odt_expanded"].sum())
+        foliage_odt = float(residue_frame["foliage_odt_expanded"].sum())
+        branch_foliage_odt = float(
+            residue_frame["branch_foliage_odt_expanded"].sum()
+        )
+        gross_total_odt = float(residue_frame["total_residue_odt_expanded"].sum())
+        recoverable_total_odt = float(
+            residue_frame["recoverable_residue_odt_expanded"].sum()
+        )
+        if not math.isclose(
+            gross_total_odt,
+            stem_odt + branch_foliage_odt,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        ):
+            raise SchemaError("BC TIPSY gross residue does not equal stem + branch/foliage")
+        if not math.isclose(
+            recoverable_total_odt,
+            gross_total_odt * DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+            rel_tol=1e-9,
+            abs_tol=1e-9,
+        ):
+            raise SchemaError("BC TIPSY recoverable residue does not match recovery factor")
+        component_summary = {
+            "stem_residue_odt_expanded": stem_odt,
+            "branch_odt_expanded": branch_odt,
+            "foliage_odt_expanded": foliage_odt,
+            "branch_foliage_odt_expanded": branch_foliage_odt,
+            "total_residue_odt_expanded": gross_total_odt,
+            "recovery_factor": DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+            "recoverable_residue_odt_expanded": recoverable_total_odt,
+            "stem_residue_odt_per_recovered_m3": _safe_div(stem_odt, recovered),
+            "branch_foliage_odt_per_recovered_m3": _safe_div(
+                branch_foliage_odt, recovered
+            ),
+            "total_residue_odt_per_recovered_m3": _safe_div(
+                gross_total_odt, recovered
+            ),
+            "recoverable_residue_odt_per_recovered_m3": _safe_div(
+                recoverable_total_odt, recovered
+            ),
+            "branch_foliage_evidence": "published_table",
+        }
     summary = {
         "sort_rule_set": TIPSY_SORT_SET,
         "sort_rules_path": str(Path(rules_path)),
@@ -845,6 +912,7 @@ def buck_bc_tipsy(
         "max_balance_error_m3": float(
             reconciliation_frame["balance_error_m3"].max()
         ),
+        **component_summary,
         "taper_warnings": sorted(warnings_seen),
         "labels": {
             "tree_list_label": BC_MEASURED_LABEL,
@@ -1376,6 +1444,308 @@ def _bc_facility_comparison(
     return rows
 
 
+def _residue_component_totals(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    label: str,
+    recovery_factor: float = DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+) -> dict[str, Any]:
+    """Sum one annotated BC residue ledger and prove its component identities."""
+    if not rows:
+        raise SchemaError(f"{label} allometry ledger has no rows")
+    required = {
+        "stem_residue_odt_expanded",
+        "branch_odt_expanded",
+        "foliage_odt_expanded",
+        "branch_foliage_odt_expanded",
+        "total_residue_odt_expanded",
+        "recoverable_residue_odt_expanded",
+        "recovered_log_m3_expanded",
+    }
+    missing = sorted(required.difference(rows[0]))
+    if missing:
+        raise SchemaError(
+            f"{label} allometry ledger is missing columns: {', '.join(missing)}"
+        )
+    stem = sum(_positive("stem_residue_odt_expanded", row["stem_residue_odt_expanded"]) for row in rows)
+    branch = sum(_non_negative("branch_odt_expanded", row["branch_odt_expanded"]) for row in rows)
+    foliage = sum(_non_negative("foliage_odt_expanded", row["foliage_odt_expanded"]) for row in rows)
+    branch_foliage = sum(
+        _non_negative("branch_foliage_odt_expanded", row["branch_foliage_odt_expanded"])
+        for row in rows
+    )
+    gross = sum(_positive("total_residue_odt_expanded", row["total_residue_odt_expanded"]) for row in rows)
+    recoverable = sum(
+        _positive("recoverable_residue_odt_expanded", row["recoverable_residue_odt_expanded"])
+        for row in rows
+    )
+    recovered = sum(
+        _non_negative("recovered_log_m3_expanded", row["recovered_log_m3_expanded"])
+        for row in rows
+    )
+    if not math.isclose(branch_foliage, branch + foliage, rel_tol=1e-9, abs_tol=1e-6):
+        raise SchemaError(f"{label} branch_foliage total is not branch + foliage")
+    if not math.isclose(gross, stem + branch_foliage, rel_tol=1e-9, abs_tol=1e-6):
+        raise SchemaError(f"{label} gross total residue is not stem + branch/foliage")
+    if not math.isclose(
+        recoverable,
+        gross * recovery_factor,
+        rel_tol=1e-9,
+        abs_tol=1e-6,
+    ):
+        raise SchemaError(f"{label} recoverable residue is not gross * recovery factor")
+    return {
+        "n_trees": len(rows),
+        "stem_residue_odt_expanded": stem,
+        "branch_odt_expanded": branch,
+        "foliage_odt_expanded": foliage,
+        "branch_foliage_odt_expanded": branch_foliage,
+        "total_residue_odt_expanded": gross,
+        "recoverable_residue_odt_expanded": recoverable,
+        "recovered_m3_expanded": recovered,
+        "stem_residue_odt_per_recovered_m3": _safe_div(stem, recovered),
+        "branch_foliage_odt_per_recovered_m3": _safe_div(branch_foliage, recovered),
+        "total_residue_odt_per_recovered_m3": _safe_div(gross, recovered),
+        "recoverable_residue_odt_per_recovered_m3": _safe_div(recoverable, recovered),
+        "recovery_factor": recovery_factor,
+    }
+
+
+def _gap_metrics(value: float, reference: float) -> dict[str, float]:
+    if not math.isfinite(value) or not math.isfinite(reference):
+        raise SchemaError("gap metrics require finite value and reference")
+    if reference <= 0.0:
+        raise SchemaError("gap reference must be positive")
+    difference = value - reference
+    return {
+        "ratio": _safe_div(value, reference),
+        "gap": difference,
+        "gap_pct": 100.0 * difference / reference,
+    }
+
+
+def _bc_residue_allometry_comparison(
+    national_rows: Sequence[Mapping[str, Any]],
+    tipsy_rows: Sequence[Mapping[str, Any]],
+    *,
+    prior_stem_odt_per_m3: float,
+    facility: Mapping[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Compare stem-only and total harvest residue with facility and prior values."""
+    national = _residue_component_totals(national_rows, label="BC national sorts")
+    tipsy = _residue_component_totals(tipsy_rows, label="BC TIPSY sorts")
+    facility_harvest = _positive("facility harvest_m3", facility["harvest_m3"])
+    facility_gross_odt = _positive(
+        "facility harvest_residue_gross_odt",
+        facility["harvest_residue_gross_odt"],
+    )
+    facility_recoverable_odt = _positive(
+        "facility harvest_residue_recoverable_odt",
+        facility["harvest_residue_recoverable_odt"],
+    )
+    facility_gross_rate = _safe_div(facility_gross_odt, facility_harvest)
+    facility_recoverable_rate = _safe_div(
+        facility_recoverable_odt, facility_harvest
+    )
+    prior = _positive("prior stem residue rate", prior_stem_odt_per_m3)
+
+    def _row(
+        variant: str,
+        description: str,
+        sort_rule_set: str,
+        residue_definition: str,
+        residue_odt: float,
+        recovered_m3: float,
+        *,
+        stem_odt: float | None,
+        branch_foliage_odt: float | None,
+        recoverable_odt: float | None,
+        recovery_factor: float | None,
+        component_split_available: bool,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        rate = _safe_div(residue_odt, recovered_m3)
+        facility_gap = _gap_metrics(rate, facility_gross_rate)
+        prior_gap = _gap_metrics(rate, prior)
+        return {
+            "variant": variant,
+            "description": description,
+            "sort_rule_set": sort_rule_set,
+            "residue_definition": residue_definition,
+            "recovered_m3_expanded": recovered_m3,
+            "residue_odt_expanded": residue_odt,
+            "residue_odt_per_recovered_m3": rate,
+            "stem_residue_odt_expanded": stem_odt,
+            "branch_foliage_odt_expanded": branch_foliage_odt,
+            "recoverable_residue_odt_expanded": recoverable_odt,
+            "recovery_factor": recovery_factor,
+            "component_split_available": component_split_available,
+            "facility_gross_odt_per_m3": facility_gross_rate,
+            "prior_stem_odt_per_m3": prior,
+            "ratio_to_facility_gross": facility_gap["ratio"],
+            "gap_vs_facility_gross_odt_per_m3": facility_gap["gap"],
+            "gap_vs_facility_gross_pct": facility_gap["gap_pct"],
+            "ratio_to_prior_stem": prior_gap["ratio"],
+            "gap_vs_prior_stem_odt_per_m3": prior_gap["gap"],
+            "gap_vs_prior_stem_pct": prior_gap["gap_pct"],
+            "model_estimate": True,
+            "synthetic": False,
+            "observed": False,
+            "policy_grade": False,
+            "national_claim": False,
+            "notes": notes,
+        }
+
+    rows = [
+        _row(
+            "BC_V2_MEASURED_NATIONAL_SORTS_STEM_ONLY_PRIOR",
+            "pilot v2 measured list; national pilot sorts; stem taper residue only (prior basis)",
+            NATIONAL_SORT_SET,
+            "stem_only",
+            national["stem_residue_odt_expanded"],
+            national["recovered_m3_expanded"],
+            stem_odt=national["stem_residue_odt_expanded"],
+            branch_foliage_odt=None,
+            recoverable_odt=None,
+            recovery_factor=None,
+            component_split_available=False,
+            notes="Prior 0.0406 ODT/m3 basis. Branch and foliage are not included.",
+        ),
+        _row(
+            "BC_V2_MEASURED_NATIONAL_SORTS_GROSS_TOTAL",
+            "pilot v2 measured list; national pilot sorts; stem + branch + foliage, gross",
+            NATIONAL_SORT_SET,
+            "gross_total",
+            national["total_residue_odt_expanded"],
+            national["recovered_m3_expanded"],
+            stem_odt=national["stem_residue_odt_expanded"],
+            branch_foliage_odt=national["branch_foliage_odt_expanded"],
+            recoverable_odt=national["recoverable_residue_odt_expanded"],
+            recovery_factor=national["recovery_factor"],
+            component_split_available=True,
+            notes="Gross total does not apply a roadside recovery factor.",
+        ),
+        _row(
+            "BC_V2_MEASURED_NATIONAL_SORTS_RECOVERABLE_TOTAL",
+            "pilot v2 measured list; national pilot sorts; stem + branch + foliage at 0.60 recovery",
+            NATIONAL_SORT_SET,
+            "recoverable_total",
+            national["recoverable_residue_odt_expanded"],
+            national["recovered_m3_expanded"],
+            stem_odt=national["stem_residue_odt_expanded"],
+            branch_foliage_odt=national["branch_foliage_odt_expanded"],
+            recoverable_odt=national["recoverable_residue_odt_expanded"],
+            recovery_factor=national["recovery_factor"],
+            component_split_available=True,
+            notes="Existing pilot recovery factor 0.60 applied to the gross total; not calibrated.",
+        ),
+        _row(
+            "BC_V2_MEASURED_TIPSY_STEM_ONLY",
+            "pilot v2 measured list; BC interior TIPSY sorts; stem taper residue only",
+            TIPSY_SORT_SET,
+            "stem_only",
+            tipsy["stem_residue_odt_expanded"],
+            tipsy["recovered_m3_expanded"],
+            stem_odt=tipsy["stem_residue_odt_expanded"],
+            branch_foliage_odt=None,
+            recoverable_odt=None,
+            recovery_factor=None,
+            component_split_available=False,
+            notes="TIPSY sort result is reported separately from the national-sort basis.",
+        ),
+        _row(
+            "BC_V2_MEASURED_TIPSY_GROSS_TOTAL",
+            "pilot v2 measured list; BC interior TIPSY sorts; stem + branch + foliage, gross",
+            TIPSY_SORT_SET,
+            "gross_total",
+            tipsy["total_residue_odt_expanded"],
+            tipsy["recovered_m3_expanded"],
+            stem_odt=tipsy["stem_residue_odt_expanded"],
+            branch_foliage_odt=tipsy["branch_foliage_odt_expanded"],
+            recoverable_odt=tipsy["recoverable_residue_odt_expanded"],
+            recovery_factor=tipsy["recovery_factor"],
+            component_split_available=True,
+            notes="Gross total does not apply a roadside recovery factor.",
+        ),
+        _row(
+            "BC_V2_MEASURED_TIPSY_RECOVERABLE_TOTAL",
+            "pilot v2 measured list; BC interior TIPSY sorts; stem + branch + foliage at 0.60 recovery",
+            TIPSY_SORT_SET,
+            "recoverable_total",
+            tipsy["recoverable_residue_odt_expanded"],
+            tipsy["recovered_m3_expanded"],
+            stem_odt=tipsy["stem_residue_odt_expanded"],
+            branch_foliage_odt=tipsy["branch_foliage_odt_expanded"],
+            recoverable_odt=tipsy["recoverable_residue_odt_expanded"],
+            recovery_factor=tipsy["recovery_factor"],
+            component_split_available=True,
+            notes="Existing pilot recovery factor 0.60 applied to the gross total; not calibrated.",
+        ),
+        _row(
+            "BC_FACILITY_HARVEST_RESIDUE_GROSS",
+            "facility_product_chain_v1 BC harvest residue coefficient, gross",
+            "facility_receipts",
+            "facility_gross",
+            facility_gross_odt,
+            facility_harvest,
+            stem_odt=None,
+            branch_foliage_odt=None,
+            recoverable_odt=facility_recoverable_odt,
+            recovery_factor=_safe_div(facility_recoverable_odt, facility_gross_odt),
+            component_split_available=False,
+            notes="Facility reference is a separate accounting stream; no stem/branch split is published.",
+        ),
+        _row(
+            "BC_FACILITY_HARVEST_RESIDUE_RECOVERABLE",
+            "facility_product_chain_v1 BC harvest residue coefficient, recoverable",
+            "facility_receipts",
+            "facility_recoverable",
+            facility_recoverable_odt,
+            facility_harvest,
+            stem_odt=None,
+            branch_foliage_odt=None,
+            recoverable_odt=facility_recoverable_odt,
+            recovery_factor=_safe_div(facility_recoverable_odt, facility_gross_odt),
+            component_split_available=False,
+            notes="Facility reference recoverable stream; ratio to facility gross is 0.7116.",
+        ),
+    ]
+    summary = {
+        "method": (
+            "stem taper residue + CFS/CFSForestTools lineage branch and foliage "
+            "allometry (Lambert 2005 / Ung 2008); gross and 0.60-recoverable "
+            "are reported separately"
+        ),
+        "branch_foliage_evidence": "published_table",
+        "source_dataset": "CFS Biomass and Nutrients Calculator",
+        "source_licence": "Open Government Licence - Canada",
+        "equations": [
+            "Lambert, Ung and Raulier (2005) Can. J. For. Res. 35:1996-2018",
+            "Ung, Bernier and Guo (2008) Can. J. For. Res. 38:1123-1132",
+        ],
+        "recovery_factor": DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+        "recovery_factor_basis": (
+            "existing pilot DEFAULT_RECOVERY_FACTOR (0.60); not calibrated to "
+            "the facility coefficient"
+        ),
+        "national_sorts": national,
+        "tipsy": tipsy,
+        "facility_reference": {
+            "harvest_m3": facility_harvest,
+            "harvest_residue_gross_odt": facility_gross_odt,
+            "harvest_residue_recoverable_odt": facility_recoverable_odt,
+            "gross_odt_per_m3": facility_gross_rate,
+            "recoverable_odt_per_m3": facility_recoverable_rate,
+            "recoverable_fraction_of_gross": _safe_div(
+                facility_recoverable_odt, facility_gross_odt
+            ),
+        },
+        "prior_stem_only_odt_per_m3": prior,
+        "comparison_rows": rows,
+    }
+    return rows, summary
+
+
 def _v1_v2_comparison(
     province_rows_v2: Sequence[Mapping[str, Any]],
     v1_province_csv: Path,
@@ -1791,6 +2161,33 @@ BC bucked logs and residue are model estimates because taper and sort rules are
 published models applied to measured stems.  They are not observed mill
 receipts.  `grade=not_assigned`, `sort_basis=dimension_only`.
 
+## Residue components
+
+`residue_odt` is the stem taper residue only.  For BC measured stems,
+`stem_residue_odt`, `branch_odt`, `foliage_odt`,
+`branch_foliage_odt`, `total_residue_odt`, `recovery_factor` and
+`recoverable_residue_odt` are populated from the CFS branch/foliage allometry.
+The identities are:
+
+```
+branch_foliage_odt = branch_odt + foliage_odt
+total_residue_odt = stem_residue_odt + branch_foliage_odt
+recoverable_residue_odt = total_residue_odt * recovery_factor
+```
+
+`recovery_factor` is the existing pilot default 0.60.  Gross and recoverable
+values are both reported; the factor is not calibrated to the facility
+coefficient.  Non-BC synthetic rows set `branch_foliage_estimated=false` and
+leave the optional branch/foliage/total values empty: an unestimated component
+is never presented as zero biomass.
+
+Branch and foliage coefficients come from the CFS Biomass and Nutrients
+Calculator tree-level DBH + height table (Open Government Licence - Canada),
+which implements Lambert et al. (2005) and Ung et al. (2008).  The exact source
+CSV and its checksum are in `workflows/national/bucking/rules/cfs_biomass/`.
+The equations are applied only to live measured stems within the documented
+DBH/height application guardrails.
+
 ## Tables
 
 | Table | Grain | Content |
@@ -1808,6 +2205,8 @@ receipts.  `grade=not_assigned`, `sort_basis=dimension_only`.
 | `province_summary.csv` | one province | Unweighted and expansion-weighted metrics |
 | `coefficient_comparison.csv` | one province | Model versus facility coefficients |
 | `bc_facility_comparison.csv` | one BC variant | v1, v2 TIPSY, v2 national, facility reference |
+| `bc_residue_allometry.csv` | one BC stem and sort rule set | Stem, branch, foliage, gross and recoverable residue |
+| `bc_residue_allometry_summary.csv` | one residue variant | Gross/recoverable comparison against facility and prior stem-only |
 | `v1_v2_comparison.csv` | one province plus national rows | v1 to v2 deltas |
 | `bc_population_reconciliation.csv` | one metric | v2 list versus full v0 population |
 | `summary.json` | artifact | Machine-readable totals, labels, checks |
@@ -1852,7 +2251,16 @@ BC is bucked twice:
 
 The other 12 jurisdictions use the v1 local/donor taper dispatch and national
 pilot sorts.  `grade=not_assigned`; no official grade, policy grade, or market
-price is claimed.  Residue is taper total minus recovered gross logs per stem.
+price is claimed.  Stem residue is taper total minus recovered gross logs per
+stem.
+
+BC branch and foliage biomass is added as a separate ODT component from the
+public CFS tree-level DBH + height equations (Open Government Licence - Canada;
+Lambert et al. 2005 and Ung et al. 2008).  `total_residue_odt` is gross stem +
+branch + foliage and `recoverable_residue_odt` applies the existing 0.60 pilot
+recovery factor.  Both are reported; the factor is not calibrated to the
+facility coefficient.  Non-BC synthetic rows keep stem residue only and do not
+claim zero branch/foliage biomass.
 
 ## Files
 
@@ -1861,6 +2269,8 @@ price is claimed.  Residue is taper total minus recovered gross logs per stem.
 | `bc_tree_list_selection.csv` | BC stratum selection and source provenance |
 | `tree_lists/BC.csv` | BC measured aggregate tree list |
 | `bc_tipsy_logs.csv`, `bc_tipsy_residue.csv` | BC TIPSY dimension-sort rerun |
+| `bc_residue_allometry.csv` | BC per-stem branch/foliage and total residue |
+| `bc_residue_allometry_summary.csv` | Gross/recoverable comparison to facility and prior stem-only |
 | `bc_tipsy_sort_rules.yaml`, `bc_tipsy_sort_rules.csv` | Exact BC TIPSY rule file used |
 | `bucked_logs.csv`, `residue_ledger.csv` | National-sort pilot |
 | `province_summary.csv` | Per-province unweighted and expanded metrics |
@@ -1925,11 +2335,14 @@ def _report_markdown(
     lines.append("\n## BC bucking results\n")
     tipsy = summary["bc_tipsy"]
     lines.append(
-        "| Rule set | Trees | Logs | Recovered m3 (expanded) | Residue m3 | "
-        "Residue odt | Sawlog share | Pulpwood share | Other share | "
-        "Solid share | Residue odt/m3 |\n"
+        "| Rule set | Trees | Logs | Recovered m3 (expanded) | Stem residue m3 | "
+        "Stem residue odt | Branch odt | Foliage odt | Gross total odt | "
+        "Gross odt/m3 | Recoverable odt/m3 (0.60) | Sawlog share | "
+        "Pulpwood share | Other share | Solid share |\n"
     )
-    lines.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+    lines.append(
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n"
+    )
     for label, row in (
         ("BC interior TIPSY", tipsy),
         ("National pilot sorts", summary["bc_national"]),
@@ -1939,12 +2352,58 @@ def _report_markdown(
             f"{row['recovered_gross_m3_expanded']:.3f} | "
             f"{row['residue_m3_expanded']:.3f} | "
             f"{row['residue_odt_expanded']:.3f} | "
+            f"{row['branch_odt_expanded']:.3f} | "
+            f"{row['foliage_odt_expanded']:.3f} | "
+            f"{row['total_residue_odt_expanded']:.3f} | "
+            f"{row['total_residue_odt_per_recovered_m3']:.4f} | "
+            f"{row['recoverable_residue_odt_per_recovered_m3']:.4f} | "
             f"{row['sawlog_share_of_recovered']:.3f} | "
             f"{row['pulpwood_share_of_recovered']:.3f} | "
             f"{row['other_share_of_recovered']:.3f} | "
-            f"{row['solid_share_of_recovered']:.3f} | "
-            f"{row['residue_odt_per_recovered_m3']:.4f} |\n"
+            f"{row['solid_share_of_recovered']:.3f} |\n"
         )
+    lines.append(
+        "\nTotal harvest residue = stem taper residue + branch ODT + foliage ODT.  "
+        "The recoverable column applies the existing pilot 0.60 recovery factor "
+        "to the gross total; it is not calibrated to the facility coefficient.\n"
+    )
+    lines.append("\n## BC branch and foliage allometry\n")
+    allometry = summary["bc_residue_allometry"]
+    lines.append(
+        f"- Source: {allometry['source_dataset']} tree-level DBH + height table; "
+        f"licence {allometry['source_licence']}.\n"
+    )
+    lines.append(
+        f"- Equations: {'; '.join(allometry['equations'])}.  "
+        "Branch and foliage are model estimates (`published_table`), not "
+        "measured slash.\n"
+    )
+    lines.append(
+        "- Gross and recoverable residue are reported separately.  The facility "
+        f"gross coefficient is {allometry['facility_reference']['gross_odt_per_m3']:.6f} "
+        "ODT/m3; the prior stem-only model result is "
+        f"{allometry['prior_stem_only_odt_per_m3']:.6f} ODT/m3.\n"
+    )
+    lines.append(
+        "| Variant | Residue definition | Residue odt/m3 | Ratio to facility | "
+        "Gap vs facility | Gap vs prior stem |\n"
+    )
+    lines.append("|---|---|---:|---:|---:|---:|\n")
+    for row in allometry["comparison_rows"]:
+        lines.append(
+            f"| {row['variant']} | {row['residue_definition']} | "
+            f"{row['residue_odt_per_recovered_m3']:.6f} | "
+            f"{row['ratio_to_facility_gross']:.4f} | "
+            f"{row['gap_vs_facility_gross_pct']:+.2f}% | "
+            f"{row['gap_vs_prior_stem_pct']:+.2f}% |\n"
+        )
+    lines.append(
+        "\nThe facility reference is a gross harvest-residue coefficient from "
+        "`facility_product_chain_v1`.  The model gross total includes all live "
+        "branch and foliage biomass and is therefore expected to exceed a "
+        "roadside-recoverable facility coefficient.  The 0.60-recoverable row "
+        "is the existing pilot default, not a calibrated recovery estimate.\n"
+    )
     lines.append("\n## v1→v2 comparison\n")
     lines.append(
         "| Scope | v1 trees | v2 trees | v1 logs/tree | v2 logs/tree | "
@@ -1995,7 +2454,10 @@ def _report_markdown(
         "rule set classifies nearly all conifer logs with a 12.5 cm top as "
         "sawlog, so its solid share is not expected to equal the facility "
         "sawlog + panel feedstock share.  The comparison is screening, not "
-        "calibration.\n"
+        "calibration.  The residue column in this table is **stem taper "
+        "residue only**; the gross and 0.60-recoverable totals that include "
+        "branch and foliage are reported in the preceding branch/foliage "
+        "section and in `bc_residue_allometry_summary.csv`.\n"
     )
     lines.append("\n## Expansion-weighted population check\n")
     lines.append(
@@ -2050,19 +2512,27 @@ def generate_pilot(
     kozak_path = default_kozak_parameter_path()
     kozak_parameters = load_kozak_parameters(kozak_path)
     rules = load_national_sort_rules(SORT_RULES_PATH)
+    allometry = load_bc_biomass_allometry()
 
     print("Building measured BC empirical tree list...", file=sys.stderr)
     bc_trees, bc_tapers, bc_extras, selection, bc_stats = (
         build_bc_empirical_tree_list(qc_registry, kozak_parameters)
     )
+    bc_components = tree_components_for_bc(bc_trees, allometry)
     print(
         f"BC measured aggregate: {len(bc_trees):,} stems in "
-        f"{bc_stats['strata']:,} strata; PHF preserved.",
+        f"{bc_stats['strata']:,} strata; PHF preserved; "
+        f"{len(bc_components):,} branch/foliage equations applied.",
         file=sys.stderr,
     )
 
     print("Bucking BC measured list with TIPSY interior sorts...", file=sys.stderr)
-    tipsy = buck_bc_tipsy(bc_trees, bc_extras, rules_path=bc_rules_path)
+    tipsy = buck_bc_tipsy(
+        bc_trees,
+        bc_extras,
+        rules_path=bc_rules_path,
+        components=bc_components,
+    )
     print(
         f"BC TIPSY: {tipsy['summary']['n_logs']:,} logs, "
         f"{tipsy['summary']['recovered_gross_m3_expanded']:,.3f} m3 expanded.",
@@ -2157,6 +2627,17 @@ def generate_pilot(
                 "national_claim": False,
             }
         )
+        if extra["measured_tree_list"]:
+            row = add_bc_component_fields(
+                row,
+                bc_components[residue.tree_id],
+                weight=weight,
+                stem_residue_odt=residue.residue_odt,
+            )
+        else:
+            row = add_not_estimated_component_fields(
+                row, stem_residue_odt=residue.residue_odt
+            )
         residue_rows.append(row)
 
     reconciliation_rows: list[dict[str, Any]] = []
@@ -2239,6 +2720,55 @@ def generate_pilot(
         tipsy["summary"], v2_province_map
     )
     bc_national = v2_province_map["BC"]
+    facility_record = pd.read_csv(FACILITY_CHAIN_PATH)
+    facility_bc = facility_record[facility_record["province"] == "BC"]
+    if len(facility_bc) != 1:
+        raise SchemaError(
+            f"facility_product_chain_v1 must contain exactly one BC row, found {len(facility_bc)}"
+        )
+    bc_residue_rows = [
+        row for row in residue_rows if row["jurisdiction"] == "BC"
+    ]
+    tipsy_residue_rows = tipsy["residue"].to_dict(orient="records")
+    allometry_comparison_rows, allometry_summary = (
+        _bc_residue_allometry_comparison(
+            bc_residue_rows,
+            tipsy_residue_rows,
+            prior_stem_odt_per_m3=float(
+                bc_national["residue_odt_per_recovered_m3"]
+            ),
+            facility=facility_bc.iloc[0].to_dict(),
+        )
+    )
+    bc_component_rows: list[dict[str, Any]] = []
+    for sort_rule_set, ledger_rows in (
+        (NATIONAL_SORT_SET, bc_residue_rows),
+        (TIPSY_SORT_SET, tipsy_residue_rows),
+    ):
+        for row in ledger_rows:
+            tree = tree_by_id[row["tree_id"]]
+            bc_component_rows.append(
+                {
+                    "sort_rule_set": sort_rule_set,
+                    "tree_id": row["tree_id"],
+                    "jurisdiction": row["jurisdiction"],
+                    "species": row["species"],
+                    "dbh_cm": tree.dbh_cm,
+                    "height_m": tree.height_m,
+                    "height_evidence": extras[row["tree_id"]]["height_evidence"],
+                    "expansion_factor": row["expansion_factor"],
+                    "tree_list_label": row["tree_list_label"],
+                    "measured_tree_list": row["measured_tree_list"],
+                    "recovered_log_m3_expanded": row["recovered_log_m3_expanded"],
+                    **{column: row[column] for column in BRANCH_FOLIAGE_COLUMNS},
+                    "model_estimate": True,
+                    "observed": False,
+                    "policy_grade": False,
+                    "national_claim": False,
+                }
+            )
+    bc_national = dict(bc_national)
+    bc_national.update(allometry_summary["national_sorts"])
 
     product_totals_expanded: dict[str, float] = {}
     for row in log_rows:
@@ -2302,6 +2832,8 @@ def generate_pilot(
     v1_v2_columns = list(v1_v2_rows[0])
     bc_facility_columns = list(bc_facility_rows[0])
     reconciliation_metric_columns = list(reconciliation[0])
+    bc_component_columns = list(bc_component_rows[0])
+    allometry_comparison_columns = list(allometry_comparison_rows[0])
     tipsy_log_columns = list(tipsy["logs"].columns)
     tipsy_residue_columns = list(tipsy["residue"].columns)
     tipsy_reconciliation_columns = list(tipsy["reconciliation"].columns)
@@ -2352,6 +2884,16 @@ def generate_pilot(
         output / "bc_facility_comparison.csv",
         bc_facility_rows,
         bc_facility_columns,
+    )
+    _write_csv(
+        output / "bc_residue_allometry.csv",
+        bc_component_rows,
+        bc_component_columns,
+    )
+    _write_csv(
+        output / "bc_residue_allometry_summary.csv",
+        allometry_comparison_rows,
+        allometry_comparison_columns,
     )
     _write_csv(
         output / "bc_population_reconciliation.csv",
@@ -2498,31 +3040,40 @@ def generate_pilot(
         ),
         f"{len(tipsy['reconciliation'])} BC TIPSY stems balance",
     )
+    def _core_numeric(frame: pd.DataFrame) -> pd.DataFrame:
+        numeric = frame.select_dtypes(include="number")
+        optional = [
+            column for column in BRANCH_FOLIAGE_COLUMNS if column in numeric.columns
+        ]
+        return numeric.drop(columns=optional)
+
     all_numeric_frames = [
-        pd.DataFrame(tree_rows),
-        pd.DataFrame(log_rows),
-        pd.DataFrame(residue_rows),
-        pd.DataFrame(reconciliation_rows),
-        pd.DataFrame(province_rows),
-        pd.DataFrame(comparison_rows),
-        pd.DataFrame(v1_v2_rows),
-        pd.DataFrame(bc_facility_rows),
-        pd.DataFrame(reconciliation),
-        tipsy["logs"],
-        tipsy["residue"],
-        tipsy["reconciliation"],
+        _core_numeric(pd.DataFrame(tree_rows)),
+        _core_numeric(pd.DataFrame(log_rows)),
+        _core_numeric(pd.DataFrame(residue_rows)),
+        _core_numeric(pd.DataFrame(reconciliation_rows)),
+        _core_numeric(pd.DataFrame(province_rows)),
+        _core_numeric(pd.DataFrame(comparison_rows)),
+        _core_numeric(pd.DataFrame(v1_v2_rows)),
+        _core_numeric(pd.DataFrame(bc_facility_rows)),
+        _core_numeric(pd.DataFrame(reconciliation)),
+        _core_numeric(tipsy["logs"]),
+        _core_numeric(tipsy["residue"]),
+        _core_numeric(tipsy["reconciliation"]),
+        pd.DataFrame(bc_component_rows).select_dtypes(include="number"),
     ]
     non_negative_frames = [
-        pd.DataFrame(tree_rows),
-        pd.DataFrame(log_rows),
-        pd.DataFrame(residue_rows),
-        pd.DataFrame(reconciliation_rows),
-        pd.DataFrame(province_rows),
-        pd.DataFrame(comparison_rows),
-        pd.DataFrame(bc_facility_rows),
-        tipsy["logs"],
-        tipsy["residue"],
-        tipsy["reconciliation"],
+        _core_numeric(pd.DataFrame(tree_rows)),
+        _core_numeric(pd.DataFrame(log_rows)),
+        _core_numeric(pd.DataFrame(residue_rows)),
+        _core_numeric(pd.DataFrame(reconciliation_rows)),
+        _core_numeric(pd.DataFrame(province_rows)),
+        _core_numeric(pd.DataFrame(comparison_rows)),
+        _core_numeric(pd.DataFrame(bc_facility_rows)),
+        _core_numeric(tipsy["logs"]),
+        _core_numeric(tipsy["residue"]),
+        _core_numeric(tipsy["reconciliation"]),
+        pd.DataFrame(bc_component_rows).select_dtypes(include="number"),
     ]
     add_check(
         "no_nan",
@@ -2530,7 +3081,8 @@ def generate_pilot(
             not frame.select_dtypes(include="number").isna().any().any()
             for frame in all_numeric_frames
         ),
-        "numeric columns contain no NaN",
+        "numeric core columns contain no NaN; optional branch/foliage fields are "
+        "populated for every BC measured stem",
     )
     add_check(
         "no_negative",
@@ -2539,6 +3091,116 @@ def generate_pilot(
             for frame in non_negative_frames
         ),
         "numeric columns are non-negative except explicit delta columns",
+    )
+    bc_component_count = 2 * len(bc_trees)
+    add_check(
+        "bc_allometry_complete",
+        len(bc_component_rows) == bc_component_count
+        and all(
+            row["branch_foliage_estimated"]
+            and float(row["branch_odt"]) > 0.0
+            and float(row["foliage_odt"]) > 0.0
+            and row["branch_foliage_evidence"] == "published_table"
+            and row["branch_foliage_equation_id"]
+            for row in bc_component_rows
+        ),
+        f"{len(bc_component_rows)} BC component rows for {len(bc_trees)} stems "
+        "across two sort rule sets; branch and foliage are positive",
+    )
+    add_check(
+        "bc_allometry_conservation",
+        all(
+            math.isclose(
+                float(row["branch_foliage_odt"]),
+                float(row["branch_odt"]) + float(row["foliage_odt"]),
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+            and math.isclose(
+                float(row["total_residue_odt"]),
+                float(row["stem_residue_odt"])
+                + float(row["branch_foliage_odt"]),
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+            and math.isclose(
+                float(row["recoverable_residue_odt"]),
+                float(row["total_residue_odt"])
+                * DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+            and math.isclose(
+                float(row["total_residue_odt_expanded"]),
+                float(row["total_residue_odt"])
+                * float(row["expansion_factor"]),
+                rel_tol=1e-12,
+                abs_tol=1e-12,
+            )
+            for row in bc_component_rows
+        ),
+        "branch+foliage, stem+branch+foliage, 0.60 recoverable and expansion "
+        "identities hold for every BC component row",
+    )
+    add_check(
+        "bc_allometry_non_bc_not_estimated",
+        all(
+            not row["branch_foliage_estimated"]
+            and row["residue_component_scope"]
+            == "stem_only_branch_foliage_not_estimated"
+            for row in residue_rows
+            if row["jurisdiction"] != "BC"
+        ),
+        "non-BC synthetic rows keep stem residue only and do not claim zero "
+        "branch/foliage biomass",
+    )
+    add_check(
+        "bc_allometry_labels",
+        all(
+            row["model_estimate"] is True
+            and row["observed"] is False
+            and row["policy_grade"] is False
+            and row["national_claim"] is False
+            for row in bc_component_rows + allometry_comparison_rows
+        ),
+        "BC branch/foliage estimates are model_estimate=true, observed=false, "
+        "policy_grade=false, national_claim=false",
+    )
+    add_check(
+        "bc_allometry_comparison",
+        len(allometry_comparison_rows) == 8
+        and math.isclose(
+            allometry_summary["national_sorts"][
+                "total_residue_odt_expanded"
+            ],
+            allometry_summary["national_sorts"]["stem_residue_odt_expanded"]
+            + allometry_summary["national_sorts"]["branch_foliage_odt_expanded"],
+            rel_tol=1e-9,
+        )
+        and math.isclose(
+            allometry_summary["national_sorts"][
+                "recoverable_residue_odt_expanded"
+            ],
+            allometry_summary["national_sorts"]["total_residue_odt_expanded"]
+            * DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+            rel_tol=1e-9,
+        )
+        and allometry_summary["national_sorts"][
+            "total_residue_odt_per_recovered_m3"
+        ]
+        > allometry_summary["prior_stem_only_odt_per_m3"]
+        and math.isclose(
+            allometry_summary["facility_reference"]["gross_odt_per_m3"],
+            0.07622551414598874,
+            rel_tol=1e-12,
+        )
+        and math.isclose(
+            allometry_summary["prior_stem_only_odt_per_m3"],
+            0.040576891708515125,
+            rel_tol=1e-12,
+        ),
+        "gross total and 0.60-recoverable totals are reported separately "
+        "against facility 0.076226 and prior stem-only 0.040577",
     )
     add_check(
         "grade_not_assigned",
@@ -2630,6 +3292,10 @@ def generate_pilot(
             "bc_tree_geometry_model_estimate": False,
             "bc_tree_geometry_synthetic": False,
             "bc_product_model_estimate": True,
+            "bc_branch_foliage_model_estimate": True,
+            "bc_branch_foliage_evidence": "published_table",
+            "bc_stem_residue_separate": True,
+            "bc_allometry_recovery_factor": DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
             "other_tree_geometry_model_estimate": True,
             "other_tree_geometry_synthetic": True,
             "observed": False,
@@ -2652,6 +3318,8 @@ def generate_pilot(
             "bc_population_reconciliation_rows": len(reconciliation),
             "bc_tipsy_logs": len(tipsy["logs"]),
             "bc_tipsy_residue_rows": len(tipsy["residue"]),
+            "bc_residue_allometry_rows": len(bc_component_rows),
+            "bc_residue_allometry_summary_rows": len(allometry_comparison_rows),
         },
         "bc_tree_list": {
             **bc_stats,
@@ -2663,6 +3331,7 @@ def generate_pilot(
         "totals": totals,
         "bc_tipsy": tipsy["summary"],
         "bc_national": dict(bc_national),
+        "bc_residue_allometry": allometry_summary,
         "province_summary": province_rows,
         "taper_coverage": {
             "local_jurisdictions": sorted(
@@ -2693,6 +3362,7 @@ def generate_pilot(
         },
         "evidence": {
             "bc_tree_tiers": ["published_table"],
+            "bc_branch_foliage_tiers": ["published_table"],
             "other_tree_tiers": ["assumption"],
             "log_taper_tiers": ["published_table"],
             "log_row_tiers": sorted({log.evidence for log in logs}),
@@ -2739,6 +3409,26 @@ def generate_pilot(
                 "residue and facility process residue are different streams."
             ),
             (
+                "BC branch and foliage biomass is a published allometric model "
+                "estimate, not measured slash. It is added to stem taper residue "
+                "for gross and recoverable totals but remains a separate component."
+            ),
+            (
+                "Some BC source heights are DBH-estimated; branch and foliage "
+                "inherit that height basis and the tree-list height evidence is "
+                "not upgraded."
+            ),
+            (
+                "Gross harvest residue and 0.60-recoverable residue are both "
+                "reported; the 0.60 recovery factor is the existing pilot default "
+                "and is not calibrated to the facility coefficient."
+            ),
+            (
+                "Mountain hemlock (one stem) uses the published conifer group "
+                "equation; black cottonwood uses the published red alder + black "
+                "cottonwood group equation. Both are flagged as non-species-specific."
+            ),
+            (
                 "No national, operational, policy-grade, AAC, or investment "
                 "claim is made."
             ),
@@ -2779,6 +3469,8 @@ def generate_pilot(
         "coefficient_comparison.csv",
         "v1_v2_comparison.csv",
         "bc_facility_comparison.csv",
+        "bc_residue_allometry.csv",
+        "bc_residue_allometry_summary.csv",
         "bc_population_reconciliation.csv",
         "summary.json",
         "report.md",
@@ -2818,6 +3510,21 @@ def generate_pilot(
             "basic_density_odt_m3": BASIC_DENSITY_ODT_M3,
             "donor_policy": DONOR_POLICY,
             "bec_anchor": BEC_ANCHOR,
+            "bc_branch_foliage_allometry": {
+                "source": "CFS Biomass and Nutrients Calculator tree-level DBH + height table",
+                "licence": "Open Government Licence - Canada",
+                "equations": [
+                    "Lambert et al. 2005, Can. J. For. Res. 35:1996-2018",
+                    "Ung et al. 2008, Can. J. For. Res. 38:1123-1132",
+                ],
+                "equation_form": "Biomass_kg = a * DBH_cm^b * Height_m^c",
+                "components": ["Branches", "Foliage"],
+                "recovery_factor": DEFAULT_ALLOMETRY_RECOVERY_FACTOR,
+                "recovery_factor_basis": (
+                    "existing pilot DEFAULT_RECOVERY_FACTOR; not calibrated "
+                    "to the facility coefficient"
+                ),
+            },
             "bucker": (
                 "value-maximising dynamic program over national pilot target "
                 "lengths; BC TIPSY uses the reference nemora sorted bucker"
@@ -2850,6 +3557,32 @@ def generate_pilot(
             "bc_basic_density": {
                 "path": str(BC_DENSITY_PATH.relative_to(REPO_ROOT)),
                 "sha256": _sha256(BC_DENSITY_PATH),
+            },
+            "bc_biomass_allometry_map": {
+                "path": str(ALLOMETRY_MAP_PATH.relative_to(REPO_ROOT)),
+                "sha256": _sha256(ALLOMETRY_MAP_PATH),
+            },
+            "cfs_biomass_equations_dbh_height": {
+                "path": str(CFS_DBH_HEIGHT_PATH.relative_to(REPO_ROOT)),
+                "sha256": _sha256(CFS_DBH_HEIGHT_PATH),
+                "source_url": (
+                    "https://apps-scf-cfs.rncan.gc.ca/calc/static/files/data/"
+                    "Tree-level%20allometric%20equations%20dbh-height.csv"
+                ),
+                "licence": "Open Government Licence - Canada",
+            },
+            "cfs_biomass_equations_dbh": {
+                "path": str(CFS_DBH_PATH.relative_to(REPO_ROOT)),
+                "sha256": _sha256(CFS_DBH_PATH),
+                "source_url": (
+                    "https://apps-scf-cfs.rncan.gc.ca/calc/static/files/data/"
+                    "Tree-level%20allometric%20equations%20dbh.csv"
+                ),
+                "licence": "Open Government Licence - Canada",
+            },
+            "cfs_biomass_readme": {
+                "path": str((CFS_BIOMASS_DIR / "README.md").relative_to(REPO_ROOT)),
+                "sha256": _sha256(CFS_BIOMASS_DIR / "README.md"),
             },
             "bc_price_profile": {
                 "path": f"nemora/{BC_PRICE_PROFILE_PATH.relative_to(default_nemora_root())}",
@@ -2887,6 +3620,7 @@ def generate_pilot(
         "code": [
             "workflows/national/bucking/national_bucking_pilot_v2.py",
             "workflows/national/bucking/national_bucking_pilot_v1.py",
+            "workflows/national/bucking/bc_biomass_allometry.py",
             "workflows/national/bucking/pilot_schema.py",
             "workflows/national/bucking/schneider2013.py",
             "workflows/national/bucking/taper.py",
@@ -2895,6 +3629,10 @@ def generate_pilot(
             "workflows/national/bucking/rules/national_pilot_sorts.csv",
             "workflows/national/bucking/rules/bc_interior.yaml",
             "workflows/national/bucking/rules/bc_basic_density.csv",
+            "workflows/national/bucking/rules/bc_biomass_allometry_map.csv",
+            "workflows/national/bucking/rules/cfs_biomass/README.md",
+            "workflows/national/bucking/rules/cfs_biomass/tree_level_allometric_equations_dbh_height.csv",
+            "workflows/national/bucking/rules/cfs_biomass/tree_level_allometric_equations_dbh.csv",
             "workflows/national/bucking/rules/qc_schneider2013_taper.csv",
         ],
         "counts": summary["counts"],

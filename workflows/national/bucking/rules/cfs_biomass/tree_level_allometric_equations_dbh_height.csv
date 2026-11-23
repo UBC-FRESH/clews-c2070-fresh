@@ -1,0 +1,174 @@
+"Reference: M.-C. Lambert, C.-H. Ung, and F. Raulier 2005. Canadian national biomass equations. Can. J. For. Res 35: 1996-2018. ",,,,,,,
+"Reference: Ung, C.-H., Bernier, P., Guo, X.-J. 2008. Canadian national biomass equations: new parameter estimates that include British Columbia data. Can. J. For. Res 38:1123-2232.",,,,,,,
+,,,,,,,
+"Parameters for biomass equation for estimating biomass (Kg, Biomass_kg) at the tree scale from DBH (cm, D_cm) and height (m, H_m)",,,,,,,
+Biomass_kg = a * D_cm^b * H_m^c,,,,,,,
+Species_en,Essence_fr,Component_en,Component_fr,a,b,c,Reference
+Deciduous,Feuillus,Bark,Écorce,0.009,1.8677,0.7144,Ung 2008
+Deciduous,Feuillus,Branches,Branche,0.0448,2.6855,-0.5911,Ung 2008
+Deciduous,Feuillus,Foliage,Feuillage,0.0869,1.8541,-0.5491,Ung 2008
+Deciduous,Feuillus,Wood,Bois,0.0353,2.0249,0.7048,Ung 2008
+Conifers,Conifères,Bark,Écorce,0.0101,1.8486,0.5525,Ung 2008
+Conifers,Conifères,Branches,Branche,0.0313,2.9974,-1.0383,Ung 2008
+Conifers,Conifères,Foliage,Feuillage,0.1379,2.3981,-1.0418,Ung 2008
+Conifers,Conifères,Wood,Bois,0.0276,1.6868,1.0953,Ung 2008
+All,Tous,Bark,Écorce,0.012,1.6378,0.7746,Ung 2008
+All,Tous,Branches,Branche,0.0338,2.6624,-0.5743,Ung 2008
+All,Tous,Foliage,Feuillage,0.1699,2.3289,-1.1316,Ung 2008
+All,Tous,Wood,Bois,0.0283,1.8298,0.9546,Ung 2008
+Balsam fir,Sapin baumier,Bark,Écorce,0.0053,2.0876,0.5842,Lambert 2005
+Balsam fir,Sapin baumier,Branches,Branche,0.0117,3.5097,-1.3006,Lambert 2005
+Balsam fir,Sapin baumier,Foliage,Feuillage,0.1245,2.523,-1.123,Lambert 2005
+Balsam fir,Sapin baumier,Wood,Bois,0.0294,1.8357,0.864,Lambert 2005
+Balsam poplar,Peuplier baumier,Bark,Écorce,0.018,1.8131,0.5144,Lambert 2005
+Balsam poplar,Peuplier baumier,Branches,Branche,0.0112,3.0861,-0.7164,Lambert 2005
+Balsam poplar,Peuplier baumier,Foliage,Feuillage,0.0617,1.8615,-0.5375,Lambert 2005
+Balsam poplar,Peuplier baumier,Wood,Bois,0.0117,1.7757,1.2555,Lambert 2005
+Basswood,Tilleul d'Amérique,Bark,Écorce,0.0057,1.5881,1.1472,Lambert 2005
+Basswood,Tilleul d'Amérique,Branches,Branche,0.0039,2.0084,0.8588,Lambert 2005
+Basswood,Tilleul d'Amérique,Foliage,Feuillage,0.0147,1.83,0,Lambert 2005
+Basswood,Tilleul d'Amérique,Wood,Bois,0.0168,1.9844,0.8989,Lambert 2005
+American beech,Hêtre à grandes feuilles,Bark,Écorce,0.0049,1.9057,0.677,Lambert 2005
+American beech,Hêtre à grandes feuilles,Branches,Branche,0.0355,2.3749,0,Lambert 2005
+American beech,Hêtre à grandes feuilles,Foliage,Feuillage,0.0452,1.5567,0,Lambert 2005
+American beech,Hêtre à grandes feuilles,Wood,Bois,0.0432,2.0378,0.7,Lambert 2005
+Black ash,Frêne noir,Bark,Écorce,0.0897,2.2634,-0.567,Lambert 2005
+Black ash,Frêne noir,Branches,Branche,0.0994,2.163,-0.4809,Lambert 2005
+Black ash,Frêne noir,Foliage,Feuillage,0.0124,1.0325,0.8747,Lambert 2005
+Black ash,Frêne noir,Wood,Bois,0.0306,2.1836,0.574,Lambert 2005
+Black cherry,Cerisier noir,Bark,Écorce,0.0101,1.5956,0.919,Lambert 2005
+Black cherry,Cerisier noir,Branches,Branche,0.0005,2.8004,0.8603,Lambert 2005
+Black cherry,Cerisier noir,Foliage,Feuillage,0.1976,1.4421,-0.5264,Lambert 2005
+Black cherry,Cerisier noir,Wood,Bois,0.0181,1.7013,1.3057,Lambert 2005
+Black spruce,Épinette noire,Bark,Écorce,0.0132,1.7657,0.5775,Ung 2008
+Black spruce,Épinette noire,Branches,Branche,0.0405,3.1917,-1.3674,Ung 2008
+Black spruce,Épinette noire,Foliage,Feuillage,0.2078,2.5517,-1.3453,Ung 2008
+Black spruce,Épinette noire,Wood,Bois,0.0335,1.7389,0.9835,Ung 2008
+Douglas fir,Douglas,Bark,Écorce,0.0083,2.4811,0,Ung 2008
+Douglas fir,Douglas,Branches,Branche,0.0351,2.2421,0,Ung 2008
+Douglas fir,Douglas,Foliage,Feuillage,0.0718,2.2935,-0.4744,Ung 2008
+Douglas fir,Douglas,Wood,Bois,0.0191,1.5365,1.3634,Ung 2008
+Eastern hemlock,Pruche du Canada,Bark,Écorce,0.0118,1.9893,0.47,Lambert 2005
+Eastern hemlock,Pruche du Canada,Branches,Branche,0.0215,2.6553,-0.4682,Lambert 2005
+Eastern hemlock,Pruche du Canada,Foliage,Feuillage,0.1471,2.0108,-0.608,Lambert 2005
+Eastern hemlock,Pruche du Canada,Wood,Bois,0.0257,1.9277,0.8576,Lambert 2005
+Eastern white cedar,Thuya occidental,Bark,Écorce,0.0076,1.7861,0.6132,Lambert 2005
+Eastern white cedar,Thuya occidental,Branches,Branche,0.0501,2.5165,-0.8774,Lambert 2005
+Eastern white cedar,Thuya occidental,Foliage,Feuillage,0.0813,2.218,-0.7907,Lambert 2005
+Eastern white cedar,Thuya occidental,Wood,Bois,0.0295,1.7026,0.9428,Lambert 2005
+Eastern white pine,Pin blanc,Bark,Écorce,0.0069,1.6589,0.9582,Lambert 2005
+Eastern white pine,Pin blanc,Branches,Branche,0.0184,3.1968,-1.0876,Lambert 2005
+Eastern white pine,Pin blanc,Foliage,Feuillage,0.0584,2.2389,-0.5968,Lambert 2005
+Eastern white pine,Pin blanc,Wood,Bois,0.017,1.7779,1.137,Lambert 2005
+Engelmann spruce,Épinette d'Engelmann,Bark,Écorce,0.0086,1.6216,0.8192,Ung 2008
+Engelmann spruce,Épinette d'Engelmann,Branches,Branche,0.0428,2.7965,-0.7328,Ung 2008
+Engelmann spruce,Épinette d'Engelmann,Foliage,Feuillage,0.0854,2.4388,-0.763,Ung 2008
+Engelmann spruce,Épinette d'Engelmann,Wood,Bois,0.0133,1.3303,1.6877,Ung 2008
+Grey birch,Bouleau gris,Bark,Écorce,0.0148,1.8433,0.5021,Lambert 2005
+Grey birch,Bouleau gris,Branches,Branche,0.015,3.0347,-0.7629,Lambert 2005
+Grey birch,Bouleau gris,Foliage,Feuillage,0.0455,2.6447,-1.4955,Lambert 2005
+Grey birch,Bouleau gris,Wood,Bois,0.0295,1.9064,0.9139,Lambert 2005
+Hickory,Caryer,Bark,Écorce,0.0081,1.4943,1.1324,Lambert 2005
+Hickory,Caryer,Branches,Branche,0.005,3.0463,0,Lambert 2005
+Hickory,Caryer,Foliage,Feuillage,0.0121,2.0865,0,Lambert 2005
+Hickory,Caryer,Wood,Bois,0.0139,1.5913,1.508,Lambert 2005
+Hop-Hornbeam,Ostryer de Virginie,Bark,Écorce,0.0012,1.1486,2.2903,Lambert 2005
+Hop-Hornbeam,Ostryer de Virginie,Branches,Branche,0.0009,1.9152,1.7769,Lambert 2005
+Hop-Hornbeam,Ostryer de Virginie,Foliage,Feuillage,0.0247,2.0056,0,Lambert 2005
+Hop-Hornbeam,Ostryer de Virginie,Wood,Bois,0.0083,1.6534,1.7479,Lambert 2005
+Jack pine,Pin gris,Bark,Écorce,0.0141,1.5994,0.5957,Lambert 2005
+Jack pine,Pin gris,Branches,Branche,0.0185,3.0584,-0.9816,Lambert 2005
+Jack pine,Pin gris,Foliage,Feuillage,0.0325,1.7879,0,Lambert 2005
+Jack pine,Pin gris,Wood,Bois,0.0199,1.6883,1.2456,Lambert 2005
+Largetooth aspen,Peuplier à grandes dents,Bark,Écorce,0.024,2.3055,0,Lambert 2005
+Largetooth aspen,Peuplier à grandes dents,Branches,Branche,0.0131,3.1274,-0.8379,Lambert 2005
+Largetooth aspen,Peuplier à grandes dents,Foliage,Feuillage,0.0382,2.1673,-0.6842,Lambert 2005
+Largetooth aspen,Peuplier à grandes dents,Wood,Bois,0.0128,2.0633,0.9516,Lambert 2005
+Lodgepole pine,Pin tordu latifolié,Bark,Écorce,0.0117,1.6398,0.6524,Ung 2008
+Lodgepole pine,Pin tordu latifolié,Branches,Branche,0.0285,3.3764,-1.4395,Ung 2008
+Lodgepole pine,Pin tordu latifolié,Foliage,Feuillage,0.0769,2.6834,-1.2484,Ung 2008
+Lodgepole pine,Pin tordu latifolié,Wood,Bois,0.0239,1.6827,1.1878,Ung 2008
+Pacific silver fir ,Sapin gracieux,Bark,Écorce,0.0067,2.697,-0.3105,Ung 2008
+Pacific silver fir ,Sapin gracieux,Branches,Branche,0.042,2.0313,0,Ung 2008
+Pacific silver fir ,Sapin gracieux,Foliage,Feuillage,0.0453,2.4867,-0.4982,Ung 2008
+Pacific silver fir ,Sapin gracieux,Wood,Bois,0.0315,1.8297,0.8056,Ung 2008
+Red alder and Black cottonwood,Aulne rouge et Peuplier de l'Ouest,Bark,Écorce,0.0009,1.3061,2.0109,Ung 2008
+Red alder and Black cottonwood,Aulne rouge et Peuplier de l'Ouest,Branches,Branche,0.0131,2.576,0,Ung 2008
+Red alder and Black cottonwood,Aulne rouge et Peuplier de l'Ouest,Foliage,Feuillage,0.0224,1.8368,0,Ung 2008
+Red alder and Black cottonwood,Aulne rouge et Peuplier de l'Ouest,Wood,Bois,0.0051,1.0697,2.2748,Ung 2008
+Red ash,Frêne rouge,Bark,Écorce,0.0219,1.419,0.8963,Lambert 2005
+Red ash,Frêne rouge,Branches,Branche,0.0176,2.3313,0,Lambert 2005
+Red ash,Frêne rouge,Foliage,Feuillage,0.0761,1.3077,0,Lambert 2005
+Red ash,Frêne rouge,Wood,Bois,0.0224,1.7845,1.066,Lambert 2005
+Red Maple,Érable rouge,Bark,Écorce,0.0283,2.0907,0,Lambert 2005
+Red Maple,Érable rouge,Branches,Branche,0.0225,2.4106,0,Lambert 2005
+Red Maple,Érable rouge,Foliage,Feuillage,0.0571,1.4898,0,Lambert 2005
+Red Maple,Érable rouge,Wood,Bois,0.0315,2.0342,0.7485,Lambert 2005
+Red oak,Chêne rouge,Bark,Écorce,0.0326,1.81,0.4153,Lambert 2005
+Red oak,Chêne rouge,Branches,Branche,0.0013,3.0637,0.3153,Lambert 2005
+Red oak,Chêne rouge,Foliage,Feuillage,0.0582,1.5438,0,Lambert 2005
+Red oak,Chêne rouge,Wood,Bois,0.0285,1.8501,1.0204,Lambert 2005
+Red pine,Pin rouge,Bark,Écorce,0.0277,1.5192,0.4645,Lambert 2005
+Red pine,Pin rouge,Branches,Branche,0.0125,3.3865,-1.1939,Lambert 2005
+Red pine,Pin rouge,Foliage,Feuillage,0.0731,2.3439,-0.7378,Lambert 2005
+Red pine,Pin rouge,Wood,Bois,0.0106,1.7725,1.3285,Lambert 2005
+Red spruce,Épinette rouge,Bark,Écorce,0.0274,2.0188,0,Lambert 2005
+Red spruce,Épinette rouge,Branches,Branche,0.0005,3.3136,0,Lambert 2005
+Red spruce,Épinette rouge,Foliage,Feuillage,0.0106,2.2709,0,Lambert 2005
+Red spruce,Épinette rouge,Wood,Bois,0.0143,1.6441,1.4065,Lambert 2005
+Silver maple,Érable à grandes feuilles,Bark,Écorce,0.0123,1.825,0.501,Lambert 2005
+Silver maple,Érable à grandes feuilles,Branches,Branche,0.0543,3.7343,-1.6497,Lambert 2005
+Silver maple,Érable à grandes feuilles,Foliage,Feuillage,6.6808,2.1092,-2.1697,Lambert 2005
+Silver maple,Érable à grandes feuilles,Wood,Bois,0.0274,1.7126,1.1086,Lambert 2005
+Sitka spruce ,Épinette de Sitka,Bark,Écorce,0.0045,1.2275,1.519,Ung 2008
+Sitka spruce ,Épinette de Sitka,Branches,Branche,0.0498,1.9671,0,Ung 2008
+Sitka spruce ,Épinette de Sitka,Foliage,Feuillage,0.014,3.1305,-0.907,Ung 2008
+Sitka spruce ,Épinette de Sitka,Wood,Bois,0.0237,2.5813,0.0822,Ung 2008
+Subalpine fir,Sapin subalpin,Bark,Écorce,0.0061,1.8603,0.7693,Ung 2008
+Subalpine fir,Sapin subalpin,Branches,Branche,0.0265,3.6747,-1.5958,Ung 2008
+Subalpine fir,Sapin subalpin,Foliage,Feuillage,0.0509,2.9909,-1.2271,Ung 2008
+Subalpine fir,Sapin subalpin,Wood,Bois,0.022,1.6469,1.1714,Ung 2008
+Sugar maple,Érable à sucre,Bark,Écorce,0.0103,1.7111,0.8509,Lambert 2005
+Sugar maple,Érable à sucre,Branches,Branche,0.0661,2.594,-0.4933,Lambert 2005
+Sugar maple,Érable à sucre,Foliage,Feuillage,2.5019,2.4527,-2.3008,Lambert 2005
+Sugar maple,Érable à sucre,Wood,Bois,0.0301,2.0313,0.8171,Lambert 2005
+Tamarack larch,Mélèze laricin,Bark,Écorce,0.012,1.7059,0.5811,Lambert 2005
+Tamarack larch,Mélèze laricin,Branches,Branche,0.0336,3.1335,-1.1559,Lambert 2005
+Tamarack larch,Mélèze laricin,Foliage,Feuillage,0.1324,2.114,-0.8781,Lambert 2005
+Tamarack larch,Mélèze laricin,Wood,Bois,0.0276,1.6724,1.1443,Lambert 2005
+Trembling aspen,Peuplier faux-tremble,Bark,Écorce,0.0063,2.0744,0.6691,Ung 2008
+Trembling aspen,Peuplier faux-tremble,Branches,Branche,0.015,2.9068,-0.6306,Ung 2008
+Trembling aspen,Peuplier faux-tremble,Foliage,Feuillage,0.0284,1.602,0,Ung 2008
+Trembling aspen,Peuplier faux-tremble,Wood,Bois,0.0143,1.9369,1.0579,Ung 2008
+Western hemlock,Pruche de l'Ouest,Bark,Écorce,0.0019,2.3356,0.6371,Ung 2008
+Western hemlock,Pruche de l'Ouest,Branches,Branche,0.0609,2.0021,0,Ung 2008
+Western hemlock,Pruche de l'Ouest,Foliage,Feuillage,0.2656,2.0107,-0.7963,Ung 2008
+Western hemlock,Pruche de l'Ouest,Wood,Bois,0.0113,1.9332,1.1125,Ung 2008
+Western red cedar,Thuya géant,Bark,Écorce,0.0002,2.4369,1.1315,Ung 2008
+Western red cedar,Thuya géant,Branches,Branche,0.0611,1.9208,0,Ung 2008
+Western red cedar,Thuya géant,Foliage,Feuillage,0.1097,1.553,0,Ung 2008
+Western red cedar,Thuya géant,Wood,Bois,0.0188,1.3376,1.5293,Ung 2008
+White ash,Frêne blanc,Bark,Écorce,0.0126,1.6456,0.7893,Lambert 2005
+White ash,Frêne blanc,Branches,Branche,0.0354,2.3046,0,Lambert 2005
+White ash,Frêne blanc,Foliage,Feuillage,0.0195,1.0509,0.7836,Lambert 2005
+White ash,Frêne blanc,Wood,Bois,0.0224,1.7438,1.1899,Lambert 2005
+White birch,Bouleau blanc,Bark,Écorce,0.0079,1.9905,0.6553,Ung 2008
+White birch,Bouleau blanc,Branches,Branche,0.0253,3.1518,-0.9083,Ung 2008
+White birch,Bouleau blanc,Foliage,Feuillage,0.1361,2.2978,-1.0934,Ung 2008
+White birch,Bouleau blanc,Wood,Bois,0.0333,2.0794,0.6811,Ung 2008
+White elm,Orme blanc,Bark,Écorce,0.0078,2.454,0,Lambert 2005
+White elm,Orme blanc,Branches,Branche,0.0393,2.188,0,Lambert 2005
+White elm,Orme blanc,Foliage,Feuillage,0.0516,1.4511,0,Lambert 2005
+White elm,Orme blanc,Wood,Bois,0.0207,2.2276,0.6488,Lambert 2005
+White oak,Chêne blanc,Bark,Écorce,0.0308,1.7479,0.3504,Lambert 2005
+White oak,Chêne blanc,Branches,Branche,0.0022,2.0165,1.3953,Lambert 2005
+White oak,Chêne blanc,Foliage,Feuillage,0.0053,1.2822,1.1323,Lambert 2005
+White oak,Chêne blanc,Wood,Bois,0.0442,1.6818,1.031,Lambert 2005
+White spruce,Épinette blanche,Bark,Écorce,0.0096,1.6901,0.7393,Ung 2008
+White spruce,Épinette blanche,Branches,Branche,0.0322,2.8961,-0.9203,Ung 2008
+White spruce,Épinette blanche,Foliage,Feuillage,0.1832,2.4144,-1.0948,Ung 2008
+White spruce,Épinette blanche,Wood,Bois,0.0252,1.7819,1.0022,Ung 2008
+Yellow birch,Bouleau jaune,Bark,Écorce,0.0069,2.0834,0.5371,Lambert 2005
+Yellow birch,Bouleau jaune,Branches,Branche,0.0325,2.3851,0,Lambert 2005
+Yellow birch,Bouleau jaune,Foliage,Feuillage,0.1683,1.2764,0,Lambert 2005
+Yellow birch,Bouleau jaune,Wood,Bois,0.0259,1.9044,0.9715,Lambert 2005

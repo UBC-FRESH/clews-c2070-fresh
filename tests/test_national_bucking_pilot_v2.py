@@ -272,6 +272,26 @@ def test_volume_and_residue_conservation(artifact) -> None:
 
 @requires_artifacts
 def test_no_nan_or_negative_core_columns(artifact) -> None:
+    optional = {
+        "stem_residue_odt",
+        "branch_odt",
+        "foliage_odt",
+        "branch_foliage_odt",
+        "total_residue_odt",
+        "recovery_factor",
+        "recoverable_residue_odt",
+        "branch_foliage_equation_id",
+        "branch_foliage_equation_species",
+        "branch_foliage_reference",
+        "branch_foliage_source",
+        "branch_foliage_source_licence",
+        "stem_residue_odt_expanded",
+        "branch_odt_expanded",
+        "foliage_odt_expanded",
+        "branch_foliage_odt_expanded",
+        "total_residue_odt_expanded",
+        "recoverable_residue_odt_expanded",
+    }
     frames = {
         "tree_list": artifact["trees"],
         "bucked_logs": artifact["logs"],
@@ -286,9 +306,30 @@ def test_no_nan_or_negative_core_columns(artifact) -> None:
     }
     for name, frame in frames.items():
         numeric = frame.select_dtypes(include="number")
-        assert not numeric.isna().any().any(), name
-        assert (numeric >= 0.0).all().all(), name
-        assert frame.notna().all().all(), name
+        core = numeric.drop(
+            columns=[column for column in optional if column in numeric.columns]
+        )
+        assert not core.isna().any().any(), name
+        assert (core >= 0.0).all().all(), name
+        required = frame.drop(
+            columns=[column for column in optional if column in frame.columns]
+        )
+        assert required.notna().all().all(), name
+
+    for frame_name in ("residue_ledger", "bc_tipsy_residue"):
+        frame = frames[frame_name]
+        bc = frame[frame["jurisdiction"] == "BC"]
+        assert bc["branch_foliage_estimated"].all()
+        for column in (
+            "stem_residue_odt",
+            "branch_odt",
+            "foliage_odt",
+            "branch_foliage_odt",
+            "total_residue_odt",
+            "recoverable_residue_odt",
+        ):
+            assert bc[column].notna().all(), (frame_name, column)
+            assert (bc[column] >= 0.0).all(), (frame_name, column)
 
     delta = artifact["v1_v2"]
     for column in ("solid_share_delta", "residue_odt_per_recovered_delta"):

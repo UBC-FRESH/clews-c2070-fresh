@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Added BC branch and foliage allometry to the measured-tree residue ledger.**
+  Added `workflows/national/bucking/bc_biomass_allometry.py`, the vendored CFS
+  tree-level DBH + height coefficient table
+  (`workflows/national/bucking/rules/cfs_biomass/`), a BC species map, and
+  `docs/bc-biomass-allometry.md`. The CFS table is Open Government Licence -
+  Canada and implements Lambert et al. (2005) and Ung et al. (2008). BC measured
+  stems now carry `branch_odt`, `foliage_odt`, `branch_foliage_odt`,
+  `stem_residue_odt`, gross `total_residue_odt`, and
+  `recoverable_residue_odt` at the existing 0.60 pilot recovery factor; stem
+  residue remains separate. The national-sort gross total is 0.161622 ODT/m3
+  (branch+foliage 0.121045), the 0.60-recoverable total is 0.096973 ODT/m3, and
+  the prior stem-only result is 0.040577 ODT/m3. The facility gross coefficient
+  is 0.076226 ODT/m3, so the gross total is +112.03% and the recoverable total
+  is +27.22% versus facility; both are reported, neither is silently chosen.
+  Non-BC synthetic rows keep stem residue only and leave branch/foliage empty,
+  never zero. Added `bc_residue_allometry.csv` and
+  `bc_residue_allometry_summary.csv`; refreshed the v2 ledger, schema, report,
+  summary, and manifest. Tests: equations, all-species positive values, group
+  fallback, domain guards, ledger conservation, gross/recoverable separation,
+  evidence and labels, manifest hashes, and recomputation from the committed
+  measured list. No UI/public OSeCAN change and no unexpected `D`.
+
 - **Added a separate TIPSY 4.5 bucking profile and reran TSA24 sort validation.**
   Added `workflows/national/bucking/profiles.py`,
   `workflows/national/bucking/rules/tipsy45_profile.yaml`, and
