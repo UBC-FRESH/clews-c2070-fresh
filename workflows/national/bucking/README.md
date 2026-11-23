@@ -271,7 +271,44 @@ written under
 .venv/bin/pytest -q tests/test_national_bucking_pilot_v1.py
 ```
 
-## 11. Quebec pilot grade-rule rerun v1
+## 11. National pilot v2 — measured BC tree list
+
+`national_bucking_pilot_v2.py` replaces the ten synthetic BC trees in pilot
+v1 with a post-stratified aggregate of measured FAIB PSP TSA24 stems.  The
+source is `bc_psp_validation_v0/selected_trees.csv` at the latest live visit
+per site.  Trees that v0 could not buck (unsupported taper species or a
+reference-bucker balance failure) are excluded and counted.
+
+Within each species x BEC zone x 2.5 cm DBH stratum, one measured stem at the
+PHF-weighted median is retained and assigned the stratum's summed `PHF_TREE`
+expansion factor.  The selected list preserves the source expansion-factor
+total exactly; DBH and height are the measured retained values, not synthetic
+geometry.  Selection is audited in `bc_tree_list_selection.csv`.
+
+BC is bucked twice: through the BC interior TIPSY 4.5 dimension sorts
+(`bc_tipsy_*`) and through the national pilot dimension sort set inside the
+13-jurisdiction pilot.  The exact TIPSY rule file used is copied into the
+artifact as `bc_tipsy_sort_rules.yaml` and `bc_tipsy_sort_rules.csv`, so the
+run is auditable even while the live rule file is revised.  The other twelve
+jurisdictions keep the v1 synthetic
+tree lists and local/donor taper dispatch.  `grade=not_assigned`,
+`sort_basis=dimension_only`, `observed=false`, `policy_grade=false`,
+`national_claim=false`.  The BC tree geometry is labelled
+`measured_tree_list`; the other twelve are `representative_synthetic`.
+Absolute volumes are not comparable between expansion-weighted BC and unit
+weight synthetic provinces; shares and per-tree metrics are the comparison
+basis.
+
+```bash
+.venv/bin/python -m workflows.national.bucking.national_bucking_pilot_v2 \
+  --out-dir data/derived/national/bucking/national_bucking_pilot_v2
+.venv/bin/pytest -q tests/test_national_bucking_pilot_v2.py
+```
+
+Outputs are under
+`data/derived/national/bucking/national_bucking_pilot_v2/`.
+
+## 12. Quebec pilot grade-rule rerun v1
 
 `qc_grade_pilot.py` reruns the ten QC trees from the v1 tree list through two
 sort sets: `rules/qc_pilot_sorts.csv` (dimension-only) and

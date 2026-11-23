@@ -1,5 +1,31 @@
 # Change Log
 
+## 2026-11-23
+
+- **Added national bucking pilot v2 with a measured BC TSA24 PSP tree list.**
+  Added `workflows/national/bucking/national_bucking_pilot_v2.py` and
+  `tests/test_national_bucking_pilot_v2.py`. The v2 list replaces the ten
+  synthetic BC trees from v1 with 347 measured FAIB PSP stems selected as the
+  PHF-weighted median of each species x BEC zone x 2.5 cm DBH stratum; pooled
+  stratum `PHF_TREE` is the expansion factor, preserving the source expansion
+  total (1,188,462.589) exactly. DBH and height remain measured values and BC
+  rows are labelled `measured_tree_list` with `synthetic=false`; the other 12
+  jurisdictions keep the v1 `representative_synthetic` lists. BC is bucked with
+  the BC interior TIPSY 4.5 dimension sorts and with the national pilot sorts.
+  The TIPSY rerun reproduces the v0 full-population expanded banks closely
+  (taper 98.7%, recovered logs 99.0%, stem residue 97.2%). National-sort BC
+  solid share is 0.705 versus the facility-chain solid feedstock share 0.689
+  (ratio 1.023); residue is 0.041 ODT/m3 versus facility harvest residue
+  0.076 ODT/m3 (ratio 0.532), so the facility screen remains outside the 20%
+  band on residue. Every row is `observed=false`, `policy_grade=false`,
+  `national_claim=false`; `grade=not_assigned`, `sort_basis=dimension_only`.
+  Outputs, selection audit, BC TIPSY logs/residue, v1-to-v2 comparison,
+  facility comparison, population reconciliation, summary, report and
+  checksummed manifest are under
+  `data/derived/national/bucking/national_bucking_pilot_v2/`. Tests: 10 v2
+  tests passed; 38 v1/v0/bucking tests passed. No UI/public OSeCAN change and
+  no unexpected `D`.
+
 ## 2026-11-22
 
 - **Added the Quebec pilot grade-rule rerun v1.** Added
