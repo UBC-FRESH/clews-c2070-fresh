@@ -1180,6 +1180,8 @@ def compute_metrics(
             ],
             "no_age_imputation": True,
             "no_threshold_tuning": True,
+            "sort_alias": dict(SORT_ALIASES),
+            "fail_closed_on_unexpected_codes": True,
         },
         "caveats": [
             (
@@ -1491,7 +1493,11 @@ def build_report(
     )
     lines.append(
         f"- TIPSY industrial-sort source: `{summary['tipsy_source']['path']}` "
-        f"(`{tipsy_source_role}`).\n\n"
+        f"(`{tipsy_source_role}`).\n"
+    )
+    lines.append(
+        "- Sort-code contract: 20 TIPSY industrial codes; the only accepted spelling "
+        "difference is `D125L50` -> `D125L5`. Any other unexpected code fails closed.\n\n"
     )
     lines.append("### Plot status\n\n")
     status_labels = [
