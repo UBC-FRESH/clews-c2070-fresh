@@ -2,6 +2,25 @@
 
 ## 2026-11-23
 
+- **Drafted the v4 energy-team handoff memo and email.** Added
+  `docs/energy-handoff-v4.md` as the decision-oriented companion to
+  `docs/handoff-national-facility-chain-v4.md`. It records 13/13 coverage
+  (4 E1 measured BC/QC/NB/YT plus 9 E2c density-calibrated
+  AB/SK/MB/ON/NS/PE/NL/NT/NU), zero donor product coefficients, and no
+  request/DUA dependency. At 119 Mm³: solid product 37.674 Mm³, pulp
+  12.066 M odt, process residue 498.751 PJ, harvest gross 444.411 PJ,
+  recoverable 155.544/266.646/333.308 PJ at 0.35/0.60/0.75, and total gross
+  943.162 PJ. Records OSeCAN handoff v8 tiers (process
+  T1/T3/above_T4/above_T4; harvest T4/above_T4/above_T4), the unchanged
+  official OSeCAN tree (146 files, `80caa91c…`, 0 changed files), four
+  decisions for the Taco/energy team (branch/foliage recovery basis,
+  process-residue availability, biomass/waste incineration assumptions,
+  industrial chemical feedstock versus energy demand), limitations
+  (`not_assigned` grade, donor tapers/capacity/zone weights, `not_available`
+  provinces), non-claims, and an 8-line draft email. Documentation only; no
+  code/model/UI change, no official OSeCAN change, no request/DUA, and no new
+  tag. No unexpected `D`.
+
 - **Froze and tagged the E2c 13-jurisdiction facility chain v4.** Updated
   `docs/model-card-national-facility-chain.md` and
   `docs/handoff-national-facility-chain-v4.md` for the E1 measured + E2c
