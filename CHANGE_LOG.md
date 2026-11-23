@@ -2,6 +2,31 @@
 
 ## 2026-11-23
 
+- **Built E2 v3 density-calibrated tree lists for the nine non-measured
+  provinces.** Added `workflows/national/inventory/provincial_open_inventory_density.py`,
+  `workflows/national/bucking/open_data_imputation_v3.py`,
+  `tests/test_open_data_imputation_v3.py`, and
+  `docs/handoff-e2-v3-density-calibrated-tree-lists.md`. Derived
+  `data/derived/national/inventory/provincial_open_inventory_density_v1/`
+  with province-specific expansion: SK 2,033.65 stems/ha from FRI
+  `BA`/`QMD`-implied total stem density (`MSTEMS` merchantable cross-check),
+  NS 1,409.82 from `TOTBA`/`AVDI` (`TOTMRVOL` volume check), PE 802.84 from
+  EFI2020 `tphmerch` (`gtv` volume check), MB 2,050.00 from the median
+  measured donor plot density, and AB/ON/NL/NT/NU 1,000.00 as labelled
+  AVI-class or no-open-density proxies. Built
+  `data/derived/national/bucking/open_data_imputation_v3/` with 36 stems per
+  province (324 total), tier `E2c_open_inventory_density_calibrated`; E2 v2
+  geometry, donor tapers and bucking are unchanged and only the expansion
+  factor is scaled. SK volume rises 43.6→88.7 m3/ha-eq against FRI `GBVOL`
+  100.1; NS 108.1→152.3 against `TOTMRVOL` 105.2; PE 145.5→116.8 against EFI
+  `gtv` 170.8; all three are within the ±50% screening tolerance. Per-m3
+  product and residue coefficients are unchanged from v2. Added v2→v3
+  comparison, density calibration, volume context and distribution labels.
+  All 23 focused v2/v3 tests pass, covering density/expansion, volume/residue
+  conservation, open-volume comparison, no NaN/negative and deterministic
+  regeneration. Data commit `3fdb0f2`; no request/DUA/restricted data, no UI
+  or official OSeCAN change and no national claim. No unexpected `D`.
+
 - **Built E2 v2 open-inventory-informed tree lists for the nine non-measured
   provinces.** Added
   `workflows/national/inventory/provincial_open_inventory_distributions.py`,

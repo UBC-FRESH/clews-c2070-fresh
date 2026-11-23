@@ -766,6 +766,29 @@ decide what blocks production readiness after the conceptual alpha.
   provenance/distribution labels, volume/residue conservation, no NaN or
   negatives, and deterministic regeneration. No request/DUA/restricted data,
   no UI/official OSeCAN change and no national claim. No unexpected `D`.
+- [x] P7.29 Build E2 v3 density-calibrated tree lists. Completed: added
+  `workflows/national/inventory/provincial_open_inventory_density.py`,
+  `workflows/national/bucking/open_data_imputation_v3.py`,
+  `tests/test_open_data_imputation_v3.py`, and
+  `docs/handoff-e2-v3-density-calibrated-tree-lists.md`. Derived
+  `provincial_open_inventory_density_v1` with province-specific expansion:
+  SK 2,033.65 stems/ha from FRI `BA`/`QMD`-implied total density (`MSTEMS`
+  cross-check), NS 1,409.82 from `TOTBA`/`AVDI` (`TOTMRVOL` check), PE 802.84
+  from EFI `tphmerch` (`gtv` check), MB 2,050.00 from median measured donor
+  plot density, and AB/ON/NL/NT/NU 1,000.00 as labelled AVI-class or
+  no-open-density proxies. Built 36 stems per province (324 total) with tier
+  `E2c_open_inventory_density_calibrated`, keeping E2 v2 geometry, donor
+  tapers and bucking; only expansion changed. SK volume rises 43.6→88.7
+  m3/ha-eq against FRI `GBVOL` 100.1; NS 108.1→152.3 against `TOTMRVOL` 105.2;
+  PE 145.5→116.8 against EFI `gtv` 170.8; all three are within the ±50%
+  screening tolerance. Per-m3 product/residue coefficients are unchanged.
+  Added `open_data_imputation_v3/` with tree list, logs, residue ledger,
+  coefficients, v2→v3 comparison, density calibration, volume context and
+  distribution labels. All 23 focused v2/v3 tests pass, including
+  density/expansion, volume/residue conservation, open-volume comparison,
+  no NaN/negative and deterministic regeneration. Data commit `3fdb0f2`;
+  no request/DUA/restricted data, no UI/official OSeCAN change and no national
+  claim. No unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 
