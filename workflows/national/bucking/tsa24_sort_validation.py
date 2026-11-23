@@ -1441,10 +1441,8 @@ def build_report(
     *,
     generated_utc: str,
     summary: Mapping[str, Any],
-    plot_comparison: pd.DataFrame,
     au_summary: pd.DataFrame,
     sort_comparison: pd.DataFrame,
-    input_paths: Mapping[str, Path],
     tipsy_source_role: str,
 ) -> str:
     sample = summary["sample"]
@@ -1801,15 +1799,8 @@ def generate_validation(
     report = build_report(
         generated_utc=generated_utc,
         summary=metrics,
-        plot_comparison=plot_comparison,
         au_summary=au_summary,
         sort_comparison=sort_comparison,
-        input_paths={
-            "logs": logs_path,
-            "trees": trees_path,
-            "coverage": coverage_path,
-            "tipsy_sorts": resolved_tipsy_path,
-        },
         tipsy_source_role=tipsy_role,
     )
     (out_dir / "VALIDATION_REPORT.md").write_text(report, encoding="utf-8")
