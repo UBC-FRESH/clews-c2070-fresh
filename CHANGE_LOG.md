@@ -2,6 +2,25 @@
 
 ## 2026-11-23
 
+- **Added transport-radius capacity gap v1.** Added
+  `transport_capacity_gap_v1.py`, focused band/capacity/conservation/label
+  tests, and `data/derived/national/facilities/transport_capacity_gap_v1/`.
+  The screening artifact groups v8 and v9 assigned harvest volume into
+  `[0,50)`, `[50,100)`, `[100,150)`, `[150,300)` and `[300,∞)` km bands by
+  origin province and destination facility class, compares it with eligible
+  same-province capacity v3 capacity in the same bands, and reports local
+  access gaps, >150/>300 km exposure, and a 50 km localization counterfactual.
+  At 118.977 Mm3, v9 moves 99.34 Mm3 (83.5%) at or above 150 km and 58.66 Mm3
+  (49.3%) at or above 300 km, versus 99.81 Mm3 (83.9%) and 67.42 Mm3 (56.7%)
+  in v8. QC, ON, NL, MB and SK meet the high >300 km exposure screen; QC SAW
+  ranks first in the v9 localization screen. Distances remain unweighted ADM1
+  province-centroid to facility screening distances, not harvest-node or routed
+  distances, so the result is an accessibility screen, not a siting study.
+  Every row is `model_estimate`, `observed=false`, `policy_grade=false`,
+  `national_claim=false` and `official_osecan_changed=false`; no UI or official
+  OSeCAN surface is changed. Nine focused tests and ruff/mypy pass; no
+  unexpected `D`.
+
 - **Added transport-aware assignment v9 and facility transport costs.** Added
   `national_facility_assignment_v9.py`, focused arithmetic/conservation/
   capacity/comparison tests, and
