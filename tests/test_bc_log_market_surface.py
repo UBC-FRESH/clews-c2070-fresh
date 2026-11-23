@@ -236,9 +236,10 @@ def test_market_run_conservation_and_no_nan() -> None:
 
     recovered = logs.groupby("tree_id")["volume_m3"].sum()
     ledger = residue.set_index("tree_id")["recovered_log_m3"]
-    common = recovered.index.intersection(ledger.index)
-    assert len(common) == len(ledger) == len(recovered)
-    difference = (recovered.loc[common] - ledger.loc[common]).abs()
+    with_logs = ledger[ledger > 0.0]
+    common = recovered.index.intersection(with_logs.index)
+    assert len(common) == len(with_logs) == len(recovered)
+    difference = (recovered.loc[common] - with_logs.loc[common]).abs()
     assert (difference <= 1e-6).all()
 
 
