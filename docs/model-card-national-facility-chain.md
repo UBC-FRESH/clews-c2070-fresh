@@ -1,61 +1,58 @@
-# Model card — National facility chain v3 (E1/E2 open-data coefficients)
+# Model card — National facility chain v4 (E1 measured + E2c density-calibrated)
 
 | Field | Value |
 |---|---|
-| Package | National facility chain v3 (frozen screening package) |
-| Freeze tag (model numbers) | `national-facility-chain-v3` |
-| Documentation tags | `national-facility-chain-v3.1`; `national-facility-chain-v3.2` (manifest integrity fix) |
+| Package | National facility chain v4 (frozen E2c screening package) |
+| Freeze tag (documentation) | `national-facility-chain-v4` |
 | Date | 2026-11-23 |
-| Parent commit at model freeze | `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` |
-| Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` for the v3 numbers; `ef64c903f57c2e89f12eca62a0c9a2be49d8a28d` for the v3.2 manifest fix (`UBC-FRESH/clews-c2070-fresh-data`) |
-| Stage artifacts | Inventory v1 → capacity v3 → assignment v6 → product-chain v4 → facility residue v6 → residue curve v6 → chain scenarios v6 → OSeCAN handoff v7 |
+| Parent commit at model freeze | `60409639b57d3aa6ff614dfba8e4c2bdb8b28247` |
+| Data commit | `f0f77a0e6cfeb3fbbcafd685beedcd7324dbc9c8` (`UBC-FRESH/clews-c2070-fresh-data`) |
+| Stage artifacts | Inventory v1 → capacity v3 → assignment v6 → product-chain v5 → facility residue v7 → residue curve v7 → chain scenarios v7 → OSeCAN handoff v8 → OSeCAN scenarios v7 |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
 | Energy-side status | Read-only handoff; `official_osecan_changed=false` |
-| Scope boundary | No code, model, UI, or public OSeCAN change; no legal/AAC claim; no data request, DUA, or approval dependency |
+| Scope boundary | Documentation/tag freeze only; no code, model artifact, UI, or public OSeCAN change at the freeze commit; no legal/AAC claim; no data request, DUA, or approval dependency |
 
 ## 1. Purpose
 
 The national facility chain is a reproducible screening chain that connects a
 documented national harvest case to a bounded set of Canadian forest-product
 facilities, then converts assigned feedstock into products and process/harvest
-residue. Version 3 replaces the nine remaining donor provincial product
-coefficients with E2 open-data imputation coefficients and applies CFS
-branch/foliage allometry to the E2 stems. BC, QC, NB, and YT retain E1 measured
-coefficients. All 13 jurisdictions therefore use a province-specific E1 or E2
-product and total-residue coefficient: **no donor provincial product
-coefficient is used**.
+residue. Version 4 keeps the frozen v3.2 inventory v1 / capacity v3 /
+assignment v6 provincial-floor allocation and replaces the nine E2 v1 product
+coefficients with E2c density-calibrated coefficients. BC, QC, NB, and YT
+retain E1 measured coefficients. All 13 jurisdictions therefore use a
+province-specific E1 measured or E2c product and total-residue coefficient:
+**zero donor provincial product coefficients are applied**.
 
 Within-class SAW/PANEL splits, other-roundwood routing, pellet/bio splits,
-recovery fractions, and mill conversion ratios remain donor assumptions and are
-labelled as such. Version 3 is designed to answer four limited questions:
+recovery fractions, and mill conversion ratios remain donor assumptions and
+are labelled as such. Version 4 is designed to answer four limited questions:
 
 1. Can a 100/119/150 Mm³ national harvest case be placed on the facility
    inventory without an unbounded sink, and with what local/cross-border split?
 2. How much of that placement relies on published capacity versus a
    class-median proxy?
 3. What products and residue follow when every province has an explicit E1
-   measured or E2 imputed coefficient, and how large is total harvest residue
-   under alternative recovery scenarios?
+   measured or E2c density-calibrated coefficient, and how large is total
+   harvest residue under alternative recovery scenarios?
 4. Can those residue streams be handed to the 13 OSeCAN zones as a read-only,
    traceable sensitivity, without changing the official energy model?
 
 It is not a mill-by-mill operating plan, a timber-supply forecast, an
 interprovincial trade forecast, a policy evaluation, or an investment case.
 
-**v3.1 publication note.** Tag `national-facility-chain-v3.1` is a
-documentation-only superset of the v3 model freeze. It publishes this model
-card, the v3 handoff, and the data pointer at a documentation commit after
-v3. It does not move `national-facility-chain-v3`, rebuild any artifact, or
-change any number in this card.
-
-**v3.2 manifest-integrity note.** Tag `national-facility-chain-v3.2` corrects
-the sole stale manifest metadata entry in the v3 data commit. The
-`facility_residue_supply_v6` manifest now records the committed
-`summary.json` size and SHA-256, and all 66 output entries across the nine v3
-artifact manifests verify. The fix changes manifest metadata only; no
-artifact number, coefficient, validation result, code, UI, or official
-OSeCAN file changed, and `national-facility-chain-v3` and
-`national-facility-chain-v3.1` are not moved.
+**Baseline correction: v3.2 was E2 v1; v4 is E2c; E2 v2 was not integrated.**
+The frozen v3.2 `national_product_chain_v4` reads
+`open_data_imputation_v1/product_coefficients.csv`, which is the E2 v1
+coefficient set. E2 v2 was built as open-inventory-informed tree lists but was
+never integrated into a facility chain. The v4 chain uses
+`open_data_imputation_v3` (E2c), which keeps E2 v2 geometry, donor
+DBH/height draws, donor tapers, and bucking unchanged and recalibrates only the
+stems/ha expansion. A coefficient check confirms E2 v2 and E2c share identical
+per-m³ solid/pulp/other shares and stem/branch-foliage/total residue
+coefficients: all 54 coefficient rows are unchanged (`changed=false`). Density
+calibration is therefore an extensive change (expanded reference volume), not
+an intensive per-m³ change. Calling v3.2 an “E2 v2” baseline would be wrong.
 
 ## 2. Chain and scope
 
@@ -64,11 +61,12 @@ OSeCAN file changed, and `national-facility-chain-v3` and
 | Inventory | `national_facility_inventory_v1` | Adds the 2025 Canadian Biomass pellet-map producers to inventory v0 and dedupes them | 519 records; 212 with published capacity |
 | Capacity | `national_facility_capacity_v3` | Adds Quebec MRNF 2026 permitted volumes, five company disclosures, and retains class-median proxies | 689 records; 271.342 Mm³/yr total capacity |
 | Assignment | `national_facility_assignment_v6` | Local-first, finite-capacity allocation of the 119 Mm³ case on capacity v3 with the 1.2× provincial floor as primary | 208 facilities; 118.977 Mm³ assigned |
-| Product chain | `national_product_chain_v4` | Applies E1 measured BC/QC/NB/YT and E2 imputed AB/SK/MB/ON/NS/PE/NL/NT/NU product shares and total residue | 42.291 Mm³ solid product; 505.333 PJ process residue; 390.418 PJ gross harvest residue |
-| Facility residue | `facility_residue_supply_v6` | Assigns process residue to facilities; keeps harvest residue origin-province | 27.315 M odt process residue; 505.333 PJ |
-| Residue curve | `national_residue_curve_v6` | Converts process/harvest residue to 0/25/50/75% and 35/60/75% cases at 18.5 GJ/ODT | National and provincial PJ curves |
-| Scenarios | `national_facility_chain_scenarios_v6` | Re-runs 100/119/150 Mm³ on the capacity-v3 floor and applies the E1/E2 product/residue coefficients | Full scenario chain |
-| OSeCAN handoff | `forestry_osecan_handoff_v7` | Allocates province/case residue to all 13 OSeCAN zones | 119 handoff rows; 91 zone/case summary rows |
+| Product chain | `national_product_chain_v5` | Applies E1 measured BC/QC/NB/YT and E2c density-calibrated AB/SK/MB/ON/NS/PE/NL/NT/NU product shares and total residue | 37.674 Mm³ solid product; 498.751 PJ process residue; 444.411 PJ gross harvest residue |
+| Facility residue | `facility_residue_supply_v7` | Assigns process residue to facilities; keeps harvest residue origin-province | 26.960 M odt process residue; 498.751 PJ |
+| Residue curve | `national_residue_curve_v7` | Converts process/harvest residue to 0/25/50/75% and 35/60/75% cases at 18.5 GJ/ODT | National and provincial PJ curves |
+| Scenarios | `national_facility_chain_scenarios_v7` | Re-runs 100/119/150 Mm³ on the capacity-v3 floor and applies the E1/E2c product/residue coefficients | Full scenario chain |
+| OSeCAN handoff | `forestry_osecan_handoff_v8` | Allocates province/case residue to all 13 OSeCAN zones | 119 handoff rows; 91 zone/case summary rows |
+| OSeCAN scenarios | `forestry_osecan_scenarios_v7` | Carries all three harvest cases and seven availability cases to the 13 zones | 357 residue rows; 273 zone summary rows |
 
 The chain is static and single-period at each harvest case. It contains no
 forest-growth, investment, facility-entry/exit, or annual time path. The
@@ -136,9 +134,9 @@ a 2026 Quebec permit ceiling, a finished-pellet bulk volume, and a converted
 sawn-lumber output must not be added or compared as if they were the same
 measurement.
 
-### 3.3 E1 measured and E2 imputed coefficients
+### 3.3 E1 measured and E2c density-calibrated coefficients
 
-Version 3 uses two evidence tiers for provincial product and residue
+Version 4 uses two evidence tiers for provincial product and residue
 coefficients. Every jurisdiction has one of them; no province uses a donor
 product coefficient.
 
@@ -146,16 +144,22 @@ product coefficient.
   **591 stems**: BC 347, QC 85, NB 106, and YT 53. Expansion-weighted
   recovered-log shares yield province-specific solid (sawlog), pulp
   (pulpwood), other-roundwood, and gross total harvest-residue coefficients.
-- **E2 open-data imputation (AB, SK, MB, ON, NS, PE, NL, NT, NU).** The
-  `open_data_imputation_v1` tree lists contain **324 stems**, 36 per province,
-  built from SCANFI v2 province species composition, deterministic weighted
-  donor DBH/height draws from the measured BC/QC/NB/YT tree lists, and labelled
-  BC Kozak or QC Schneider donor tapers. Imputed expansion is 1,000 stems/ha,
-  a round representative density. Every E2 row is `measured=false`,
-  `imputed=true`, and `synthetic=false`.
-- **Zero donor product coefficients.** The `national_product_chain_v4`
+- **E2c density-calibrated open-data imputation (AB, SK, MB, ON, NS, PE, NL,
+  NT, NU).** The `open_data_imputation_v3` tree lists contain **324 stems**, 36
+  per province, built from SCANFI v2 province species composition,
+  deterministic weighted donor DBH/height draws from the measured
+  BC/QC/NB/YT tree lists, and labelled BC Kozak or QC Schneider donor tapers.
+  The E2c tier is `E2c_open_inventory_density_calibrated`; every E2c row is
+  `measured=false`, `imputed=true`, `synthetic=false`, and
+  `density_calibrated=true`.
+- **Density expansion.** SK, NS, and PE use open-inventory stem density; MB
+  uses a donor median plot density; AB, ON, NL, NT, and NU retain a labelled
+  1,000 stems/ha screening proxy. Density changes stems/ha and the expanded
+  reference volume only. It does not change per-m³ product shares, residue
+  coefficients, donor tapers, or bucking.
+- **Zero donor product coefficients.** The `national_product_chain_v5`
   coefficient table has solid, pulp, other, and total harvest-residue values
-  for all 13 provinces from either E1 or E2. The donor coefficient column is
+  for all 13 provinces from either E1 or E2c. The donor coefficient column is
   retained only as an audit comparison; it is not applied.
 - **Retained donor splits, explicitly labelled.** The within-solid SAW/PANEL
   split, the other-roundwood routing to PELLET/BIO (the facility chain has no
@@ -163,16 +167,30 @@ product coefficient.
   mill conversion ratios remain donor assumptions. They are labelled
   `donor_within_class_split` or `donor_conversion` in the product-chain rows.
 - **Total residue for both tiers.** E1 stems use measured stem, branch, and
-  foliage components. E2 stems use stem taper residue plus CFS branch and
+  foliage components. E2c stems use stem taper residue plus CFS branch and
   foliage equations with explicit species/group proxies. Branch and foliage
   are dry mass; they are never added to stem taper volume.
 - **PANEL in BC.** PANEL is absent from BC Stage A; its allocation is the
   explicit BC panel nameplate share of sawlog plus panel nameplate, labelled as
   a BC anchor.
 
+E2c density evidence:
+
+| Province | Density stems/ha | Density statistic | Evidence class | Expanded volume m³/ha |
+|---|---:|---|---|---:|
+| SK | 2,033.65 | `area_weighted_median` | `open_inventory` | 88.692 |
+| NS | 1,409.82 | `area_weighted_median` | `open_inventory` | 152.342 |
+| PE | 802.84 | `area_weighted_median` | `open_inventory` | 116.794 |
+| MB | 2,050.00 | `donor_median_plot_density` | `donor` | 251.565 |
+| AB | 1,000.00 | `proxy_default` | `proxy` | 409.088 |
+| ON | 1,000.00 | `proxy_default` | `proxy` | 122.913 |
+| NL | 1,000.00 | `proxy_default` | `proxy` | 178.398 |
+| NT | 1,000.00 | `proxy_default` | `proxy` | 146.149 |
+| NU | 1,000.00 | `proxy_default` | `proxy` | 102.728 |
+
 ### 3.4 Branch and foliage
 
-Branch and foliage dry mass is computed for every E1 and E2 stem from the
+Branch and foliage dry mass is computed for every E1 and E2c stem from the
 vendored CFS Biomass and Nutrients tree-level DBH + height equations (Lambert,
 Ung and Raulier 2005; Ung, Bernier and Guo 2008; Open Government Licence –
 Canada):
@@ -186,7 +204,7 @@ include mountain hemlock (conifer aggregate), birch (Betula aggregate), and
 black spruce for YT spruce. Branch and foliage are model estimates, not weighed
 components. They add dry mass and energy but no measured volume, so the m³
 feedstock routing remains the stem taper residue; products and m³ process
-residue are driven by the E1/E2 product shares and class conversion ratios.
+residue are driven by the E1/E2c product shares and class conversion ratios.
 
 ### 3.5 OSeCAN zone context
 
@@ -231,7 +249,7 @@ output; it carries no defect, sweep, knot, rot, or product-quality information.
 Multiple PSP plots share a managed-AU curve, so per-plot errors are not
 independent. The optional `tipsy45` profile does not close the gap (pooled TVD
 0.4404, mean per-plot TVD 0.5354). Do not describe the chain as
-"grade-validated" or "sort-validated".
+“grade-validated” or “sort-validated”.
 
 ## 4. Facility inventory, capacity, and assignment
 
@@ -273,120 +291,129 @@ independent. The optional `tipsy45` profile does not close the gap (pooled TVD
 
 Validation reports conservation, finite capacity, no capacity violation, no
 unbounded assignment, no non-operating assignment, and `max_utilization=1.0`.
-The published capacity is unchanged by the floor. The assignment layer is
-identical to v2; v3 changes only the downstream product and residue chain.
+The published capacity is unchanged by the floor. Assignment is identical to
+v3.2; v4 changes only the downstream product and residue coefficients.
 
 ## 5. Product and residue chain
 
-Product-chain v4 replaces all nine donor provincial product coefficients with
-E2 coefficients and applies total residue (stem plus branch/foliage) to E1 and
-E2 stems. All quantities are model estimates, not measured mill output or a
-facility survey.
+Product-chain v5 applies E1 measured coefficients in BC/QC/NB/YT and E2c
+density-calibrated coefficients in the nine other jurisdictions. All
+quantities are model estimates, not measured mill output or a facility survey.
 
-### 5.1 119 Mm³ national chain
+### 5.1 119 Mm³ national chain, v3.2 (E2 v1) → v4 (E2c)
 
-| Metric | v3 E1/E2 | v2 donor product | Delta |
-|---|---:|---:|---:|
-| Solid product | 42.291 Mm³ | 47.174 Mm³ | −10.35% |
-| Sawlog product | 38.119 Mm³ | 42.520 Mm³ | −10.35% |
-| Panel product | 4.172 Mm³ | 4.654 Mm³ | −10.35% |
-| Pulp product | 10.824 M odt | 9.527 M odt | +13.62% |
-| Pellet product | 4.356 M odt | 4.172 M odt | +4.40% |
-| Bio product | 775.428 GWh | 742.725 GWh | +4.40% |
-| Process residue | 27.315 M odt / 505.333 PJ | 27.817 M odt / 514.614 PJ | −1.80% |
-| Harvest residue, gross | 21.104 M odt / 390.418 PJ | 16.954 M odt / 313.640 PJ | +24.48% |
-| Harvest residue, recoverable | 12.662 M odt / 234.251 PJ | 10.564 M odt / 195.433 PJ | +19.86% |
-| Total residue, gross | 48.419 M odt / 895.751 PJ | 44.771 M odt / 828.254 PJ | +8.15% |
-| Total residue, recoverable | 39.977 M odt / 739.584 PJ | 38.381 M odt / 710.047 PJ | +4.16% |
+Assignment and harvest are identical across the two chains, so every delta is
+a coefficient effect. E1 provinces are unchanged.
 
-The percentages compare the v3 E1/E2 chain with the frozen v2 donor-product
-chain at the same 119 Mm³ harvest and assignment. Assignment, harvest, and
-facility set are unchanged; the differences are coefficient effects only.
+| Metric | v3.2 (E2 v1) | v4 (E2c) | Delta | Delta % |
+|---|---:|---:|---:|---:|
+| Sawlog product Mm³ | 38.119 | 33.957 | −4.162 | −10.92% |
+| Panel product Mm³ | 4.172 | 3.717 | −0.456 | −10.92% |
+| **Solid product Mm³** | **42.291** | **37.674** | **−4.617** | **−10.92%** |
+| Pulp product M odt | 10.824 | 12.066 | +1.242 | +11.47% |
+| Pellet product M odt | 4.356 | 5.230 | +0.874 | +20.06% |
+| Bio product GWh | 775.4 | 930.9 | +155.5 | +20.06% |
+| Process residue PJ | 505.333 | 498.751 | −6.582 | −1.30% |
+| Harvest gross PJ | 390.418 | 444.411 | +53.993 | +13.83% |
+| Harvest recoverable PJ (60%) | 234.251 | 266.646 | +32.396 | +13.83% |
+| Total gross PJ | 895.751 | 943.162 | +47.411 | +5.29% |
+| Total recoverable PJ (60% harvest) | 739.584 | 765.397 | +25.814 | +3.49% |
 
-The v2 harvest-recoverable baseline is the mixed reference definition: 0.60 on
-total residue for the four measured provinces and the v1 donor stem-recoverable
-share for the nine donor provinces. In v3 all 13 jurisdictions carry total
-residue, so the comparable field is a uniform 0.60 on gross harvest residue.
-The +19.86% is the change in that field; the v2 uniform-0.60 value was
-188.184 PJ. The total-recoverable row is process residue plus the harvest
-recoverable field, not 0.60 of total gross residue.
+The solid decrease and pulp increase reflect the E2c province shares, not the
+density expansion. Harvest residue rises because the E2c total-residue
+coefficients differ from E2 v1; process residue falls slightly because the
+class mix changes while class residue ratios stay donor assumptions.
 
-Process residue per m³ feedstock is 0.209747 odt/m³; gross harvest residue per
-m³ harvest is 0.177375 odt/m³; total gross residue per m³ harvest is 0.406959
-odt/m³. Process and harvest residue are separate streams and are never summed
-into a combined OSeCAN row.
-
-The 0.60 factor remains the existing reference scenario, not a calibrated
-recovery factor.
-
-### 5.2 E1/E2 coefficient table (119 Mm³)
+### 5.2 E1/E2c coefficient table (119 Mm³)
 
 | Province | Tier | Solid | Pulp | Other | Stem ODT/m³ | Branch+foliage ODT/m³ | Total ODT/m³ |
 |---|---|---:|---:|---:|---:|---:|---:|
 | BC | E1 measured | 0.6953 | 0.2948 | 0.0100 | 0.040577 | 0.121045 | 0.161622 |
-| AB | E2 imputed | 0.5985 | 0.3773 | 0.0242 | 0.040511 | 0.092006 | 0.132517 |
-| SK | E2 imputed | 0.4704 | 0.5008 | 0.0288 | 0.063432 | 0.105375 | 0.168808 |
-| MB | E2 imputed | 0.5099 | 0.4611 | 0.0290 | 0.094930 | 0.123141 | 0.218071 |
-| ON | E2 imputed | 0.4529 | 0.5076 | 0.0396 | 0.083483 | 0.124172 | 0.207654 |
+| AB | E2c | 0.4077 | 0.5846 | 0.0077 | 0.014555 | 0.145210 | 0.159765 |
+| SK | E2c | 0.0000 | 0.6432 | 0.3568 | 0.349895 | 0.285004 | 0.634899 |
+| MB | E2c | 0.3919 | 0.5785 | 0.0296 | 0.084668 | 0.109293 | 0.193961 |
+| ON | E2c | 0.4529 | 0.5076 | 0.0396 | 0.084967 | 0.125217 | 0.210184 |
 | QC | E1 measured | 0.3420 | 0.6417 | 0.0164 | 0.059410 | 0.158097 | 0.217507 |
 | NB | E1 measured | 0.5238 | 0.4672 | 0.0090 | 0.030341 | 0.157085 | 0.187426 |
-| NS | E2 imputed | 0.4080 | 0.5754 | 0.0166 | 0.038670 | 0.154820 | 0.193490 |
-| PE | E2 imputed | 0.3840 | 0.5908 | 0.0252 | 0.034972 | 0.149139 | 0.184111 |
-| NL | E2 imputed | 0.5103 | 0.4873 | 0.0024 | 0.065621 | 0.154070 | 0.219691 |
+| NS | E2c | 0.2165 | 0.7695 | 0.0140 | 0.123222 | 0.173239 | 0.296461 |
+| PE | E2c | 0.2539 | 0.7274 | 0.0188 | 0.064730 | 0.173242 | 0.237971 |
+| NL | E2c | 0.5103 | 0.4873 | 0.0024 | 0.065918 | 0.154253 | 0.220171 |
 | YT | E1 measured | 0.4246 | 0.5625 | 0.0129 | 0.123046 | 0.146642 | 0.269689 |
-| NT | E2 imputed | 0.6242 | 0.3589 | 0.0169 | 0.070509 | 0.103371 | 0.173880 |
-| NU | E2 imputed | 0.7051 | 0.2816 | 0.0132 | 0.137096 | 0.137126 | 0.274223 |
+| NT | E2c | 0.6242 | 0.3589 | 0.0169 | 0.072550 | 0.104472 | 0.177021 |
+| NU | E2c | 0.7051 | 0.2816 | 0.0132 | 0.139130 | 0.137916 | 0.277046 |
 
 The prior donor values are retained in
 `e1_e2_coefficient_replacement.csv` and `donor_vs_e2_coefficients.csv` as audit
 columns. They are not applied to any chain row. NU has no modelled harvest in
 the 119 Mm³ case, so its coefficients do not affect the national totals.
 
-### 5.3 Provincial process residue (119 Mm³)
+### 5.3 Provincial process residue (119 Mm³, by origin)
 
 | Province | Process PJ | Harvest gross PJ | Harvest 0.60 PJ |
 |---|---:|---:|---:|
 | BC | 174.450 | 119.536 | 71.722 |
-| AB | 97.382 | 56.120 | 33.672 |
-| SK | 18.188 | 13.568 | 8.141 |
-| MB | 4.841 | 4.580 | 2.748 |
-| ON | 56.376 | 51.837 | 31.102 |
+| AB | 94.397 | 67.659 | 40.595 |
+| SK | 14.660 | 51.031 | 30.619 |
+| MB | 4.726 | 4.074 | 2.444 |
+| ON | 56.406 | 52.469 | 31.481 |
 | QC | 110.033 | 107.334 | 64.401 |
 | NB | 26.371 | 21.618 | 12.971 |
-| NS | 9.873 | 8.549 | 5.129 |
-| PE | 1.234 | 1.029 | 0.618 |
-| NL | 6.238 | 5.910 | 3.546 |
+| NS | 9.896 | 13.098 | 7.859 |
+| PE | 1.227 | 1.330 | 0.798 |
+| NL | 6.238 | 5.923 | 3.554 |
 | YT | 0.189 | 0.219 | 0.131 |
-| NT | 0.158 | 0.117 | 0.070 |
+| NT | 0.158 | 0.119 | 0.071 |
 | NU | 0.000 | 0.000 | 0.000 |
 
 Provincial process residue is shown at 100% availability. The national process
-total is 505.333 PJ; the harvest totals are gross residue and the uniform 0.60
+total is 498.751 PJ; the harvest totals are gross residue and the uniform 0.60
 recoverable value. Process and harvest columns are separate streams.
 
-### 5.4 Residue curve v6
+### 5.4 Residue curve v7 and facility residue v7
 
-At 18.5 GJ/ODT, the national process-availability cases are **0 / 126.333 /
-252.666 / 379.000 PJ** for 0/25/50/75%. The national harvest recovery cases are
-**136.646 / 234.251 / 292.813 PJ** for 35/60/75%. Gross harvest residue is
-21.104 M odt; recoverable amounts are **7.386 / 12.662 / 15.828 M odt** for
-35/60/75%. The base process residue is 27.315 M odt / 505.333 PJ.
+At 18.5 GJ/ODT, the national process-availability cases are **0 / 124.688 /
+249.375 / 374.063 PJ** for 0/25/50/75%. The national harvest recovery cases are
+**155.544 / 266.646 / 333.308 PJ** for 35/60/75%. Gross harvest residue is
+24.022 M odt / 444.411 PJ; recoverable amounts are **8.408 / 14.413 / 18.017 M
+odt** for 35/60/75% (155.544 / 266.646 / 333.308 PJ). The base process residue
+is 26.960 M odt / 498.751 PJ.
 
 The RSYC 119 Mm³ base is 7.080 M odt / 130.981 PJ; the familiar 129.6709 PJ
 figure is the RSYC 100 Mm³ reference, not the 119 Mm³ value. The harvest 60%
-case is 12.662 M odt / 234.251 PJ, a ratio of **1.7884** to the RSYC 119 Mm³
-base (`model_above_rsyc`). The 35% and 75% cases bracket it at 1.0433 and
-2.2355. Only harvest recoverable rows are labelled `rsyc_comparable=true`. The
-v2 ratio was 1.4367; the increase reflects E2 branch/foliage mass in the nine
-imputed provinces, not calibration.
+case is 14.413 M odt / 266.646 PJ, a ratio of **2.0358** to the RSYC 119 Mm³
+base (`model_above_rsyc`). The 35% and 75% cases bracket it at 1.1875 and
+2.5447. Only harvest recoverable rows are labelled `rsyc_comparable=true`.
+The ratio increase reflects E2c branch/foliage mass and the E2c total-residue
+coefficients, not calibration.
 
-Facility residue v6 keeps process residue at 27.315 M odt / 505.333 PJ and
+Facility residue v7 keeps process residue at 26.960 M odt / 498.751 PJ and
 distributes it to 208 facilities receiving class-matched feedstock; 186 have
-positive residue. Proxy-attributed residue is 38.92% of process residue;
-scaled-proxy residue is 31.16%. Published-capacity residue is 61.08%. National
-class-fallback residue is 4.08% (1.114 M odt); cross-border process residue is
-4.10% (1.119 M odt). HHI of process residue is 0.022084 (effective facility
-count 45.3); top-1 share is 7.31% and top-5 share is 25.12%.
+positive residue. Proxy-attributed residue is 37.78% of process residue;
+scaled-proxy residue is 29.87%. Published-capacity residue is 62.22%. National
+class-fallback residue is 5.20% (1.402 M odt); cross-border process residue is
+5.22% (1.407 M odt). HHI of process residue is 0.028873 (effective facility
+count 34.6); top-1 share is 11.27% and top-5 share is 29.51%. Process residue
+per m³ feedstock is 0.204419 odt/m³.
+
+### 5.5 Open-volume checks
+
+| Province | Density stems/ha | Expanded volume m³/ha | Open inventory m³/ha | Ratio | Status |
+|---|---:|---:|---:|---:|---|
+| SK | 2,033.65 | 88.692 | 100.126 | 0.8858 | within_50pct |
+| NS | 1,409.82 | 152.342 | 105.239 | 1.4476 | within_50pct |
+| PE | 802.84 | 116.794 | 170.824 | 0.6837 | within_50pct |
+| AB | 1,000.00 | 409.088 | — | — | not_available |
+| MB | 2,050.00 | 251.565 | — | — | not_available |
+| ON | 1,000.00 | 122.913 | — | — | not_available |
+| NL | 1,000.00 | 178.398 | — | — | not_available |
+| NT | 1,000.00 | 146.149 | — | — | not_available |
+| NU | 1,000.00 | 102.728 | — | — | not_available |
+
+SK, NS, and PE pass the ±50% screening check. AB, ON, NL, NT, and NU have no
+open volume field; `not_available` is not a pass. MB uses donor median plot
+density, which is cross-jurisdiction donor evidence, not Manitoba inventory
+density; its open-volume status is also `not_available`. AB AVI publishes
+density classes, not numeric stems/ha.
 
 ## 6. 100 / 119 / 150 Mm³ scenarios
 
@@ -397,47 +424,36 @@ separate case from the 1.0 and 1.2 m³/ha/yr operable-proxy intensity screens,
 which are infeasible at 150 Mm³ (16.296 and 4.492 Mm³ deficits). The intensity
 screens must not be used to relabel or reject the documented 150 Mm³ case.
 
+### 6.1 Assignment metrics
+
 | Scenario | Harvest Mm³ | Assigned Mm³ | Eligible capacity Mm³/yr | Utilization | Cross-border Mm³ | Proxy share | Facilities | Max facility share | HHI |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 100m | 100.000 | 100.000 | 265.012 | 37.7% | 0.031 | 39.7% | 185 | 6.61% | 0.01354 |
 | 119m | 118.977 | 118.977 | 273.468 | 43.5% | 0.036 | 39.9% | 208 | 6.80% | 0.01287 |
 | 150m | 150.000 | 150.000 | 293.272 | 51.1% | 0.036 | 43.9% | 242 | 7.24% | 0.01350 |
 
-### 6.1 Products and residue by scenario
+### 6.2 Products and residue by scenario
 
 | Scenario | Sawlog Mm³ | Pulp M odt | Panel Mm³ | Pellet M odt | Bio GWh | Process residue PJ | Harvest gross PJ | Harvest recoverable PJ | Total gross PJ | Total recoverable PJ |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 100m | 32.028 | 9.104 | 3.505 | 3.646 | 649.0 | 424.71 | 328.34 | 197.00 | 753.05 | 621.72 |
-| 119m | 38.119 | 10.824 | 4.172 | 4.356 | 775.4 | 505.33 | 390.42 | 234.25 | 895.75 | 739.58 |
-| 150m | 47.330 | 13.873 | 5.180 | 5.656 | 1,006.8 | 636.14 | 494.83 | 296.90 | 1,130.97 | 933.04 |
+| 100m | 28.566 | 10.137 | 3.127 | 4.372 | 778.3 | 419.238 | 373.244 | 223.946 | 792.482 | 643.184 |
+| 119m | 33.957 | 12.066 | 3.717 | 5.230 | 930.9 | 498.751 | 444.411 | 266.646 | 943.162 | 765.397 |
+| 150m | 41.585 | 15.551 | 4.552 | 7.039 | 1,253.0 | 626.865 | 573.125 | 343.875 | 1,199.991 | 970.740 |
 
 Relative to the 119 Mm³ case, 100 Mm³ reduces assigned volume by 18.977 Mm³ and
-total gross residue by 142.70 PJ; 150 Mm³ adds 31.023 Mm³ and 235.22 PJ.
+total gross residue by 150.68 PJ; 150 Mm³ adds 31.023 Mm³ and 256.83 PJ.
 Product and residue ordering is validated as 100 < 119 < 150 within each
-metric.
+metric. These are planning allocations, not legal harvest levels.
 
-### 6.2 Donor-product versus E1/E2 chain (119 Mm³)
+### 6.3 E2 v2 versus E2c coefficient equality
 
-| Metric | v2 donor product | v3 E1/E2 | Delta | Delta % |
-|---|---:|---:|---:|---:|
-| Solid product Mm³ | 47.174 | 42.291 | −4.883 | −10.35% |
-| Pulp product M odt | 9.527 | 10.824 | +1.297 | +13.62% |
-| Panel product Mm³ | 4.654 | 4.172 | −0.482 | −10.35% |
-| Pellet product M odt | 4.172 | 4.356 | +0.184 | +4.40% |
-| Bio product GWh | 742.725 | 775.428 | +32.704 | +4.40% |
-| Process residue PJ | 514.614 | 505.333 | −9.281 | −1.80% |
-| Harvest gross PJ | 313.640 | 390.418 | +76.777 | +24.48% |
-| Harvest recoverable PJ | 195.433 | 234.251 | +38.818 | +19.86% |
-| Total gross PJ | 828.254 | 895.751 | +67.496 | +8.15% |
-| Total recoverable PJ | 710.047 | 739.584 | +29.537 | +4.16% |
-
-The solid decrease and pulp increase follow from the E2 product shares in the
-nine imputed provinces: the donor solid share was uniformly high, while the E2
-lists resolve substantial pulpwood in AB, SK, MB, ON, NS, PE, NL, and NT. The
-process residue decrease is smaller than the product shift because process
-residue per unit feedstock differs by class. The harvest increase comes from
-CFS branch and foliage in the E2 provinces. These are model estimates at
-identical harvest and assignment; they are not observed mill outcomes.
+The `e2_v2_vs_e2c_coefficients.csv` comparison covers the nine E2c provinces ×
+six coefficients (54 rows). All 54 rows are unchanged: solid, pulp, and other
+shares, stem residue, branch+foliage residue, and total residue are identical
+to machine precision (`changed=false`). E2 v2 was built but never integrated
+into a facility chain. The v3.2 baseline is E2 v1; the v4 chain is E2c. The
+density calibration is extensive and appears in the expanded reference volume
+and open-volume checks, not in the per-m³ coefficients.
 
 ## 7. Base v6 local processing versus v5 trade sensitivity
 
@@ -446,8 +462,8 @@ provincial floor, local-first allocation, and cross-border only for the local
 residual. The **v5 sensitivity** is the earlier unscaled
 `published_plus_proxy` case. It is a trade-permissive counterfactual, not a
 forecast and not evidence of provincial self-sufficiency. The trade sensitivity
-was built on the v2 donor-product chain and is not rebuilt on E1/E2 in v3; its
-national products and residue therefore do not match the v3 base.
+was built on the v2 donor-product chain and is not rebuilt on E2c in v4; its
+national products and residue therefore do not match the v4 base.
 
 | Metric | V5 `published_plus_proxy` | V6 `province_capacity_floor` | Delta v6−v5 |
 |---|---:|---:|---:|
@@ -468,108 +484,112 @@ The local-first floor changes the **distribution** of the same total process
 residue, not its national total. The v5 sensitivity's 18.4% cross-border share
 remains a useful upper-bound trade counterfactual, but the v6 local-processing
 case is the frozen base because the 1.2× floor is the documented primary
-assumption for this release. The v3 E1/E2 product chain applies to the v6
-assignment only.
+assumption for this release. The v4 E1/E2c product chain applies to the v6
+assignment only. The v2.1 trade and sensitivity addenda retain v2 donor product
+coefficients and must not be mixed with v4 totals.
 
-### 7.1 v2.1 trade and sensitivity disposition
+## 8. OSeCAN handoff v8 and scenarios v7
 
-`national-facility-chain-v2.1` (the measured trade-v5 chain and local-v6
-comparison) and `national-chain-sensitivity-v1` (the 16-run global screening)
-are v2-pinned addenda. They retain the v2 donor product coefficients for the
-nine non-measured provinces and are **not rebuilt on the v3 E1/E2 chain**. Their
-numbers are valid only inside their v2 model definition and must not be mixed
-with v3 totals or presented as v3 sensitivities. The v5 trade case in §7 is
-one of those v2-pinned counterfactuals; the v6 local-processing case remains
-the v3 base.
-
-## 8. OSeCAN handoff v7
-
-Handoff v7 is a read-only forestry-side screening handoff from residue curve
-v6. It preserves the all-zone v2 proxy weights and refreshes the province/case
-totals from the E1/E2 chain. It maps to all 13 OSeCAN zones with no `UNMAPPED`
-bucket.
+Handoff v8 is a read-only forestry-side screening handoff from residue curve
+v7. It preserves the all-zone v2 proxy weights and refreshes the province/case
+totals from the E1/E2c chain. It maps to all 13 OSeCAN zones with no `UNMAPPED`
+bucket and 119 handoff rows.
 
 | Case | National PJ | Tier / position |
 |---|---:|---|
 | Process 0% | 0.000 | T1 |
-| Process 25% | 126.333 | T3 |
-| Process 50% | 252.666 | above T4 |
-| Process 75% | 379.000 | above T4 |
-| Harvest 35% | 136.646 | T3 |
-| Harvest 60% | 234.251 | above T4 |
-| Harvest 75% | 292.813 | above T4 |
+| Process 25% | 124.688 | T3 |
+| Process 50% | 249.375 | above_T4 |
+| Process 75% | 374.063 | above_T4 |
+| Harvest 35% | 155.544 | T4 |
+| Harvest 60% | 266.646 | above_T4 |
+| Harvest 75% | 333.308 | above_T4 |
 
 The adopted supply-curve reference points are T1 85.007 PJ, T2 109.399 PJ,
 T3 149.273 PJ, and T4 213.538 PJ. The 2050 OSeCAN context is 152.923 PJ
-national and 43.524 PJ BC; these are context, not policy targets. At 119 Mm³,
-process 25% is 0.826× the 2050 national context and process 50% is 1.652×;
-harvest 60% is 1.532×. In BC, process 25% (44.921 PJ) is 1.032× the 43.524 PJ
-BC zonal reference, process 50% is 2.064×, and harvest 60% is 1.648×.
+national and 43.524 PJ BC; these are context, not policy targets.
 
-**Tier shifts versus the donor-product chain.** Replacing the nine donor
-product coefficients with E2 total-residue coefficients moves the harvest 60%
-case from T4 to above T4; the other harvest cases and all process cases keep
-their tiers:
+**Tier shifts versus v3.2.** The harvest 35% case moves from T3 to T4. Harvest
+60% and 75% remain above T4; all process tiers are unchanged:
 
-| Stream | Case | Donor product v6 | E1/E2 v7 | Changed |
+| Stream | Case | v3.2 (E2 v1) | v4 (E2c) | Changed |
 |---|---|---|---|---|
-| Harvest | 35% | T3 | T3 | no |
-| Harvest | 60% | T4 | above_T4 | yes |
+| Harvest | 35% | T3 | T4 | yes |
+| Harvest | 60% | above_T4 | above_T4 | no |
 | Harvest | 75% | above_T4 | above_T4 | no |
 | Process | 0% / 25% / 50% / 75% | T1 / T3 / above_T4 / above_T4 | T1 / T3 / above_T4 / above_T4 | no |
 
-The 119 Mm³ process 50% zone results include B2 82.400 PJ, Q1 35.190 PJ,
-A1 33.330 PJ, O1 23.154 PJ, Q2 22.432 PJ, A2 18.441 PJ, T1 18.179 PJ, and
-B1 7.443 PJ. The harvest 60% results include B2 65.780 PJ, Q1 39.330 PJ,
-O1 25.915 PJ, Q2 25.071 PJ, A1 21.678 PJ, T1 18.718 PJ, A2 11.994 PJ,
-S1 8.141 PJ, B1 5.941 PJ, O2 5.187 PJ, L1 3.546 PJ, M1 2.748 PJ, and
-N1 0.202 PJ. All zone rows carry `model_estimate=true`, `observed=false`,
+The 119 Mm³ process 50% zone results include B2 83.191 PJ, Q1 35.553 PJ,
+A1 32.714 PJ, O1 23.383 PJ, Q2 22.663 PJ, T1 18.516 PJ, A2 18.101 PJ,
+B1 7.514 PJ, O2 4.680 PJ, L1 1.871 PJ, M1 1.044 PJ, S1 0.107 PJ, and
+N1 0.040 PJ. The harvest 60% results include B2 65.780 PJ, Q1 39.330 PJ,
+S1 30.619 PJ, O1 26.231 PJ, A1 26.135 PJ, Q2 25.071 PJ, T1 21.628 PJ,
+A2 14.460 PJ, B1 5.941 PJ, O2 5.250 PJ, L1 3.554 PJ, M1 2.444 PJ, and
+N1 0.203 PJ. All zone rows carry `model_estimate=true`, `observed=false`,
 `policy_grade=false`, and `official_osecan_changed=false`.
+
+Scenarios v7 carries all three harvests and all seven cases to the 13 zones.
+Zone weights remain the v2 proxy weights: BC 2050 zonal supply dispatch,
+AB/ON/QC 2050 zonal dispatch activity, single-zone/aggregate membership
+elsewhere. Every multi-zone weight is `proxy_share=true`.
 
 Handoff validation passed 20 checks with 0 failures, including row uniqueness,
 zone coverage, province-weight sums, conservation to national totals, no
 combined stream, explicit proxy labels, and an unchanged OSeCAN tree hash
-(`80caa91c…`, 146 files before and after).
+(`80caa91c…`, 146 files before and after). Scenario v7 validation also passed
+with 0 failures.
 
 ## 9. Key results
 
 - **119 Mm³ v6 base:** 118.977 Mm³ assigned; 99.97% local; 36,376 m³
   cross-border; 39.9% proxy; 208 facilities; HHI 0.01287; largest facility
   6.80%; no unassigned harvest; NT floor gap 43,651 m³.
-- **E1/E2 coverage:** 13 of 13 jurisdictions have a province-specific product
+- **E1/E2c coverage:** 13 of 13 jurisdictions have a province-specific product
   and total-residue coefficient. E1 measured covers BC 347, QC 85, NB 106, and
-  YT 53 stems (591 total); E2 imputation covers AB/SK/MB/ON/NS/PE/NL/NT/NU
-  with 324 stems (36 each). Zero donor provincial product coefficients.
-- **119 Mm³ products:** 42.291 Mm³ solid (sawlog 38.119 + panel 4.172),
-  10.824 M odt pulp, 4.356 M odt pellet, 775.428 GWh bio.
-- **119 Mm³ residue:** 27.315 M odt / 505.333 PJ process; 21.104 M odt /
-  390.418 PJ gross harvest; 12.662 M odt / 234.251 PJ harvest at 0.60;
-  48.419 M odt / 895.751 PJ total gross; 39.977 M odt / 739.584 PJ total
+  YT 53 stems (591 total); E2c density-calibrated imputation covers
+  AB/SK/MB/ON/NS/PE/NL/NT/NU with 324 stems (36 each). Zero donor provincial
+  product coefficients. SK/NS/PE use open density; MB donor density; five
+  jurisdictions retain the 1,000 stems/ha proxy.
+- **119 Mm³ products:** 37.674 Mm³ solid (sawlog 33.957 + panel 3.717),
+  12.066 M odt pulp, 5.230 M odt pellet, 930.946 GWh bio.
+- **119 Mm³ residue:** 26.960 M odt / 498.751 PJ process; 24.022 M odt /
+  444.411 PJ gross harvest; 14.413 M odt / 266.646 PJ harvest at 0.60;
+  50.982 M odt / 943.162 PJ total gross; 41.373 M odt / 765.397 PJ total
   recoverable (process + harvest recoverable).
-- **Change versus donor-product v2:** solid −10.35%, pulp +13.62%, process
-  −1.80%, harvest gross +24.48%, harvest 0.60 +19.86%, total gross +8.15%.
-- **Recovery scenarios:** harvest 35/60/75% = 136.646 / 234.251 / 292.813 PJ;
-  process 0/25/50/75% = 0 / 126.333 / 252.666 / 379.000 PJ; no recovery factor
+- **Change versus v3.2 (E2 v1):** solid −10.92%, pulp +11.47%, process
+  −1.30%, harvest gross +13.83%, harvest 0.60 +13.83%, total gross +5.29%,
+  total recoverable +3.49%.
+- **Recovery scenarios:** harvest 35/60/75% = 155.544 / 266.646 / 333.308 PJ;
+  process 0/25/50/75% = 0 / 124.688 / 249.375 / 374.063 PJ; no recovery factor
   is calibrated, and 0.60 is the reference scenario only.
-- **100/119/150 total gross residue:** 753.05 / 895.75 / 1,130.97 PJ; total
-  recoverable 621.72 / 739.58 / 933.04 PJ.
-- **RSYC check:** 60% harvest case is 1.7884 of the RSYC 119 Mm³ base
+- **100/119/150 total gross residue:** 792.482 / 943.162 / 1,199.991 PJ; total
+  recoverable 643.184 / 765.397 / 970.740 PJ.
+- **RSYC check:** 60% harvest case is 2.0358 of the RSYC 119 Mm³ base
   (`model_above_rsyc`), not a calibration.
-- **OSeCAN handoff v7:** 119 process 50% = 252.666 PJ; harvest 60% =
-  234.251 PJ; harvest 60% moves T4 → above_T4; process tiers unchanged;
-  2050 context = 152.923 PJ national / 43.524 PJ BC.
+- **OSeCAN handoff v8:** 119 process 50% = 249.375 PJ; harvest 60% =
+  266.646 PJ; harvest 35% moves T3 → T4; harvest 60/75% and all process tiers
+  are unchanged; 2050 context = 152.923 PJ national / 43.524 PJ BC.
 - **Capacity evidence:** 433 published records / 166.609 Mm³/yr; 241 proxy
   records / 104.733 Mm³/yr; 15 records without capacity.
 
 ## 10. Limitations and non-use
 
-- **Nine jurisdictions are E2 imputed, not measured.** AB, SK, MB, ON, NS, PE,
-  NL, NT, and NU use 36-stem open-data imputation lists built from SCANFI
-  composition, donor DBH/height geometry, and donor tapers. They are not
-  province-specific measured tree lists and not observed mill outcomes. The
-  imputed expansion of 1,000 stems/ha is an assumption.
-- **E2 donor geometry and tapers; 11 of 13 jurisdictions use a donor taper.**
-  The E2 lists draw DBH/height from the measured BC/QC/NB/YT stems and use BC
+- **Nine jurisdictions are E2c, not measured.** AB, SK, MB, ON, NS, PE, NL, NT,
+  and NU use 36-stem open-data imputation lists built from SCANFI composition,
+  donor DBH/height geometry, and donor tapers. They are not province-specific
+  measured tree lists and not observed mill outcomes. SK/NS/PE have open
+  density evidence, MB uses donor median density, and AB/ON/NL/NT/NU retain a
+  1,000 stems/ha proxy. The proxy is an assumption, not a measurement.
+- **Density calibration is extensive.** It changes stems/ha and the expanded
+  reference volume; it does not change per-m³ product or residue coefficients.
+  E2 v2 and E2c per-m³ coefficients are identical. E2 v2 was never integrated
+  into a facility chain; v3.2 is E2 v1, not E2 v2.
+- **Open-volume checks are screening, not validation.** SK (0.8858), NS
+  (1.4476), and PE (0.6837) pass the ±50% check against open inventory volume.
+  AB, MB, ON, NL, NT, and NU return `not_available`; `not_available` is not a
+  pass. MB's density is donor evidence.
+- **E2c donor geometry and tapers; 11 of 13 jurisdictions use a donor taper.**
+  The E2c lists draw DBH/height from the measured BC/QC/NB/YT stems and use BC
   Kozak or QC Schneider donor tapers. NB uses the QC Schneider donor and YT
   uses the BC Kozak donor, so only BC and QC use a local taper. Species without
   a mapped taper and unsupported hardwoods are excluded or proxied; they are
@@ -590,19 +610,19 @@ combined stream, explicit proxy labels, and an unchanged OSeCAN tree hash
   `not_assigned` and `official_grade_validation=false`. The comparison is
   dimension-only against TIPSY model output and is not an official BC log-grade
   validation. See §3.6.
-- **Donor splits remain material.** Solid/pulp/other are E1 or E2, but the
+- **Donor splits remain material.** Solid/pulp/other are E1 or E2c, but the
   within-solid SAW/PANEL split, other-roundwood routing to PELLET/BIO, the
   pellet/bio split, and all class conversion ratios remain donor assumptions.
-  The measured and E2 pilots do not measure panel logs separately. These rows
+  The measured and E2c pilots do not measure panel logs separately. These rows
   carry explicit donor labels.
 - **No chosen recovery factor.** Gross total residue is reported with
   0.35/0.60/0.75 recoverable scenarios. The 0.60 value is the existing
   reference scenario, not a calibrated, observed, or policy recovery factor.
-  The product-chain recoverable field and the uniform 0.60 case now coincide
+  The product-chain recoverable field and the uniform 0.60 case coincide
   because all provinces carry total residue; neither is a preferred answer.
 - **Class-median and floor-scaled capacity are material.** Proxy capacity is
   39.9% of assigned volume in the 119 Mm³ v6 base (47.463 of 118.977 Mm³) and
-  38.92% of process residue; scaled proxy is 31.16% of process residue. The 241
+  37.78% of process residue; scaled proxy is 29.87% of process residue. The 241
   proxy records are class medians, not facility measurements. Scaled proxy
   capacity (38.035 Mm³ in the v6 floor case) is not observed capacity and is
   not evidence of provincial self-sufficiency.
@@ -652,77 +672,60 @@ combined stream, explicit proxy labels, and an unchanged OSeCAN tree hash
 Run from the repository root with the project virtual environment:
 
 ```bash
-.venv/bin/python -m workflows.national.facilities.national_facility_inventory_v1
-.venv/bin/python -m workflows.national.facilities.national_facility_capacity_v3
-.venv/bin/python -m workflows.national.facilities.national_facility_assignment_v6
-.venv/bin/python -m workflows.national.facilities.national_product_chain_v4
-.venv/bin/python -m workflows.national.facilities.facility_residue_supply_v6
-.venv/bin/python -m workflows.national.facilities.national_residue_curve_v6
-.venv/bin/python -m workflows.national.facilities.national_facility_chain_scenarios_v6
-.venv/bin/python -m workflows.national.facilities.forestry_osecan_handoff_v7
+.venv/bin/python -m workflows.national.facilities.e1_e2c_coefficients
+.venv/bin/python -m workflows.national.facilities.national_product_chain_v5
+.venv/bin/python -m workflows.national.facilities.facility_residue_supply_v7
+.venv/bin/python -m workflows.national.facilities.national_residue_curve_v7
+.venv/bin/python -m workflows.national.facilities.national_facility_chain_scenarios_v7
+.venv/bin/python -m workflows.national.facilities.forestry_osecan_handoff_v8
+.venv/bin/python -m workflows.national.facilities.forestry_osecan_scenarios_v7
 ```
 
-Evidence inputs for the coefficient tiers:
+The upstream inventory v1, capacity v3, and assignment v6 artifacts are frozen
+inputs and are not rebuilt by the v4 chain. Evidence inputs for the coefficient
+tiers are in `open_data_imputation_v3` (E2c) and
+`four_province_bucking_pilot_v0` (E1).
 
-```bash
-.venv/bin/python -m workflows.national.bucking.open_data_imputation
-.venv/bin/python -m workflows.national.facilities.national_product_chain_v4
-```
-
-### 11.1 v3 artifact manifest list
+### 11.1 v4 artifact manifest list
 
 | Artifact | Manifest | Output entries | Manifest SHA-256 |
 |---|---|---:|---|
-| `national_facility_inventory_v1` | `data/derived/national/facilities/national_facility_inventory_v1/manifest.json` | 6 | `0de3d86acd306e10…` |
-| `national_facility_capacity_v3` | `data/derived/national/facilities/national_facility_capacity_v3/manifest.json` | 6 | `a77233d39d049834…` |
-| `national_facility_assignment_v6` | `data/derived/national/facilities/national_facility_assignment_v6/manifest.json` | 13 | `fb1f5be7b2a185ad…` |
-| `national_product_chain_v4` | `data/derived/national/facilities/national_product_chain_v4/manifest.json` | 8 | `f484288cddacbe88…` |
-| `facility_residue_supply_v6` | `data/derived/national/facilities/facility_residue_supply_v6/manifest.json` | 5 | `56ea55a53e9c6ca0…` |
-| `national_residue_curve_v6` | `data/derived/national/facilities/national_residue_curve_v6/manifest.json` | 5 | `0a846adca2502537…` |
-| `national_facility_chain_scenarios_v6` | `data/derived/national/facilities/national_facility_chain_scenarios_v6/manifest.json` | 8 | `9003ea44a144c15e…` |
-| `forestry_osecan_handoff_v7` | `data/derived/national/facilities/forestry_osecan_handoff_v7/manifest.json` | 8 | `74780c8d3a4879e3…` |
-| `forestry_osecan_scenarios_v6` | `data/derived/national/facilities/forestry_osecan_scenarios_v6/manifest.json` | 7 | `cfad0bd537f872d1…` |
+| `e1_e2c_product_coefficients_v1` | `data/derived/national/facilities/e1_e2c_product_coefficients_v1/manifest.json` | 4 | `203530a9fc476491264b5ffa8d6b361a5c1a384047e0414d1bbbca42bd95dbaa` |
+| `national_product_chain_v5` | `data/derived/national/facilities/national_product_chain_v5/manifest.json` | 11 | `eab84d4f513a2c9567c9ee5ec886e3713c8db16e8bdfc12993b708e2d76a9794` |
+| `facility_residue_supply_v7` | `data/derived/national/facilities/facility_residue_supply_v7/manifest.json` | 5 | `b91eb5374f8d37a1aa476744ac315f61f088551896cbb77ccd17b3a0831c441d` |
+| `national_residue_curve_v7` | `data/derived/national/facilities/national_residue_curve_v7/manifest.json` | 5 | `ec0db3e47bd58ec5185666e1ca0c2f70310033e42f0196a5af533835a697830d` |
+| `national_facility_chain_scenarios_v7` | `data/derived/national/facilities/national_facility_chain_scenarios_v7/manifest.json` | 8 | `f483a6eab52f54ed120c6d25baada13d59bc0e28c85ec2be8e9f7b3e8608571a` |
+| `forestry_osecan_handoff_v8` | `data/derived/national/facilities/forestry_osecan_handoff_v8/manifest.json` | 7 | `c3820a6a8e7566183e0cd8a175cca9c30858d4946f4d3779d7e743eeaa8af111` |
+| `forestry_osecan_scenarios_v7` | `data/derived/national/facilities/forestry_osecan_scenarios_v7/manifest.json` | 7 | `be42f3a411385b99b089e9de640c3fb408f105c58ee6631655698aa45b54f38a` |
 
-Every published artifact directory contains its report, JSON summary, and
-SHA-256 manifest. The handoff manifest records the OSeCAN tree hash check and
-the exact input hashes. At v3.2 publication, the official OSeCAN tree hash is
+Every published v4 artifact directory contains its report, JSON summary, and
+SHA-256 manifest. All seven v4 manifests verify (47 output entries). The three
+unchanged upstream manifests (inventory v1, capacity v3, assignment v6; 25
+entries) also verify, for 72/72 entries and 0 mismatches. The handoff manifest
+records the OSeCAN tree hash check and the exact input hashes. At the v4
+freeze, the official OSeCAN tree hash is
 `80caa91c3e91c89006b8d5e3ad78232eade70a298a83657510fffa26924bc64a`
-(146 files, unchanged).
+(146 files, unchanged since v3.2).
 
-**Manifest integrity (v3.2).** The v3 data commit's
-`facility_residue_supply_v6/manifest.json` had recorded the pre-wrapper size
-and hash of `summary.json`; the v6 wrapper rewrites that summary after the
-shared v4 builder writes the manifest. The v3.2 data commit
-`ef64c903f57c2e89f12eca62a0c9a2be49d8a28d` corrects that entry to the
-committed file (`23,643` bytes;
-`778a02eb3334865db1168e90b7ff44ec57bbaf2ed6525b471617b246b03becd7`), and
-all 66 output entries across the nine manifests verify. The numeric artifact
-files, summaries, reports, and 14 validation checks are unchanged from v3.
-The v6 builder itself is not changed by this metadata-only fix; a rebuild
-regenerates identical numeric outputs and the same pre-wrapper manifest
-metadata, so the committed v3.2 manifest remains the integrity reference.
-v3.2 does not move the v3 or v3.1 tags.
+A clean rebuild of all seven v4 stages to a scratch directory reproduced every
+numeric CSV byte-for-byte; only `generated_utc`-derived summary/manifest hashes
+differed. Rebuild against data commit `f0f77a0` to reproduce the frozen
+numbers; later data commits may supersede the inputs.
 
 Focused regression tests:
 
 ```bash
 .venv/bin/python -m pytest \
+  tests/test_e1_e2c_facility_chain_v4.py \
   tests/test_e1_e2_facility_chain_v6.py \
-  tests/test_open_data_imputation.py \
-  tests/test_four_province_bucking_pilot.py \
-  tests/test_four_province_biomass_allometry.py -q
+  tests/test_open_data_imputation_v3.py -q
 ```
 
-The v3 artifact contract tests are in
-`tests/test_e1_e2_facility_chain_v6.py`; they cover product-chain v4,
-residue-curve v6, chain-scenarios v6, handoff v7, zone-scenarios v6, E1/E2
-coefficient provenance, conservation, labels, and the unchanged OSeCAN tree.
-The earlier `test_*_v4`, `test_*_v6`, and `test_*_v7` paths sometimes cited in
-older notes do not exist; the contract test file is the authoritative v3
-regression entry point.
-
-Rebuild against data commit `d77472c` to reproduce the frozen numbers; later
-data commits may supersede the inputs.
+Result at freeze: 27 passed. The v4 contract test covers 13 jurisdictions,
+E1/E2c source and zero donor product coefficients, product/feedstock/residue
+conservation, 100/119/150 scenarios, 0.35/0.60/0.75 cases, v3.2→v4 and E2
+v2→E2c comparisons, open-volume checks, OSeCAN v8 labels and 13-zone coverage,
+and no NaN/infinity/negative values.
 
 ## 12. Non-claims and references
 
@@ -732,20 +735,22 @@ mill capacity or throughput; measured mill product yields; a calibrated residue
 recovery factor; an interprovincial trade forecast; a transport, cost, revenue,
 or net-value result; a facility investment or closure plan; an energy-policy
 recommendation; an official OSeCAN scenario; or a public UI release. It does
-not claim that E2 imputed coefficients are observed or province-specific
-measurements, and it does not require a data request, DUA, or approval.
+not claim that E2c density-calibrated coefficients are observed or
+province-specific measurements, and it does not require a data request, DUA, or
+approval. `not_available` open-volume status is not a validation pass.
 
 **References.**
 
-- `data/derived/national/facilities/national_facility_inventory_v1/NATIONAL_FACILITY_INVENTORY_V1.md`
-- `data/derived/national/facilities/national_facility_capacity_v3/NATIONAL_FACILITY_CAPACITY_V3.md`
-- `data/derived/national/facilities/national_facility_assignment_v6/NATIONAL_FACILITY_ASSIGNMENT_V6.md`
-- `data/derived/national/facilities/national_product_chain_v4/NATIONAL_PRODUCT_CHAIN_V4.md`
-- `data/derived/national/facilities/facility_residue_supply_v6/FACILITY_RESIDUE_SUPPLY_V6.md`
-- `data/derived/national/facilities/national_residue_curve_v6/NATIONAL_RESIDUE_CURVE_V6.md`
-- `data/derived/national/facilities/national_facility_chain_scenarios_v6/NATIONAL_FACILITY_CHAIN_SCENARIOS_V6.md`
-- `data/derived/national/facilities/forestry_osecan_handoff_v7/FORESTRY_OSECAN_HANDOFF_V7.md`
-- `data/derived/national/bucking/open_data_imputation_v1/report.md`
+- `data/derived/national/facilities/e1_e2c_product_coefficients_v1/report.md`
+- `data/derived/national/facilities/national_product_chain_v5/NATIONAL_PRODUCT_CHAIN_V5.md`
+- `data/derived/national/facilities/facility_residue_supply_v7/FACILITY_RESIDUE_SUPPLY_V7.md`
+- `data/derived/national/facilities/national_residue_curve_v7/NATIONAL_RESIDUE_CURVE_V7.md`
+- `data/derived/national/facilities/national_facility_chain_scenarios_v7/NATIONAL_FACILITY_CHAIN_SCENARIOS_V7.md`
+- `data/derived/national/facilities/forestry_osecan_handoff_v8/FORESTRY_OSECAN_HANDOFF_V8.md`
+- `data/derived/national/facilities/forestry_osecan_scenarios_v7/FORESTRY_OSECAN_SCENARIOS_V7.md`
+- `data/derived/national/bucking/open_data_imputation_v3/`
+- `docs/handoff-national-facility-chain-v4.md`
+- `docs/handoff-e2-v3-density-calibrated-tree-lists.md`
 - `docs/four-province-biomass-allometry.md`
 - `docs/bc-biomass-allometry.md`
 
@@ -759,14 +764,14 @@ data commit `c91ee9bd19442d239b15dadf2818d96bd1b6c253`. Annotated tag
 `national-facility-chain-v3` marks parent commit
 `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` and records data commit
 `d77472c7ac877b60c3c7833d718a3e1bafe593a7`. Annotated tag
-`national-facility-chain-v3.1` marks the documentation commit that publishes
-this card, the v3 handoff, and the data pointer; it records model parent commit
-`029eef1d89014c0bda8af1dfa49e78a19ae58d4f` and data commit
-`d77472c7ac877b60c3c7833d718a3e1bafe593a7`. It does not move
-`national-facility-chain-v3`. Annotated tag `national-facility-chain-v3.2`
-marks the manifest-integrity fix commit and records that commit, data commit
-`ef64c903f57c2e89f12eca62a0c9a2be49d8a28d`, and the unchanged v3/v3.1
-references. It changes manifest metadata only. The tags are the immutable
-references for the frozen numbers. Documentation-only commits after a tag do
-not change the frozen artifacts; the v3.2 manifest correction is the only
-post-v3 change to an artifact manifest and changes no number.
+`national-facility-chain-v3.1` marks the documentation-only superset and does
+not move v3. Annotated tag `national-facility-chain-v3.2` marks the
+manifest-integrity fix and records data commit
+`ef64c903f57c2e89f12eca62a0c9a2be49d8a28d`; it changes manifest metadata
+only. Annotated tag `national-facility-chain-v4` marks the documentation commit
+carrying this card and the v4 handoff, records model commit
+`60409639b57d3aa6ff614dfba8e4c2bdb8b28247` and data commit
+`f0f77a0e6cfeb3fbbcafd685beedcd7324dbc9c8`, and does not move any earlier
+tag. The freeze commit is documentation and tag only; no code, model artifact,
+UI, or official OSeCAN file changed at that commit. The tags are the immutable
+references for the frozen numbers.

@@ -807,6 +807,28 @@ decide what blocks production readiness after the conceptual alpha.
   and all process tiers are unchanged. All 27 focused tests pass; no
   NaN/negative, no UI/official OSeCAN change and no national claim. No
   unexpected `D`.
+- [x] P7.31 Freeze and tag the E2c 13-jurisdiction chain v4. Completed:
+  updated `docs/model-card-national-facility-chain.md` for the inventory v1 →
+  capacity v3 → assignment v6 → product-chain v5 → facility residue v7 →
+  residue curve v7 → chain scenarios v7 → OSeCAN handoff v8 → OSeCAN
+  scenarios v7 chain, and updated `docs/handoff-national-facility-chain-v4.md`
+  with the freeze record. Recorded that v3.2 froze E2 v1, E2 v2 was built but
+  never integrated, and v4 uses E2c (E2 v3); E2 v2 and E2c per-m³ coefficients
+  are identical (54/54 rows) and density calibration is extensive. At
+  119 Mm³, E2c changes solid product 42.291→37.674 Mm³ (−10.92%), pulp
+  10.824→12.066 M odt (+11.47%), process residue 505.333→498.751 PJ (−1.30%),
+  harvest gross 390.418→444.411 PJ (+13.83%), and total gross 895.751→943.162
+  PJ (+5.29%). Open-volume checks pass for SK/NS/PE within ±50%; AB, MB, ON,
+  NL, NT and NU are `not_available`. OSeCAN handoff v8 covers 13 zones with
+  119 rows and no `UNMAPPED`; harvest 35% moves T3→T4 and all other tiers are
+  unchanged. Pre-freeze checks: 27 focused tests pass; all seven v4 manifests
+  (47 entries) and three upstream manifests (25 entries) verify, 72/72; the
+  official OSeCAN tree hash is unchanged (146 files, `80caa91c…`); a clean
+  rebuild reproduces every numeric CSV byte-for-byte; no unexpected `D`.
+  Created annotated tag `national-facility-chain-v4` at the documentation
+  commit, recording model commit `6040963` and data commit `f0f77a0`.
+  Documentation and tag only; no code/model/UI change and no official OSeCAN
+  change.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

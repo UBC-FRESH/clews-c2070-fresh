@@ -2,6 +2,30 @@
 
 ## 2026-11-23
 
+- **Froze and tagged the E2c 13-jurisdiction facility chain v4.** Updated
+  `docs/model-card-national-facility-chain.md` and
+  `docs/handoff-national-facility-chain-v4.md` for the E1 measured + E2c
+  density-calibrated chain with zero donor product coefficients; recorded that
+  v3.2 froze E2 v1, E2 v2 was built but never integrated, and v4 is E2c
+  (E2 v3), with 54/54 per-m³ coefficient rows unchanged from E2 v2. At
+  119 Mm³, v3.2→v4 moves solid product 42.291→37.674 Mm³ (−10.92%), pulp
+  10.824→12.066 M odt (+11.47%), process residue 505.333→498.751 PJ (−1.30%),
+  harvest gross 390.418→444.411 PJ (+13.83%), harvest 60% 234.251→266.646 PJ,
+  total gross 895.751→943.162 PJ (+5.29%) and total recoverable
+  739.584→765.397 PJ (+3.49%). Open-volume checks pass for SK (0.8858), NS
+  (1.4476) and PE (0.6837) within ±50%; AB, MB, ON, NL, NT and NU are
+  `not_available`. OSeCAN handoff v8 maps 119 rows to 13 zones with no
+  `UNMAPPED`; harvest 35% moves T3→T4 while harvest 60/75% and all process
+  tiers are unchanged. Pre-freeze checks: 27 focused tests pass; all seven v4
+  manifests (47 output entries) and the three unchanged upstream manifests
+  (25 entries) verify, 72/72 with 0 mismatches; the official OSeCAN tree hash
+  is unchanged (146 files, `80caa91c…`); a clean rebuild reproduces every
+  numeric CSV byte-for-byte; no unexpected `D` in either repository. Created
+  annotated tag `national-facility-chain-v4` at the documentation commit,
+  recording model commit `6040963` and data commit `f0f77a0`. Documentation
+  and tag only; no code/model/UI change, no public OSeCAN change and no
+  national claim.
+
 - **Integrated E2c density-calibrated coefficients into facility chain v4.**
   Added `workflows/national/facilities/e1_e2c_coefficients.py`,
   `national_product_chain_v5.py`, `facility_residue_supply_v7.py`,

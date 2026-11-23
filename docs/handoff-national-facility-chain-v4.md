@@ -3,7 +3,10 @@
 | Field | Value |
 |---|---|
 | Prepared | 2026-11-23 |
-| Status | E2c screening chain; model estimate, not observed, not policy grade |
+| Status | Frozen E2c screening chain; model estimate, not observed, not policy grade |
+| Freeze tag | `national-facility-chain-v4` (annotated; points at this documentation commit) |
+| Model commit | `60409639b57d3aa6ff614dfba8e4c2bdb8b28247` (E2c chain integration) |
+| Data commit | `f0f77a0e6cfeb3fbbcafd685beedcd7324dbc9c8` (`UBC-FRESH/clews-c2070-fresh-data`) |
 | Supersedes | `national-facility-chain-v3.2` (E2 v1 product coefficients) |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
 | Data dependency | Open data only; no DUA, request, or approval |
@@ -191,6 +194,15 @@ AVI publishes density classes, not numeric stems/ha.
   coefficients; product, feedstock and residue conservation; 100/119/150
   scenarios; 0.35/0.60/0.75 cases; v3.2→v4 and E2 v2→E2c comparisons;
   open-volume checks; OSeCAN labels and zone coverage; no NaN/infinity/negative.
+- Manifests: all seven v4 artifact manifests verify (47 output entries), as do
+  the three unchanged upstream manifests (inventory v1, capacity v3,
+  assignment v6; 25 entries). Total 72/72 entries, 0 mismatches.
+- Official OSeCAN tree unchanged: 146 files, tree SHA-256
+  `80caa91c3e91c89006b8d5e3ad78232eade70a298a83657510fffa26924bc64a`,
+  identical to the v3.2 and v4 handoff before/after checks; 0 changed files.
+- Determinism: a clean rebuild of all seven v4 stages to a scratch directory
+  reproduced every numeric CSV byte-for-byte; only `generated_utc`-derived
+  summary/manifest hashes differed.
 - No request, DUA, restricted data, UI change, or official OSeCAN change.
 - No national supply, policy, operating, or grade-validation claim.
 - No unexpected `D` in either repository.
@@ -210,3 +222,14 @@ AVI publishes density classes, not numeric stems/ha.
   allocations, not legal harvest levels.
 - No transport cost, annual dynamics, economics, trade, or mill operating
   status is modelled.
+
+## 8. Freeze record
+
+- Annotated tag `national-facility-chain-v4` marks the documentation commit
+  carrying this handoff and the v4 model card.
+- The tag records model commit
+  `60409639b57d3aa6ff614dfba8e4c2bdb8b28247` and data commit
+  `f0f77a0e6cfeb3fbbcafd685beedcd7324dbc9c8`.
+- It does not move `national-facility-chain-v3`, `-v3.1`, or `-v3.2`.
+- The freeze is documentation and tag only; no code, model artifact, UI, or
+  official OSeCAN file changed at the freeze commit.
