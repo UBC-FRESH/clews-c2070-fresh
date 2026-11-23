@@ -66,6 +66,8 @@ OUTPUT_DIR = DATA_ROOT / "derived/national/facilities/facility_residue_supply_v1
 PRODUCT_CHAIN_DIR = (
     DATA_ROOT / "derived/national/facilities/national_product_chain_v1"
 )
+PRODUCT_CHAIN_ARTIFACT = "national_product_chain_v1"
+PRODUCT_CHAIN_LABEL = "national_product_chain_v1"
 ASSIGNMENT_DIR = (
     DATA_ROOT / "derived/national/facilities/national_facility_assignment_v3"
 )
@@ -419,7 +421,7 @@ def _parse_product_chain() -> tuple[dict[str, ProvinceChain], dict[str, Any]]:
             f"product-chain summary is missing: {summary_path}"
         )
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    if summary.get("artifact") != "national_product_chain_v1":
+    if summary.get("artifact") != PRODUCT_CHAIN_ARTIFACT:
         raise FacilityResidueSupplyError(
             f"unexpected product-chain artifact: {summary.get('artifact')!r}"
         )
@@ -570,6 +572,7 @@ def _parse_product_chain() -> tuple[dict[str, ProvinceChain], dict[str, Any]]:
         if coefficient_tier not in {
             "bc_anchor_species_group",
             "donor_coefficient",
+            "measured_bucking_pilot",
         }:
             raise FacilityResidueSupplyError(
                 f"{province} unexpected coefficient tier {coefficient_tier!r}"
@@ -2586,7 +2589,7 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             ),
             "class_mixing": "prohibited",
             "conversion": (
-                "national_product_chain_v1 effective province/class product and "
+                f"{PRODUCT_CHAIN_LABEL} effective province/class product and "
                 "process-residue ratios applied to facility feedstock"
             ),
             "lhv_gj_per_odt": rsvc.lhv_gj_per_odt,

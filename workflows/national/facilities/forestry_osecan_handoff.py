@@ -71,6 +71,15 @@ ARTIFACT_VERSION = "1.0.0"
 PJ_GJ = 1_000_000.0
 EXPECTED_LHV_GJ_PER_ODT = 18.5
 EXPECTED_TIER_UPPER_PJ = 213.538041
+EXPECTED_CASE_TIERS: dict[tuple[str, str], str] = {
+    ("process", "process_availability_000"): "T1",
+    ("process", "process_availability_025"): "T3",
+    ("process", "process_availability_050"): "above_T4",
+    ("process", "process_availability_075"): "above_T4",
+    ("harvest", "harvest_recovery_035"): "T1",
+    ("harvest", "harvest_recovery_060"): "T2",
+    ("harvest", "harvest_recovery_075"): "T3",
+}
 EXPECTED_BC_ZONAL_UPPER_PJ = 43.523816
 EXPECTED_NATIONAL_2050_CONTEXT_PJ = 152.92277
 EXPECTED_BC_2050_CONTEXT_PJ = 43.52377
@@ -1645,18 +1654,9 @@ def _validate(
         ),
         f"rows={len(comparison_rows)}",
     )
-    expected_tiers = {
-        ("process", "process_availability_000"): "T1",
-        ("process", "process_availability_025"): "T3",
-        ("process", "process_availability_050"): "above_T4",
-        ("process", "process_availability_075"): "above_T4",
-        ("harvest", "harvest_recovery_035"): "T1",
-        ("harvest", "harvest_recovery_060"): "T2",
-        ("harvest", "harvest_recovery_075"): "T3",
-    }
     tier_ok = True
     tier_detail = ""
-    for (stream, case), expected in expected_tiers.items():
+    for (stream, case), expected in EXPECTED_CASE_TIERS.items():
         actual = _tier_for_pj(national[(stream, case)].pj, tiers)
         if actual != expected:
             tier_ok = False

@@ -107,6 +107,15 @@ HARVEST_CASES = v1.HARVEST_CASES
 CASE_FRACTIONS = v1.CASE_FRACTIONS
 CASE_ORDER = v1.CASE_ORDER
 BC_ZONES = v1.BC_ZONES
+EXPECTED_CASE_TIERS: dict[tuple[str, str], str] = {
+    ("process", "process_availability_000"): "T1",
+    ("process", "process_availability_025"): "T3",
+    ("process", "process_availability_050"): "above_T4",
+    ("process", "process_availability_075"): "above_T4",
+    ("harvest", "harvest_recovery_035"): "T1",
+    ("harvest", "harvest_recovery_060"): "T2",
+    ("harvest", "harvest_recovery_075"): "T3",
+}
 
 MULTI_ZONE_PROVINCES: tuple[str, ...] = ("BC", "AB", "ON", "QC")
 SINGLE_ZONE_PROVINCES: tuple[str, ...] = tuple(
@@ -1163,18 +1172,9 @@ def _validate(
         zone_detail or "13 zone rows equal national totals",
     )
 
-    expected_tiers = {
-        ("process", "process_availability_000"): "T1",
-        ("process", "process_availability_025"): "T3",
-        ("process", "process_availability_050"): "above_T4",
-        ("process", "process_availability_075"): "above_T4",
-        ("harvest", "harvest_recovery_035"): "T1",
-        ("harvest", "harvest_recovery_060"): "T2",
-        ("harvest", "harvest_recovery_075"): "T3",
-    }
     tier_ok = True
     tier_detail = ""
-    for (stream, case), expected in expected_tiers.items():
+    for (stream, case), expected in EXPECTED_CASE_TIERS.items():
         actual = v1._tier_for_pj(national[(stream, case)].pj, tiers)
         if actual != expected:
             tier_ok = False

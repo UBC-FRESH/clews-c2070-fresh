@@ -2,6 +2,25 @@
 
 ## 2026-11-23
 
+- **Integrated measured four-province bucking coefficients into the national
+  facility chain.** Added `measured_bucking_coefficients.py`,
+  `national_product_chain_v2.py`, `national_facility_chain_scenarios_v4.py`,
+  `facility_residue_supply_v4.py`, `national_residue_curve_v4.py`,
+  `forestry_osecan_handoff_v5.py`, and `forestry_osecan_scenarios_v4.py`.
+  BC, QC, NB and YT now use the pilot's measured solid (sawlog), pulp
+  (pulpwood), other (other roundwood) and gross harvest-residue ODT/m3
+  coefficients; the other nine jurisdictions keep the v1 donor coefficients.
+  Solid replaces SAW+PANEL feedstock, with the SAW/PANEL split, pellet/bio
+  split, residue recovery and mill conversion ratios retained as labelled
+  donor assumptions. At 119 Mm3 the measured chain changes sawlog product
+  from 48.467 to 42.520 Mm3, pulp product from 7.590 to 9.527 M odt, process
+  residue from 526.006 to 514.614 PJ, and gross harvest residue from 167.779
+  to 127.860 PJ versus the donor chain. OSeCAN handoff v5 and scenario v4 are
+  read-only and unchanged in the official tree. Tests cover conservation,
+  measured/donor split, comparison and labels. Taper coverage and hardwood
+  limitations are documented. No UI or public OSeCAN change; no unexpected
+  `D`.
+
 - **Added BC branch and foliage allometry to the measured-tree residue ledger.**
   Added `workflows/national/bucking/bc_biomass_allometry.py`, the vendored CFS
   tree-level DBH + height coefficient table

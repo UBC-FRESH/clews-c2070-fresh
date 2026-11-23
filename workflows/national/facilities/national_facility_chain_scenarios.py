@@ -71,6 +71,7 @@ PRODUCT_CHAIN_DIR = (
 )
 PRODUCT_CHAIN_CSV = PRODUCT_CHAIN_DIR / "product_chain_by_province.csv"
 PRODUCT_CHAIN_SUMMARY = PRODUCT_CHAIN_DIR / "summary.json"
+PRODUCT_CHAIN_ARTIFACT = "national_product_chain_v1"
 RSYC_SUMMARY = (
     DATA_ROOT
     / "derived/national/clews_supply/rsyc_backbone/"
@@ -580,7 +581,7 @@ def read_reference_chains() -> tuple[dict[str, ReferenceChain], dict[str, Any]]:
             f"product-chain summary is missing: {PRODUCT_CHAIN_SUMMARY}"
         )
     summary = json.loads(PRODUCT_CHAIN_SUMMARY.read_text(encoding="utf-8"))
-    if summary.get("artifact") != "national_product_chain_v1":
+    if summary.get("artifact") != PRODUCT_CHAIN_ARTIFACT:
         raise ScenarioChainError(
             f"unexpected product-chain artifact: {summary.get('artifact')!r}"
         )
@@ -637,6 +638,7 @@ def read_reference_chains() -> tuple[dict[str, ReferenceChain], dict[str, Any]]:
         if coefficient_tier not in {
             "bc_anchor_species_group",
             "donor_coefficient",
+            "measured_bucking_pilot",
         }:
             raise ScenarioChainError(
                 f"{province}: unexpected coefficient tier "

@@ -89,6 +89,7 @@ EXPECTED_RSYC_119M_PJ = 130.9811485914871
 EXPECTED_RSYC_100M_ODT = 7_009_238.195978076
 EXPECTED_RSYC_100M_PJ = 129.6709066255944
 EXPECTED_HARVEST_BASIS_M3 = 118_977_339.0
+BASE_RECOVERY_RATIO_119M = 0.7685618064711366
 RSYC_BASE_RECOVERY = 0.60
 REL_TOL = 1e-8
 ABS_TOL = 1e-6
@@ -423,6 +424,7 @@ def _parse_product_chain() -> dict[str, ProductChainProvince]:
         if coefficient_tier not in {
             "bc_anchor_species_group",
             "donor_coefficient",
+            "measured_bucking_pilot",
         }:
             raise NationalResidueCurveError(
                 f"{province}: unexpected coefficient tier {coefficient_tier!r}"
@@ -833,6 +835,7 @@ def _parse_process_base(
         if coefficient_tier not in {
             "bc_anchor_species_group",
             "donor_coefficient",
+            "measured_bucking_pilot",
         }:
             raise NationalResidueCurveError(
                 f"{facility_id}: unexpected coefficient tier {coefficient_tier!r}"
@@ -1659,7 +1662,7 @@ def _validate(
         )
     _require_close(
         float(harvest_scenarios["harvest_recovery_060"]["rsyc_ratio_to_119m_base"]),
-        0.7685618064711366,
+        BASE_RECOVERY_RATIO_119M,
         "base-recovery RSYC ratio",
         abs_tol=1e-9,
     )
