@@ -1,0 +1,21 @@
+group,sort_code,output_code,min_top_cm,min_length_m,min_length_note,source
+Sawlog/Peeler,D38L13,D38L13,38.0,13.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Sawlog/Peeler,D38L11,D38L11,38.0,11.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Sawlog/Peeler,D38L8,D38L8,38.0,8.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Large Gang,D30L13,D30L13,30.0,13.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Large Gang,D30L11,D30L11,30.0,11.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Large Gang,D30L8,D30L8,30.0,8.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Small Gang,D20L13,D20L13,20.0,13.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Small Gang,D20L11,D20L11,20.0,11.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Small Gang,D20L8,D20L8,20.0,8.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Chip'n'saw,D125L13,D125L13,12.5,13.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Chip'n'saw,D125L11,D125L11,12.5,11.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Chip'n'saw,D125L8,D125L8,12.5,8.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Chip'n'saw,D125L63,D125L63,12.5,6.3,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Pulp,D125L51,D125L51,12.5,5.1,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Pulp,D125L50,D125L5,12.5,5.0,,TIPSY 4.5 CHM Log_Grades_industrial_interior
+Deciduous Sawlog/Peeler,D305,D305,30.5,,no published minimum; TIPSY 4.5 base log length 2.5 m,TIPSY 4.5 CHM Log_Grades_industrial_interior + Log_Tables
+Deciduous Sawlog/Peeler,D254,D254,25.4,,no published minimum; TIPSY 4.5 base log length 2.5 m,TIPSY 4.5 CHM Log_Grades_industrial_interior + Log_Tables
+Deciduous Pulp,D203,D203,20.3,,no published minimum; TIPSY 4.5 base log length 2.5 m,TIPSY 4.5 CHM Log_Grades_industrial_interior + Log_Tables
+Deciduous Pulp,D178,D178,17.8,,no published minimum; TIPSY 4.5 base log length 2.5 m,TIPSY 4.5 CHM Log_Grades_industrial_interior + Log_Tables
+Deciduous Pulp,D152,D152,15.2,,no published minimum; TIPSY 4.5 base log length 2.5 m,TIPSY 4.5 CHM Log_Grades_industrial_interior + Log_Tables

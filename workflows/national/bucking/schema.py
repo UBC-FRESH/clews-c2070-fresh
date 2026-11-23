@@ -327,6 +327,7 @@ class GradeRule:
     trim_m: float
     priority: int
     price_key: str
+    tipsy_group: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -335,6 +336,10 @@ class GradeRule:
         object.__setattr__(self, "sort_code", _require_text("sort_code", self.sort_code).upper())
         object.__setattr__(self, "product", _require_text("product", self.product).lower())
         object.__setattr__(self, "price_key", _require_text("price_key", self.price_key).lower())
+        if self.tipsy_group is not None:
+            object.__setattr__(
+                self, "tipsy_group", _require_text("tipsy_group", self.tipsy_group)
+            )
         object.__setattr__(self, "min_top_cm", _require_positive("min_top_cm", self.min_top_cm))
         object.__setattr__(
             self, "min_length_m", _require_positive("min_length_m", self.min_length_m)

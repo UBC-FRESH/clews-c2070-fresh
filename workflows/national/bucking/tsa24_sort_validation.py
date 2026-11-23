@@ -34,6 +34,7 @@ import argparse
 import hashlib
 import json
 import math
+import re
 import subprocess
 import sys
 from collections.abc import Iterable, Mapping, Sequence
@@ -57,6 +58,7 @@ __all__ = [
     "INDUSTRIAL_ORDER",
     "LABEL",
     "SortValidationError",
+    "build_diagnostics",
     "build_plot_attributes",
     "build_plot_comparison",
     "compute_metrics",
@@ -163,6 +165,11 @@ SPECIES_TO_CURVE: Mapping[str, str] = {
 }
 
 _SHARE_TOL = 1e-6
+_SORT_CODE_PATTERN = re.compile(r"^D(?P<diameter>\d+)(?:L(?P<length>\d+))?$")
+#: Lengths the reference bucker can create that are not TIPSY nominal log
+#: lengths.  7.5 m and 10.0 m come from the nemora default bucking profile;
+#: 2.4 m is the pre-alignment deciduous floor; 12.5/15.0 are cumulative sums.
+_NON_TIPSY_LENGTHS_M = (2.4, 7.5, 10.0, 12.5, 15.0)
 
 
 class SortValidationError(RuntimeError):
@@ -983,6 +990,161 @@ def _tvd_summary(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def _is_conifer_code(code: str) -> bool:
+    match = _SORT_CODE_PATTERN.match(str(code))
+    if match is None:
+        raise SortValidationError(f"unexpected industrial sort code {code!r}")
+    return bool(match.group("length"))
+
+
+def _marginal_distribution(
+    shares: Mapping[str, float],
+    kind: str,
+) -> dict[str, float]:
+    """Collapse industrial codes to diameter or length marginals.
+
+    Deciduous industrial codes carry no length suffix; their length marginal is
+    reported as ``none`` rather than being silently pooled with L5/L8/etc.
+    """
+    if kind not in {"diameter", "length"}:
+        raise SortValidationError(f"unknown marginal kind {kind!r}")
+    collapsed: dict[str, float] = {}
+    for code, value in shares.items():
+        match = _SORT_CODE_PATTERN.match(str(code))
+        if match is None:
+            raise SortValidationError(f"unexpected industrial sort code {code!r}")
+        if kind == "diameter":
+            key = f"D{match.group('diameter')}"
+        else:
+            key = f"L{match.group('length')}" if match.group("length") else "none"
+        number = float(value)
+        if number == 0.0:
+            continue
+        collapsed[key] = collapsed.get(key, 0.0) + number
+    total = float(sum(collapsed.values()))
+    if total <= 0:
+        raise SortValidationError(f"empty {kind} marginal")
+    return {key: value / total for key, value in collapsed.items()}
+
+
+def _marginal_tvd(pilot: Mapping[str, float], tipsy: Mapping[str, float]) -> float:
+    order = sorted(set(pilot) | set(tipsy))
+    return 0.5 * float(sum(abs(pilot.get(key, 0.0) - tipsy.get(key, 0.0)) for key in order))
+
+
+def build_diagnostics(
+    plot_comparison: pd.DataFrame,
+    logs: pd.DataFrame,
+) -> dict[str, Any]:
+    """Report marginals and bucker length artefacts without a fitted threshold.
+
+    Definitions-only mismatches should appear in the top-diameter marginal.
+    Length/segmentation mismatches appear in the length marginal and in log
+    lengths that are not TIPSY nominal lengths.
+    """
+    primary = plot_comparison[plot_comparison["comparison_status"] == "comparable_au"].copy()
+    if primary.empty:
+        raise SortValidationError("no comparable AU plots; diagnostics cannot be computed")
+
+    weights = primary["bucked_log_m3ha"].astype(float).tolist()
+    pilot = _weighted_shares(primary, "pilot", weights)
+    tipsy = _weighted_shares(primary, "tipsy", weights)
+    pilot_diameter = _marginal_distribution(pilot, "diameter")
+    tipsy_diameter = _marginal_distribution(tipsy, "diameter")
+    pilot_length = _marginal_distribution(pilot, "length")
+    tipsy_length = _marginal_distribution(tipsy, "length")
+
+    conifer_codes = [code for code in INDUSTRIAL_ORDER if _is_conifer_code(code)]
+    pilot_conifer = {code: pilot[code] for code in conifer_codes}
+    tipsy_conifer = {code: tipsy[code] for code in conifer_codes}
+    pilot_conifer_total = float(sum(pilot_conifer.values()))
+    tipsy_conifer_total = float(sum(tipsy_conifer.values()))
+    if pilot_conifer_total <= 0 or tipsy_conifer_total <= 0:
+        raise SortValidationError("conifer-only diagnostics require conifer share in both vectors")
+    pilot_conifer = {code: value / pilot_conifer_total for code, value in pilot_conifer.items()}
+    tipsy_conifer = {code: value / tipsy_conifer_total for code, value in tipsy_conifer.items()}
+
+    plot_ids = set(primary["plot_id"].astype(str))
+    primary_logs = logs[logs["plot_id"].astype(str).isin(plot_ids)].copy()
+    if primary_logs.empty:
+        raise SortValidationError("no bucked logs on comparable AU plots")
+    if "length_m" in primary_logs.columns:
+        lengths = primary_logs["length_m"].astype(float).round(6)
+        length_counts = {
+            f"{float(length):.3f}": int(count)
+            for length, count in lengths.value_counts().sort_index().items()
+        }
+        length_volume = (
+            primary_logs.assign(length_m=lengths)
+            .groupby("length_m")["volume_m3"]
+            .sum()
+            .sort_index()
+        )
+        non_tipsy = {
+            f"{length:.3f}": int((lengths.sub(length).abs() <= 1e-9).sum())
+            for length in _NON_TIPSY_LENGTHS_M
+        }
+        by_sort_length = {
+            str(code): {
+                f"{float(length):.3f}": int(count)
+                for length, count in group["length_m"]
+                .astype(float)
+                .round(6)
+                .value_counts()
+                .sort_index()
+                .items()
+            }
+            for code, group in primary_logs.groupby("sort_code")
+        }
+        log_lengths: dict[str, Any] = {
+            "counts": length_counts,
+            "volume_m3": {f"{float(k):.3f}": float(v) for k, v in length_volume.items()},
+            "non_tipsy_nominal_lengths": non_tipsy,
+            "by_sort": by_sort_length,
+        }
+    else:
+        log_lengths = {"status": "not_available_no_length_m"}
+
+    return {
+        "evidence": "derived",
+        "grade_status": GRADE_STATUS,
+        "n_plots": len(primary),
+        "n_logs": len(primary_logs),
+        "pooled_tvd": tvd(pilot, tipsy),
+        "pooled_overlap": overlap(pilot, tipsy),
+        "diameter_marginal": {
+            "pilot": pilot_diameter,
+            "tipsy": tipsy_diameter,
+            "tvd": _marginal_tvd(pilot_diameter, tipsy_diameter),
+        },
+        "length_marginal": {
+            "pilot": pilot_length,
+            "tipsy": tipsy_length,
+            "tvd": _marginal_tvd(pilot_length, tipsy_length),
+        },
+        "conifer_only": {
+            "pilot_share_of_total": pilot_conifer_total,
+            "tipsy_share_of_total": tipsy_conifer_total,
+            "pooled_tvd": tvd(pilot_conifer, tipsy_conifer),
+            "pooled_overlap": overlap(pilot_conifer, tipsy_conifer),
+            "diameter_tvd": _marginal_tvd(
+                _marginal_distribution(pilot_conifer, "diameter"),
+                _marginal_distribution(tipsy_conifer, "diameter"),
+            ),
+            "length_tvd": _marginal_tvd(
+                _marginal_distribution(pilot_conifer, "length"),
+                _marginal_distribution(tipsy_conifer, "length"),
+            ),
+        },
+        "log_lengths": log_lengths,
+        "note": (
+            "Diameter marginal isolates top-diameter definition error. Length "
+            "marginal and non-TIPSY nominal lengths isolate bucking/DP "
+            "segmentation. Deciduous codes have no published length group."
+        ),
+    }
+
+
 def build_au_summary(plot_comparison: pd.DataFrame) -> pd.DataFrame:
     primary = plot_comparison[plot_comparison["comparison_status"] == "comparable_au"].copy()
     if primary.empty:
@@ -1446,6 +1608,7 @@ def build_report(
     au_summary: pd.DataFrame,
     sort_comparison: pd.DataFrame,
     tipsy_source_role: str,
+    artifact_version: str = "v0",
 ) -> str:
     sample = summary["sample"]
     primary = summary["primary_au_match"]
@@ -1453,7 +1616,7 @@ def build_report(
     volume = primary["volume"]
     statuses = sample["n_plots_status"]
     lines: list[str] = []
-    lines.append("# TSA24 pilot industrial-sort validation v0\n")
+    lines.append(f"# TSA24 pilot industrial-sort validation {artifact_version}\n")
     lines.append("| Field | Value |\n|---|---|\n")
     lines.append(f"| Validation | `{LABEL}` |\n")
     lines.append("| TSA | 24 — Prince George |\n")
@@ -1718,6 +1881,9 @@ def generate_validation(
     pilot_benchmark_path = Path(pilot_benchmark_path) if pilot_benchmark_path else None
     femic_root = Path(femic_root) if femic_root else None
     generated_utc = _utc_now()
+    artifact_version = (
+        out_dir.name.removeprefix("tsa24_sort_validation_") or out_dir.name
+    )
 
     resolved_tipsy_path, tipsy_role = resolve_tipsy_sorts_path(tipsy_sorts_path)
     logs = load_pilot_logs(logs_path)
@@ -1755,6 +1921,8 @@ def generate_validation(
     else:
         metrics["pass_fail"] = "not_assessed_no_pre_registered_tolerance"
 
+    diagnostics = build_diagnostics(plot_comparison, logs)
+    metrics["diagnostics"] = diagnostics
     sort_comparison = build_sort_comparison(plot_comparison, metrics)
     output_check = _validate_outputs(plot_comparison, au_summary, sort_comparison, metrics)
     metrics["output_check"] = output_check
@@ -1762,6 +1930,7 @@ def generate_validation(
     summary = {
         "validation": LABEL,
         "label": LABEL,
+        "artifact_version": artifact_version,
         "grade_status": GRADE_STATUS,
         "official_grade_validation": False,
         "generated_utc": generated_utc,
@@ -1788,6 +1957,7 @@ def generate_validation(
         "evidence_tiers": metrics["evidence_tiers"],
         "labels": metrics["labels"],
         "caveats": metrics["caveats"],
+        "diagnostics": diagnostics,
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1802,12 +1972,17 @@ def generate_validation(
         json.dumps(_jsonable(summary), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    (out_dir / "diagnostics.json").write_text(
+        json.dumps(_jsonable(diagnostics), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     report = build_report(
         generated_utc=generated_utc,
         summary=metrics,
         au_summary=au_summary,
         sort_comparison=sort_comparison,
         tipsy_source_role=tipsy_role,
+        artifact_version=artifact_version,
     )
     (out_dir / "VALIDATION_REPORT.md").write_text(report, encoding="utf-8")
 
@@ -1817,6 +1992,7 @@ def generate_validation(
         out_dir / "sort_comparison.csv",
         out_dir / "metrics.json",
         out_dir / "summary.json",
+        out_dir / "diagnostics.json",
         out_dir / "VALIDATION_REPORT.md",
     ]
     missing_outputs = [str(path) for path in output_paths if not path.exists()]
@@ -1875,6 +2051,7 @@ def generate_validation(
     manifest = {
         "validation": LABEL,
         "label": LABEL,
+        "artifact_version": artifact_version,
         "grade_status": GRADE_STATUS,
         "official_grade_validation": False,
         "created_utc": generated_utc,

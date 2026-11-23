@@ -22,6 +22,7 @@ from workflows.national.bucking.tsa24_sort_validation import (
     LABEL,
     SortValidationError,
     _assert_expected_codes,
+    _marginal_distribution,
     build_plot_attributes,
     generate_validation,
     normalise_sort_code,
@@ -132,6 +133,19 @@ def test_alias_and_fail_closed() -> None:
         _assert_expected_codes(["D999L9"], context="test")
     with pytest.raises(SortValidationError, match="unexpected industrial sort"):
         _assert_expected_codes(["D125L50"], context="test")
+
+
+def test_marginal_distribution_keeps_deciduous_length_separate() -> None:
+    shares = _share_map(D125L63=0.4, D125L51=0.3, D20L8=0.2, D305=0.1)
+
+    diameter = _marginal_distribution(shares, "diameter")
+    assert diameter == pytest.approx({"D125": 0.7, "D20": 0.2, "D305": 0.1})
+
+    length = _marginal_distribution(shares, "length")
+    assert length == pytest.approx({"L63": 0.4, "L51": 0.3, "L8": 0.2, "none": 0.1})
+
+    with pytest.raises(SortValidationError, match="unknown marginal"):
+        _marginal_distribution(shares, "product")
 
 
 def test_tvd_and_overlap_arithmetic() -> None:
