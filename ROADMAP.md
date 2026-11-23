@@ -975,6 +975,24 @@ decide what blocks production readiness after the conceptual alpha.
   screenshots captured under `tmp/facilities-v51-*.png` with no horizontal
   overflow at 390 px. No static publication and no official OSeCAN change.
 
+- [x] P7.38 Document and freeze the national transport/siting layer v1.
+  Completed: added `docs/model-card-national-transport-siting.md` covering the
+  11 province road factors and 81/81 public OSRM sample, transport cost v1
+  (604 CAD/trip and 11.50 CAD/m3 at 100 km base), 525 supply nodes / 486
+  positive, assignment v10 (118.977 Mm3, 296 facilities, 3.392 B CAD/yr,
+  270.289 km mean), chain v5.1 transport (2.702 / 3.392 / 5.018 B CAD/yr at
+  100/119/150 Mm3), greenfield k-median (k=20 1.749 B CAD/yr and 131.973 km
+  at 119 Mm3; 1.428 / 1.749 / 2.307 B at 100/119/150), k=13 diminishing returns
+  in all three cases, and the 119 Mm3 break-even threshold (40.55-59.47 CAD
+  per m3/yr; 40.87 at k=20). Added the companion-card cross-reference and
+  updated the v5.1 transport limitation in the facility-chain model card.
+  Updated ROADMAP and CHANGE_LOG. Seven transport/siting manifests verify 64/64
+  entries; no unexpected `D`. Created annotated tag
+  `national-transport-siting-v1` at the documentation commit, recording data
+  commits `16e979a` (assignment v10), `1f0a02a` (greenfield siting),
+  `5b7d717` (break-even), and `068787d` (case screen). No code, model artifact,
+  UI, or official OSeCAN change.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

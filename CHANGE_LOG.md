@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Documented and froze the national transport/siting layer v1.** Added
+  `docs/model-card-national-transport-siting.md` and a companion-card
+  cross-reference plus refreshed transport limitation in
+  `docs/model-card-national-facility-chain.md`; updated `ROADMAP.md` and this
+  change log. The card covers the 11 province road/haversine factors and 81/81
+  public OSRM sample, transport cost v1 (604 CAD/trip and 11.50 CAD/m3 at
+  100 km base; 52.5 m3 payload, empty return), 525 supply nodes / 486 positive,
+  assignment v10 (118.977 Mm3, 296 facilities, 3.392 B CAD/yr, 270.289 km
+  mean), chain v5.1 transport (2.702 / 3.392 / 5.018 B CAD/yr at 100/119/150
+  Mm3), the greenfield k-median screen (k=20 1.749 B CAD/yr and 131.973 km at
+  119 Mm3; 1.428 / 1.749 / 2.307 B at 100/119/150; k=13 diminishing in all
+  cases), and the 119 Mm3 break-even annualized capital threshold
+  (40.55-59.47 CAD per m3/yr; 40.87 at k=20). Documented limitations include
+  centroid/node screening geometry, heuristic siting, generic unlimited
+  modules, no capital or permitting estimate, no class capacity, and no
+  official OSeCAN change. Seven transport/siting manifests verify 64/64
+  entries; no unexpected `D`. Created annotated tag
+  `national-transport-siting-v1` at the documentation commit, recording data
+  commits `16e979a` (assignment v10), `1f0a02a` (greenfield siting),
+  `5b7d717` (break-even), and `068787d` (case screen). No code, model artifact,
+  UI, or official OSeCAN change.
+
 - **Published national portal v3.2 with Facilities v5.1 transport-aware
   assignment.** Built `ui_publications/national-portal-v3.2/` from live UI
   commit `59318fd`: a 92-file, 13,339,368-byte static bundle with the

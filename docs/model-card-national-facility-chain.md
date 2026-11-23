@@ -12,6 +12,17 @@
 | Energy-side status | Read-only handoff; `official_osecan_changed=false`; transport cost is not in official tiers |
 | Scope boundary | Documentation/tag freeze only; no code, model artifact, UI, or public OSeCAN change at the freeze commit; no legal/AAC claim; no data request, DUA, or approval dependency |
 
+## Transport/siting companion card
+
+Road factors and OSRM evidence, transport cost v1, supply-node construction and
+assignment v10, and the separate greenfield k-median/break-even screen are
+documented in `docs/model-card-national-transport-siting.md` (annotated tag
+`national-transport-siting-v1`). That card records the transport/siting data
+commits `16e979a` (assignment v10), `1f0a02a` (greenfield siting), `5b7d717`
+(break-even), and `068787d` (case screen). The cross-reference changes no v5.1
+number, artifact, or tag. The greenfield screen is not part of the chain, and
+transport cost remains a chain summary rather than an OSeCAN input.
+
 ## v5.1 supersession summary
 
 Version 5.1 extends assignment v10 to the 100 and 150 Mm³ sensitivity cases;
@@ -680,10 +691,15 @@ with 0 failures.
   119 Mm³ case. NT has no eligible local capacity, so its 36,376 m³ is placed
   cross-border; the separate 43,651 m³ NT floor gap is a 1.2× buffer, not
   unassigned harvest.
-- **No transport cost.** The assignment uses a distance screen (1.3 road
-  factor, 500 km cross-border penalty) but no $/t/km rate, road-network route,
-  mode choice, backhaul, or transport objective. Cross-border volume is a
-  residual allocation, not an interprovincial trade forecast.
+- **Transport cost is a screening layer, not an observed or net cost.** V5.1
+  assignment v10 prices node-to-facility truck flows with transport cost v1
+  (52.5 m³ payload, empty return) and haversine × province-road-factor
+  distances, with a 500 km cross-border soft penalty. It is not an observed
+  route, mode choice, backhaul, border/ferry/winter-road, or delivered-cost
+  model. Cross-border volume is a soft-penalty allocation, not an
+  interprovincial trade forecast. Transport cost is a chain summary and not an
+  OSeCAN input. The greenfield siting screen is separate and changes no chain
+  total; see `docs/model-card-national-transport-siting.md`.
 - **No annual dynamics.** Each harvest case is a static snapshot. There is no
   forest growth, age-class transition, natural disturbance, capacity
   expansion/closure, facility entry/exit, investment, or 2021–2070 time path.
@@ -821,6 +837,10 @@ carrying the v4 card and handoff, records model commit
 tag. Annotated tag `national-facility-chain-v5` marks the v5 documentation
 commit, records model commit `0943b12027f9eb994bda3646d9e3fe7548454fb0` and data commit
 `86ad55506d6ef10bcd60a6b6701d4d06c0026d12`, and does not move v4 or any
-earlier tag. The freeze commits are documentation and tag only; no code, model
+earlier tag. Annotated tag `national-transport-siting-v1` marks the
+transport/siting documentation commit, records transport/siting data commits
+`16e979a` (assignment v10), `1f0a02a` (greenfield siting), `5b7d717`
+(break-even), and `068787d` (case screen), and does not move v5.1 or any earlier
+tag. The freeze commits are documentation and tag only; no code, model
 artifact, UI, or official OSeCAN file changed at those commits. The tags are the
 immutable references for the frozen numbers.
