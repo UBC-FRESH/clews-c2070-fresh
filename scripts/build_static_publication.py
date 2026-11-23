@@ -31,6 +31,9 @@ DATA_MANIFEST = Path("public/data/manifest.json")
 ECONOMICS_MANIFEST = Path("public/data/economics/manifest.json")
 NATIONAL_MANIFEST = Path("public/data/economics/national.manifest.json")
 NATIONAL_FILE = Path("public/data/economics/national.json")
+FACILITY_MANIFEST = Path("public/data/facilities/manifest.json")
+FACILITY_FILE = Path("public/data/facilities/facilities.json")
+FACILITY_SCENARIOS = ("100m", "119m", "150m")
 ECONOMICS_FILES = (
     "economics/summary.json",
     "economics/detail.csv",
@@ -423,6 +426,44 @@ def main() -> None:
         if abs(row["scaled_gap"] + row["scaled_margin"]) > 1e-4:
             fail("national break-even scaled gap is not the negated margin")
 
+    facility_manifest, facility_record = verify_generated_payload(
+        destination / "public/data", destination / FACILITY_MANIFEST
+    )
+    facilities = load_json(destination / FACILITY_FILE)
+    if facilities.get("schema_version") != "facilities/1":
+        fail("facilities schema mismatch")
+    if facilities.get("artifact") != "ui_facilities_v1":
+        fail("facilities artifact mismatch")
+    facility_coverage = facilities.get("coverage") or {}
+    facility_rows = facilities.get("facilities") or []
+    if facility_coverage.get("record_count") != 689 or len(facility_rows) != 689:
+        fail("facilities must cover 689 records")
+    if facility_coverage.get("mapped_count") != 608:
+        fail("facilities must map 608 records")
+    if facility_coverage.get("unlocated_count") != 81:
+        fail("facilities must leave 81 records unlocated")
+    mapped_rows = [row for row in facility_rows if row.get("mapped")]
+    if len(mapped_rows) != 608:
+        fail("facility mapped flags do not sum to 608")
+    if any(row.get("lat") is None or row.get("lon") is None for row in mapped_rows):
+        fail("mapped facility is missing coordinates")
+    facility_labels = facilities.get("labels") or {}
+    if facility_labels.get("evidence") != "model_estimate":
+        fail("facilities must stay a model estimate")
+    if any(facility_labels.get(key) is not False for key in ("observed", "policy_grade", "official_osecan")):
+        fail("facility labels must stay model-only and outside official OSeCAN")
+    if facility_labels.get("ranking") != "none" or facility_labels.get("read_only") is not True:
+        fail("facilities must stay unranked and read-only")
+    facility_scenarios = facilities.get("scenarios") or []
+    if [scenario.get("id") for scenario in facility_scenarios] != list(FACILITY_SCENARIOS):
+        fail("facility scenarios must be 100m/119m/150m")
+    if facilities.get("default_scenario") != "119m":
+        fail("facility default scenario must be 119m")
+    if facility_manifest.get("validation", {}).get("ok") is not True:
+        fail("facility manifest validation is not ok")
+    if facility_manifest.get("labels") != facility_labels:
+        fail("facility manifest labels diverge from the payload")
+
     scenarios = load_json(destination / "public/data/scenarios.json")
     families = {scenario["family"] for scenario in scenarios["scenarios"]}
     pareto_eligible = sum(1 for scenario in scenarios["scenarios"] if scenario.get("pareto_eligible"))
@@ -477,6 +518,9 @@ def main() -> None:
             "data_directory_files": sum(1 for path in (destination / "public/data").rglob("*") if path.is_file()),
             "economics_rows": headline["rows"],
             "national_jurisdictions": len(national["jurisdictions"]),
+            "facilities": facility_coverage["record_count"],
+            "facilities_mapped": facility_coverage["mapped_count"],
+            "facility_scenarios": len(facility_scenarios),
             "national_base_margin_cad_m3": diagnostic["donor_flat"]["base_cad_m3"],
             "national_sensitivity_margin_cad_m3": diagnostic["stumpage_scaled"]["base_cad_m3"],
             "forest_lp_net_value_allocation_rows": net_coverage["allocation_rows"],
@@ -533,6 +577,30 @@ def main() -> None:
                 },
             },
         },
+        "facilities": {
+            "schema_version": facilities["schema_version"],
+            "artifact": facilities["artifact"],
+            "coverage": facility_coverage,
+            "default_scenario": facilities["default_scenario"],
+            "scenarios": [
+                {
+                    "id": scenario["id"],
+                    "harvest_m3": scenario["harvest_m3"],
+                    "assigned_m3": scenario["assigned_m3"],
+                    "facilities_used": scenario["facilities_used"],
+                    "capacity_utilization": scenario["capacity_utilization"],
+                }
+                for scenario in facility_scenarios
+            ],
+            "labels": facility_labels,
+            "payload": facility_record,
+            "manifest": {
+                "path": FACILITY_MANIFEST.relative_to("public/data").as_posix(),
+                "bytes": (destination / FACILITY_MANIFEST).stat().st_size,
+                "sha256": sha256_file(destination / FACILITY_MANIFEST),
+                "sources": len(facility_manifest["sources"]),
+            },
+        },
         "data_bundle": {
             "manifest_path": DATA_MANIFEST.as_posix(),
             "manifest_sha256": sha256_file(destination / DATA_MANIFEST),
@@ -581,6 +649,9 @@ def main() -> None:
         "economics_files": len(economics_records),
         "national_manifest": NATIONAL_MANIFEST.as_posix(),
         "national_jurisdictions": len(national["jurisdictions"]),
+        "facilities": facility_coverage["record_count"],
+        "facilities_mapped": facility_coverage["mapped_count"],
+        "facility_scenarios": [scenario["id"] for scenario in facility_scenarios],
         "national_base_margin_cad_m3": diagnostic["donor_flat"]["base_cad_m3"],
         "national_sensitivity_margin_cad_m3": diagnostic["stumpage_scaled"]["base_cad_m3"],
         "headline": headline,
