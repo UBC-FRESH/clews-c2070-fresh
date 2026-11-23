@@ -301,7 +301,7 @@ def _markdown_table(frame: pd.DataFrame, digits: int = 2) -> str:
         return "_No rows._"
     columns = list(frame.columns)
     lines = [
-        "| " + " | ".join(str(column) for column in columns) + " |",
+        "| " + " | ".join(str(column).replace("|", "\\|") for column in columns) + " |",
         "| " + " | ".join("---" for _ in columns) + " |",
     ]
     for row in frame.itertuples(index=False):
@@ -312,7 +312,7 @@ def _markdown_table(frame: pd.DataFrame, digits: int = 2) -> str:
             elif value is None or (isinstance(value, float) and math.isnan(value)):
                 cells.append("")
             else:
-                cells.append(str(value))
+                cells.append(str(value).replace("|", "\\|"))
         lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
