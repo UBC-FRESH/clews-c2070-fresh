@@ -92,6 +92,10 @@ MODULE_PATH = "workflows.national.facilities.forestry_osecan_scenarios"
 TEST_PATH = "tests/test_forestry_osecan_scenarios.py"
 
 SCENARIO_ORDER: tuple[str, ...] = ("100m", "119m", "150m")
+# Provinces whose product mix legitimately has zero feedstock for a facility
+# class.  Empty by default; a version wrapper may name only classes that the
+# upstream product chain proves are zero.
+ALLOWED_ZERO_FEEDSTOCK_CLASSES: dict[str, frozenset[str]] = {}
 PRIMARY_SCENARIO = "119m"
 
 PROCESS_STREAM = v1.PROCESS_STREAM
@@ -452,9 +456,12 @@ def _parse_scenario_inputs() -> tuple[
             "expected exactly one jurisdiction without facility process residue"
         )
     for key, classes in process_classes.items():
-        if classes != set(v1.CLASS_ORDER):
+        missing = set(v1.CLASS_ORDER) - classes
+        allowed = ALLOWED_ZERO_FEEDSTOCK_CLASSES.get(key[1], frozenset())
+        if missing and not missing.issubset(allowed):
             raise ForestryOsecanScenariosError(
-                f"incomplete facility class coverage for {key}: {sorted(classes)}"
+                f"incomplete facility class coverage for {key}: "
+                f"{sorted(classes)}"
             )
     expected_harvest_rows = len(SCENARIO_ORDER) * len(PROVINCES)
     if len(harvest_rows) != expected_harvest_rows:

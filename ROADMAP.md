@@ -790,6 +790,24 @@ decide what blocks production readiness after the conceptual alpha.
   no request/DUA/restricted data, no UI/official OSeCAN change and no national
   claim. No unexpected `D`.
 
+- [x] P7.30 Integrate E2c density-calibrated coefficients into facility
+  chain v4. Completed: added the E1+E2c coefficient boundary and rebuilt
+  product-chain v5, facility residue v7, residue curve v7, chain scenarios v7,
+  OSeCAN handoff v8 and OSeCAN scenarios v7. The 13-jurisdiction coefficient
+  artifact carries 4 E1 measured and 9 E2c rows with zero donor product
+  coefficients. The 100/119/150 Mm³ cases keep assignment v6 / capacity v3.
+  At 119 Mm³, solid product falls 10.92% (42.291→37.674 Mm³), pulp rises
+  11.47% (10.824→12.066 M odt), process residue falls 1.30%
+  (505.333→498.751 PJ) and harvest gross rises 13.83% (390.418→444.411 PJ);
+  harvest 60% is 266.646 PJ. The frozen v3.2 chain uses E2 v1, not E2 v2;
+  E2 v2 and E2c per-m³ coefficients are identical. Open-volume checks pass for
+  SK/NS/PE within ±50% and are `not_available` for the other six E2c
+  jurisdictions. Handoff v8 covers all 13 OSeCAN zones with no `UNMAPPED`
+  bucket and 119 handoff rows; harvest 35% moves T3→T4 while harvest 60/75%
+  and all process tiers are unchanged. All 27 focused tests pass; no
+  NaN/negative, no UI/official OSeCAN change and no national claim. No
+  unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

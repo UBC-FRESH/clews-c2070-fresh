@@ -640,6 +640,7 @@ def read_reference_chains() -> tuple[dict[str, ReferenceChain], dict[str, Any]]:
             "donor_coefficient",
             "measured_bucking_pilot",
             "e2_open_data_imputation",
+            "E2c_open_inventory_density_calibrated",
         }:
             raise ScenarioChainError(
                 f"{province}: unexpected coefficient tier "

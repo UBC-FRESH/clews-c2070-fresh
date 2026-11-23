@@ -426,6 +426,7 @@ def _parse_product_chain() -> dict[str, ProductChainProvince]:
             "donor_coefficient",
             "measured_bucking_pilot",
             "e2_open_data_imputation",
+            "E2c_open_inventory_density_calibrated",
         }:
             raise NationalResidueCurveError(
                 f"{province}: unexpected coefficient tier {coefficient_tier!r}"
@@ -838,6 +839,7 @@ def _parse_process_base(
             "donor_coefficient",
             "measured_bucking_pilot",
             "e2_open_data_imputation",
+            "E2c_open_inventory_density_calibrated",
         }:
             raise NationalResidueCurveError(
                 f"{facility_id}: unexpected coefficient tier {coefficient_tier!r}"

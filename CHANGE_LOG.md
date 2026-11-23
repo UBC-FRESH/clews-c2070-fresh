@@ -2,6 +2,27 @@
 
 ## 2026-11-23
 
+- **Integrated E2c density-calibrated coefficients into facility chain v4.**
+  Added `workflows/national/facilities/e1_e2c_coefficients.py`,
+  `national_product_chain_v5.py`, `facility_residue_supply_v7.py`,
+  `national_residue_curve_v7.py`, `national_facility_chain_scenarios_v7.py`,
+  `forestry_osecan_handoff_v8.py`, `forestry_osecan_scenarios_v7.py`, and
+  `tests/test_e1_e2c_facility_chain_v4.py`. Built
+  `e1_e2c_product_coefficients_v1` with 13 rows (4 E1 measured, 9 E2c
+  density-calibrated, 0 donor product coefficients) and carried the v3.2
+  assignment v6 / capacity v3 floor through 100/119/150 Mm³. At 119 Mm³,
+  v3.2→v4 moves solid product 42.291→37.674 Mm³ (−10.92%), pulp
+  10.824→12.066 M odt (+11.47%), process residue 505.333→498.751 PJ
+  (−1.30%), harvest gross 390.418→444.411 PJ (+13.83%), and harvest 60%
+  234.251→266.646 PJ. The frozen v3.2 baseline uses E2 v1, not E2 v2; E2 v2
+  and E2c per-m³ coefficients are unchanged (54/54 rows). Open-volume checks
+  pass for SK (0.8858), NS (1.4476) and PE (0.6837) against ±50%; AB, ON, NL,
+  NT and NU are `not_available`, and MB density is donor evidence. Handoff v8
+  maps 119 rows to 13 OSeCAN zones with no `UNMAPPED` bucket; harvest 35%
+  moves T3→T4, harvest 60% and 75% stay above T4, process tiers are unchanged.
+  All 27 focused tests pass; no NaN/negative; no UI/official OSeCAN change and
+  no national claim. No unexpected `D`.
+
 - **Built E2 v3 density-calibrated tree lists for the nine non-measured
   provinces.** Added `workflows/national/inventory/provincial_open_inventory_density.py`,
   `workflows/national/bucking/open_data_imputation_v3.py`,
