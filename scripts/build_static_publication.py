@@ -464,6 +464,75 @@ def main() -> None:
     if facility_manifest.get("labels") != facility_labels:
         fail("facility manifest labels diverge from the payload")
 
+    national_chain = facilities.get("national_chain") or {}
+    if national_chain.get("artifact") != "national_facility_chain_scenarios_v7":
+        fail("facilities national chain artifact mismatch")
+    if national_chain.get("artifact_version") != "7.0.0":
+        fail("facilities national chain artifact version mismatch")
+    chain_labels = national_chain.get("labels") or {}
+    if chain_labels != {
+        "model_estimate": True,
+        "observed": False,
+        "policy_grade": False,
+        "national_claim": False,
+        "official_osecan_changed": False,
+    }:
+        fail("national chain labels must stay model-only and unclaimed")
+    chain_rows = national_chain.get("rows") or []
+    if [row.get("id") for row in chain_rows] != ["100m", "119m", "150m"]:
+        fail("national chain rows must be 100m/119m/150m")
+    chain_columns = national_chain.get("columns") or []
+    if len(chain_columns) != 6:
+        fail("national chain must carry six summary columns")
+    if any(column.get("field") not in chain_rows[0] for column in chain_columns):
+        fail("national chain column references a missing field")
+    chain_fields = (
+        "harvest_m3",
+        "solid_m3",
+        "pulp_odt",
+        "process_pj",
+        "harvest_gross_pj",
+        "harvest_recoverable_pj",
+        "total_gross_pj",
+    )
+    for row in chain_rows:
+        if any(not isinstance(row.get(field), (int, float)) or row[field] < 0 for field in chain_fields):
+            fail(f"national chain {row.get('id')} has an invalid numeric field")
+        if abs(row["total_gross_pj"] - (row["process_pj"] + row["harvest_gross_pj"])) > 1e-6:
+            fail(f"national chain total gross does not conserve for {row['id']}")
+    expected_chain = {
+        "100m": (31.693, 10.137, 419.238, 373.244, 223.946, 792.482),
+        "119m": (37.674, 12.066, 498.751, 444.411, 266.646, 943.162),
+        "150m": (46.137, 15.551, 626.865, 573.125, 343.875, 1199.991),
+    }
+    for row in chain_rows:
+        rounded = (
+            round(row["solid_m3"] / 1e6, 3),
+            round(row["pulp_odt"] / 1e6, 3),
+            round(row["process_pj"], 3),
+            round(row["harvest_gross_pj"], 3),
+            round(row["harvest_recoverable_pj"], 3),
+            round(row["total_gross_pj"], 3),
+        )
+        if rounded != expected_chain[row["id"]]:
+            fail(f"national chain values changed for {row['id']}")
+    chain_reference = national_chain.get("reference") or {}
+    if chain_reference.get("scenario") != "119m":
+        fail("national chain reference scenario must be 119m")
+    if chain_reference.get("process_availability_fraction") != 0.5:
+        fail("national chain process availability reference must be 0.50")
+    if chain_reference.get("harvest_recovery_fraction") != 0.6:
+        fail("national chain harvest recovery reference must be 0.60")
+    if [tier.get("stream") for tier in chain_reference.get("tiers") or []] != ["process", "harvest"]:
+        fail("national chain reference badges must cover process and harvest")
+    chain_provenance = national_chain.get("coefficient_provenance") or {}
+    if chain_provenance.get("donor_product_coefficients") != 0:
+        fail("national chain must not apply donor product coefficients")
+    if (chain_provenance.get("e1") or {}).get("count") != 4:
+        fail("national chain E1 province count mismatch")
+    if (chain_provenance.get("e2c") or {}).get("count") != 9:
+        fail("national chain E2c province count mismatch")
+
     scenarios = load_json(destination / "public/data/scenarios.json")
     families = {scenario["family"] for scenario in scenarios["scenarios"]}
     pareto_eligible = sum(1 for scenario in scenarios["scenarios"] if scenario.get("pareto_eligible"))
@@ -521,6 +590,7 @@ def main() -> None:
             "facilities": facility_coverage["record_count"],
             "facilities_mapped": facility_coverage["mapped_count"],
             "facility_scenarios": len(facility_scenarios),
+            "national_chain_rows": len(chain_rows),
             "national_base_margin_cad_m3": diagnostic["donor_flat"]["base_cad_m3"],
             "national_sensitivity_margin_cad_m3": diagnostic["stumpage_scaled"]["base_cad_m3"],
             "forest_lp_net_value_allocation_rows": net_coverage["allocation_rows"],
@@ -592,6 +662,28 @@ def main() -> None:
                 }
                 for scenario in facility_scenarios
             ],
+            "national_chain": {
+                "artifact": national_chain["artifact"],
+                "artifact_version": national_chain["artifact_version"],
+                "rows": [
+                    {
+                        "id": row["id"],
+                        "label": row.get("label"),
+                        "harvest_m3": row["harvest_m3"],
+                        "solid_m3": row["solid_m3"],
+                        "pulp_odt": row["pulp_odt"],
+                        "process_pj": row["process_pj"],
+                        "harvest_gross_pj": row["harvest_gross_pj"],
+                        "harvest_recoverable_pj": row["harvest_recoverable_pj"],
+                        "total_gross_pj": row["total_gross_pj"],
+                    }
+                    for row in chain_rows
+                ],
+                "columns": chain_columns,
+                "reference": chain_reference,
+                "labels": chain_labels,
+                "coefficient_provenance": chain_provenance,
+            },
             "labels": facility_labels,
             "payload": facility_record,
             "manifest": {
