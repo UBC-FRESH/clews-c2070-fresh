@@ -85,6 +85,9 @@ ASSIGNMENT_VERSION = "v3"
 ASSIGNMENT_LABEL = "assignment v3"
 ASSIGNMENT_ARTIFACT = "national_facility_assignment_v3"
 ASSIGNMENT_SUMMARY_KEY = "assignment_v3"
+ASSIGNMENT_CSV_NAME = "facility_assignment.csv"
+ASSIGNMENT_UTILIZATION_CSV_NAME = "facility_utilization.csv"
+ASSIGNMENT_SUMMARY_NAME = "summary.json"
 ALLOCATION_BASIS = "assignment_v3_province_capacity_floor_assigned_m3"
 UTILIZATION_FIELD = "assignment_utilization_v3"
 UTILIZATION_MODE = "row"
@@ -643,7 +646,7 @@ def _parse_product_chain() -> tuple[dict[str, ProvinceChain], dict[str, Any]]:
 
 
 def _parse_assignment() -> tuple[list[AssignmentLink], dict[str, Any]]:
-    path = ASSIGNMENT_DIR / "facility_assignment.csv"
+    path = ASSIGNMENT_DIR / ASSIGNMENT_CSV_NAME
     required = [
         "scenario",
         "province",
@@ -673,7 +676,7 @@ def _parse_assignment() -> tuple[list[AssignmentLink], dict[str, Any]]:
         raise FacilityResidueSupplyError(
             f"{ASSIGNMENT_LABEL} has no rows for scenario {SCENARIO!r}"
         )
-    summary_path = ASSIGNMENT_DIR / "summary.json"
+    summary_path = ASSIGNMENT_DIR / ASSIGNMENT_SUMMARY_NAME
     if not summary_path.is_file():
         raise FacilityResidueSupplyError(
             f"{ASSIGNMENT_LABEL} summary is missing: {summary_path}"
@@ -2432,9 +2435,9 @@ def build(output_dir: Path | None = None) -> dict[str, Any]:
             PRODUCT_CHAIN_DIR / "product_chain_by_province.csv",
             PRODUCT_CHAIN_DIR / "coefficients.csv",
             PRODUCT_CHAIN_DIR / "summary.json",
-            ASSIGNMENT_DIR / "facility_assignment.csv",
-            ASSIGNMENT_DIR / "facility_utilization.csv",
-            ASSIGNMENT_DIR / "summary.json",
+            ASSIGNMENT_DIR / ASSIGNMENT_CSV_NAME,
+            ASSIGNMENT_DIR / ASSIGNMENT_UTILIZATION_CSV_NAME,
+            ASSIGNMENT_DIR / ASSIGNMENT_SUMMARY_NAME,
             RSYC_SUMMARY,
         )
     }
