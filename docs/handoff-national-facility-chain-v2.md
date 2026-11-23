@@ -8,6 +8,7 @@
 | Trade addendum | `national-facility-chain-v2.1` |
 | Sensitivity freeze | `national-chain-sensitivity-v1` |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
+| Data dependency | Open data only; no DUA, request, or approval required |
 | OSeCAN status | Read-only handoff; `official_osecan_changed=false` |
 | Scope boundary | No code, model, UI, or official OSeCAN change in this handoff |
 
@@ -94,44 +95,57 @@ Each published artifact directory contains a report, a JSON summary, and a
 SHA-256 manifest. Rebuild against the recorded data commit to reproduce the
 frozen numbers.
 
-## 3. Province coverage: measured versus synthetic/donor
+## 3. Province coverage: measured versus open-data imputation
 
-### 3.1 Coverage
+### 3.1 Coverage and evidence tiers
 
-The chain covers 13 jurisdictions. Four are measured; nine retain the BC
-aggregate donor coefficients.
+The chain covers 13 jurisdictions. Four have measured tree lists. The other
+nine do not depend on restricted data; they are covered by an explicit
+open-data imputation path and are labelled with their current evidence tier.
 
-| Jurisdiction | Basis | Measured stems | Coverage note |
-|---|---|---:|---|
-| BC | Measured | 347 | Local Kozak taper; 100.0% taper-supported |
-| QC | Measured | 85 | Local Schneider taper; 74.4% taper-supported |
-| NB | Measured | 106 | QC Schneider donor taper; 37.0% taper-supported |
-| YT | Measured | 53 | BC Kozak donor taper; 98.9% taper-supported |
-| AB | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| SK | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| MB | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| ON | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| NS | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| PE | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| NL | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| NT | Synthetic/donor | 0 | BC aggregate donor; no province-specific pilot |
-| NU | Synthetic/donor | 0 | No modelled harvest in the 119 Mm³ case |
+| Jurisdiction | Frozen v2 coefficient tier | Open-data inputs | Evidence note |
+|---|---|---|---|
+| BC | E1 measured | 347 stems | Local Kozak taper; 100.0% taper-supported |
+| QC | E1 measured | 85 stems | Local Schneider taper; 74.4% taper-supported |
+| NB | E1 measured | 106 stems | QC Schneider donor taper; 37.0% taper-supported |
+| YT | E1 measured | 53 stems | BC Kozak donor taper; 98.9% taper-supported |
+| AB | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| SK | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; open MAGPlot Tier 1 records where usable; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| MB | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; open MAGPlot Tier 1 records where usable; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| ON | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| NS | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| PE | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| NL | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| NT | E3 donor; E2 path | SCANFI v2 structure; NFI standard-report summaries; donor distributions; explicit synthetic tree list | No restricted record used or required |
+| NU | E3 donor; E2 path | None needed | No modelled harvest in the 119 Mm³ case |
 
 Total measured stems: **591** (BC 347, QC 85, NB 106, YT 53). The measured
 pilot replaces 16 coefficients: four (solid share, pulp share, other-roundwood
 share, gross harvest-residue rate) for each of four provinces.
 
-**What “measured” means here.** The four-province bucking pilot measures
-individual stems and expansion weights; it does not measure mill output or
-province-wide species populations. The taper-supported frame is smaller than
-the full provincial inventory, and unsupported species or stems outside the
-taper domain are excluded rather than imputed. The coefficients are therefore
-model estimates from a measured stem sample, not census values.
+Evidence tiers used by this handoff:
 
-**What “synthetic/donor” means here.** The nine donor jurisdictions apply the
-BC aggregate product shares and stem-residue coefficient. They are not
-province-specific measurements. The word “synthetic” in this handoff refers to
-that donor substitution, not to fabricated facility or harvest data.
+- **E1 measured tree list.** Individual stems with measured species, DBH, height,
+  live/dead status, and expansion weights. The four-province bucking pilot is
+  E1; it does not measure mill output or province-wide species populations.
+- **E2 open-data imputation.** Open SCANFI v2 inventory structure and NFI
+  standard-report summaries, national DBH/height fits, donor product-share and
+  residue distributions, and an explicitly labelled imputed or synthetic tree
+  list. Every imputed field is flagged; no imputed value is reported as
+  observed.
+- **E3 donor aggregate.** The BC aggregate product shares and stem-residue
+  coefficient applied directly, with no province-specific tree list.
+
+The frozen v2 coefficients for the nine non-measured jurisdictions are **E3**.
+The documented completion path is **E2**: it uses only open data and requires no
+DUA, request, or approval. Applying E2 is an evidence upgrade, not a gate on
+model completion. Optional restricted records would supply E1 evidence for a
+subset of jurisdictions and would only improve the tier.
+
+**What “synthetic/imputed” means here.** E2 combines open inventory structure,
+open summary statistics, and donor distributions into a tree list whose species,
+DBH, height, and expansion assumptions are stated. The word “synthetic” refers
+to that explicit imputation, not to fabricated facility or harvest data.
 
 ### 3.2 Why the donor block matters
 
@@ -147,8 +161,10 @@ of the chain:
 | **Four-province total** | **185.087** | **59.037** |
 | Share of national 119 Mm³ | 36.0% of 514.614 | 18.8% of 313.640 |
 
-These values are model estimates computed with donor coefficients. They are the
-main reason the companion data request targets AB, SK, MB, and ON first.
+These values are model estimates computed with donor coefficients. They show
+why open-data imputation for AB, SK, MB, and ON is the priority evidence
+upgrade; an optional restricted-data request would be a secondary refinement,
+not a dependency.
 
 ### 3.3 Branch and foliage
 
@@ -162,6 +178,14 @@ and black spruce for YT spruce.
 Branch and foliage add dry mass and energy but no measured volume. Products and
 process residue are unchanged from product-chain v2; only harvest residue
 changes.
+
+### 3.4 Completion does not require external approval
+
+The model is complete on open data. No DUA, data request, or approval is
+required to finish the national facility chain, and no jurisdiction is gated on
+restricted MAGPlot Tier 2/3 or NFI ground-plot access. Optional requests, if
+pursued, can only improve evidence tiers; they do not unblock model completion
+and must not appear as a roadmap dependency.
 
 ## 4. 100 / 119 / 150 Mm³ results
 
@@ -518,13 +542,14 @@ model assumption or an observed value. Until then, the handoff will continue to
 report the full 0.35/0.60/0.75 and 0/25/50/75% ranges and will not label any
 case as preferred.
 
-## 9. Companion data request
+## 9. Optional restricted-data requests
 
-`docs/data-request-magplot-tier2.md` is a **draft, not submitted** request for
-MAGPlot Tier 2/3 and NFI ground-plot records in AB, SK, MB, and ON. Its purpose
-is to replace donor coefficients in the four priority donor jurisdictions and
-to test how much the national chain depends on the BC donor. No access has been
-granted, and no raw plot data are in the parent repository.
+`docs/data-request-magplot-tier2.md` is an **optional, non-blocking note**, not
+a request and not a roadmap gate. The model does not require MAGPlot Tier 2/3,
+NFI ground plots, a DUA, or any approval. The open-data path in §3 completes the
+chain; a future request could only upgrade evidence tiers for some
+jurisdictions. No request has been sent, no access has been granted, and no raw
+plot data are in the parent repository.
 
 ## 10. Non-claims
 
@@ -540,8 +565,10 @@ This handoff does not claim:
 - an energy-policy recommendation, an official OSeCAN scenario, or a change to
   the official OSeCAN tree;
 - a public UI release or a production-ready national model;
-- that the nine donor jurisdictions are represented by province-specific
-  measurements;
+- that the nine non-measured jurisdictions are represented by province-specific
+  measurements or that their current E3 donor coefficients are observed;
+- that restricted MAGPlot/NFI records, a DUA, a data request, or an approval
+  are required to complete the model;
 - that the 100/119/150 Mm³ cases are legal harvest levels rather than planning
   allocations.
 

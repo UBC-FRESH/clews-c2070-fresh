@@ -2,6 +2,18 @@
 
 ## 2026-11-23
 
+- **Corrected the national-chain plan to an open-data completion path.** Replaced
+  `docs/data-request-magplot-tier2.md` with an optional, non-blocking note; it
+  is not a roadmap milestone, gate, or model dependency. Updated
+  `docs/handoff-national-facility-chain-v2.md` to define E1 measured / E2
+  open-data imputation / E3 donor evidence tiers, state that non-open-tree-list
+  provinces use open SCANFI/NFI summaries, donor distributions, and explicit
+  imputed/synthetic tree lists, and state that no DUA, request, or approval is
+  required to complete the model. Optional requests only improve evidence.
+  Updated ROADMAP P7.21 to remove the request as a milestone. Documentation
+  only; no code/model/UI change, no official OSeCAN change, and no unexpected
+  `D`.
+
 - **Wrote the national facility chain v2 handoff and the MAGPlot Tier 2/3 /
   NFI ground-plot data-request draft.** Added
   `docs/handoff-national-facility-chain-v2.md` covering the frozen
