@@ -2,6 +2,32 @@
 
 ## 2026-11-23
 
+- **Published national facility chain v3.1 and corrected the v3 publication
+  ordering.** Confirmed `national-facility-chain-v3` remains at model commit
+  `029eef1` and that its documentation commit `e279371` is after it. Added
+  `national-facility-chain-v3.1` as an annotated documentation tag at the
+  documentation commit, recording model parent `029eef1` and data commit
+  `d77472c`; v3 was not moved. Updated the model card and v3 handoff with the
+  TSA24 industrial-sort status: 341 of 558 comparable managed-AU plots, mean
+  per-plot TVD 0.505, pooled TVD 0.433,
+  `pass_fail=not_assessed_no_pre_registered_tolerance`, grade
+  `not_assigned`, and `official_grade_validation=false`. Added the material
+  assumptions: donor tapers in 11 of 13 jurisdictions, E2 donor DBH/height and
+  1,000 stems/ha expansion, CFS allometry proxies, class-median and
+  floor-scaled capacity, OSeCAN proxy zone weights, and the NU zero-harvest /
+  NT cross-border cases. Recorded that `national-facility-chain-v2.1` and
+  `national-chain-sensitivity-v1` are v2-pinned addenda and were not rebuilt
+  on v3. Added the v3 artifact manifest list. Updated
+  `docs/data-request-magplot-tier2.md` to the v3 handoff and removed pre-v3
+  donor-product wording; the note remains optional and non-blocking. Pre-freeze
+  checks: 7 v3 contract tests passed; all nine artifact manifests present;
+  official OSeCAN tree unchanged (146 files, hash `80caa91c…`); 65 of 66
+  manifest output entries verify, with one known stale
+  `facility_residue_supply_v6/summary.json` entry (artifact validation 14/14
+  pass; no number changed); no unexpected `D`; tracked worktree clean.
+  Documentation and tag only; no code/model/UI change and no official OSeCAN
+  change.
+
 - **Froze and documented the 13-province open-data facility chain v3.**
   Updated `docs/model-card-national-facility-chain.md` and added
   `docs/handoff-national-facility-chain-v3.md`; updated `ROADMAP.md`

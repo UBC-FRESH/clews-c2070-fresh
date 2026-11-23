@@ -681,6 +681,32 @@ decide what blocks production readiness after the conceptual alpha.
   `national-facility-chain-v3` at parent `029eef1` and recorded data commit
   `d77472c`. Documentation and tag only; no code/model/UI change, no public
   OSeCAN change, and no unexpected `D`.
+- [x] P7.25 Publish the national facility chain v3.1 documentation superset and
+  correct the v3 publication ordering. Completed: confirmed
+  `national-facility-chain-v3` still points at model commit `029eef1` and that
+  the v3 documentation commit `e279371` is after it. Ran the v3 artifact
+  contract tests (7 passed) and the pre-freeze checks: all nine v3 artifact
+  manifests are present; the official OSeCAN tree is unchanged (146 files,
+  tree SHA-256 `80caa91c…`); 65 of 66 manifest output entries verify, with one
+  known stale `facility_residue_supply_v6/summary.json` entry caused by the v6
+  wrapper rewriting the summary after the shared manifest (artifact validation
+  is 14/14 pass; no number changed); no unexpected `D`; tracked worktree clean.
+  Added the TSA24 sort status to the model card and handoff: 341 of 558
+  comparable managed-AU plots, mean per-plot TVD 0.505, pooled TVD 0.433,
+  `pass_fail=not_assessed_no_pre_registered_tolerance`, grade
+  `not_assigned`, and `official_grade_validation=false`. Documented donor
+  tapers in 11 of 13 jurisdictions, E2 donor DBH/height and 1,000 stems/ha
+  expansion, CFS allometry proxies, class-median and floor-scaled capacity,
+  OSeCAN proxy zone weights, and the NU zero-harvest / NT cross-border cases.
+  Recorded that `national-facility-chain-v2.1` and
+  `national-chain-sensitivity-v1` are v2-pinned addenda, not rebuilt on v3.
+  Added the v3 artifact manifest list. Updated
+  `docs/data-request-magplot-tier2.md` to point at the v3 handoff and removed
+  the pre-v3 donor-product wording; it remains optional and non-blocking.
+  Created annotated tag `national-facility-chain-v3.1` at the documentation
+  commit, recording model parent `029eef1` and data commit `d77472c`; v3 was
+  not moved. Documentation and tag only; no code/model/UI change, no official
+  OSeCAN change, and no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

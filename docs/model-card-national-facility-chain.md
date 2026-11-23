@@ -3,9 +3,10 @@
 | Field | Value |
 |---|---|
 | Package | National facility chain v3 (frozen screening package) |
-| Freeze tag | `national-facility-chain-v3` |
+| Freeze tag (model numbers) | `national-facility-chain-v3` |
+| Documentation tag | `national-facility-chain-v3.1` |
 | Date | 2026-11-23 |
-| Parent commit at freeze | `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` |
+| Parent commit at model freeze | `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` |
 | Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` (`UBC-FRESH/clews-c2070-fresh-data`) |
 | Stage artifacts | Inventory v1 → capacity v3 → assignment v6 → product-chain v4 → facility residue v6 → residue curve v6 → chain scenarios v6 → OSeCAN handoff v7 |
 | Evidence labels | `model_estimate`; `observed=false`; `policy_grade=false`; `national_claim=false` |
@@ -40,6 +41,12 @@ labelled as such. Version 3 is designed to answer four limited questions:
 
 It is not a mill-by-mill operating plan, a timber-supply forecast, an
 interprovincial trade forecast, a policy evaluation, or an investment case.
+
+**v3.1 publication note.** Tag `national-facility-chain-v3.1` is a
+documentation-only superset of the v3 model freeze. It publishes this model
+card, the v3 handoff, and the data pointer at a documentation commit after
+v3. It does not move `national-facility-chain-v3`, rebuild any artifact, or
+change any number in this card.
 
 ## 2. Chain and scope
 
@@ -188,6 +195,34 @@ The handoff uses existing OSeCAN evidence, not new energy modelling:
   but not activated.
 - Every multi-zone allocation is `proxy_share=true`; no observed
   sub-provincial residue split is used.
+
+### 3.6 TSA24 sort validation status (not a pass)
+
+The package includes a TSA24 (Prince George) industrial-sort check against
+TIPSY industrial-log curves. It is a diagnostic, not a validation pass and not
+an official grade check.
+
+| Check | Value |
+|---|---|
+| Sample frame | 558 plots |
+| Comparable managed-AU plots | 341 of 558 (61.1%); 15 additional species-fallback plots |
+| Mean per-plot TVD | 0.505 |
+| Median per-plot TVD | 0.480 |
+| Volume-weighted per-plot TVD | 0.491 |
+| Pooled-share TVD | 0.433 |
+| Pooled overlap | 0.567 |
+| `pass_fail` | `not_assessed_no_pre_registered_tolerance` |
+| `grade_status` | `not_assigned` |
+| `official_grade_validation` | `false` |
+| Pre-registered tolerance | none |
+
+No tolerance was pre-registered, so no pass/fail conclusion is drawn. The
+check compares a dimension-only, value-maximising bucker with TIPSY model
+output; it carries no defect, sweep, knot, rot, or product-quality information.
+Multiple PSP plots share a managed-AU curve, so per-plot errors are not
+independent. The optional `tipsy45` profile does not close the gap (pooled TVD
+0.4404, mean per-plot TVD 0.5354). Do not describe the chain as
+"grade-validated" or "sort-validated".
 
 ## 4. Facility inventory, capacity, and assignment
 
@@ -427,6 +462,17 @@ case is the frozen base because the 1.2× floor is the documented primary
 assumption for this release. The v3 E1/E2 product chain applies to the v6
 assignment only.
 
+### 7.1 v2.1 trade and sensitivity disposition
+
+`national-facility-chain-v2.1` (the measured trade-v5 chain and local-v6
+comparison) and `national-chain-sensitivity-v1` (the 16-run global screening)
+are v2-pinned addenda. They retain the v2 donor product coefficients for the
+nine non-measured provinces and are **not rebuilt on the v3 E1/E2 chain**. Their
+numbers are valid only inside their v2 model definition and must not be mixed
+with v3 totals or presented as v3 sensitivities. The v5 trade case in §7 is
+one of those v2-pinned counterfactuals; the v6 local-processing case remains
+the v3 base.
+
 ## 8. OSeCAN handoff v7
 
 Handoff v7 is a read-only forestry-side screening handoff from residue curve
@@ -513,10 +559,12 @@ combined stream, explicit proxy labels, and an unchanged OSeCAN tree hash
   composition, donor DBH/height geometry, and donor tapers. They are not
   province-specific measured tree lists and not observed mill outcomes. The
   imputed expansion of 1,000 stems/ha is an assumption.
-- **E2 donor geometry and tapers.** The E2 lists draw DBH/height from the
-  measured BC/QC/NB/YT stems and use BC Kozak or QC Schneider donor tapers.
-  Species without a mapped taper and unsupported hardwoods are excluded or
-  proxied; they are not imputed as observations.
+- **E2 donor geometry and tapers; 11 of 13 jurisdictions use a donor taper.**
+  The E2 lists draw DBH/height from the measured BC/QC/NB/YT stems and use BC
+  Kozak or QC Schneider donor tapers. NB uses the QC Schneider donor and YT
+  uses the BC Kozak donor, so only BC and QC use a local taper. Species without
+  a mapped taper and unsupported hardwoods are excluded or proxied; they are
+  not imputed as observations.
 - **E1 taper coverage is partial.** The taper-supported share of the eligible
   measured frame is 100.0% for BC (347 trees), 74.4% for QC (85 trees), 37.0%
   for NB (106 trees), and 98.9% for YT (53 trees). BC, NB, and YT residual proxy
@@ -526,6 +574,13 @@ combined stream, explicit proxy labels, and an unchanged OSeCAN tree hash
 - **Branch and foliage are model estimates.** They use published CFS equations
   with documented proxies (mountain hemlock, birch, black spruce for YT spruce),
   not weighed components. They add dry mass and energy but no measured volume.
+- **Sort recovery is reported, not validated.** The TSA24 check has 341
+  comparable managed-AU plots out of 558, mean per-plot TVD 0.505 and pooled TVD
+  0.433. No tolerance was pre-registered
+  (`pass_fail=not_assessed_no_pre_registered_tolerance`); grade is
+  `not_assigned` and `official_grade_validation=false`. The comparison is
+  dimension-only against TIPSY model output and is not an official BC log-grade
+  validation. See §3.6.
 - **Donor splits remain material.** Solid/pulp/other are E1 or E2, but the
   within-solid SAW/PANEL split, other-roundwood routing to PELLET/BIO, the
   pellet/bio split, and all class conversion ratios remain donor assumptions.
@@ -536,22 +591,26 @@ combined stream, explicit proxy labels, and an unchanged OSeCAN tree hash
   reference scenario, not a calibrated, observed, or policy recovery factor.
   The product-chain recoverable field and the uniform 0.60 case now coincide
   because all provinces carry total residue; neither is a preferred answer.
-- **Proxy capacity is material.** Proxy capacity is 39.9% of assigned volume
-  in the 119 Mm³ v6 base (47.463 of 118.977 Mm³) and 38.92% of process
-  residue; scaled proxy is 31.16% of process residue. The 241 proxy records are
-  class medians, not facility measurements. Scaled proxy capacity (38.035 Mm³
-  in the v6 floor case) is not observed capacity and is not evidence of
-  provincial self-sufficiency.
+- **Class-median and floor-scaled capacity are material.** Proxy capacity is
+  39.9% of assigned volume in the 119 Mm³ v6 base (47.463 of 118.977 Mm³) and
+  38.92% of process residue; scaled proxy is 31.16% of process residue. The 241
+  proxy records are class medians, not facility measurements. Scaled proxy
+  capacity (38.035 Mm³ in the v6 floor case) is not observed capacity and is
+  not evidence of provincial self-sufficiency.
 - **Published capacity is mixed-basis.** BC is a 2015 infeed proxy; Quebec is
   a 2026 permit ceiling; pellet-map rows are converted finished-pellet bulk
   volume; company rows are converted sawn-lumber output. The bases are not
   interchangeable. A permit does not prove operation, and no record is
   observed throughput.
-- **Zone weights are proxies.** BC uses zonal supply dispatch; AB, ON, and QC
-  use zonal energy dispatch activity, not harvest volume; the remaining
+- **OSeCAN zone weights are proxies.** BC uses zonal supply dispatch; AB, ON,
+  and QC use zonal energy dispatch activity, not harvest volume; the remaining
   jurisdictions use single-zone or aggregate membership. No observed
   sub-provincial residue polygon or split exists. Zone shares are frozen across
   all cases by design.
+- **NU and NT are special cases.** NU has zero modelled harvest in the
+  119 Mm³ case. NT has no eligible local capacity, so its 36,376 m³ is placed
+  cross-border; the separate 43,651 m³ NT floor gap is a 1.2× buffer, not
+  unassigned harvest.
 - **No transport cost.** The assignment uses a distance screen (1.3 road
   factor, 500 km cross-border penalty) but no $/t/km rate, road-network route,
   mode choice, backhaul, or transport objective. Cross-border volume is a
@@ -601,27 +660,56 @@ Evidence inputs for the coefficient tiers:
 .venv/bin/python -m workflows.national.facilities.national_product_chain_v4
 ```
 
+### 11.1 v3 artifact manifest list
+
+| Artifact | Manifest | Output entries | Manifest SHA-256 |
+|---|---|---:|---|
+| `national_facility_inventory_v1` | `data/derived/national/facilities/national_facility_inventory_v1/manifest.json` | 6 | `0de3d86acd306e10…` |
+| `national_facility_capacity_v3` | `data/derived/national/facilities/national_facility_capacity_v3/manifest.json` | 6 | `a77233d39d049834…` |
+| `national_facility_assignment_v6` | `data/derived/national/facilities/national_facility_assignment_v6/manifest.json` | 13 | `fb1f5be7b2a185ad…` |
+| `national_product_chain_v4` | `data/derived/national/facilities/national_product_chain_v4/manifest.json` | 8 | `f484288cddacbe88…` |
+| `facility_residue_supply_v6` | `data/derived/national/facilities/facility_residue_supply_v6/manifest.json` | 5 | `f53c37376c83d6b5…` |
+| `national_residue_curve_v6` | `data/derived/national/facilities/national_residue_curve_v6/manifest.json` | 5 | `0a846adca2502537…` |
+| `national_facility_chain_scenarios_v6` | `data/derived/national/facilities/national_facility_chain_scenarios_v6/manifest.json` | 8 | `9003ea44a144c15e…` |
+| `forestry_osecan_handoff_v7` | `data/derived/national/facilities/forestry_osecan_handoff_v7/manifest.json` | 8 | `74780c8d3a4879e3…` |
+| `forestry_osecan_scenarios_v6` | `data/derived/national/facilities/forestry_osecan_scenarios_v6/manifest.json` | 7 | `cfad0bd537f872d1…` |
+
+Every published artifact directory contains its report, JSON summary, and
+SHA-256 manifest. The handoff manifest records the OSeCAN tree hash check and
+the exact input hashes. At v3.1 publication, the official OSeCAN tree hash is
+`80caa91c3e91c89006b8d5e3ad78232eade70a298a83657510fffa26924bc64a`
+(146 files, unchanged).
+
+**Known manifest metadata exception.** The v3 data commit's
+`facility_residue_supply_v6/manifest.json` records the pre-wrapper size and
+hash of `summary.json`; the v6 wrapper rewrites that summary after the shared
+v4 builder writes the manifest. Across the nine manifests, 65 of 66 output
+entries verify. The numeric artifact content passes its own 14 validation
+checks and the contract tests, but the `summary.json` entry does not verify
+against the committed file. This is a metadata defect in data commit
+`d77472c`, not a model or number change. v3.1 does not rewrite the data commit
+or move the v3 tag.
+
 Focused regression tests:
 
 ```bash
 .venv/bin/python -m pytest \
-  tests/test_national_facility_inventory_v1.py \
-  tests/test_national_facility_capacity_v3.py \
-  tests/test_national_facility_assignment_v6.py \
-  tests/test_national_product_chain_v4.py \
+  tests/test_e1_e2_facility_chain_v6.py \
   tests/test_open_data_imputation.py \
-  tests/test_facility_residue_supply_v6.py \
-  tests/test_national_residue_curve_v6.py \
-  tests/test_national_facility_chain_scenarios_v6.py \
-  tests/test_forestry_osecan_handoff_v7.py \
   tests/test_four_province_bucking_pilot.py \
   tests/test_four_province_biomass_allometry.py -q
 ```
 
-Every published artifact directory contains its report, JSON summary, and
-SHA-256 manifest. The handoff manifest records the OSeCAN tree hash check and
-the exact input hashes. Rebuild against data commit `d77472c` to reproduce the
-frozen numbers; later data commits may supersede the inputs.
+The v3 artifact contract tests are in
+`tests/test_e1_e2_facility_chain_v6.py`; they cover product-chain v4,
+residue-curve v6, chain-scenarios v6, handoff v7, zone-scenarios v6, E1/E2
+coefficient provenance, conservation, labels, and the unchanged OSeCAN tree.
+The earlier `test_*_v4`, `test_*_v6`, and `test_*_v7` paths sometimes cited in
+older notes do not exist; the contract test file is the authoritative v3
+regression entry point.
+
+Rebuild against data commit `d77472c` to reproduce the frozen numbers; later
+data commits may supersede the inputs.
 
 ## 12. Non-claims and references
 
@@ -657,6 +745,11 @@ commit `94c7501` and records data commit `6ca272e`. Annotated tag
 data commit `c91ee9bd19442d239b15dadf2818d96bd1b6c253`. Annotated tag
 `national-facility-chain-v3` marks parent commit
 `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` and records data commit
-`d77472c7ac877b60c3c7833d718a3e1bafe593a7`. The tags are the immutable
-references for the frozen numbers. Documentation-only commits after a tag do
-not change the frozen artifacts.
+`d77472c7ac877b60c3c7833d718a3e1bafe593a7`. Annotated tag
+`national-facility-chain-v3.1` marks the documentation commit that publishes
+this card, the v3 handoff, and the data pointer; it records model parent commit
+`029eef1d89014c0bda8af1dfa49e78a19ae58d4f` and data commit
+`d77472c7ac877b60c3c7833d718a3e1bafe593a7`. It does not move
+`national-facility-chain-v3`. The tags are the immutable references for the
+frozen numbers. Documentation-only commits after a tag do not change the frozen
+artifacts.

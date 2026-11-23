@@ -5,7 +5,7 @@
 | Status | **Optional; not submitted; not a dependency, gate, or milestone** |
 | Prepared | 2026-11-23 |
 | Scope | Possible evidence upgrade only |
-| Companion handoff | `docs/handoff-national-facility-chain-v2.md` |
+| Companion handoff | `docs/handoff-national-facility-chain-v3.md` |
 
 This note is informational. The national facility chain is complete without any
 restricted MAGPlot Tier 2/3 record, NFI ground-plot record, data-use agreement
@@ -14,18 +14,25 @@ held.
 
 ## 1. Position
 
-The model uses open data. Non-open-tree-list jurisdictions are represented by an
-explicit open-data imputation path:
+The v3 model uses open data. Non-open-tree-list jurisdictions are represented by
+the E2 open-data imputation path:
 
-- open SCANFI v2 inventory structure and NFI standard-report summaries;
-- donor product-share and residue distributions, labelled as donor assumptions;
-- explicitly imputed or synthetic tree lists with documented species, DBH,
-  height, and expansion assumptions;
+- open SCANFI v2 province species composition and NFI standard-report summaries;
+- 36 imputed tree lists per province (324 stems total; 1,000 stems/ha
+  expansion) with deterministic donor DBH/height draws from the measured
+  BC/QC/NB/YT lists;
+- labelled BC Kozak or QC Schneider donor tapers (11 of 13 jurisdictions use a
+  donor taper);
+- CFS branch/foliage allometry with documented species/group proxies;
 - declared evidence tiers so no imputed value is presented as observed.
 
-That path is sufficient to complete the model and does not require external
-approval. Restricted MAGPlot or NFI records would only upgrade the evidence tier
-for some jurisdictions; they would not unblock model completion.
+All 13 jurisdictions use either E1 measured or E2 imputed solid/pulp/other
+product shares and total harvest residue; no donor provincial product
+coefficient is applied. Within-class SAW/PANEL and pellet/bio splits, routing,
+recovery fraction, and mill conversion ratios remain labelled donor
+assumptions. This path is sufficient to complete the model and does not require
+external approval. Restricted MAGPlot or NFI records would only upgrade the
+evidence tier for some jurisdictions; they would not unblock model completion.
 
 ## 2. What a future request could add
 
@@ -54,7 +61,7 @@ This note does not claim that:
 
 ## 4. References
 
-- `docs/handoff-national-facility-chain-v2.md` — chain handoff and evidence tiers.
+- `docs/handoff-national-facility-chain-v3.md` — v3 chain handoff and evidence tiers.
 - `docs/model-card-national-facility-chain.md` — frozen chain method card.
 - `metadata/source-reviews/magplot.md` — MAGPlot source review and access tiers.
 - `metadata/source-reviews/nfi_ground_plot_data.md` — NFI ground-plot access

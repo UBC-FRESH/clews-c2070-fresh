@@ -5,6 +5,7 @@
 | Prepared | 2026-11-23 |
 | Status | Handoff and interpretation note; documentation only |
 | Base freeze | `national-facility-chain-v3` |
+| Documentation tag | `national-facility-chain-v3.1` |
 | Freeze commit | `029eef1d89014c0bda8af1dfa49e78a19ae58d4f` |
 | Data commit | `d77472c7ac877b60c3c7833d718a3e1bafe593a7` |
 | Supersedes | `national-facility-chain-v2` (donor product coefficients for nine provinces) |
@@ -18,6 +19,10 @@ frozen national facility chain v3 without re-deriving it. The authoritative
 method card is `docs/model-card-national-facility-chain.md`; the artifact
 reports under `data/derived/national/facilities/` remain the numeric source of
 truth.
+
+Tag `national-facility-chain-v3.1` is a documentation-only publication of this
+note, the v3 model card, and the data pointer. It does not move v3, rebuild an
+artifact, or change a number.
 
 ## 1. What changed in v3
 
@@ -51,10 +56,12 @@ entry/exit, or interprovincial trade. All results are screening estimates.
 | `national-facility-chain-v2` | `64a6b83` | `e9fc837` | Frozen local-processing v6 base with measured total residue for four provinces |
 | `national-facility-chain-v2.1` | `cd0562c` | `c91ee9b` | Trade-v5 measured rebuild and local-v6 comparison addendum |
 | `national-chain-sensitivity-v1` | `006e84e` | `ec2f7fc` | 16-run global screening of the 119 Mm³ chain |
-| `national-facility-chain-v3` | `029eef1` | `d77472c` | 13-province E1/E2 open-data chain; current base |
+| `national-facility-chain-v3` | `029eef1` | `d77472c` | 13-province E1/E2 open-data chain; current model base |
+| `national-facility-chain-v3.1` | v3.1 docs commit | `d77472c` | Documentation superset: v3 model card, v3 handoff, data pointer; no artifact change |
 
 The v3 tag is the immutable reference for the v3 numbers. Documentation-only
-commits after the tag do not change the frozen artifacts.
+commits after the tag do not change the frozen artifacts. v3.1 publishes the
+v3 documentation at its own commit and does not move v3.
 
 ### 2.2 Stage artifacts
 
@@ -96,9 +103,15 @@ numbers.
 
 E1 totals **591 measured stems**. E2 totals **324 imputed stems** (36 per
 province). E2 expansion is 1,000 stems/ha; every row is `measured=false`,
-`imputed=true`, `synthetic=false`. E2 is an explicit open-data imputation, not
-fabricated facility or harvest data and not an observed province-wide tree
+`imputed=true`, `synthetic=false`. E2 draws DBH and height deterministically
+from the measured BC/QC/NB/YT lists. E2 is an explicit open-data imputation,
+not fabricated facility or harvest data and not an observed province-wide tree
 population.
+
+**Donor tapers in 11 of 13 jurisdictions.** BC uses a local Kozak taper and QC
+a local Schneider taper. NB and YT use QC/BC donor tapers, and all nine E2
+provinces use a labelled BC Kozak or QC Schneider donor taper. Thus only 2 of
+13 jurisdictions have a local taper.
 
 ### 3.2 Zero donor product coefficients, labelled donor splits
 
@@ -256,26 +269,56 @@ stream, explicit proxy labels, and an unchanged OSeCAN tree hash
 `model_estimate=true`, `observed=false`, `policy_grade=false`, and
 `official_osecan_changed=false`.
 
+### 6.3 TSA24 sort status (not a pass)
+
+The TSA24 industrial-sort check is a diagnostic, not a grade validation. Of 558
+plots, **341** are comparable on a managed AU (61.1%); 15 more use the species
+fallback. Mean per-plot TVD is **0.505** and pooled-share TVD is **0.433**
+(pooled overlap 0.567). No tolerance was pre-registered
+(`pass_fail=not_assessed_no_pre_registered_tolerance`), grade is
+`not_assigned`, and `official_grade_validation=false`. The bucker is
+dimension-only against TIPSY model output and has no defect, sweep, knot, rot,
+or product-quality information. Do not call the chain sort-validated or
+grade-validated. The optional `tipsy45` profile leaves the gap open (pooled TVD
+0.4404, mean per-plot 0.5354).
+
 ## 7. Limitations and non-claims
 
 - Nine jurisdictions are E2 imputed, not measured. The 36-stem lists, 1,000
-  stems/ha expansion, donor DBH/height geometry, and donor tapers are explicit
-  assumptions, not province-wide measurements.
+  stems/ha expansion, and donor DBH/height geometry are explicit assumptions,
+  not province-wide measurements.
+- **Donor tapers in 11 of 13 jurisdictions.** Only BC (local Kozak) and QC
+  (local Schneider) use a local taper. NB uses QC Schneider, YT uses BC Kozak,
+  and all nine E2 provinces use a labelled BC Kozak or QC Schneider donor taper.
 - E1 taper coverage is partial: BC 100.0%, QC 74.4%, NB 37.0%, and YT 98.9% of
   the eligible measured frame. Species without a mapped taper are excluded or
   proxied.
-- Branch and foliage are CFS model estimates with documented proxies, not
-  weighed components.
+- Branch and foliage are CFS model estimates with documented proxies (mountain
+  hemlock, birch, black spruce for YT spruce), not weighed components. They add
+  dry mass and energy but no measured volume.
+- **Sort recovery is not validated.** TSA24 has 341 of 558 comparable plots,
+  mean per-plot TVD 0.505 and pooled TVD 0.433; `pass_fail` is
+  `not_assessed_no_pre_registered_tolerance`, grade is `not_assigned`, and
+  `official_grade_validation=false`. See §6.3.
 - Within-class SAW/PANEL and PELLET/BIO splits, other-roundwood routing,
   recovery fractions, and mill conversion ratios remain donor assumptions and
   are labelled.
 - No recovery factor is calibrated. The 0.60 case is a reference scenario.
-- Proxy capacity is material (39.9% of assigned volume; 38.92% of process
-  residue; scaled proxy 31.16%). Published capacity mixes a 2015 infeed proxy,
-  a 2026 permit ceiling, converted pellet bulk volume, and converted sawn-lumber
+- **Class-median and floor-scaled capacity are material.** Proxy capacity is
+  39.9% of assigned volume and 38.92% of process residue; scaled proxy is
+  31.16% of process residue. The 241 proxy records are class medians, not
+  facility measurements. The 38.035 Mm³ floor-scaled proxy volume is not
+  observed capacity. Published capacity mixes a 2015 infeed proxy, a 2026
+  permit ceiling, converted pellet bulk volume, and converted sawn-lumber
   output; the bases are not interchangeable.
-- Zone weights are proxies. No observed sub-provincial residue polygon or split
-  exists.
+- **OSeCAN zone weights are proxies.** BC uses 2050 zonal supply dispatch; AB,
+  ON, and QC use zonal dispatch activity (not harvest volume); the remaining
+  jurisdictions use single-zone or aggregate membership. No observed
+  sub-provincial residue polygon or split exists.
+- **NU and NT are special cases.** NU has zero modelled harvest in the 119 Mm³
+  case. NT has no eligible local capacity, so its 36,376 m³ is placed
+  cross-border; the 43,651 m³ NT floor gap is a 1.2× buffer, not unassigned
+  harvest.
 - No transport cost, annual dynamics, economics, legal AAC/THLB, mill operating
   status, or policy-grade result is produced.
 - The 100/119/150 Mm³ cases are planning allocations, not legal harvest levels.
@@ -283,6 +326,16 @@ stream, explicit proxy labels, and an unchanged OSeCAN tree hash
   an official OSeCAN result.
 - No DUA, data request, or approval is required; optional restricted records
   could only improve evidence tiers.
+
+### 7.1 v2.1 trade and sensitivity disposition
+
+`national-facility-chain-v2.1` (the measured trade-v5 chain and local-v6
+comparison) and `national-chain-sensitivity-v1` (the 16-run global screening)
+are v2-pinned addenda. They retain donor product coefficients for the nine
+non-measured provinces and are **not rebuilt on v3 E1/E2**. Their numbers are
+valid only inside the v2 model definition and must not be mixed with v3 totals
+or described as v3 sensitivities. The v5 trade case in the model card is a
+v2-pinned counterfactual, not the v3 base.
 
 All rows are `model_estimate`, `observed=false`, `policy_grade=false`, and
 `national_claim=false`. The 2050 OSeCAN values are external model context, not
@@ -319,4 +372,12 @@ is documentation only; no code or model test is required to read it.
 - `data/derived/national/facilities/national_facility_chain_scenarios_v6/NATIONAL_FACILITY_CHAIN_SCENARIOS_V6.md`
 - `data/derived/national/facilities/forestry_osecan_handoff_v7/FORESTRY_OSECAN_HANDOFF_V7.md`
 - `data/derived/national/bucking/open_data_imputation_v1/report.md`
+- `data/derived/national/bucking/tsa24_sort_validation_v1/VALIDATION_REPORT.md`
+  — industrial-sort diagnostic; `pass_fail=not_assessed_no_pre_registered_tolerance`.
 - `docs/data-request-magplot-tier2.md` — optional, non-blocking note only.
+
+**Freeze record.** `national-facility-chain-v3` remains at model commit
+`029eef1` with data commit `d77472c`. `national-facility-chain-v3.1` is an
+annotated documentation tag at the commit that publishes this handoff, the v3
+model card, and the data pointer; it records parent `029eef1` and data commit
+`d77472c`. It does not move v3 or change an artifact.
