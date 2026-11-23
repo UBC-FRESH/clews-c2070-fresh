@@ -2,6 +2,33 @@
 
 ## 2026-11-23
 
+- **Built E2 v2 open-inventory-informed tree lists for the nine non-measured
+  provinces.** Added
+  `workflows/national/inventory/provincial_open_inventory_distributions.py`,
+  `workflows/national/bucking/open_data_imputation_v2.py`,
+  `tests/test_open_data_imputation_v2.py`, and
+  `docs/handoff-e2-v2-open-inventory-tree-lists.md`. Derived
+  `data/derived/national/inventory/provincial_open_inventory_distributions_v1/`
+  from AB AVI Crown (full 788,810-polygon FGDB), SK FRI Forest Stands
+  (500-stand sample), MB FRI 1970s (full 582,601-polygon FGDB), NS Forest
+  Inventory (full 1,004,111-record DBF), and PE CLUI 2010 plus EFI2020
+  (500-row samples). AB uses species/height/age with `inferred_dbh` from a
+  fitted log-log DBH-on-height equation; SK uses inventory height and QMD
+  paired marginals constrained by CSG group shares; MB uses local species/age
+  plus `donor_joint` height/DBH; NS uses `local_joint` species/height/AVDI/
+  volume stand rows; PE uses CLUI species/height plus EFI algebraic QMD
+  inference and volume. ON/NL/NT/NU remain `donor_joint` because no open stand
+  distribution exists. All nine provinces have 36 stems and 1,000 stems/ha
+  expansion, tier `E2b_open_inventory_informed`, with `inventory_informed`
+  true for AB/SK/MB/NS/PE and false for the four donor-only provinces. Built
+  `data/derived/national/bucking/open_data_imputation_v2/` with bucked logs,
+  residue ledger, product coefficients, v1→v2 province/species comparison,
+  volume context and distribution labels. All 13 focused tests pass; checks
+  cover nine provinces, provenance, distribution labels, volume/residue
+  conservation, no NaN or negatives, and deterministic regeneration. No
+  request/DUA/restricted data, no UI or official OSeCAN change and no national
+  claim. No unexpected `D`.
+
 - **Fixed the v3 manifest integrity exception and published national facility
   chain v3.2.** Corrected the `facility_residue_supply_v6/manifest.json`
   `summary.json` entry to the committed file (23,643 bytes; SHA-256

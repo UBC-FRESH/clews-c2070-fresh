@@ -744,6 +744,29 @@ decide what blocks production readiness after the conceptual alpha.
   v3.1 were not moved. Manifest metadata and documentation only; no
   model-value, code, UI, or official OSeCAN change.
 
+- [x] P7.28 Build E2 v2 open-inventory-informed tree lists. Completed: added
+  `workflows/national/inventory/provincial_open_inventory_distributions.py`,
+  `workflows/national/bucking/open_data_imputation_v2.py`,
+  `tests/test_open_data_imputation_v2.py`, and
+  `docs/handoff-e2-v2-open-inventory-tree-lists.md`. Derived
+  `provincial_open_inventory_distributions_v1` from AB AVI (full FGDB), SK FRI
+  (500-stand sample), MB FRI 1970s (full FGDB), NS Forest Inventory (full DBF),
+  and PE CLUI/EFI (500-row samples), with area-weighted species composition and
+  height/DBH/age/volume quantiles plus SHA-256 provenance. Built 36 stems per
+  province for AB/SK/MB/ON/NS/PE/NL/NT/NU (324 total) and tiered them
+  `E2b_open_inventory_informed`, with `inventory_informed=true` for the five
+  provinces that have local distributions and false for the four donor-only
+  provinces. AB DBH is `inferred_dbh` from a fitted log-log DBH-on-height
+  equation; SK uses `inventory_qmd` paired marginals; NS uses `local_joint`
+  stand rows; PE uses `paired_multi_source` with an algebraic EFI QMD
+  inference; MB and the four donor-only provinces use `donor_joint`. Bucking
+  and residue use the existing published donor tapers and national sorts. The
+  v1→v2 comparison reports species L1 distance, mean height/DBH, solid/pulp
+  shares and residue ODT/m3. All checks pass, including 9 provinces × 36 stems,
+  provenance/distribution labels, volume/residue conservation, no NaN or
+  negatives, and deterministic regeneration. No request/DUA/restricted data,
+  no UI/official OSeCAN change and no national claim. No unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
