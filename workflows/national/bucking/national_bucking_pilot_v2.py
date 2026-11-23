@@ -65,7 +65,11 @@ from nemora.workflows.taper import (
 
 from .bucking import (
     buck_tree as buck_bc_tree,
+)
+from .bucking import (
     load_grade_rules as load_bc_grade_rules,
+)
+from .bucking import (
     load_price_profile as load_bc_price_profile,
 )
 from .national_bucking_pilot_v1 import (
@@ -85,13 +89,12 @@ from .national_bucking_pilot_v1 import (
     QC_TAPER_PATH,
     SORT_RULES_PATH,
     STUMP_HEIGHT_M,
-    ProvinceComposition,
     PilotSortRule,
     PilotTaper,
+    ProvinceComposition,
     assert_no_unexpected_deletions,
-    build_representative_tree_lists,
-    build_taper,
     buck_tree,
+    build_representative_tree_lists,
     load_national_sort_rules,
 )
 from .pilot_schema import (
@@ -288,7 +291,7 @@ def _bc_taper(
     kozak_parameters: Mapping[tuple[str, str], Any],
 ) -> PilotTaper:
     parameters = params_for(kozak_parameters, species, bec_zone)
-    kozak_code, proxy = KOZAK_SPECIES.get(species, (species, True))
+    _kozak_code, proxy = KOZAK_SPECIES.get(species, (species, True))
     return PilotTaper(
         taper_id=f"BC-KOZAK2004-{species}-{bec_zone}",
         jurisdiction="BC",
@@ -424,7 +427,7 @@ def select_bc_stratum_representatives(frame: pd.DataFrame) -> pd.DataFrame:
             {
                 "stratum_id": f"{species}|{bec_zone}|{stratum}",
                 "dbh_stratum": stratum,
-                "stratum_n_trees": int(len(ordered)),
+                "stratum_n_trees": len(ordered),
                 "stratum_expansion_factor": total_phf,
                 "expansion_factor": total_phf,
                 "selection_method": (
@@ -585,10 +588,10 @@ def build_bc_empirical_tree_list(
     if not math.isclose(selected_phf, source_phf, rel_tol=1e-12, abs_tol=1e-6):
         raise SchemaError("BC empirical list does not preserve the source PHF total")
     stats = {
-        "source_rows": int(len(population)),
-        "source_bucked_rows": int(len(bucked)),
-        "excluded_not_bucked_rows": int(len(excluded_status)),
-        "excluded_unsupported_rows": int(len(unsupported)),
+        "source_rows": len(population),
+        "source_bucked_rows": len(bucked),
+        "excluded_not_bucked_rows": len(excluded_status),
+        "excluded_unsupported_rows": len(unsupported),
         "excluded_status_counts": (
             excluded_status["bucked_status"].value_counts().to_dict()
         ),
@@ -670,7 +673,6 @@ def buck_bc_tipsy(
     residues: list[dict[str, Any]] = []
     reconciliations: list[dict[str, Any]] = []
     warnings_seen: set[str] = set()
-    tree_by_id = {tree.tree_id: tree for tree in trees}
 
     for tree in trees:
         extra = extras[tree.tree_id]
@@ -2418,10 +2420,6 @@ def generate_pilot(
         )
 
     bc_tree_rows = [row for row in tree_rows if row["jurisdiction"] == "BC"]
-    bc_log_rows = [row for row in log_rows if row["jurisdiction"] == "BC"]
-    bc_residue_rows = [
-        row for row in residue_rows if row["jurisdiction"] == "BC"
-    ]
     source_ids = set(
         pd.read_csv(BC_SELECTED_TREES_PATH, usecols=["tree_id"], dtype=str)[
             "tree_id"
@@ -2712,22 +2710,38 @@ def generate_pilot(
             "bc_population_reconciliation": reconciliation,
         },
         "limitations": [
-            "The BC empirical list is a post-stratified measured aggregate, not "
-            "the full PSP tree list and not an inventory expansion.",
-            "The other 12 jurisdictions remain representative synthetic lists "
-            "from pilot v1.",
-            "Absolute volumes are not comparable between expansion-weighted BC "
-            "and unit-weight synthetic provinces.",
-            "BC TIPSY dimension sorts and national pilot sorts are different "
-            "rule sets; both are reported.",
-            "Dimension-only pilot sorts are not official federal or provincial "
-            "log grades; grade=not_assigned.",
-            "Prices, density, moisture, chip and hog yields are pilot "
-            "assumptions.",
-            "Facility coefficient comparison is screening only; harvest residue "
-            "and facility process residue are different streams.",
-            "No national, operational, policy-grade, AAC, or investment claim "
-            "is made.",
+            (
+                "The BC empirical list is a post-stratified measured aggregate, "
+                "not the full PSP tree list and not an inventory expansion."
+            ),
+            (
+                "The other 12 jurisdictions remain representative synthetic "
+                "lists from pilot v1."
+            ),
+            (
+                "Absolute volumes are not comparable between expansion-weighted "
+                "BC and unit-weight synthetic provinces."
+            ),
+            (
+                "BC TIPSY dimension sorts and national pilot sorts are "
+                "different rule sets; both are reported."
+            ),
+            (
+                "Dimension-only pilot sorts are not official federal or "
+                "provincial log grades; grade=not_assigned."
+            ),
+            (
+                "Prices, density, moisture, chip and hog yields are pilot "
+                "assumptions."
+            ),
+            (
+                "Facility coefficient comparison is screening only; harvest "
+                "residue and facility process residue are different streams."
+            ),
+            (
+                "No national, operational, policy-grade, AAC, or investment "
+                "claim is made."
+            ),
             "No UI or public OSeCAN surface was changed.",
         ],
         "elapsed_seconds": elapsed,
