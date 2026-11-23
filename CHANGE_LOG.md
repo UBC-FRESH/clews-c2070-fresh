@@ -13,7 +13,7 @@
   jurisdictions keep the v1 `representative_synthetic` lists. BC is bucked with
   the BC interior TIPSY 4.5 dimension sorts and with the national pilot sorts.
   The TIPSY rerun reproduces the v0 full-population expanded banks closely
-  (taper 98.7%, recovered logs 99.0%, stem residue 97.2%). National-sort BC
+  (taper 98.7%, recovered logs 98.8%, stem residue 98.2%). National-sort BC
   solid share is 0.705 versus the facility-chain solid feedstock share 0.689
   (ratio 1.023); residue is 0.041 ODT/m3 versus facility harvest residue
   0.076 ODT/m3 (ratio 0.532), so the facility screen remains outside the 20%
