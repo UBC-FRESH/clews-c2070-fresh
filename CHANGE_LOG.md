@@ -2,6 +2,30 @@
 
 ## 2026-11-23
 
+- **Rebuilt the trade-enabled assignment-v5 chain with measured total residue
+  and froze the v2.1 addendum.** Added
+  `national_facility_chain_scenarios_v5_trade.py`,
+  `facility_residue_supply_v5_trade.py`,
+  `national_residue_curve_v5_trade.py`,
+  `forestry_osecan_handoff_v6_trade.py`, and
+  `national_facility_chain_v5_trade_comparison.py`, plus their contract tests
+  and `tests/test_facility_residue_supply_v5.py` /
+  `tests/test_national_residue_curve_v5.py` (the test paths named in the v5
+  reports). The trade chain uses assignment v5 `published_plus_proxy`
+  (unscaled capacity) with the same `national_product_chain_v3` measured
+  coefficients and total residue scenarios as the local v5 chain. At 119 Mm3
+  the trade case has 21.902 Mm3 cross-border (18.41%), 33.9% proxy, 263
+  facilities, HHI 0.00755 and a 30.282 Mm3 pre-floor shortfall; the local v6
+  base has 36,376 m3 (0.031%), 39.9% proxy, 208 facilities and HHI 0.01287.
+  National products, process residue, harvest residue and all 0/25/50/75%
+  and 35/60/75% scenarios are unchanged; facility-province process residue
+  moves BC 180.270 -> 254.958 PJ (+74.687), AB 106.747 -> 41.207 PJ (-65.540),
+  SK -10.584 PJ, ON -8.584 PJ and QC +11.247 PJ. OSeCAN handoff v6 trade keeps
+  the same zone weights, national case totals and tiers; BC process 50% rises
+  90.135 -> 127.479 PJ and the official OSeCAN tree remains hash-identical.
+  Created annotated tag `national-facility-chain-v2.1` and recorded data commit
+  `c91ee9bd19442d239b15dadf2818d96bd1b6c253`. No UI or public OSeCAN change; no unexpected `D`.
+
 - **Froze and documented the national facility chain v2.** Replaced
   `docs/model-card-national-facility-chain.md` with the v2 measured
   total-residue card covering the inventory v1 → capacity v3 → assignment v6 →

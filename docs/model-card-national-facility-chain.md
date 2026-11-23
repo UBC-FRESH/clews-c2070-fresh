@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| Package | National facility chain v2 (frozen screening package) |
-| Freeze tag | `national-facility-chain-v2` |
+| Package | National facility chain v2 (frozen screening package) + v2.1 trade addendum |
+| Freeze tag | `national-facility-chain-v2` (base) / `national-facility-chain-v2.1` (trade rebuild) |
 | Date | 2026-11-23 |
 | Parent commit at freeze | `64a6b83492f06f125fa6865a7986180689c3f703` |
 | Data commit | `e9fc837adf66a4ac4006bc036126c458a0a23214` (`UBC-FRESH/clews-c2070-fresh-data`) |
@@ -375,12 +375,55 @@ forecast and not evidence of provincial self-sufficiency.
 | Provinces below floor | 5 | 1 | −4 |
 
 The local-first floor changes the **distribution** of the same total process
-residue, not its national total. The v5 trade sensitivity has not been rebuilt
-with the measured coefficient chain, so v1's province-level process-residue
-deltas are not carried forward as v2 results. The v5 sensitivity's 18.4%
-cross-border share remains a useful upper-bound trade counterfactual, but the
-v6 local-processing case is the frozen base because the 1.2× floor is the
-documented primary assumption for this release.
+residue, not its national total. The v5 trade sensitivity has now been rebuilt
+on the same measured `national_product_chain_v3` coefficients and total-residue
+scenarios (v2.1 addendum); the v1 province-level process-residue deltas are not
+carried forward as results. The v5 sensitivity's 18.4% cross-border share
+remains a useful upper-bound trade counterfactual, but the v6 local-processing
+case is the frozen base because the 1.2× floor is the documented primary
+assumption for this release.
+
+### 7.1 Trade v5 measured rebuild (v2.1 addendum)
+
+The trade chain is `national_facility_chain_scenarios_v5_trade` →
+`facility_residue_supply_v5_trade` → `national_residue_curve_v5_trade` →
+`forestry_osecan_handoff_v6_trade`. It uses assignment v5
+`published_plus_proxy` (unscaled capacity, trade-permissive cross-border
+allocation) with the same `national_product_chain_v3` measured coefficients and
+the same 0.35/0.60/0.75 harvest recovery and 0/25/50/75% process availability
+scenarios. The comparison artifact is
+`national_facility_chain_v5_trade_comparison`.
+
+| Metric (119 Mm³) | Local v6 | Trade v5 measured | Delta trade−local |
+|---|---:|---:|---:|
+| Assigned | 118.977 Mm³ | 118.977 Mm³ | 0 |
+| Local | 118.941 Mm³ (99.97%) | 97.075 Mm³ (81.59%) | −21.866 Mm³ |
+| Cross-border | 36,376 m³ (0.031%) | 21.902 Mm³ (18.41%) | +21.866 Mm³ |
+| Published | 71.514 Mm³ (60.11%) | 78.658 Mm³ (66.11%) | +7.144 Mm³ |
+| Proxy | 47.463 Mm³ (39.89%) | 40.319 Mm³ (33.89%) | −7.144 Mm³ |
+| Scaled proxy | 38.035 Mm³ | 0 | −38.035 Mm³ |
+| Facilities used | 208 | 263 | +55 |
+| Largest facility share | 6.80% | 1.82% | −4.98 pp |
+| Top-5 share | 15.75% | 7.98% | −7.77 pp |
+| HHI | 0.01287 | 0.00755 | −0.00532 |
+| Capacity shortfall before floor | 30.282 Mm³/yr | 30.282 Mm³/yr | 0 |
+
+National products and residue are unchanged: at 119 Mm³ both cases have
+514.614 PJ process residue, 313.640 PJ gross harvest residue, 195.433 PJ
+product-chain recoverable harvest residue, and 828.254 PJ total gross residue.
+The trade case moves the same national total across facilities and provinces.
+At 119 Mm³ the facility-province process residue moves BC 180.270 → 254.958 PJ
+(+74.687), AB 106.747 → 41.207 PJ (−65.540), SK 12.645 → 2.062 PJ (−10.584),
+ON 57.143 → 48.559 PJ (−8.584), QC 115.184 → 126.431 PJ (+11.247), MB
+3.428 → 2.226 PJ (−1.202), and YT 0.080 → 0.186 PJ (+0.106). The remaining
+provinces move by less than 0.1 PJ. The trade case is a screening
+counterfactual, not an interprovincial trade forecast.
+
+OSeCAN handoff v6 trade keeps the same zone weights and the same national case
+totals. BC process residue rises from 45.068 to 63.739 PJ at 25% availability
+and from 90.135 to 127.479 PJ at 50%; the national process and harvest cases
+and all case tiers are unchanged (process T1/T3/above_T4/above_T4; harvest
+T3/T4/above_T4). The official OSeCAN tree remains hash-identical.
 
 ## 8. OSeCAN handoff v6
 
@@ -437,9 +480,11 @@ OSeCAN result and does not apply candidate activity limits.
 - **119 Mm³ v6 base:** 118.977 Mm³ assigned; 99.97% local; 36,376 m³
   cross-border; 39.9% proxy; 208 facilities; HHI 0.01287; largest facility
   6.80%; no unassigned harvest; NT floor gap 43,651 m³.
-- **v5 trade sensitivity:** 21.902 Mm³ cross-border (18.41%); 33.9% proxy;
-  263 facilities; HHI 0.00755; 30.282 Mm³ capacity shortfall across 5
-  provinces.
+- **v5 trade sensitivity (measured rebuild):** 21.902 Mm³ cross-border
+  (18.41%); 33.9% proxy; 263 facilities; HHI 0.00755; largest facility 1.82%;
+  30.282 Mm³ capacity shortfall before floor scaling across 5 provinces.
+  National products and residue match the local v6 base; process residue moves
+  from AB/SK/ON toward BC/QC, and BC process 50% rises to 127.479 PJ.
 - **Measured coefficient coverage:** 4 of 13 jurisdictions measured (BC, QC,
   NB, YT; 591 stems); 9 donor jurisdictions.
 - **119 Mm³ residue:** 27.817 M odt / 514.614 PJ process; 16.954 M odt /
@@ -549,6 +594,16 @@ Run from the repository root with the project virtual environment:
 .venv/bin/python -m workflows.national.facilities.forestry_osecan_scenarios_v5
 ```
 
+Trade v5 measured rebuild and comparison:
+
+```bash
+.venv/bin/python -m workflows.national.facilities.national_facility_chain_scenarios_v5_trade
+.venv/bin/python -m workflows.national.facilities.facility_residue_supply_v5_trade
+.venv/bin/python -m workflows.national.facilities.national_residue_curve_v5_trade
+.venv/bin/python -m workflows.national.facilities.forestry_osecan_handoff_v6_trade
+.venv/bin/python -m workflows.national.facilities.national_facility_chain_v5_trade_comparison
+```
+
 Focused regression tests:
 
 ```bash
@@ -560,6 +615,13 @@ Focused regression tests:
   tests/test_national_facility_chain_scenarios_v5.py \
   tests/test_forestry_osecan_handoff_v6.py \
   tests/test_forestry_osecan_scenarios_v5.py \
+  tests/test_facility_residue_supply_v5.py \
+  tests/test_national_residue_curve_v5.py \
+  tests/test_national_facility_chain_scenarios_v5_trade.py \
+  tests/test_facility_residue_supply_v5_trade.py \
+  tests/test_national_residue_curve_v5_trade.py \
+  tests/test_forestry_osecan_handoff_v6_trade.py \
+  tests/test_national_facility_chain_v5_trade_comparison.py \
   tests/test_four_province_bucking_pilot.py \
   tests/test_four_province_biomass_allometry.py -q
 ```
@@ -589,11 +651,18 @@ recommendation; an official OSeCAN scenario; or a public UI release.
 - `data/derived/national/facilities/national_facility_chain_scenarios_v5/NATIONAL_FACILITY_CHAIN_SCENARIOS_V5.md`
 - `data/derived/national/facilities/forestry_osecan_handoff_v6/FORESTRY_OSECAN_HANDOFF_V6.md`
 - `data/derived/national/facilities/forestry_osecan_scenarios_v5/FORESTRY_OSECAN_SCENARIOS_V5.md`
+- `data/derived/national/facilities/national_facility_chain_scenarios_v5_trade/NATIONAL_FACILITY_CHAIN_SCENARIOS_V5_TRADE.md`
+- `data/derived/national/facilities/facility_residue_supply_v5_trade/FACILITY_RESIDUE_SUPPLY_V5_TRADE.md`
+- `data/derived/national/facilities/national_residue_curve_v5_trade/NATIONAL_RESIDUE_CURVE_V5_TRADE.md`
+- `data/derived/national/facilities/forestry_osecan_handoff_v6_trade/FORESTRY_OSECAN_HANDOFF_V6_TRADE.md`
+- `data/derived/national/facilities/national_facility_chain_v5_trade_comparison/LOCAL_V6_VS_TRADE_V5_COMPARISON.md`
 - `docs/four-province-biomass-allometry.md`
 - `docs/bc-biomass-allometry.md`
 
 **Freeze record.** Annotated tag `national-facility-chain-v2` marks parent
 commit `64a6b83492f06f125fa6865a7986180689c3f703` and records data commit
-`e9fc837adf66a4ac4006bc036126c458a0a23214`. The tag is the immutable reference
-for the key result numbers in this model card. Documentation-only commits after
-the tag do not change the frozen artifacts.
+`e9fc837adf66a4ac4006bc036126c458a0a23214`. Annotated tag
+`national-facility-chain-v2.1` marks the trade v5 measured rebuild and records
+data commit `c91ee9bd19442d239b15dadf2818d96bd1b6c253`. The tags are the immutable references for the
+key result numbers in this model card. Documentation-only commits after a tag
+do not change the frozen artifacts.
