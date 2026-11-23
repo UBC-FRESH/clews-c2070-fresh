@@ -846,6 +846,30 @@ decide what blocks production readiness after the conceptual alpha.
   provinces), non-claims, and an 8-line draft email. Documentation only; no
   code/model/UI change, no official OSeCAN change, no request/DUA, no new tag.
   No unexpected `D`.
+- [x] P7.33 Refresh the national chain Plackett-Burman sensitivity on v4
+  E1+E2c. Completed: added
+  `workflows/national/facilities/national_chain_global_sensitivity_v2.py`,
+  `facility_residue_supply_v7_trade.py`,
+  `tests/test_national_chain_global_sensitivity_v2.py`,
+  `tests/test_facility_residue_supply_v7_trade.py`, and
+  `docs/handoff-national-chain-sensitivity-v2.md`. Rebuilt the same 7-factor
+  16-run PB design on chain v7/supply v7 with donor v1 vs E2c, local v6 vs
+  trade v5, stem vs total residue, 0.35/0.75 recovery, 0/75% availability,
+  economics v2.3 price cases, and OSeCAN handoff v8 zone weights. At 119 Mm³
+  local E2c total: process base 498.751 PJ, harvest gross 444.411 PJ,
+  recoverable 60% 266.646 PJ, BC process at 50% 90.705 PJ; the derived trade
+  E2c BC process is 253.214 PJ. Overall v1/v2 ranks are unchanged
+  (availability 1, residue 2, price 3, recovery 4, coefficients 5,
+  assignment 6, zone 7), but scores move for coefficients (0.0933→0.0459),
+  residue (0.4127→0.4423), recovery (0.1571→0.1319) and assignment
+  (0.0284→0.0437). Documented that v1's `measured_v4` was the E1
+  four-province chain, not E2 v1; that E2c-total uses full 13-province
+  branch/foliage while donor-total remains a measured-four-province partial
+  lower bound; and that the price BC and assignment recoverable effects are
+  three-factor aliasing artifacts. 18 focused tests pass; ruff and mypy
+  (skip imports) pass on new files; manifests verify; no UI/official OSeCAN
+  change and no policy/national claim. Created tag
+  `national-chain-sensitivity-v2`. No unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

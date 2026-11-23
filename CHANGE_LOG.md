@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Refreshed the national chain Plackett-Burman sensitivity on v4 E1+E2c.**
+  Added `national_chain_global_sensitivity_v2.py`,
+  `facility_residue_supply_v7_trade.py`, their focused tests, and
+  `docs/handoff-national-chain-sensitivity-v2.md`. Rebuilt the same 7-factor
+  16-run PB design on chain v7 / supply v7 with donor v1 vs E2c, local v6 vs
+  trade v5, stem vs total residue, 0.35/0.75 recovery, 0/75% availability,
+  economics v2.3 price cases, and OSeCAN handoff v8 zone weights. The derived
+  trade E2c source uses supply v7_trade; national process/harvest totals are
+  assignment-invariant and BC process rises 181.409→253.214 PJ. Overall v1/v2
+  ranks are unchanged (availability 1, residue 2, price 3, recovery 4,
+  coefficients 5, assignment 6, zone 7); scores move for coefficients
+  (0.0933→0.0459), residue (0.4127→0.4423), recovery (0.1571→0.1319) and
+  assignment (0.0284→0.0437). Documented that v1's `measured_v4` was the E1
+  four-province chain, not E2 v1; that E2c-total includes full 13-province
+  branch/foliage while donor-total remains a measured-four-province partial
+  lower bound; and that the price BC process (−0.539 PJ) and assignment
+  recoverable (+13.080 PJ) effects are three-factor aliasing artifacts. 18
+  focused tests pass; ruff and mypy (skip imports) pass on new files; every
+  manifest hash verifies; no UI or official OSeCAN change and no
+  policy/national claim. Created tag `national-chain-sensitivity-v2`. No
+  unexpected `D`.
+
 - **Drafted the v4 energy-team handoff memo and email.** Added
   `docs/energy-handoff-v4.md` as the decision-oriented companion to
   `docs/handoff-national-facility-chain-v4.md`. It records 13/13 coverage

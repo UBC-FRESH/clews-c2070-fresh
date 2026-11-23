@@ -485,8 +485,11 @@ residue, not its national total. The v5 sensitivity's 18.4% cross-border share
 remains a useful upper-bound trade counterfactual, but the v6 local-processing
 case is the frozen base because the 1.2× floor is the documented primary
 assumption for this release. The v4 E1/E2c product chain applies to the v6
-assignment only. The v2.1 trade and sensitivity addenda retain v2 donor product
-coefficients and must not be mixed with v4 totals.
+assignment base. A separate screening `facility_residue_supply_v7_trade`
+rebuilds the assignment-v5 trade placement with E2c coefficients for the
+sensitivity v2 design; it is not part of the frozen v4 base and must not be
+mixed with v4 totals. The older v2.1 trade and sensitivity addenda retain v2
+donor product coefficients and must not be mixed with v4 totals.
 
 ## 8. OSeCAN handoff v8 and scenarios v7
 
