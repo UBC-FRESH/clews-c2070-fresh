@@ -45,6 +45,14 @@ from nemora.workflows.taper import (
     params_for,
 )
 
+from .four_province_biomass_allometry import (
+    COMPONENT_COLUMNS,
+    DEFAULT_RECOVERY_FACTORS,
+    REFERENCE_RECOVERY_FACTOR,
+    annotate_component_row,
+    load_four_province_biomass_allometry,
+    tree_components_for_measured_trees,
+)
 from .national_bucking_pilot_v1 import (
     BASIC_DENSITY_ODT_M3,
     CHIP_YIELD_FRACTION,
@@ -617,6 +625,7 @@ def _province_rows(
     logs: Sequence[PilotBuckedLog],
     residues: Sequence[PilotResidueLedger],
     extras: Mapping[str, Mapping[str, Any]],
+    components: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     logs_by: dict[str, list[PilotBuckedLog]] = {}
     for log in logs:
@@ -657,6 +666,28 @@ def _province_rows(
             row.residue_odt * float(extras[row.tree_id]["expansion_factor"])
             for row in province_residues
         )
+        stem_component = sum(
+            row.residue_odt * float(extras[row.tree_id]["expansion_factor"])
+            for row in province_residues
+        )
+        branch_component = sum(
+            components[row.tree_id].branch_odt
+            * float(extras[row.tree_id]["expansion_factor"])
+            for row in province_residues
+        )
+        foliage_component = sum(
+            components[row.tree_id].foliage_odt
+            * float(extras[row.tree_id]["expansion_factor"])
+            for row in province_residues
+        )
+        branch_foliage_component = branch_component + foliage_component
+        total_component = stem_component + branch_foliage_component
+        scenario_components = {
+            f"recoverable_residue_odt_r{round(factor * 100):03d}_expanded": (
+                total_component * factor
+            )
+            for factor in DEFAULT_RECOVERY_FACTORS
+        }
         local_trees = sum(
             1
             for tree in province_trees
@@ -703,6 +734,37 @@ def _province_rows(
                 "recovered_gross_m3_expanded": recovered_expanded,
                 "residue_m3_expanded": residue_m3_expanded,
                 "residue_odt_expanded": residue_odt_expanded,
+                "stem_residue_odt_expanded": stem_component,
+                "branch_odt_expanded": branch_component,
+                "foliage_odt_expanded": foliage_component,
+                "branch_foliage_odt_expanded": branch_foliage_component,
+                "total_residue_odt_expanded": total_component,
+                **scenario_components,
+                "branch_foliage_odt_per_recovered_m3": _safe_div(
+                    branch_foliage_component, recovered_expanded
+                ),
+                "total_residue_odt_per_recovered_m3": _safe_div(
+                    total_component, recovered_expanded
+                ),
+                "total_residue_recoverable_odt_per_recovered_m3_r035": _safe_div(
+                    total_component * 0.35, recovered_expanded
+                ),
+                "total_residue_recoverable_odt_per_recovered_m3_r060": _safe_div(
+                    total_component * 0.60, recovered_expanded
+                ),
+                "total_residue_recoverable_odt_per_recovered_m3_r075": _safe_div(
+                    total_component * 0.75, recovered_expanded
+                ),
+                "n_allometry_species_specific_trees": sum(
+                    1
+                    for tree in province_trees
+                    if components[tree.tree_id].species_specific
+                ),
+                "n_allometry_proxy_trees": sum(
+                    1
+                    for tree in province_trees
+                    if components[tree.tree_id].proxy
+                ),
                 "sawlog_m3_expanded": products_expanded.get("sawlog", 0.0),
                 "pulpwood_m3_expanded": products_expanded.get("pulpwood", 0.0),
                 "other_m3_expanded": products_expanded.get("other", 0.0),
@@ -816,12 +878,32 @@ def _coefficient_rows(
         model_other = float(province_row["other_share_of_recovered"])
         model_solid = float(province_row["solid_share_of_recovered"])
         model_residue = float(province_row["residue_odt_per_recovered_m3"])
+        model_branch_foliage = float(
+            province_row["branch_foliage_odt_per_recovered_m3"]
+        )
+        model_total_residue = float(
+            province_row["total_residue_odt_per_recovered_m3"]
+        )
+        model_total_recoverable = {
+            factor: float(
+                province_row[
+                    "total_residue_recoverable_odt_per_recovered_m3_"
+                    f"r{round(factor * 100):03d}"
+                ]
+            )
+            for factor in DEFAULT_RECOVERY_FACTORS
+        }
+        total_ratio = _safe_div(model_total_residue, residue_facility)
         solid_ratio = _safe_div(model_solid, solid_facility)
         residue_ratio = _safe_div(model_residue, residue_facility)
         if 0.8 <= solid_ratio <= 1.2 and 0.8 <= residue_ratio <= 1.2:
             status = "within_20pct"
         else:
             status = "outside_20pct"
+        if 0.8 <= solid_ratio <= 1.2 and 0.8 <= total_ratio <= 1.2:
+            total_status = "within_20pct"
+        else:
+            total_status = "outside_20pct"
         audit = audit_by[province]
         rows.append(
             {
@@ -839,6 +921,29 @@ def _coefficient_rows(
                     province_row["residue_m3_per_recovered_m3"]
                 ),
                 "model_residue_odt_per_recovered_m3": model_residue,
+                "model_stem_residue_odt_per_recovered_m3": model_residue,
+                "model_branch_foliage_odt_per_recovered_m3": model_branch_foliage,
+                "model_total_residue_gross_odt_per_recovered_m3": (
+                    model_total_residue
+                ),
+                "model_total_residue_recoverable_odt_per_recovered_m3_r035": (
+                    model_total_recoverable[0.35]
+                ),
+                "model_total_residue_recoverable_odt_per_recovered_m3_r060": (
+                    model_total_recoverable[0.60]
+                ),
+                "model_total_residue_recoverable_odt_per_recovered_m3_r075": (
+                    model_total_recoverable[0.75]
+                ),
+                "model_recovery_scenarios": "0.35|0.60|0.75",
+                "model_recovery_reference_factor": REFERENCE_RECOVERY_FACTOR,
+                "model_recovery_factor_calibrated": False,
+                "model_allometry_proxy_trees": int(
+                    province_row["n_allometry_proxy_trees"]
+                ),
+                "model_allometry_species_specific_trees": int(
+                    province_row["n_allometry_species_specific_trees"]
+                ),
                 "facility_harvest_m3": harvest,
                 "facility_sawlog_feedstock_share": sawlog_facility,
                 "facility_pulp_feedstock_share": pulp_facility,
@@ -849,7 +954,9 @@ def _coefficient_rows(
                 ),
                 "solid_share_model_over_facility": solid_ratio,
                 "residue_odt_model_over_facility": residue_ratio,
+                "total_residue_odt_model_over_facility": total_ratio,
                 "comparison_status": status,
+                "comparison_status_total_residue": total_status,
                 "facility_coefficient_tier": str(record.get("coefficient_tier", "")),
                 "taper_status": province_row["taper_status"],
                 "taper_jurisdictions": province_row["taper_jurisdictions"],
@@ -885,6 +992,112 @@ def _coefficient_rows(
     if len(rows) != len(PILOT_PROVINCES):
         raise SchemaError(
             f"expected {len(PILOT_PROVINCES)} coefficient rows, got {len(rows)}"
+        )
+    return rows
+
+
+def _allometry_coverage_rows(
+    trees: Sequence[PilotTree],
+    extras: Mapping[str, Mapping[str, Any]],
+    components: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    buckets: dict[tuple[str, str, str], list[PilotTree]] = {}
+    for tree in trees:
+        buckets.setdefault(
+            (
+                tree.jurisdiction,
+                tree.species,
+                str(extras[tree.tree_id]["species_nfi"]),
+            ),
+            [],
+        ).append(tree)
+    rows: list[dict[str, Any]] = []
+    for (province, species, species_nfi), group in sorted(buckets.items()):
+        component = components[group[0].tree_id]
+        rows.append(
+            {
+                "province": province,
+                "species": species,
+                "species_nfi": species_nfi,
+                "n_trees": len(group),
+                "expansion_factor_total": sum(
+                    float(extras[tree.tree_id]["expansion_factor"])
+                    for tree in group
+                ),
+                "branch_equation_id": component.branch_equation.equation_id,
+                "foliage_equation_id": component.foliage_equation.equation_id,
+                "equation_species": component.equation_species,
+                "reference": component.reference,
+                "species_specific": component.species_specific,
+                "proxy": component.proxy,
+                "proxy_reason": component.branch_equation.proxy_reason,
+                "source": component.branch_equation.source_dataset,
+                "source_licence": component.branch_equation.source_licence,
+                "dbh_min_cm": min(tree.dbh_cm for tree in group),
+                "dbh_max_cm": max(tree.dbh_cm for tree in group),
+                "height_min_m": min(tree.height_m for tree in group),
+                "height_max_m": max(tree.height_m for tree in group),
+                "equation_dbh_min_cm": component.branch_equation.dbh_min_cm,
+                "equation_dbh_max_cm": component.branch_equation.dbh_max_cm,
+                "equation_height_min_m": component.branch_equation.height_min_m,
+                "equation_height_max_m": component.branch_equation.height_max_m,
+                "domain_basis": component.branch_equation.domain_basis,
+                "model_estimate": True,
+                "observed": False,
+                "policy_grade": False,
+                "national_claim": False,
+            }
+        )
+    if not rows:
+        raise SchemaError("allometry coverage has no rows")
+    return rows
+
+
+def _residue_scenario_rows(
+    province_summary: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for province_row in province_summary:
+        recovered = float(province_row["recovered_gross_m3_expanded"])
+        total = float(province_row["total_residue_odt_expanded"])
+        row = {
+            "province": province_row["province"],
+            "province_name": province_row["province_name"],
+            "n_trees": int(province_row["n_trees"]),
+            "recovered_gross_m3_expanded": recovered,
+            "stem_residue_odt_expanded": float(
+                province_row["stem_residue_odt_expanded"]
+            ),
+            "branch_odt_expanded": float(province_row["branch_odt_expanded"]),
+            "foliage_odt_expanded": float(
+                province_row["foliage_odt_expanded"]
+            ),
+            "branch_foliage_odt_expanded": float(
+                province_row["branch_foliage_odt_expanded"]
+            ),
+            "total_residue_odt_expanded": total,
+            "total_residue_gross_odt_per_recovered_m3": _safe_div(
+                total, recovered
+            ),
+            "recovery_factor_reference": REFERENCE_RECOVERY_FACTOR,
+            "recovery_factor_calibrated": False,
+            "recovery_scenario_basis": "0.35|0.60|0.75; no single factor adopted",
+            "model_estimate": True,
+            "observed": False,
+            "policy_grade": False,
+            "national_claim": False,
+        }
+        for factor in DEFAULT_RECOVERY_FACTORS:
+            suffix = f"r{round(factor * 100):03d}"
+            row[f"recovery_factor_{suffix}"] = factor
+            row[f"recoverable_residue_odt_{suffix}_expanded"] = total * factor
+            row[f"recoverable_residue_odt_per_recovered_m3_{suffix}"] = _safe_div(
+                total * factor, recovered
+            )
+        rows.append(row)
+    if len(rows) != len(PILOT_PROVINCES):
+        raise SchemaError(
+            f"expected {len(PILOT_PROVINCES)} residue scenario rows, got {len(rows)}"
         )
     return rows
 
@@ -1331,6 +1544,18 @@ def generate_pilot(
         logs.extend(tree_logs)
         residues.append(residue)
 
+    allometry = load_four_province_biomass_allometry()
+    species_nfi_by_tree = {
+        tree_id: str(extra["species_nfi"]) for tree_id, extra in extras.items()
+    }
+    components = tree_components_for_measured_trees(
+        trees,
+        allometry,
+        species_nfi_by_tree=species_nfi_by_tree,
+    )
+    if set(components) != {tree.tree_id for tree in trees}:
+        raise SchemaError("allometry components do not cover every measured tree")
+
     if not logs:
         raise SchemaError("pilot produced no logs")
     if len(residues) != len(trees):
@@ -1341,9 +1566,11 @@ def generate_pilot(
                 f"tree {residue.tree_id} balance error {residue.balance_error_m3}"
             )
 
-    province_summary = _province_rows(trees, logs, residues, extras)
+    province_summary = _province_rows(trees, logs, residues, extras, components)
     coefficient_comparison = _coefficient_rows(province_summary, audit_rows)
     taper_coverage = _taper_coverage_rows(trees, extras)
+    allometry_coverage = _allometry_coverage_rows(trees, extras, components)
+    residue_scenarios = _residue_scenario_rows(province_summary)
     sort_rule_columns = [
         "jurisdiction",
         "rule_id",
@@ -1583,36 +1810,47 @@ def generate_pilot(
         "policy_grade",
         "national_claim",
     ]
+    residue_columns.extend(
+        column for column in COMPONENT_COLUMNS if column not in residue_columns
+    )
     residue_rows = []
     for residue in residues:
         extra = extras[residue.tree_id]
         weight = float(extra["expansion_factor"])
+        base_row = {
+            **asdict(residue),
+            "taper_status": extra["taper_status"],
+            "taper_jurisdiction": extra["taper_jurisdiction"],
+            "taper_bec_zone": extra["taper_bec_zone"],
+            "taper_proxy": extra["taper_proxy"],
+            "species_nfi": extra["species_nfi"],
+            "tree_list_basis": extra["tree_list_basis"],
+            "tree_list_label": TREE_LIST_LABEL,
+            "measured_tree_list": True,
+            "sort_rule_set": SORT_RULE_SET,
+            "expansion_factor": weight,
+            "residue_volume_m3_expanded": residue.residue_volume_m3 * weight,
+            "residue_odt_expanded": residue.residue_odt * weight,
+            "green_tonnes_expanded": residue.green_tonnes * weight,
+            "chip_green_tonnes_expanded": residue.chip_green_tonnes * weight,
+            "hog_green_tonnes_expanded": residue.hog_green_tonnes * weight,
+            "recovered_log_m3_expanded": residue.recovered_log_m3 * weight,
+            "taper_total_m3_expanded": residue.taper_total_m3 * weight,
+            "model_estimate": True,
+            "synthetic": False,
+            "observed": False,
+            "policy_grade": False,
+            "national_claim": False,
+        }
         residue_rows.append(
-            {
-                **asdict(residue),
-                "taper_status": extra["taper_status"],
-                "taper_jurisdiction": extra["taper_jurisdiction"],
-                "taper_bec_zone": extra["taper_bec_zone"],
-                "taper_proxy": extra["taper_proxy"],
-                "species_nfi": extra["species_nfi"],
-                "tree_list_basis": extra["tree_list_basis"],
-                "tree_list_label": TREE_LIST_LABEL,
-                "measured_tree_list": True,
-                "sort_rule_set": SORT_RULE_SET,
-                "expansion_factor": weight,
-                "residue_volume_m3_expanded": residue.residue_volume_m3 * weight,
-                "residue_odt_expanded": residue.residue_odt * weight,
-                "green_tonnes_expanded": residue.green_tonnes * weight,
-                "chip_green_tonnes_expanded": residue.chip_green_tonnes * weight,
-                "hog_green_tonnes_expanded": residue.hog_green_tonnes * weight,
-                "recovered_log_m3_expanded": residue.recovered_log_m3 * weight,
-                "taper_total_m3_expanded": residue.taper_total_m3 * weight,
-                "model_estimate": True,
-                "synthetic": False,
-                "observed": False,
-                "policy_grade": False,
-                "national_claim": False,
-            }
+            annotate_component_row(
+                base_row,
+                components[residue.tree_id],
+                weight=weight,
+                stem_residue_odt=residue.residue_odt,
+                jurisdiction=residue.jurisdiction,
+                species_nfi=str(extra["species_nfi"]),
+            )
         )
 
     tree_summary_rows = []
@@ -1717,6 +1955,8 @@ def generate_pilot(
         "taper_dispatch": out_dir / "taper_dispatch.csv",
         "taper_coverage": out_dir / "taper_coverage.csv",
         "coefficient_comparison": out_dir / "coefficient_comparison.csv",
+        "allometry_coverage": out_dir / "allometry_coverage.csv",
+        "residue_recovery_scenarios": out_dir / "residue_recovery_scenarios.csv",
         "sort_rules": out_dir / "sort_rules.csv",
     }
     _write_csv(paths["tree_list"], tree_rows, tree_columns)
@@ -1729,6 +1969,16 @@ def generate_pilot(
     _write_csv(paths["taper_dispatch"], taper_dispatch_rows, dispatch_columns)
     _write_csv(paths["taper_coverage"], taper_coverage, coverage_columns)
     _write_csv(paths["coefficient_comparison"], coefficient_comparison, coefficient_columns)
+    _write_csv(
+        paths["allometry_coverage"],
+        allometry_coverage,
+        list(allometry_coverage[0]),
+    )
+    _write_csv(
+        paths["residue_recovery_scenarios"],
+        residue_scenarios,
+        list(residue_scenarios[0]),
+    )
     _write_csv(paths["sort_rules"], sort_rule_rows, sort_rule_columns)
 
     summary = {
@@ -1772,6 +2022,32 @@ def generate_pilot(
         },
         "sample_audit": audit_rows,
         "taper_coverage": taper_coverage,
+        "allometry": {
+            "method": (
+                "CFS tree-level DBH+height branch and foliage equations "
+                "(Lambert/Ung); exact species or NFI mapping with documented "
+                "proxy labels"
+            ),
+            "coverage": allometry_coverage,
+            "n_trees": len(components),
+            "n_proxy_trees": sum(
+                1 for component in components.values() if component.proxy
+            ),
+            "n_species_specific_trees": sum(
+                1
+                for component in components.values()
+                if component.species_specific
+            ),
+            "source": "CFS Biomass and Nutrients Calculator",
+            "source_licence": "Open Government Licence - Canada",
+            "reference": (
+                "Lambert, Ung and Raulier 2005; Ung, Bernier and Guo 2008"
+            ),
+            "recovery_scenarios": list(DEFAULT_RECOVERY_FACTORS),
+            "reference_recovery_factor": REFERENCE_RECOVERY_FACTOR,
+            "calibrated_recovery_factor": False,
+            "residue_scenarios": residue_scenarios,
+        },
         "province_summary": province_summary,
         "coefficient_comparison": coefficient_comparison,
         "config": {
@@ -1808,6 +2084,28 @@ def generate_pilot(
             "expansion_conservation": all(
                 row["expansion_conservation_error"] <= 1e-6 for row in audit_rows
             ),
+            "all_measured_trees_have_allometry": set(components)
+            == {tree.tree_id for tree in trees},
+            "allometry_conservation": all(
+                math.isclose(
+                    float(row["total_residue_odt_expanded"]),
+                    float(row["stem_residue_odt_expanded"])
+                    + float(row["branch_foliage_odt_expanded"]),
+                    rel_tol=1e-9,
+                    abs_tol=1e-6,
+                )
+                for row in residue_rows
+            ),
+            "allometry_recovery_scenarios": all(
+                math.isclose(
+                    float(row[f"recoverable_residue_odt_r{round(factor * 100):03d}_expanded"]),
+                    float(row["total_residue_odt_expanded"]) * factor,
+                    rel_tol=1e-9,
+                    abs_tol=1e-6,
+                )
+                for row in residue_rows
+                for factor in DEFAULT_RECOVERY_FACTORS
+            ),
             "no_negative_or_nan_outputs": True,
         },
         "inputs": [
@@ -1829,6 +2127,7 @@ def generate_pilot(
         "bucked_logs": pd.DataFrame(log_rows, columns=log_columns),
         "residue_ledger": pd.DataFrame(residue_rows, columns=residue_columns),
         "tree_list": pd.DataFrame(tree_rows, columns=tree_columns),
+        "residue_recovery_scenarios": pd.DataFrame(residue_scenarios),
     }
     for name, frame in checked_frames.items():
         numeric = frame.select_dtypes(include=[np.number])

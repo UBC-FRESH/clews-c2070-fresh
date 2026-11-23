@@ -46,6 +46,7 @@ DONOR_TIER = "donor_coefficient"
 RESIDUE_DENSITY_ODT_M3 = 0.45
 RSYC_BASE_RECOVERY = 0.60
 SUM_TOLERANCE = 1e-9
+RECOVERY_SCENARIOS: tuple[float, ...] = (0.35, 0.60, 0.75)
 
 
 class MeasuredCoefficientError(RuntimeError):
@@ -63,6 +64,11 @@ class MeasuredCoefficients:
     other_share: float
     harvest_residue_odt_per_m3: float
     harvest_residue_m3_per_m3: float
+    harvest_residue_total_odt_per_m3: float
+    branch_foliage_odt_per_m3: float
+    recoverable_odt_per_m3_r035: float
+    recoverable_odt_per_m3_r060: float
+    recoverable_odt_per_m3_r075: float
     taper_status: str
     taper_jurisdictions: str
     tree_list_basis: str
@@ -138,6 +144,9 @@ def load_measured_coefficients() -> dict[str, MeasuredCoefficients]:
         "all_measured",
         "no_national_claim",
         "no_synthetic",
+        "all_measured_trees_have_allometry",
+        "allometry_conservation",
+        "allometry_recovery_scenarios",
     ):
         if checks.get(check) is not True:
             raise MeasuredCoefficientError(f"pilot check failed: {check}")
@@ -187,6 +196,51 @@ def load_measured_coefficients() -> dict[str, MeasuredCoefficients]:
             row["model_residue_m3_per_recovered_m3"],
             f"{province} measured residue m3/m3",
         )
+        total_residue = _finite_positive(
+            row["model_total_residue_gross_odt_per_recovered_m3"],
+            f"{province} measured total residue ODT/m3",
+        )
+        branch_foliage = _finite_positive(
+            row["model_branch_foliage_odt_per_recovered_m3"],
+            f"{province} measured branch/foliage ODT/m3",
+        )
+        recoverable = {
+            factor: _finite_positive(
+                row[
+                    "model_total_residue_recoverable_odt_per_recovered_m3_"
+                    f"r{int(round(factor * 100)):03d}"
+                ],
+                f"{province} measured recoverable ODT/m3 at {factor}",
+            )
+            for factor in RECOVERY_SCENARIOS
+        }
+        if not math.isclose(
+            total_residue,
+            residue_odt + branch_foliage,
+            rel_tol=1e-9,
+            abs_tol=1e-12,
+        ):
+            raise MeasuredCoefficientError(
+                f"{province}: total residue does not equal stem + branch/foliage"
+            )
+        if not all(
+            recoverable[left] < recoverable[right]
+            for left, right in zip(RECOVERY_SCENARIOS, RECOVERY_SCENARIOS[1:])
+        ):
+            raise MeasuredCoefficientError(
+                f"{province}: residue recovery scenarios are not increasing"
+            )
+        for factor in RECOVERY_SCENARIOS:
+            if not math.isclose(
+                recoverable[factor],
+                total_residue * factor,
+                rel_tol=1e-9,
+                abs_tol=1e-12,
+            ):
+                raise MeasuredCoefficientError(
+                    f"{province}: recoverable residue at {factor} is not "
+                    "gross * factor"
+                )
         result[province] = MeasuredCoefficients(
             province=province,
             province_name=row["province_name"].strip(),
@@ -195,6 +249,11 @@ def load_measured_coefficients() -> dict[str, MeasuredCoefficients]:
             other_share=other,
             harvest_residue_odt_per_m3=residue_odt,
             harvest_residue_m3_per_m3=residue_m3,
+            harvest_residue_total_odt_per_m3=total_residue,
+            branch_foliage_odt_per_m3=branch_foliage,
+            recoverable_odt_per_m3_r035=recoverable[0.35],
+            recoverable_odt_per_m3_r060=recoverable[0.60],
+            recoverable_odt_per_m3_r075=recoverable[0.75],
             taper_status=row["taper_status"].strip(),
             taper_jurisdictions=row["taper_jurisdictions"].strip(),
             tree_list_basis=row["tree_list_basis"].strip(),

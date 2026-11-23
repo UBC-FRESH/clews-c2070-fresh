@@ -2,6 +2,28 @@
 
 ## 2026-11-23
 
+- **Integrated four-province branch/foliage total residue and recovery
+  scenarios into the measured facility chain.** Added
+  `four_province_biomass_allometry.py`, the four-province CFS equation map, a
+  new `allometry_coverage.csv` and `residue_recovery_scenarios.csv` in the
+  measured pilot, and `docs/four-province-biomass-allometry.md`. All 591
+  measured BC/QC/NB/YT stems now carry stem, branch, foliage and gross total
+  residue with recoverable values at 0.35/0.60/0.75; 0.60 is a reference
+  scenario, not a calibrated factor. Province gross total rates are BC
+  0.161622, QC 0.217507, NB 0.187426 and YT 0.269689 ODT/m3 recovered versus
+  stem-only 0.040577/0.059410/0.030341/0.123046. Added
+  `national_product_chain_v3.py`, `national_facility_chain_scenarios_v5.py`,
+  `facility_residue_supply_v5.py`, `national_residue_curve_v5.py`,
+  `forestry_osecan_handoff_v6.py` and `forestry_osecan_scenarios_v5.py`.
+  Products, process residue and feedstock routing are unchanged from v2/v4.
+  At 119 Mm3, gross harvest residue rises from 127.860 to 313.640 PJ and
+  recoverable harvest residue from 90.990 to 195.433 PJ. OSeCAN harvest tiers
+  move from T1/T1/T2 at 0.35/0.60/0.75 to T3/T4/above_T4; process tiers are
+  unchanged. The official OSeCAN tree remains hash-identical. Tests cover
+  mapping/proxies, per-tree conservation, scenarios, v2 product equality,
+  chain reconciliation, tier positions, labels and no NaN/negative values. No
+  UI or public OSeCAN change; no unexpected `D`.
+
 - **Integrated measured four-province bucking coefficients into the national
   facility chain.** Added `measured_bucking_coefficients.py`,
   `national_product_chain_v2.py`, `national_facility_chain_scenarios_v4.py`,

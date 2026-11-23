@@ -242,8 +242,11 @@ def test_manifest_and_summary_checks(artifact) -> None:
 
     assert summary["checks"] == {
         "all_measured": True,
+        "all_measured_trees_have_allometry": True,
         "all_residue_balances_within_1e8_m3": True,
         "all_taper_evidence_published_table": True,
+        "allometry_conservation": True,
+        "allometry_recovery_scenarios": True,
         "exactly_four_provinces": True,
         "expansion_conservation": True,
         "no_national_claim": True,
@@ -264,5 +267,7 @@ def test_manifest_and_summary_checks(artifact) -> None:
         "taper_dispatch",
         "taper_coverage",
         "coefficient_comparison",
+        "allometry_coverage",
+        "residue_recovery_scenarios",
         "sort_rules",
     }
