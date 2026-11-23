@@ -7,12 +7,12 @@
   <meta name="description" content="Static, provisional FRESH-side explorer for CLEWS/C2070 forest-biomass scenarios. Iteration 0 with an optional live screening runner.">
   <link rel="stylesheet" href="vendor/fonts.css">
   <link rel="stylesheet" href="vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="styles.css?v=f1cd6226be79">
+  <link rel="stylesheet" href="styles.css?v=bcc7baf48013">
   <script defer src="vendor/echarts.min.js"></script>
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=18fe1c3cbf68"></script>
+  <script defer src="app.js?v=1e9dc9b031ea"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -85,6 +85,7 @@
           <button class="tab" id="tab-tradeoff" role="tab" aria-selected="false" aria-controls="panel-tradeoff" data-tab="tradeoff" tabindex="-1" type="button">Trade-off</button>
           <button class="tab" id="tab-explore" role="tab" aria-selected="false" aria-controls="panel-explore" data-tab="explore" tabindex="-1" type="button">Explore</button>
           <button class="tab" id="tab-map" role="tab" aria-selected="false" aria-controls="panel-map" data-tab="map" tabindex="-1" type="button">Map</button>
+          <button class="tab" id="tab-facilities" role="tab" aria-selected="false" aria-controls="panel-facilities" data-tab="facilities" tabindex="-1" type="button">Facilities</button>
           <button class="tab" id="tab-zones" role="tab" aria-selected="false" aria-controls="panel-zones" data-tab="zones" tabindex="-1" type="button">Zones</button>
           <button class="tab" id="tab-economics" role="tab" aria-selected="false" aria-controls="panel-economics" data-tab="economics" tabindex="-1" type="button">Economics</button>
           <button class="tab" id="tab-osecan" role="tab" aria-selected="false" aria-controls="panel-osecan" data-tab="osecan" tabindex="-1" type="button">OSeCAN Links</button>
@@ -348,6 +349,84 @@
             <p class="method-note">Choropleth classes are quantiles of <span class="mono">recoverable_pj_base</span> across 385 RSYC tiles. Click a tile for its record.</p>
           </aside>
         </div>
+      </section>
+
+      <section class="panel" id="panel-facilities" role="tabpanel" aria-labelledby="tab-facilities" tabindex="0" hidden>
+        <div class="panel-heading">
+          <div>
+            <p class="kicker">Facility ledger · read-only</p>
+            <h2>Facilities by class, capacity &amp; assignment</h2>
+          </div>
+          <p class="panel-deck">The national facility inventory joined to capacity v3 and the 100/119/150 Mm³ local-first assignments. This is the facility point ledger, separate from the spatial supply Map. One map, one province × class table, filters, no ranking.</p>
+        </div>
+
+        <div class="facility-caveat" role="note">
+          <div class="facility-caveat-head">
+            <span class="badge badge--facility-model">model_estimate</span>
+            <span class="badge badge--ink">observed=false</span>
+            <span class="badge badge--ink">policy_grade=false</span>
+            <span class="badge badge--ink">no ranking</span>
+          </div>
+          <p><strong>Proxy capacity caveat.</strong> Published capacity mixes infeed proxies, permitted input volume, finished-pellet bulk volume, and converted sawn output; the bases are not interchangeable. Class-median proxy capacity is a placeholder, not a measurement. Assignment is a local-first planning allocation, not an AAC or observed harvest. Read-only: no LP, OSeCAN, or run controls.</p>
+        </div>
+
+        <div class="facility-stat-strip" id="facility-stat-strip" aria-live="polite">
+          <div class="facility-stat"><span>Records</span><strong id="facility-stat-records">—</strong><small id="facility-stat-records-note">loading</small></div>
+          <div class="facility-stat"><span>Mapped</span><strong id="facility-stat-mapped">—</strong><small id="facility-stat-mapped-note">loading</small></div>
+          <div class="facility-stat"><span>Published / proxy</span><strong id="facility-stat-evidence">—</strong><small id="facility-stat-evidence-note">loading</small></div>
+          <div class="facility-stat"><span>Capacity</span><strong id="facility-stat-capacity">—</strong><small id="facility-stat-capacity-note">loading</small></div>
+          <div class="facility-stat"><span>Scenario assignment</span><strong id="facility-stat-scenario">—</strong><small id="facility-stat-scenario-note">loading</small></div>
+        </div>
+
+        <div class="control-deck facility-controls" role="group" aria-label="Facility filters">
+          <label class="select-field">Harvest scenario
+            <select id="facility-scenario" aria-describedby="facility-scenario-note"></select>
+          </label>
+          <label class="select-field">Province
+            <select id="facility-province"></select>
+          </label>
+          <label class="select-field">Facility class
+            <select id="facility-class"></select>
+          </label>
+          <button class="button button--quiet" id="facility-reset" type="button">Reset filters</button>
+          <p class="facility-scenario-note" id="facility-scenario-note">Scenario controls assigned volume and utilization only; capacity and class do not change.</p>
+        </div>
+
+        <div class="facility-layout">
+          <div class="facility-map-stage">
+            <div id="facility-map" aria-label="Map of national facility records coloured by facility class"></div>
+            <div id="facility-map-state" class="map-state">Facility points load when this tab opens.</div>
+            <div class="facility-map-counter" id="facility-map-count" aria-live="polite">—</div>
+            <div class="map-legend facility-legend" id="facility-legend" hidden>
+              <span class="map-legend-title">Facility class</span>
+              <div id="facility-legend-items"></div>
+            </div>
+          </div>
+          <aside class="facility-side" aria-label="Facility coverage, evidence and caveats">
+            <h3>Coverage &amp; evidence</h3>
+            <dl class="mini-stats" id="facility-side-stats"></dl>
+            <div class="facility-unlocated-note" id="facility-unlocated-note" hidden></div>
+            <div class="facility-legend-caveat">
+              <strong>One point per located record</strong>
+              <p>Points are coloured by class. Records without coordinates stay in the table and are not given an invented position. Click a point for name, capacity, status and source.</p>
+            </div>
+            <p class="method-note" id="facility-evidence-note">Loading the facility export manifest and source hashes…</p>
+          </aside>
+        </div>
+
+        <section class="section-block" aria-labelledby="facility-table-title">
+          <div class="section-heading">
+            <div>
+              <h3 id="facility-table-title">Province × class ledger</h3>
+              <p id="facility-table-status" aria-live="polite">Loading facility export…</p>
+            </div>
+            <p class="method-note">Capacity is the capacity-v3 base; assigned volume is the selected local-first scenario. Utilization is assigned ÷ eligible capacity (located, operating records after proxy floor scaling).</p>
+          </div>
+          <div class="table-wrap facilities-table-wrap">
+            <table class="data-table facilities-table" id="facilities-table"></table>
+          </div>
+          <p class="method-note facility-export-note" id="facility-export-note"></p>
+        </section>
       </section>
 
       <section class="panel" id="panel-zones" role="tabpanel" aria-labelledby="tab-zones" tabindex="0" hidden>

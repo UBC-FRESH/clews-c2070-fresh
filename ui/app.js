@@ -33,6 +33,10 @@
   var CANADA_FIT_OPTIONS = { padding: 34 };
   var MOBILE_RAIL_QUERY = '(max-width: 720px)';
   var TEMPORAL_DEFAULT = 2050;
+  var FACILITY_DATA_PATH = 'facilities/facilities.json';
+  var FACILITY_MANIFEST_PATH = 'facilities/manifest.json';
+  var FACILITY_CLASS_ORDER = ['SAW', 'PULP', 'PANEL', 'PELLET', 'BIO', 'OTHER'];
+  var FACILITY_DEFAULT_SCENARIO = '119m';
   var PROVINCE_ALIAS = { QC: 'CA-QB' };
   var EXPECTED_SCENARIO_COUNT = 53;
   var EXPECTED_FAMILY_COUNT = 18;
@@ -242,6 +246,19 @@
       data: null,
       markers: [],
       pendingSelection: null
+    },
+    facilities: {
+      initialized: false,
+      loading: false,
+      error: false,
+      data: null,
+      manifest: null,
+      map: null,
+      provinceFeatures: null,
+      provinceByIso: null,
+      features: [],
+      controlsBound: false,
+      filters: { scenario: FACILITY_DEFAULT_SCENARIO, province: 'all', facilityClass: 'all' }
     },
     spatial: {
       selection: null,
@@ -1115,7 +1132,7 @@
   }
 
   function validTab(tab) {
-    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'zones', 'economics', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
+    return ['overview', 'dispatch', 'tradeoff', 'explore', 'map', 'facilities', 'zones', 'economics', 'osecan', 'run', 'inputs'].indexOf(tab) !== -1 ? tab : 'overview';
   }
 
   function validEconomicsView(view) {
@@ -1163,6 +1180,7 @@
     if (state.tab === 'tradeoff') renderTradeoff();
     if (state.tab === 'explore') renderExplore();
     if (state.tab === 'map') { initMap(); renderBreadcrumb(); renderSelectionPanel(); }
+    if (state.tab === 'facilities') initFacilities();
     if (state.tab === 'zones') renderZones();
     if (state.tab === 'economics') {
       renderEconomics();
@@ -1184,6 +1202,7 @@
         state.economicsChart.resize();
       }
       if (state.tab === 'map' && state.mapState.map) state.mapState.map.resize();
+      if (state.tab === 'facilities' && state.facilities.map) state.facilities.map.resize();
     });
     if (!opts.silent) {
       updateHash();
@@ -7553,6 +7572,597 @@
     }, true);
   }
 
+  /* ---------------- Facilities ---------------- */
+
+  function facilityClassMeta(classId) {
+    var data = state.facilities.data;
+    if (!data) return null;
+    return data.classes.filter(function (item) { return item.id === classId; })[0] || null;
+  }
+
+  function facilityProvinceMeta(provinceId) {
+    var data = state.facilities.data;
+    if (!data) return null;
+    return data.provinces.filter(function (item) { return item.id === provinceId; })[0] || null;
+  }
+
+  function facilityProvinceIso(provinceId) {
+    return PROVINCE_ALIAS[provinceId] || 'CA-' + provinceId;
+  }
+
+  function facilityScenario() {
+    var data = state.facilities.data;
+    if (!data) return null;
+    return data.scenarios.filter(function (item) { return item.id === state.facilities.filters.scenario; })[0] ||
+      data.scenarios.filter(function (item) { return item.id === data.default_scenario; })[0] ||
+      data.scenarios[0] || null;
+  }
+
+  function facilityById() {
+    if (!state.facilities.data) return new Map();
+    if (!state.facilities.byId) {
+      state.facilities.byId = new Map();
+      state.facilities.data.facilities.forEach(function (facility) {
+        state.facilities.byId.set(facility.id, facility);
+      });
+    }
+    return state.facilities.byId;
+  }
+
+  function facilityScenariosById() {
+    var data = state.facilities.data;
+    if (!data) return new Map();
+    if (!state.facilities.scenariosById) {
+      state.facilities.scenariosById = new Map();
+      data.scenarios.forEach(function (scenario) { state.facilities.scenariosById.set(scenario.id, scenario); });
+    }
+    return state.facilities.scenariosById;
+  }
+
+  function validateFacilities(data, manifest) {
+    requireTrue(data && typeof data === 'object', 'facilities.json is missing');
+    requireTrue(data.schema_version === 'facilities/1', 'unexpected facilities schema_version ' + data.schema_version);
+    requireTrue(data.artifact === 'ui_facilities_v1', 'unexpected facilities artifact ' + data.artifact);
+    requireTrue(data.labels && data.labels.evidence === 'model_estimate' &&
+      data.labels.observed === false && data.labels.policy_grade === false &&
+      data.labels.ranking === 'none' && data.labels.read_only === true,
+      'facility labels must stay model-only, unranked, and read-only');
+    requireTrue(data.caveats && typeof data.caveats.proxy === 'string' && data.caveats.proxy.length > 0,
+      'proxy capacity caveat is missing');
+    requireTrue(data.caveats && typeof data.caveats.assignment === 'string' && data.caveats.assignment.length > 0,
+      'assignment caveat is missing');
+    requireTrue(Array.isArray(data.facilities), 'facility rows are missing');
+    requireTrue(data.coverage && data.coverage.record_count === 689, 'expected 689 facility records');
+    requireTrue(data.facilities.length === data.coverage.record_count,
+      'facility row count does not match coverage');
+    requireTrue(data.coverage.mapped_count + data.coverage.unlocated_count === data.coverage.record_count,
+      'mapped/unlocated counts do not conserve');
+    requireTrue(Array.isArray(data.classes) && data.classes.length === 6, 'expected six facility classes');
+    requireTrue(Array.isArray(data.provinces) && data.provinces.length > 0, 'province coverage is missing');
+    var seen = new Set();
+    var mapped = 0;
+    data.facilities.forEach(function (facility) {
+      requireTrue(facility.id && !seen.has(facility.id), 'duplicate or missing facility id');
+      seen.add(facility.id);
+      requireTrue(FACILITY_CLASS_ORDER.indexOf(facility.facility_class) !== -1,
+        'unknown facility class ' + facility.facility_class);
+      requireTrue(facility.mapped === (facility.lat !== null && facility.lon !== null),
+        'facility mapped flag does not match coordinates for ' + facility.id);
+      requireTrue(facility.mapped || (facility.lat === null && facility.lon === null),
+        'unmapped facility carries invented coordinates for ' + facility.id);
+      if (facility.mapped) mapped += 1;
+    });
+    requireTrue(mapped === data.coverage.mapped_count, 'mapped count mismatch');
+    var classRecords = data.classes.reduce(function (sum, item) { return sum + item.record_count; }, 0);
+    requireTrue(classRecords === data.coverage.record_count, 'class counts do not conserve');
+    var provinceRecords = data.provinces.reduce(function (sum, item) { return sum + item.record_count; }, 0);
+    requireTrue(provinceRecords === data.coverage.record_count, 'province counts do not conserve');
+    requireTrue(Array.isArray(data.scenarios) && data.scenarios.length === 3,
+      'expected 100/119/150 facility scenarios');
+    requireTrue(data.scenarios.map(function (item) { return item.id; }).join(',') === '100m,119m,150m',
+      'facility scenario ids are not 100m/119m/150m');
+    requireTrue(data.default_scenario === '119m' && data.scenarios.some(function (item) { return item.id === '119m'; }),
+      'the default 119m scenario is missing');
+    data.scenarios.forEach(function (scenario) {
+      requireTrue(Array.isArray(scenario.rows) && scenario.rows.length > 0, 'scenario rows missing for ' + scenario.id);
+      requireTrue(scenario.rows.reduce(function (sum, row) { return sum + row.record_count; }, 0) === data.coverage.record_count,
+        'scenario table rows do not conserve records for ' + scenario.id);
+      var assigned = scenario.rows.reduce(function (sum, row) { return sum + row.assigned_m3_y; }, 0);
+      requireTrue(Math.abs(assigned - scenario.assigned_m3) <= 0.01,
+        'scenario table assigned volume does not conserve for ' + scenario.id);
+      requireTrue(scenario.facility_assignments && typeof scenario.facility_assignments === 'object',
+        'facility assignments missing for ' + scenario.id);
+    });
+    requireTrue(manifest && manifest.schema_version === 'facilities/1', 'facility manifest schema mismatch');
+    requireTrue(manifest.validation && manifest.validation.ok === true, 'facility manifest validation is not ok');
+    requireTrue(Array.isArray(manifest.generated) && manifest.generated.length === 1 &&
+      manifest.generated[0].path === 'facilities/facilities.json' &&
+      typeof manifest.generated[0].sha256 === 'string' && manifest.generated[0].sha256.length === 64,
+      'facility manifest payload hash is missing');
+    requireTrue(Array.isArray(manifest.sources) && manifest.sources.length >= 4, 'facility source hashes are missing');
+  }
+
+  async function loadFacilityProvinces() {
+    if (!state.facilities.provincePromise) {
+      state.facilities.provincePromise = loadJSON('spatial/provinces.geojson');
+    }
+    return state.facilities.provincePromise;
+  }
+
+  async function initFacilities() {
+    if (state.facilities.initialized) {
+      renderFacilityStats();
+      renderFacilityTable();
+      if (state.facilities.map) state.facilities.map.resize();
+      return;
+    }
+    if (state.facilities.loading || state.facilities.error) return;
+    state.facilities.loading = true;
+    var stateEl = $('facility-map-state');
+    stateEl.hidden = false;
+    stateEl.classList.remove('is-error');
+    stateEl.textContent = 'Loading facility ledger and province geometry…';
+    try {
+      var bundle = await Promise.all([
+        loadJSON(FACILITY_DATA_PATH),
+        loadJSON(FACILITY_MANIFEST_PATH),
+        loadFacilityProvinces()
+      ]);
+      var data = bundle[0];
+      var manifest = bundle[1];
+      var provinces = bundle[2];
+      validateFacilities(data, manifest);
+      requireTrue(provinces.features && provinces.features.length === 13, 'expected 13 province polygons');
+      state.facilities.data = data;
+      state.facilities.manifest = manifest;
+      state.facilities.provinceFeatures = provinces.features.map(function (feature) {
+        feature._bbox = geometryBBox(feature.geometry);
+        return feature;
+      });
+      state.facilities.provinceByIso = new Map();
+      state.facilities.provinceFeatures.forEach(function (feature) {
+        state.facilities.provinceByIso.set(feature.properties.iso, feature);
+      });
+      state.facilities.filters.scenario = data.default_scenario;
+      state.facilities.filters.province = 'all';
+      state.facilities.filters.facilityClass = 'all';
+      populateFacilityControls();
+      bindFacilityControls();
+      initFacilityMap();
+      renderFacilities();
+      state.facilities.loading = false;
+      state.facilities.initialized = true;
+    } catch (error) {
+      state.facilities.loading = false;
+      state.facilities.error = true;
+      stateEl.hidden = false;
+      stateEl.classList.add('is-error');
+      stateEl.textContent = 'Facility ledger failed its guard: ' + error.message;
+      $('facility-table-status').textContent = 'Facility export failed closed: ' + error.message;
+      $('facility-export-note').textContent = 'No facility table or map was rendered from mismatched data.';
+    }
+  }
+
+  function populateFacilityControls() {
+    var data = state.facilities.data;
+    var scenarioSelect = $('facility-scenario');
+    scenarioSelect.innerHTML = data.scenarios.map(function (scenario) {
+      return '<option value="' + esc(scenario.id) + '">' + esc(scenario.label) + '</option>';
+    }).join('');
+    scenarioSelect.value = state.facilities.filters.scenario;
+    var provinceSelect = $('facility-province');
+    provinceSelect.innerHTML = '<option value="all">All provinces</option>' + data.provinces.map(function (province) {
+      return '<option value="' + esc(province.id) + '">' + esc(province.label) + ' (' + esc(province.id) + ')</option>';
+    }).join('');
+    provinceSelect.value = 'all';
+    var classSelect = $('facility-class');
+    classSelect.innerHTML = '<option value="all">All classes</option>' + data.classes.map(function (facilityClass) {
+      return '<option value="' + esc(facilityClass.id) + '">' + esc(facilityClass.label) + ' (' + esc(facilityClass.id) + ')</option>';
+    }).join('');
+    classSelect.value = 'all';
+  }
+
+  function bindFacilityControls() {
+    if (state.facilities.controlsBound) return;
+    state.facilities.controlsBound = true;
+    $('facility-scenario').addEventListener('change', function (event) {
+      state.facilities.filters.scenario = event.target.value;
+      renderFacilityStats();
+      renderFacilityTable();
+      applyFacilityMapFilter();
+    });
+    $('facility-province').addEventListener('change', function (event) {
+      state.facilities.filters.province = event.target.value;
+      renderFacilityStats();
+      renderFacilityTable();
+      applyFacilityMapFilter();
+      fitFacilityMap();
+    });
+    $('facility-class').addEventListener('change', function (event) {
+      state.facilities.filters.facilityClass = event.target.value;
+      renderFacilityStats();
+      renderFacilityTable();
+      applyFacilityMapFilter();
+      updateFacilityMapCount();
+    });
+    $('facility-reset').addEventListener('click', function () {
+      state.facilities.filters.scenario = state.facilities.data.default_scenario;
+      state.facilities.filters.province = 'all';
+      state.facilities.filters.facilityClass = 'all';
+      $('facility-scenario').value = state.facilities.filters.scenario;
+      $('facility-province').value = 'all';
+      $('facility-class').value = 'all';
+      renderFacilityStats();
+      renderFacilityTable();
+      applyFacilityMapFilter();
+      fitFacilityMap();
+    });
+  }
+
+  function facilityFilteredRows() {
+    var scenario = facilityScenario();
+    if (!scenario) return [];
+    var province = state.facilities.filters.province;
+    var facilityClass = state.facilities.filters.facilityClass;
+    return scenario.rows.filter(function (row) {
+      if (province !== 'all' && row.province !== province) return false;
+      if (facilityClass !== 'all' && row.facility_class !== facilityClass) return false;
+      return true;
+    });
+  }
+
+  function facilityFilteredFeatures() {
+    var province = state.facilities.filters.province;
+    var facilityClass = state.facilities.filters.facilityClass;
+    return state.facilities.features.filter(function (feature) {
+      var properties = feature.properties;
+      if (province !== 'all' && properties.province !== province) return false;
+      if (facilityClass !== 'all' && properties.class !== facilityClass) return false;
+      return true;
+    });
+  }
+
+  function renderFacilities() {
+    renderFacilityStats();
+    renderFacilityLegend();
+    renderFacilityTable();
+    updateFacilityMapCount();
+  }
+
+  function renderFacilityStats() {
+    var data = state.facilities.data;
+    var manifest = state.facilities.manifest;
+    if (!data) return;
+    var scenario = facilityScenario();
+    var coverage = data.coverage;
+    $('facility-stat-records').textContent = fmt(coverage.record_count, 0);
+    $('facility-stat-records-note').textContent = coverage.class_count + ' classes · ' + coverage.province_count + ' provinces';
+    $('facility-stat-mapped').textContent = fmt(coverage.mapped_count, 0);
+    $('facility-stat-mapped-note').textContent = fmt(coverage.unlocated_count, 0) + ' unlocated · not invented';
+    $('facility-stat-evidence').textContent = fmt(coverage.published_count, 0) + ' / ' + fmt(coverage.proxy_count, 0);
+    $('facility-stat-evidence-note').textContent = coverage.not_published_count + ' no-capacity records';
+    $('facility-stat-capacity').textContent = fmt(coverage.published_capacity_m3_y / 1e6, 2);
+    $('facility-stat-capacity-note').textContent = 'published Mm³/yr · ' + fmt(coverage.proxy_capacity_m3_y / 1e6, 2) + ' proxy';
+    if (scenario) {
+      $('facility-stat-scenario').textContent = fmt(scenario.assigned_m3 / 1e6, 3);
+      $('facility-stat-scenario-note').textContent = 'Mm³ assigned · ' + fmtPct(scenario.capacity_utilization, 1) + ' all eligible';
+    }
+    $('facility-side-stats').innerHTML =
+      '<div><dt>Records</dt><dd>' + fmt(coverage.record_count, 0) + '</dd></div>' +
+      '<div><dt>Mapped / unlocated</dt><dd>' + fmt(coverage.mapped_count, 0) + ' / ' + fmt(coverage.unlocated_count, 0) + '</dd></div>' +
+      '<div><dt>Provinces</dt><dd>' + coverage.province_count + '</dd></div>' +
+      '<div><dt>Published count</dt><dd>' + fmt(coverage.published_count, 0) + '</dd></div>' +
+      '<div><dt>Proxy count</dt><dd>' + fmt(coverage.proxy_count, 0) + '</dd></div>' +
+      '<div><dt>Published capacity</dt><dd>' + fmt(coverage.published_capacity_m3_y / 1e6, 2) + ' Mm³</dd></div>' +
+      '<div><dt>Proxy capacity</dt><dd>' + fmt(coverage.proxy_capacity_m3_y / 1e6, 2) + ' Mm³</dd></div>' +
+      '<div><dt>Assignment scenario</dt><dd>' + esc(scenario ? scenario.id : '—') + '</dd></div>' +
+      '<div><dt>Assigned</dt><dd>' + fmt(scenario ? scenario.assigned_m3 / 1e6 : null, 3) + ' Mm³</dd></div>' +
+      '<div><dt>Facilities used</dt><dd>' + fmt(scenario ? scenario.facilities_used : null, 0) + '</dd></div>';
+    var unlocatedNote = $('facility-unlocated-note');
+    if (coverage.unlocated_count > 0) {
+      unlocatedNote.hidden = false;
+      unlocatedNote.innerHTML = '<strong>' + fmt(coverage.unlocated_count, 0) + ' records lack coordinates</strong>' +
+        '<p>They remain in the province × class table but are not plotted. Provinces: ' +
+        esc((coverage.unlocated_provinces || []).join(', ')) + '. No province centroid or jittered point is substituted.</p>';
+    } else {
+      unlocatedNote.hidden = true;
+      unlocatedNote.innerHTML = '';
+    }
+    if (manifest) {
+      var generated = manifest.generated[0];
+      $('facility-evidence-note').innerHTML =
+        'Static export <span class="mono">' + esc(generated.path) + '</span> · ' + esc(fmtBytes(generated.bytes)) +
+        ' · sha256 <span class="mono" title="' + esc(generated.sha256) + '">' + esc(generated.sha256.slice(0, 16)) + '…</span>' +
+        ' · ' + manifest.sources.length + ' source hashes · labels model_estimate / observed=false / policy_grade=false.';
+      $('facility-export-note').innerHTML =
+        'Read-only static JSON from committed CSVs. Manifest <a href="' + esc(DATA_ROOT + FACILITY_MANIFEST_PATH) + '" download>facilities/manifest.json</a>' +
+        ' · payload <a href="' + esc(DATA_ROOT + FACILITY_DATA_PATH) + '" download>facilities/facilities.json</a>' +
+        ' · generated ' + esc(fmtDate(data.generated_utc)) + '. No LP, OSeCAN, or run control is present in this view.';
+    }
+  }
+
+  function renderFacilityLegend() {
+    var data = state.facilities.data;
+    if (!data) return;
+    $('facility-legend-items').innerHTML = data.classes.map(function (facilityClass) {
+      return '<div class="legend-class facility-legend-row">' +
+        '<i style="background:' + esc(facilityClass.color) + '"></i>' +
+        '<span>' + esc(facilityClass.label) + '</span>' +
+        '<b class="mono">' + fmt(facilityClass.record_count, 0) + '</b></div>';
+    }).join('');
+    $('facility-legend').hidden = false;
+  }
+
+  function facilityClassColor(classId) {
+    var meta = facilityClassMeta(classId);
+    return meta ? meta.color : '#b9b09b';
+  }
+
+  function renderFacilityTable() {
+    var data = state.facilities.data;
+    if (!data) return;
+    var scenario = facilityScenario();
+    var rows = facilityFilteredRows();
+    var table = $('facilities-table');
+    var province = state.facilities.filters.province;
+    var facilityClass = state.facilities.filters.facilityClass;
+    var totalRecords = rows.reduce(function (sum, row) { return sum + row.record_count; }, 0);
+    var totalPublished = rows.reduce(function (sum, row) { return sum + row.published_capacity_m3_y; }, 0);
+    var totalProxy = rows.reduce(function (sum, row) { return sum + row.proxy_capacity_m3_y; }, 0);
+    var totalAssigned = rows.reduce(function (sum, row) { return sum + row.assigned_m3_y; }, 0);
+    var totalEligibleCapacity = rows.reduce(function (sum, row) { return sum + row.eligible_capacity_m3_y; }, 0);
+    var totalPublishedRecords = rows.reduce(function (sum, row) { return sum + row.published_count; }, 0);
+    var totalProxyRecords = rows.reduce(function (sum, row) { return sum + row.proxy_count; }, 0);
+    var totalNoneRecords = rows.reduce(function (sum, row) { return sum + row.not_published_count; }, 0);
+    var utilization = totalEligibleCapacity > 0 ? totalAssigned / totalEligibleCapacity : null;
+    var tableHint = window.matchMedia(MOBILE_RAIL_QUERY).matches
+      ? ' Swipe the table sideways for assigned, utilization and evidence.'
+      : '';
+    $('facility-table-status').textContent =
+      'Showing ' + rows.length + ' province × class rows · ' + fmt(totalRecords, 0) + ' records · ' +
+      esc(scenario ? scenario.id : '—') + ' assignment · province ' +
+      (province === 'all' ? 'all' : province) + ' · class ' + (facilityClass === 'all' ? 'all' : facilityClass) + '.' +
+      tableHint;
+
+    var bodyRows = rows.map(function (row) {
+      var color = facilityClassColor(row.facility_class);
+      var crossBorder = row.cross_border_m3_y > 0
+        ? '<small class="facility-subnote">cross-border ' + fmt(row.cross_border_m3_y / 1e6, 3) + '</small>'
+        : '<small class="facility-subnote">local-first</small>';
+      return '<tr data-province="' + esc(row.province) + '" data-class="' + esc(row.facility_class) + '">' +
+        '<td>' + esc(row.province_label) + ' <span class="mono muted">' + esc(row.province) + '</span></td>' +
+        '<td><span class="facility-class-dot" style="background:' + esc(color) + '"></span>' + esc(row.class_label) +
+          ' <span class="mono muted">' + esc(row.facility_class) + '</span></td>' +
+        '<td class="num">' + fmt(row.record_count, 0) + '</td>' +
+        '<td class="num">' + fmt(row.published_capacity_m3_y / 1e6, 3) + '</td>' +
+        '<td class="num">' + fmt(row.proxy_capacity_m3_y / 1e6, 3) + '</td>' +
+        '<td class="num">' + fmt(row.assigned_m3_y / 1e6, 3) + crossBorder + '</td>' +
+        '<td class="num">' + (row.utilization === null ? '—' : fmtPct(row.utilization, 1)) + '</td>' +
+        '<td><span class="evidence-pill evidence-pill--pub" title="Published capacity records">PUB ' + fmt(row.published_count, 0) + '</span>' +
+        '<span class="evidence-pill evidence-pill--proxy" title="Class-median proxy capacity records">PRX ' + fmt(row.proxy_count, 0) + '</span>' +
+        '<span class="evidence-pill evidence-pill--none" title="No accepted capacity evidence">N/A ' + fmt(row.not_published_count, 0) + '</span>' +
+        '<small class="facility-subnote">model_estimate</small></td>' +
+        '</tr>';
+    }).join('');
+    if (!rows.length) {
+      bodyRows = '<tr><td colspan="8" class="facility-empty">No province × class rows match the selected filters.</td></tr>';
+    }
+    table.innerHTML =
+      '<caption>Capacity v3 base joined to chain v6 assignment. Capacity in Mm³/yr; assigned volume local-first. Utilization = assigned ÷ eligible capacity (located, operating records after proxy floor scaling).</caption>' +
+      '<thead><tr><th>Province</th><th>Class</th><th class="num">Records</th>' +
+      '<th class="num">Published<br>Mm³/yr</th><th class="num">Proxy<br>Mm³/yr</th>' +
+      '<th class="num">Assigned<br>Mm³/yr</th><th class="num">Utilization</th><th>Evidence</th></tr></thead>' +
+      '<tbody>' + bodyRows + '</tbody>' +
+      '<tfoot><tr><th colspan="2">Visible total</th>' +
+      '<td class="num">' + fmt(totalRecords, 0) + '</td>' +
+      '<td class="num">' + fmt(totalPublished / 1e6, 3) + '</td>' +
+      '<td class="num">' + fmt(totalProxy / 1e6, 3) + '</td>' +
+      '<td class="num">' + fmt(totalAssigned / 1e6, 3) + '</td>' +
+      '<td class="num">' + (utilization === null ? '—' : fmtPct(utilization, 1)) + '</td>' +
+      '<td><span class="evidence-pill evidence-pill--pub">PUB ' + fmt(totalPublishedRecords, 0) + '</span>' +
+      '<span class="evidence-pill evidence-pill--proxy">PRX ' + fmt(totalProxyRecords, 0) + '</span>' +
+      '<span class="evidence-pill evidence-pill--none">N/A ' + fmt(totalNoneRecords, 0) + '</span></td>' +
+      '</tr></tfoot>';
+  }
+
+  function facilityPopupHtml(facility) {
+    var scenario = facilityScenario();
+    var assignment = scenario && scenario.facility_assignments ? scenario.facility_assignments[facility.id] : null;
+    var capacity = facility.capacity_m3_y === null
+      ? '—'
+      : fmt(facility.capacity_m3_y, 0) + ' m³/yr';
+    var assigned = assignment && assignment.assigned_m3_y !== null
+      ? fmt(assignment.assigned_m3_y, 0) + ' m³/yr'
+      : 'not assigned';
+    var utilization = assignment && assignment.utilization !== null
+      ? fmtPct(assignment.utilization, 1)
+      : '—';
+    var sourceUrl = facility.source_url || facility.capacity_source_url;
+    var source = facility.source_id || facility.capacity_source_id || '—';
+    var sourceHtml = sourceUrl
+      ? '<a href="' + esc(sourceUrl) + '" target="_blank" rel="noopener">' + esc(source) + '</a>'
+      : esc(source);
+    return '<h4>' + esc(facility.name) + '</h4>' +
+      '<p class="facility-popup-sub"><span class="facility-class-dot" style="background:' + esc(facilityClassColor(facility.facility_class)) + '"></span>' +
+      esc(facilityClassMeta(facility.facility_class) ? facilityClassMeta(facility.facility_class).label : facility.facility_class) +
+      ' · ' + esc(facility.province) + ' · tier ' + esc(facility.evidence_tier || '—') + '</p>' +
+      '<div class="popup-grid">' +
+      '<span>Capacity</span><b>' + esc(capacity) + '</b>' +
+      '<span>Capacity status</span><b>' + esc(facility.capacity_status) + '</b>' +
+      '<span>Operating status</span><b>' + esc(facility.status || 'unknown') + '</b>' +
+      '<span>' + esc(scenario ? scenario.id : 'Scenario') + ' assigned</span><b>' + esc(assigned) + '</b>' +
+      '<span>Utilization</span><b>' + esc(utilization) + '</b>' +
+      '<span>Source</span><b>' + sourceHtml + '</b>' +
+      '</div>' +
+      '<p class="facility-popup-note">model_estimate · observed=false · policy_grade=false. Capacity basis: ' +
+      esc(facility.capacity_basis || facility.capacity_evidence || 'not stated') + '.</p>' +
+      (facility.mapped ? '' : '<p class="facility-popup-note">Location unknown; this record is not mapped.</p>');
+  }
+
+  function initFacilityMap() {
+    var data = state.facilities.data;
+    var mapState = $('facility-map-state');
+    if (typeof window.maplibregl === 'undefined') {
+      mapState.classList.add('is-error');
+      mapState.textContent = 'MapLibre GL failed to load. Check vendor/maplibregl.js.';
+      return;
+    }
+    state.facilities.features = data.facilities.filter(function (facility) {
+      return facility.mapped;
+    }).map(function (facility) {
+      return {
+        type: 'Feature',
+        id: facility.id,
+        properties: {
+          id: facility.id,
+          name: facility.name,
+          class: facility.facility_class,
+          province: facility.province,
+          capacity_m3_y: facility.capacity_m3_y,
+          capacity_status: facility.capacity_status,
+          status: facility.status || 'unknown',
+          evidence_tier: facility.evidence_tier,
+          source_id: facility.source_id,
+          source_url: facility.source_url,
+          capacity_source_id: facility.capacity_source_id,
+          capacity_source_url: facility.capacity_source_url,
+          capacity_basis: facility.capacity_basis,
+          capacity_evidence: facility.capacity_evidence
+        },
+        geometry: { type: 'Point', coordinates: [facility.lon, facility.lat] }
+      };
+    });
+    var map = new window.maplibregl.Map({
+      container: 'facility-map',
+      style: {
+        version: 8,
+        sources: {},
+        layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#0c1f19' } }]
+      },
+      center: [-101, 58],
+      zoom: 2.6,
+      minZoom: 1.6,
+      maxZoom: 9,
+      attributionControl: false,
+      dragRotate: false
+    });
+    state.facilities.map = map;
+    map.addControl(new window.maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    map.addControl(new window.maplibregl.ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
+    map.on('load', function () {
+      map.addSource('facility-provinces', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: state.facilities.provinceFeatures }
+      });
+      map.addLayer({
+        id: 'facility-province-fill',
+        type: 'fill',
+        source: 'facility-provinces',
+        paint: { 'fill-color': '#17382c', 'fill-opacity': 0.94 }
+      });
+      map.addLayer({
+        id: 'facility-province-line',
+        type: 'line',
+        source: 'facility-provinces',
+        paint: { 'line-color': '#cfc09c', 'line-width': 1.1, 'line-opacity': 0.84 }
+      });
+      map.addSource('facility-points', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: state.facilities.features }
+      });
+      var colorExpression = ['match', ['get', 'class']];
+      data.classes.forEach(function (facilityClass) {
+        colorExpression.push(facilityClass.id, facilityClass.color);
+      });
+      colorExpression.push('#b9b09b');
+      map.addLayer({
+        id: 'facility-points-halo',
+        type: 'circle',
+        source: 'facility-points',
+        paint: {
+          'circle-radius': 7.2,
+          'circle-color': colorExpression,
+          'circle-opacity': 0.16,
+          'circle-blur': 0.4
+        }
+      });
+      map.addLayer({
+        id: 'facility-points',
+        type: 'circle',
+        source: 'facility-points',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 2, 3.1, 4, 4.6, 7, 6.2],
+          'circle-color': colorExpression,
+          'circle-opacity': 0.92,
+          'circle-stroke-color': '#0c1f19',
+          'circle-stroke-width': 0.85
+        }
+      });
+      map.on('click', 'facility-points', function (event) {
+        var feature = event.features && event.features[0];
+        if (!feature) return;
+        var facility = facilityById().get(feature.properties.id);
+        if (!facility) return;
+        new window.maplibregl.Popup({ closeButton: true, offset: 12, maxWidth: '330px' })
+          .setLngLat(facility.lon !== null && facility.lat !== null ? [facility.lon, facility.lat] : event.lngLat)
+          .setHTML(facilityPopupHtml(facility))
+          .addTo(map);
+      });
+      map.on('mouseenter', 'facility-points', function () { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'facility-points', function () { map.getCanvas().style.cursor = ''; });
+      mapState.hidden = true;
+      state.facilities.mapLoaded = true;
+      applyFacilityMapFilter();
+      map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 0 });
+      updateFacilityMapCount();
+      map.resize();
+    });
+  }
+
+  function applyFacilityMapFilter() {
+    var map = state.facilities.map;
+    if (!map || !state.facilities.mapLoaded) {
+      updateFacilityMapCount();
+      return;
+    }
+    var province = state.facilities.filters.province;
+    var facilityClass = state.facilities.filters.facilityClass;
+    var filters = [];
+    if (province !== 'all') filters.push(['==', ['get', 'province'], province]);
+    if (facilityClass !== 'all') filters.push(['==', ['get', 'class'], facilityClass]);
+    var expression = filters.length ? ['all'].concat(filters) : null;
+    map.setFilter('facility-points', expression);
+    if (map.getLayer('facility-points-halo')) map.setFilter('facility-points-halo', expression);
+    updateFacilityMapCount();
+  }
+
+  function updateFacilityMapCount() {
+    var el = $('facility-map-count');
+    if (!el || !state.facilities.data) return;
+    var features = facilityFilteredFeatures();
+    var rows = facilityFilteredRows();
+    var records = rows.reduce(function (sum, row) { return sum + row.record_count; }, 0);
+    var unlocated = rows.reduce(function (sum, row) { return sum + row.unlocated_count; }, 0);
+    el.textContent = fmt(features.length, 0) + ' mapped · ' + fmt(records, 0) +
+      ' records · ' + fmt(unlocated, 0) + ' unlocated';
+  }
+
+  function fitFacilityMap() {
+    var map = state.facilities.map;
+    if (!map) return;
+    var province = state.facilities.filters.province;
+    if (province === 'all') {
+      map.fitBounds(CANADA_BOUNDS, { padding: CANADA_FIT_OPTIONS.padding, duration: 650 });
+      return;
+    }
+    var feature = state.facilities.provinceByIso && state.facilities.provinceByIso.get(facilityProvinceIso(province));
+    if (!feature || !feature._bbox) return;
+    map.fitBounds(
+      [[feature._bbox[0], feature._bbox[1]], [feature._bbox[2], feature._bbox[3]]],
+      { padding: 40, duration: 650, maxZoom: 6 }
+    );
+  }
+
   /* ---------------- Boot ---------------- */
 
   async function init() {
@@ -7602,6 +8212,7 @@
     if (state.economicsChart) state.economicsChart.resize();
     if (state.nationalNetValueChart) state.nationalNetValueChart.resize();
     if (state.mapState.map) state.mapState.map.resize();
+    if (state.facilities.map) state.facilities.map.resize();
     if (state.tab === 'explore') {
       if (state.paretoChart) state.paretoChart.resize();
       if (state.compareChart) state.compareChart.resize();
