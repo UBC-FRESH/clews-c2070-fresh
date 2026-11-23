@@ -26,6 +26,7 @@ MANIFEST_JSON = OUTPUT_DIR / "manifest.json"
 COMPARISON_CSV = OUTPUT_DIR / "v6_v8_comparison.csv"
 DISTANCE_CSV = OUTPUT_DIR / "facility_distance_comparison.csv"
 PROVINCE_DISTANCE_CSV = OUTPUT_DIR / "province_distance_comparison.csv"
+SCENARIO_COMPARISON_CSV = OUTPUT_DIR / "scenario_assignment_comparison.csv"
 FACTOR_COMPARISON_CSV = OUTPUT_DIR / "province_factor_comparison.csv"
 CAPACITY_FLOOR_CSV = OUTPUT_DIR / "capacity_floor.csv"
 REPORT_MD = OUTPUT_DIR / "NATIONAL_FACILITY_ASSIGNMENT_V8.md"
@@ -67,6 +68,7 @@ def test_outputs_exist_and_labels(summary) -> None:
         COMPARISON_CSV,
         DISTANCE_CSV,
         PROVINCE_DISTANCE_CSV,
+        SCENARIO_COMPARISON_CSV,
         FACTOR_COMPARISON_CSV,
         CAPACITY_FLOOR_CSV,
         REPORT_MD,
@@ -81,7 +83,9 @@ def test_outputs_exist_and_labels(summary) -> None:
         "policy_grade": False,
         "national_claim": False,
         "official_osecan_changed": False,
-        "assignment_change_vs_v6": False,
+        "assignment_change_vs_v6": True,
+        "primary_assignment_change_vs_v6": False,
+        "reference_assignment_change_vs_v6": True,
         "capacity_change": False,
         "product_change": False,
         "residue_change": False,
@@ -228,7 +232,43 @@ def test_distance_comparison_arithmetic() -> None:
     assert distance["assignment_changed"] is False
     assert distance["moved_volume_m3"] == 0.0
     assert distance["changed_provinces"] == []
-    assert summary["labels"]["assignment_change_vs_v6"] is False
+    assert summary["labels"]["primary_assignment_change_vs_v6"] is False
+
+
+def test_scenario_assignment_comparison() -> None:
+    rows = _read_csv(SCENARIO_COMPARISON_CSV)
+    assert list(rows[0]) == v8.SCENARIO_COMPARISON_FIELDS
+    by_scenario = {row["scenario"]: row for row in rows}
+    assert set(by_scenario) == set(v8.SCENARIOS)
+    primary = by_scenario[v8.PRIMARY_SCENARIO]
+    assert primary["assignment_changed"] == "false"
+    assert float(primary["moved_volume_m3"]) == 0.0
+    assert primary["changed_provinces"] == ""
+    reference = [
+        row
+        for row in rows
+        if row["scenario"] != v8.PRIMARY_SCENARIO
+    ]
+    assert any(row["assignment_changed"] == "true" for row in reference)
+    for row in rows:
+        for field in (
+            "v6_assigned_m3",
+            "v8_assigned_m3",
+            "v6_local_m3",
+            "v8_local_m3",
+            "v6_cross_border_m3",
+            "v8_cross_border_m3",
+        ):
+            assert math.isfinite(float(row[field]))
+        assert float(row["v6_assigned_m3"]) == pytest.approx(
+            float(row["v8_assigned_m3"]), abs=1e-6
+        )
+        assert float(row["v6_local_m3"]) == pytest.approx(
+            float(row["v8_local_m3"]), abs=1e-6
+        )
+        assert float(row["v6_cross_border_m3"]) == pytest.approx(
+            float(row["v8_cross_border_m3"]), abs=1e-6
+        )
 
 
 def test_capacity_floor_and_capacity_unchanged() -> None:
@@ -255,6 +295,24 @@ def test_capacity_floor_and_capacity_unchanged() -> None:
             "capacity_floor_status",
         ):
             assert row[field] == old[province][field]
+    floor_capacities = {
+        row["facility_id"]: (row["capacity_m3_y_after"], row["capacity_status_after"])
+        for row in _read_csv(OUTPUT_DIR / "capacity_floor_facilities.csv")
+    }
+    base_capacities = {
+        row["facility_id"]: (row["capacity_m3_y"], row["capacity_status"])
+        for row in _read_csv(v8.CAPACITY_CSV)
+    }
+    for row in _read_csv(ASSIGNMENT_CSV):
+        expected = (
+            floor_capacities[row["facility_id"]]
+            if row["scenario"] == v8.PRIMARY_SCENARIO
+            else base_capacities[row["facility_id"]]
+        )
+        assert float(row["capacity_m3_y"]) == pytest.approx(
+            float(expected[0]), abs=1e-6
+        )
+        assert row["capacity_status"] == expected[1]
     summary = json.loads(SUMMARY_JSON.read_text(encoding="utf-8"))
     assert summary["validation"]["capacity_floor_unchanged"] is True
     assert summary["labels"]["capacity_change"] is False

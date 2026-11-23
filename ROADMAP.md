@@ -887,11 +887,13 @@ decide what blocks production readiness after the conceptual alpha.
   assigns 118.977 Mm3 with 118.941 Mm3 local, 36,376 m3 cross-border, 39.89%
   proxy, 208 facilities and HHI 0.01287, identical to v6 because a uniform
   province factor cannot reorder local candidates; the NT residual recipient
-  did not switch. Volume-weighted mean road distance rises 402.12 to 558.54 km
-  (+38.9%). Labels remain `model_estimate` / `observed=false` /
-  `policy_grade=false`; no national single factor, no national claim, no UI or
-  official OSeCAN change. Fourteen focused tests pass; 111 existing
-  assignment/audit/UI tests pass. No unexpected `D`.
+  did not switch. The two reference scenarios change only cross-border
+  destinations (NT in `published_plus_proxy`, MB in `published_only`); their
+  local/cross-border totals are unchanged. Volume-weighted mean road distance
+  rises 402.12 to 558.54 km (+38.9%). Labels remain `model_estimate` /
+  `observed=false` / `policy_grade=false`; no national single factor, no
+  national claim, no UI or official OSeCAN change. Fifteen focused tests pass;
+  111 existing assignment/audit/UI tests pass. No unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

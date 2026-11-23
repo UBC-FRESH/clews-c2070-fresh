@@ -159,6 +159,29 @@ PROVINCE_DISTANCE_FIELDS = [
     "v8_total_volume_distance_m3_km",
     "delta_total_volume_distance_m3_km",
 ]
+SCENARIO_COMPARISON_FIELDS = [
+    "scenario",
+    "n_rows_v6",
+    "n_rows_v8",
+    "n_rows_common",
+    "n_rows_added",
+    "n_rows_removed",
+    "moved_volume_m3",
+    "changed_provinces",
+    "assignment_changed",
+    "v6_assigned_m3",
+    "v8_assigned_m3",
+    "v6_local_m3",
+    "v8_local_m3",
+    "v6_cross_border_m3",
+    "v8_cross_border_m3",
+    "v6_proxy_share_of_assigned",
+    "v8_proxy_share_of_assigned",
+    "v6_facilities_used",
+    "v8_facilities_used",
+    "v6_hhi",
+    "v8_hhi",
+]
 
 COMPARISON_METRICS = (
     ("assigned_m3", "m3/yr", "volume assigned to facilities"),
@@ -200,6 +223,10 @@ COMPARISON_METRICS = (
 
 class AssignmentV8Error(v6.AssignmentV6Error):
     """Raised when a province-factor assignment invariant fails."""
+
+
+def _bool_text(value: bool) -> str:
+    return "true" if value else "false"
 
 
 def _read_csv(path: Path, label: str) -> list[dict[str, str]]:
@@ -634,6 +661,94 @@ def _province_distance_rows(
     return rows
 
 
+def _scenario_comparison_rows(
+    v6_rows: Sequence[dict[str, str]],
+    v8_rows: Sequence[dict[str, Any]],
+    *,
+    v6_summary: Mapping[str, Any],
+    v8_metrics: Mapping[str, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for scenario in SCENARIOS:
+        old = {
+            (row["province"], row["facility_id"]): row
+            for row in v6_rows
+            if row["scenario"] == scenario
+        }
+        new = {
+            (row["province"], row["facility_id"]): row
+            for row in v8_rows
+            if row["scenario"] == scenario
+        }
+        keys = set(old) | set(new)
+        moved = 0.0
+        changed_provinces: set[str] = set()
+        added = 0
+        removed = 0
+        for key in keys:
+            before = old.get(key)
+            after = new.get(key)
+            before_assigned = (
+                float(before["assigned_m3"]) if before else 0.0
+            )
+            after_assigned = float(after["assigned_m3"]) if after else 0.0
+            delta = after_assigned - before_assigned
+            if delta > VOLUME_EPSILON_M3:
+                moved += delta
+            if abs(delta) > VOLUME_EPSILON_M3:
+                changed_provinces.add(key[0])
+            if before is None:
+                added += 1
+            elif after is None:
+                removed += 1
+        old_metrics = v6_summary["scenarios"][scenario]
+        new_metrics = v8_metrics[scenario]
+        rows.append(
+            {
+                "scenario": scenario,
+                "n_rows_v6": len(old),
+                "n_rows_v8": len(new),
+                "n_rows_common": len(set(old) & set(new)),
+                "n_rows_added": added,
+                "n_rows_removed": removed,
+                "moved_volume_m3": a2._format_float(moved),
+                "changed_provinces": ";".join(sorted(changed_provinces)),
+                "assignment_changed": _bool_text(
+                    moved > VOLUME_EPSILON_M3
+                ),
+                "v6_assigned_m3": a2._format_float(
+                    float(old_metrics["assigned_m3"])
+                ),
+                "v8_assigned_m3": a2._format_float(
+                    float(new_metrics["assigned_m3"])
+                ),
+                "v6_local_m3": a2._format_float(
+                    float(old_metrics["local_m3"])
+                ),
+                "v8_local_m3": a2._format_float(
+                    float(new_metrics["local_m3"])
+                ),
+                "v6_cross_border_m3": a2._format_float(
+                    float(old_metrics["cross_border_m3"])
+                ),
+                "v8_cross_border_m3": a2._format_float(
+                    float(new_metrics["cross_border_m3"])
+                ),
+                "v6_proxy_share_of_assigned": a2._format_float(
+                    old_metrics.get("proxy_share_of_assigned")
+                ),
+                "v8_proxy_share_of_assigned": a2._format_float(
+                    new_metrics.get("proxy_share_of_assigned")
+                ),
+                "v6_facilities_used": old_metrics["facilities_used"],
+                "v8_facilities_used": new_metrics["facilities_used"],
+                "v6_hhi": a2._format_float(old_metrics.get("hhi")),
+                "v8_hhi": a2._format_float(new_metrics.get("hhi")),
+            }
+        )
+    return rows
+
+
 def _validate_rows(
     *,
     results: Mapping[str, a2.ScenarioResult],
@@ -844,13 +959,43 @@ def _report(summary: dict[str, Any]) -> str:
                 )
             ),
             "",
+            "## Scenario assignment comparison",
+            "",
+            (
+                "| Scenario | V6 rows | V8 rows | Moved m3 | Changed provinces | "
+                "Proxy share v6/v8 | Facilities v6/v8 | HHI v6/v8 |"
+            ),
+            "|---|---:|---:|---:|---|---:|---:|---:|",
+        ]
+    )
+    for row in summary["scenario_assignment_comparison"]:
+        lines.append(
+            f"| {row['scenario']} | {row['n_rows_v6']} | "
+            f"{row['n_rows_v8']} | {row['moved_volume_m3']} | "
+            f"{row['changed_provinces'] or 'none'} | "
+            f"{row['v6_proxy_share_of_assigned'] or 'n/a'}/"
+            f"{row['v8_proxy_share_of_assigned'] or 'n/a'} | "
+            f"{row['v6_facilities_used']}/{row['v8_facilities_used']} | "
+            f"{row['v6_hhi'] or 'n/a'}/{row['v8_hhi'] or 'n/a'} |"
+        )
+    lines.extend(
+        [
+            "",
+            (
+                "The primary 119 Mm3 floor scenario is composition-identical to "
+                "v6. The reference scenarios change only cross-border "
+                "destinations; their local and cross-border totals are "
+                "unchanged."
+            ),
+            "",
             "## Province factors",
             "",
             (
                 "| Province | Factor v6 | Factor v8 | Delta % | n | IQR | "
                 "90% CI | Flags |"
             ),
-            "|---|---:|---:|---:|---:|---:|---|---|",        ]
+            "|---|---:|---:|---:|---:|---:|---|---|",
+        ]
     )
     for row in summary["province_factors"]:
         lines.append(
@@ -993,6 +1138,20 @@ def build(
     distance_rows, distance_summary = _distance_comparison(
         v6_rows, augmented, factors=factors
     )
+    scenario_comparison = _scenario_comparison_rows(
+        v6_rows,
+        augmented,
+        v6_summary=v6_summary,
+        v8_metrics=metrics,
+    )
+    any_assignment_change = any(
+        row["assignment_changed"] == "true" for row in scenario_comparison
+    )
+    reference_assignment_change = any(
+        row["assignment_changed"] == "true"
+        for row in scenario_comparison
+        if row["scenario"] != PRIMARY_SCENARIO
+    )
     v6_primary = dict(v6_summary["scenarios"][PRIMARY_SCENARIO])
     v8_primary = dict(metrics[PRIMARY_SCENARIO])
     v6_primary.update(
@@ -1044,9 +1203,13 @@ def build(
             "policy_grade": POLICY_GRADE,
             "national_claim": False,
             "official_osecan_changed": False,
-            "assignment_change_vs_v6": distance_summary[
+            "assignment_change_vs_v6": any_assignment_change,
+            "primary_assignment_change_vs_v6": distance_summary[
                 "assignment_changed"
             ],
+            "reference_assignment_change_vs_v6": (
+                reference_assignment_change
+            ),
             "capacity_change": False,
             "product_change": False,
             "residue_change": False,
@@ -1104,6 +1267,7 @@ def build(
         },
         "v6_v8_comparison": comparison,
         "distance_comparison": distance_summary,
+        "scenario_assignment_comparison": scenario_comparison,
         "distance_rows": distance_rows,
         "province_factors": province_factors,
         "province_distance_comparison": province_distance,
@@ -1191,6 +1355,9 @@ def build(
             ),
             "province_distance_comparison_csv": (
                 "province_distance_comparison.csv"
+            ),
+            "scenario_assignment_comparison_csv": (
+                "scenario_assignment_comparison.csv"
             ),
             "report_md": "NATIONAL_FACILITY_ASSIGNMENT_V8.md",
         },
@@ -1296,6 +1463,11 @@ def build(
         PROVINCE_DISTANCE_FIELDS,
         province_distance,
     )
+    a2._write_csv(
+        output_dir / "scenario_assignment_comparison.csv",
+        SCENARIO_COMPARISON_FIELDS,
+        scenario_comparison,
+    )
     (output_dir / "NATIONAL_FACILITY_ASSIGNMENT_V8.md").write_text(
         _report(summary), encoding="utf-8"
     )
@@ -1323,6 +1495,7 @@ def build(
         },
         "distance_comparison": distance_summary,
         "province_distance_comparison": province_distance,
+        "scenario_assignment_comparison": scenario_comparison,
         "validation": summary["validation"],
         "reproduce": summary["reproduce"],
     }
@@ -1350,6 +1523,9 @@ def main() -> None:
                 "hhi_delta": comparison["hhi"]["delta_v8_minus_v6"],
                 "assignment_changed": summary["distance_comparison"][
                     "assignment_changed"
+                ],
+                "any_assignment_change": summary["labels"][
+                    "assignment_change_vs_v6"
                 ],
                 "moved_volume_m3": summary["distance_comparison"][
                     "moved_volume_m3"

@@ -18,12 +18,14 @@
   floor, products and residue unchanged. At 119 Mm3 it assigns 118.977 Mm3
   (118.941 local, 36,376 cross-border), 39.89% proxy, 208 facilities, HHI
   0.01287, identical to v6 because a uniform province factor cannot reorder
-  local candidates; the NT residual recipient did not switch. Volume-weighted
-  mean road distance rises 402.12 to 558.54 km (+38.9%). Labels remain
-  `model_estimate` / `observed=false` / `policy_grade=false`; no national
-  single factor, no national claim, no UI or official OSeCAN change. Fourteen
-  focused tests pass and 111 existing assignment/audit/UI tests pass. No
-  unexpected `D`.
+  local candidates; the NT residual recipient did not switch. The two
+  reference scenarios change only cross-border destinations (NT in
+  `published_plus_proxy`, MB in `published_only`); their local/cross-border
+  totals are unchanged. Volume-weighted mean road distance rises 402.12 to
+  558.54 km (+38.9%). Labels remain `model_estimate` / `observed=false` /
+  `policy_grade=false`; no national single factor, no national claim, no UI or
+  official OSeCAN change. Fifteen focused tests pass and 111 existing
+  assignment/audit/UI tests pass. No unexpected `D`.
 
 - **Packaged the 12 D1/D2 OSeCAN candidate cases as read-only files.** Added
   `osecan_candidate_cases_v1.py`, its focused test, and
