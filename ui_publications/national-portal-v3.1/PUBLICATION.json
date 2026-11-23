@@ -1,0 +1,618 @@
+{
+  "schema_version": "clews.ui_publication.v1",
+  "release": {
+    "label": "National portal v3.1 static publication",
+    "tag": "ui-national-portal-v3.1",
+    "tag_type": "annotated",
+    "date": "2026-11-23",
+    "generated_utc": "2026-11-23T13:21:36Z",
+    "source_branch": "feature/osecan-zonal-bc-supply",
+    "source_commit": "24c3f281222c33dba8626967c134963ecebe8657"
+  },
+  "publication": {
+    "path": "ui_publications/national-portal-v3.1",
+    "type": "static_demo",
+    "static_only": true,
+    "backend": "none",
+    "live_solver": false,
+    "official_c2070": false,
+    "energy_policy_advice": false,
+    "entrypoint": "index.html",
+    "publication_guard": "publication-mode.js"
+  },
+  "counts": {
+    "scenarios": 53,
+    "families": 18,
+    "pareto_eligible": 1,
+    "dispatch_outputs": 53,
+    "data_manifest_files": 63,
+    "data_directory_files": 72,
+    "economics_rows": 945,
+    "national_jurisdictions": 13,
+    "facilities": 689,
+    "facilities_mapped": 608,
+    "facility_scenarios": 3,
+    "national_chain_rows": 3,
+    "national_base_margin_cad_m3": 43.0187,
+    "national_sensitivity_margin_cad_m3": -5.7444,
+    "forest_lp_net_value_allocation_rows": 117,
+    "forest_lp_net_value_groups": 18,
+    "forest_lp_net_value_documented_rows": 6,
+    "forest_lp_net_value_infeasible_rows": 4,
+    "allocation_net_value_lp_rows": 6,
+    "allocation_net_value_lp_province_shifts": 13,
+    "province_break_even_rows": 13,
+    "payload_manifest_files": 92
+  },
+  "economics": {
+    "headline": {
+      "rows": 945,
+      "zone_system_groups": 21,
+      "median_base_net_model_cad_m3": 48.84,
+      "min_base_net_model_cad_m3": -23.38,
+      "max_base_net_model_cad_m3": 86.85,
+      "negative_net_base_rows": 168,
+      "negative_net_base_share": 0.177778
+    },
+    "qc_reference": {
+      "reference_id": "qc_2022_sepm_purchased_wood_channel",
+      "geography": "QC",
+      "cost_spread_after_transfers_cad_m3": 0.81,
+      "net_value_status": "separate_reference_not_net_value",
+      "policy_grade": false
+    },
+    "labels": {
+      "evidence": "model_estimate",
+      "observed": false,
+      "policy_grade": false,
+      "price_basis": "mill_delivered_reported_average",
+      "cost_basis": "open_proxy_model",
+      "net_value_status": "model_estimate",
+      "qc_net_value_status": "separate_reference_not_net_value",
+      "source_licensing": "public_reference_copyrighted",
+      "combined_bc_qc_national_total": false,
+      "forest_lp_input": false,
+      "public_osecan_input": false
+    },
+    "downloads": {
+      "detail_csv": {
+        "label": "Full 945-row BC detail CSV",
+        "path": "economics/detail.csv",
+        "bytes": 816632,
+        "sha256": "1e1da49aa36be34218c942bffb66af4b2f3ce8d37e30bc9dc475d49744999dc7",
+        "rows": 945,
+        "media_type": "text/csv"
+      },
+      "model_inputs_zip": {
+        "label": "Model-input bundle (ZIP)",
+        "path": "economics/model_inputs.zip",
+        "bytes": 52828,
+        "sha256": "e933292a4d59161f996a4e2905db2bddcbc91efe35d3cfcc709e036ecbf482db",
+        "media_type": "application/zip",
+        "files": [
+          {
+            "path": "README.md",
+            "bytes": 3003,
+            "sha256": "dbde220cc833b794b4e3a2f8ef1fd674853fe5946ca90c9e5a617b56ea2ae5ac"
+          },
+          {
+            "path": "RUN.md",
+            "bytes": 1184,
+            "sha256": "2c345b3a1132a94745d3fbc7e07beabbd8615afd8b92501e705a9e59dd15f728"
+          },
+          {
+            "path": "bc_cost_inputs_used.csv",
+            "bytes": 1219305,
+            "sha256": "86b53a837935d8c45660fbc9b7f5f43bda5a535c57ae9376df0748ebb884b0d1"
+          },
+          {
+            "path": "bc_cost_parameters_used.csv",
+            "bytes": 22885,
+            "sha256": "2cfada94ce3f546083c9f7c15491a3a5ae824f77a6e41e3c43c4af91ee39f152"
+          },
+          {
+            "path": "bc_price_panel_used.csv",
+            "bytes": 113340,
+            "sha256": "cfd5b66720628296499e000c9167b69d3b26e9b127f1bdeac58478aa7833fd24"
+          },
+          {
+            "path": "input_manifest.json",
+            "bytes": 7249,
+            "sha256": "51124400f802f4264873e321fbef547e209381106ee41cf086bb3acd4ce5816e"
+          },
+          {
+            "path": "qc_reference_used.csv",
+            "bytes": 2204,
+            "sha256": "24d3811a8491b8f0af2ec34c5519db5093ebcaa6e323b183c3b23e5fc722de5c"
+          },
+          {
+            "path": "silviculture_inputs_used.csv",
+            "bytes": 13383,
+            "sha256": "debf394a33d04453d29a96adb607a36d2b45e53673d8d95e5b1a43f63507e27c"
+          },
+          {
+            "path": "sources.csv",
+            "bytes": 15605,
+            "sha256": "e2da1375d645862d0331727aad0384521f428b4f72e2adb0792541a4c6997b4b"
+          },
+          {
+            "path": "zone_region_mapping.csv",
+            "bytes": 1893,
+            "sha256": "14f39767bf9659ea591425aa14cfd2e4c157fc201ac63d4583f3b3e75af2c617"
+          }
+        ]
+      },
+      "manifest": {
+        "label": "Economics export manifest",
+        "path": "economics/manifest.json",
+        "media_type": "application/json"
+      }
+    }
+  },
+  "national_economics": {
+    "schema_version": "economics/national/3",
+    "model_id": "national_economics_v2_3",
+    "artifact_version": "2.3.0",
+    "coverage": {
+      "province_count": 13,
+      "provinces": [
+        "BC",
+        "AB",
+        "SK",
+        "MB",
+        "ON",
+        "QC",
+        "NB",
+        "NS",
+        "NL",
+        "PE",
+        "YT",
+        "NT",
+        "NU"
+      ],
+      "not_estimated_count": 0,
+      "jurisdiction_rows": 13,
+      "scenario_rows": 78,
+      "price_cell_count": 65,
+      "cost_cell_count": 13
+    },
+    "national_diagnostic": {
+      "donor_flat": {
+        "low_cad_m3": -32.1594,
+        "base_cad_m3": 43.0187,
+        "high_cad_m3": 75.5834,
+        "scenario_role": "base",
+        "volume_basis": "observed_2024_m3"
+      },
+      "stumpage_scaled": {
+        "low_cad_m3": -67.1392,
+        "base_cad_m3": -5.7444,
+        "high_cad_m3": 33.0932,
+        "scenario_role": "sensitivity",
+        "volume_basis": "observed_2024_m3"
+      }
+    },
+    "labels": {
+      "evidence": "model_estimate",
+      "observed": false,
+      "policy_grade": false,
+      "not_decision_grade": true,
+      "ranking_performed": false,
+      "combined_national_net_value": false,
+      "national_diagnostic_label": "model_estimate_not_policy",
+      "national_total_margin_label": "model_estimate_not_policy",
+      "total_margin_policy_result": false,
+      "strict_open": false,
+      "forest_lp_input": false,
+      "public_osecan_input": false
+    },
+    "payload": {
+      "path": "economics/national.json",
+      "bytes": 192285,
+      "sha256": "09857cc37e27a3b07d1716f0fcc94fefdc0b8fae0dc9e908ea1678d2bcf3e894"
+    },
+    "manifest": {
+      "path": "economics/national.manifest.json",
+      "bytes": 9209,
+      "sha256": "f2e405458c083642ed7373994a5d570cde795052928a2869040695a7a0023c02",
+      "sources": 25
+    },
+    "forest_lp_net_value_sensitivity": {
+      "model_id": "forest_lp_net_value_sensitivity_v1",
+      "artifact_version": "1.0.0",
+      "coverage": {
+        "allocation_source": "out/forest_lp_v1/forest_lp_allocation.csv",
+        "allocation_rows": 117,
+        "expected_allocation_rows": 117,
+        "margin_source": "data/derived/national/harvest_basis/national_margin_totals/province_margin_totals.csv",
+        "margin_rows": 26,
+        "province_count": 13,
+        "scenario_count": 2,
+        "scenarios": [
+          "donor_flat",
+          "stumpage_scaled"
+        ],
+        "levels": [
+          "100m",
+          "119m",
+          "150m"
+        ],
+        "cap_cases": [
+          "documented_ceiling",
+          "intensity_1.0",
+          "intensity_1.2"
+        ],
+        "joined_province_scenario_rows": 234,
+        "feasible_group_count": 14,
+        "infeasible_group_count": 4,
+        "infeasible_allocation_rows": 26,
+        "group_rows": 18,
+        "national_rows": 54,
+        "documented_ceiling_rows": 6,
+        "infeasible_rows": 4,
+        "allocation_cases": [
+          "100m",
+          "119m",
+          "150m"
+        ]
+      },
+      "documented_ceiling_row_count": 6,
+      "infeasible_row_count": 4,
+      "labels": {
+        "net_value_label": "model_estimate",
+        "net_value_status": "model_estimate_not_policy",
+        "observed": false,
+        "policy_grade": false,
+        "lp_objective": "not_used",
+        "forest_lp_input": false,
+        "public_osecan_input": false,
+        "forest_lp_objective_changed": false,
+        "v1_outputs_changed": false,
+        "combined_national_net_value": false,
+        "ranking_performed": false,
+        "restricted_data_used": false
+      },
+      "economic_allocation_sensitivity": {
+        "model_id": "provincial_allocation_net_value_lp_v1",
+        "artifact_version": "1.0.0",
+        "coverage": {
+          "allocation_rows": 182,
+          "delta_rows": 182,
+          "feasible_case_count": 14,
+          "summary_case_count": 18,
+          "documented_ceiling_rows": 6,
+          "province_shift_rows": 13,
+          "province_shift_level": "119m",
+          "province_count": 13,
+          "levels": [
+            "100m",
+            "119m",
+            "150m"
+          ],
+          "scenarios": [
+            "donor_flat",
+            "stumpage_scaled"
+          ]
+        },
+        "labels": {
+          "evidence": "model_estimate",
+          "net_value_label": "model_estimate",
+          "observed": false,
+          "policy_grade": false,
+          "lp_objective": "net_value_sensitivity",
+          "canonical_changed": false,
+          "baseline_objective": "least_deviation_from_observed_2024_shares",
+          "combined_national_net_value": false,
+          "public_osecan_input": false,
+          "restricted_data_used": false,
+          "ranking_performed": false,
+          "forest_lp_input": false
+        },
+        "donor_price_caveat": "donor_flat is a donor/flat price proxy, not an observed provincial price; stumpage_scaled is a method sensitivity. Both are model_estimate, observed=false, policy_grade=false, and not policy-grade net value."
+      }
+    }
+  },
+  "facilities": {
+    "schema_version": "facilities/1",
+    "artifact": "ui_facilities_v1",
+    "coverage": {
+      "class_count": 6,
+      "mapped_count": 608,
+      "not_published_count": 15,
+      "province_count": 11,
+      "proxy_capacity_m3_y": 104733008.0,
+      "proxy_count": 241,
+      "published_capacity_m3_y": 166608791.45642096,
+      "published_count": 433,
+      "record_count": 689,
+      "source_file_count": 26,
+      "total_capacity_m3_y": 271341799.45642096,
+      "unlocated_count": 81,
+      "unlocated_provinces": [
+        "BC"
+      ]
+    },
+    "default_scenario": "119m",
+    "scenarios": [
+      {
+        "id": "100m",
+        "harvest_m3": 100000000.1,
+        "assigned_m3": 100000000.09999998,
+        "facilities_used": 185,
+        "capacity_utilization": 0.377341953
+      },
+      {
+        "id": "119m",
+        "harvest_m3": 118977339.1,
+        "assigned_m3": 118977339.10000001,
+        "facilities_used": 208,
+        "capacity_utilization": 0.435068016
+      },
+      {
+        "id": "150m",
+        "harvest_m3": 150000000.2,
+        "assigned_m3": 150000000.20000002,
+        "facilities_used": 242,
+        "capacity_utilization": 0.511471368
+      }
+    ],
+    "national_chain": {
+      "artifact": "national_facility_chain_scenarios_v7",
+      "artifact_version": "7.0.0",
+      "rows": [
+        {
+          "id": "100m",
+          "label": "100 Mm\u00b3",
+          "harvest_m3": 100000000.1,
+          "solid_m3": 31692807.151333615,
+          "pulp_odt": 10136702.86391734,
+          "process_pj": 419.238018262,
+          "harvest_gross_pj": 373.243923301,
+          "harvest_recoverable_pj": 223.946353981,
+          "total_gross_pj": 792.481941564
+        },
+        {
+          "id": "119m",
+          "label": "119 Mm\u00b3",
+          "harvest_m3": 118977339.1,
+          "solid_m3": 37673626.76106759,
+          "pulp_odt": 12066311.269557001,
+          "process_pj": 498.75091692,
+          "harvest_gross_pj": 444.410766076,
+          "harvest_recoverable_pj": 266.646459646,
+          "total_gross_pj": 943.161682997
+        },
+        {
+          "id": "150m",
+          "label": "150 Mm\u00b3",
+          "harvest_m3": 150000000.2,
+          "solid_m3": 46136665.718212955,
+          "pulp_odt": 15550881.011045067,
+          "process_pj": 626.865219442,
+          "harvest_gross_pj": 573.125413005,
+          "harvest_recoverable_pj": 343.875247803,
+          "total_gross_pj": 1199.990632446
+        }
+      ],
+      "columns": [
+        {
+          "decimals": 3,
+          "field": "solid_m3",
+          "id": "solid",
+          "label": "Solid",
+          "scale": 1000000,
+          "unit": "Mm\u00b3"
+        },
+        {
+          "decimals": 3,
+          "field": "pulp_odt",
+          "id": "pulp",
+          "label": "Pulp",
+          "scale": 1000000,
+          "unit": "M odt"
+        },
+        {
+          "decimals": 3,
+          "field": "process_pj",
+          "id": "process",
+          "label": "Process",
+          "scale": 1,
+          "tier_stream": "process",
+          "unit": "PJ"
+        },
+        {
+          "decimals": 3,
+          "field": "harvest_gross_pj",
+          "id": "harvest_gross",
+          "label": "Harvest gross",
+          "scale": 1,
+          "unit": "PJ"
+        },
+        {
+          "decimals": 3,
+          "field": "harvest_recoverable_pj",
+          "id": "harvest_recoverable",
+          "label": "Harvest recoverable",
+          "scale": 1,
+          "tier_stream": "harvest",
+          "unit": "PJ"
+        },
+        {
+          "decimals": 3,
+          "field": "total_gross_pj",
+          "id": "total_gross",
+          "label": "Total gross",
+          "scale": 1,
+          "unit": "PJ"
+        }
+      ],
+      "reference": {
+        "harvest_case": "harvest_recovery_060",
+        "harvest_recovery_fraction": 0.6,
+        "process_availability_fraction": 0.5,
+        "process_case": "process_availability_050",
+        "scenario": "119m",
+        "tiers": [
+          {
+            "case": "process_availability_050",
+            "fraction": 0.5,
+            "label": "above T4",
+            "stream": "process",
+            "tier": "above_T4"
+          },
+          {
+            "case": "harvest_recovery_060",
+            "fraction": 0.6,
+            "label": "above T4",
+            "stream": "harvest",
+            "tier": "above_T4"
+          }
+        ]
+      },
+      "labels": {
+        "model_estimate": true,
+        "national_claim": false,
+        "observed": false,
+        "official_osecan_changed": false,
+        "policy_grade": false
+      },
+      "coefficient_provenance": {
+        "donor_product_coefficients": 0,
+        "e1": {
+          "count": 4,
+          "label": "E1 measured",
+          "provinces": [
+            "BC",
+            "QC",
+            "NB",
+            "YT"
+          ],
+          "tier": "measured_bucking_pilot"
+        },
+        "e2c": {
+          "count": 9,
+          "label": "E2c imputed",
+          "provinces": [
+            "AB",
+            "SK",
+            "MB",
+            "ON",
+            "NS",
+            "PE",
+            "NL",
+            "NT",
+            "NU"
+          ],
+          "tier": "E2c_open_inventory_density_calibrated"
+        }
+      }
+    },
+    "labels": {
+      "evidence": "model_estimate",
+      "observed": false,
+      "official_osecan": false,
+      "policy_grade": false,
+      "ranking": "none",
+      "read_only": true
+    },
+    "payload": {
+      "path": "facilities/facilities.json",
+      "bytes": 558851,
+      "sha256": "83ae7e374ac215b5fc0011e39f8acf433b3d9bda8f7090de956204cff1b608c5"
+    },
+    "manifest": {
+      "path": "facilities/manifest.json",
+      "bytes": 9278,
+      "sha256": "a71329c8150ccbb64781d1a391631d348cd4ee8e2e6fe301f699b5231180d06e",
+      "sources": 26
+    }
+  },
+  "data_bundle": {
+    "manifest_path": "public/data/manifest.json",
+    "manifest_sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102",
+    "manifest_bytes": 31855,
+    "files": 63,
+    "bytes": 8732120,
+    "bundle_sha256": "dc4a8933ab12b79d73479e6667539821ec3d925cc00e9978fad656f677b81676",
+    "algorithm": "sha256 of sorted \"<sha256>  <path>\" lines over data-manifest files"
+  },
+  "economics_bundle": {
+    "manifest_path": "public/data/economics/manifest.json",
+    "manifest_sha256": "b12dc9626a6f951ec39c8f12074756084f93a3414c95499884a0b3c24bf047bf",
+    "files": 3,
+    "bytes": 900394,
+    "bundle_sha256": "e3df2ad342b2df1b4e201f0a41d2ff4593650f92667ac7057a9e6bb7b772c702",
+    "algorithm": "sha256 of sorted \"<sha256>  <path>\" lines over economics-manifest files"
+  },
+  "manifest": {
+    "path": "manifest.json",
+    "bytes": 16949,
+    "sha256": "68eefb1efe53f9df4a7968edbf96da95b187e19db3d4dd324ad778919281c405",
+    "files": 92,
+    "total_bytes": 13228453,
+    "excluded": [
+      "PUBLICATION.json",
+      "manifest.json"
+    ]
+  },
+  "static_mode": {
+    "guard": "publication-mode.js",
+    "guard_loaded_before": [
+      "api.js",
+      "app.js"
+    ],
+    "badge": "Static mode \u00b7 no backend",
+    "api_requests_blocked": true,
+    "exports_available": true,
+    "create_disabled": true,
+    "queue_disabled": true
+  },
+  "artifacts": {
+    "index_html": {
+      "path": "index.html",
+      "bytes": 59527,
+      "sha256": "d2d1a2ff1c556e861eea0970d620cda29c917f9defef88ce1d35cf96c06d5843"
+    },
+    "app_js": {
+      "path": "app.js",
+      "bytes": 416913,
+      "sha256": "46625738aadfc2b86f72441de192feaa884d6cb61f118b98380e3358fb9c42a7"
+    },
+    "api_js": {
+      "path": "api.js",
+      "bytes": 6347,
+      "sha256": "9f8483ad22ae8d5694331c3345795ab5765cd5ddf88945f868397ae45c52592e"
+    },
+    "styles_css": {
+      "path": "styles.css",
+      "bytes": 142989,
+      "sha256": "3128ff6e0c05d71b036d50fd33d12546947ee3b5f77638ef19212422a09b418c"
+    },
+    "publication_mode_js": {
+      "path": "publication-mode.js",
+      "bytes": 1163,
+      "sha256": "4b12fcbc6cec01c2e5f8cf173c59decc0781a156dfbd3d493e245c9e9541cb84"
+    },
+    "data_manifest": {
+      "path": "public/data/manifest.json",
+      "bytes": 31855,
+      "sha256": "2a924d6cc7dbbf9be36e31aae4d9924b397a93ec20e2d0f5127b54e27dc5e102"
+    },
+    "economics_manifest": {
+      "path": "public/data/economics/manifest.json",
+      "bytes": 5712,
+      "sha256": "b12dc9626a6f951ec39c8f12074756084f93a3414c95499884a0b3c24bf047bf"
+    },
+    "national_manifest": {
+      "path": "public/data/economics/national.manifest.json",
+      "bytes": 9209,
+      "sha256": "f2e405458c083642ed7373994a5d570cde795052928a2869040695a7a0023c02"
+    },
+    "national_json": {
+      "path": "public/data/economics/national.json",
+      "bytes": 192285,
+      "sha256": "09857cc37e27a3b07d1716f0fcc94fefdc0b8fae0dc9e908ea1678d2bcf3e894"
+    }
+  },
+  "validation": {}
+}
