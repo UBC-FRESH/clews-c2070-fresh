@@ -430,9 +430,9 @@ def main() -> None:
         destination / "public/data", destination / FACILITY_MANIFEST
     )
     facilities = load_json(destination / FACILITY_FILE)
-    if facilities.get("schema_version") != "facilities/1":
+    if facilities.get("schema_version") != "facilities/2":
         fail("facilities schema mismatch")
-    if facilities.get("artifact") != "ui_facilities_v1":
+    if facilities.get("artifact") != "ui_facilities_v2":
         fail("facilities artifact mismatch")
     facility_coverage = facilities.get("coverage") or {}
     facility_rows = facilities.get("facilities") or []
@@ -465,9 +465,9 @@ def main() -> None:
         fail("facility manifest labels diverge from the payload")
 
     national_chain = facilities.get("national_chain") or {}
-    if national_chain.get("artifact") != "national_facility_chain_scenarios_v7":
+    if national_chain.get("artifact") != "national_facility_chain_scenarios_v9":
         fail("facilities national chain artifact mismatch")
-    if national_chain.get("artifact_version") != "7.0.0":
+    if national_chain.get("artifact_version") != "9.0.0":
         fail("facilities national chain artifact version mismatch")
     chain_labels = national_chain.get("labels") or {}
     if chain_labels != {
@@ -476,14 +476,15 @@ def main() -> None:
         "policy_grade": False,
         "national_claim": False,
         "official_osecan_changed": False,
+        "transport_cost_in_osecan": False,
     }:
         fail("national chain labels must stay model-only and unclaimed")
     chain_rows = national_chain.get("rows") or []
     if [row.get("id") for row in chain_rows] != ["100m", "119m", "150m"]:
         fail("national chain rows must be 100m/119m/150m")
     chain_columns = national_chain.get("columns") or []
-    if len(chain_columns) != 6:
-        fail("national chain must carry six summary columns")
+    if len(chain_columns) != 8:
+        fail("national chain must carry eight summary columns")
     if any(column.get("field") not in chain_rows[0] for column in chain_columns):
         fail("national chain column references a missing field")
     chain_fields = (
@@ -494,6 +495,8 @@ def main() -> None:
         "harvest_gross_pj",
         "harvest_recoverable_pj",
         "total_gross_pj",
+        "transport_cost_cad",
+        "mean_road_distance_km",
     )
     for row in chain_rows:
         if any(not isinstance(row.get(field), (int, float)) or row[field] < 0 for field in chain_fields):
@@ -659,6 +662,10 @@ def main() -> None:
                     "assigned_m3": scenario["assigned_m3"],
                     "facilities_used": scenario["facilities_used"],
                     "capacity_utilization": scenario["capacity_utilization"],
+                    "transport_cost_cad": scenario["transport_cost_cad"],
+                    "mean_road_distance_km": scenario["mean_road_distance_km"],
+                    "share_ge_150_km": scenario["share_ge_150_km"],
+                    "share_ge_300_km": scenario["share_ge_300_km"],
                 }
                 for scenario in facility_scenarios
             ],
@@ -676,6 +683,8 @@ def main() -> None:
                         "harvest_gross_pj": row["harvest_gross_pj"],
                         "harvest_recoverable_pj": row["harvest_recoverable_pj"],
                         "total_gross_pj": row["total_gross_pj"],
+                        "transport_cost_cad": row["transport_cost_cad"],
+                        "mean_road_distance_km": row["mean_road_distance_km"],
                     }
                     for row in chain_rows
                 ],

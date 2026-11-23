@@ -959,6 +959,22 @@ decide what blocks production readiness after the conceptual alpha.
   commit `2775317` and data commit `0d3b2ff`, and added
   `docs/handoff-national-facility-chain-v5.1.md`.
 
+- [x] P7.37 Update the Facilities view to v5.1 transport-aware assignment.
+  Completed: the 100/119/150 scenario selector, province x class ledger and
+  facility popups now read `national_facility_assignment_v10` per-case
+  facility utilization/province CSVs instead of chain v6; capacity-v3 record
+  counts, published/proxy badges and capacity columns stay unchanged. The
+  national chain summary reads `national_facility_chain_scenarios_v9` and adds
+  transport cost (2.702 / 3.392 / 5.018 billion CAD/yr) and mean distance
+  (255.3 / 270.3 / 319.8 km); product/residue rows stay invariant. Coverage &
+  evidence adds transport cost, mean distance and >=150/>=300 km shares.
+  Static export schema is `facilities/2` / `ui_facilities_v2`, generated from
+  33 committed CSVs with no hardcoded values. Added v10 reproduction,
+  three-scenario transport, no-stale-v6 and read-only tests; all 17 Facilities
+  tests and 30 UI guard/export tests pass. Desktop/mobile plus chain/table
+  screenshots captured under `tmp/facilities-v51-*.png` with no horizontal
+  overflow at 390 px. No static publication and no official OSeCAN change.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

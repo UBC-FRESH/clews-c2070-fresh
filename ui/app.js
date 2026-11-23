@@ -7621,35 +7621,48 @@
 
   function validateNationalChain(chain) {
     requireTrue(chain && typeof chain === 'object', 'national chain summary is missing');
-    requireTrue(chain.artifact === 'national_facility_chain_scenarios_v7',
+    requireTrue(chain.artifact === 'national_facility_chain_scenarios_v9',
       'unexpected national chain artifact ' + chain.artifact);
+    requireTrue(chain.artifact_version === '9.0.0',
+      'unexpected national chain version ' + chain.artifact_version);
     requireTrue(chain.labels && chain.labels.model_estimate === true &&
       chain.labels.observed === false && chain.labels.policy_grade === false &&
-      chain.labels.national_claim === false && chain.labels.official_osecan_changed === false,
+      chain.labels.national_claim === false && chain.labels.official_osecan_changed === false &&
+      chain.labels.transport_cost_in_osecan === false,
       'national chain labels must stay model-only, unclaimed, and outside official OSeCAN');
+    requireTrue(chain.assignment && chain.assignment.artifact === 'national_facility_assignment_v10' &&
+      chain.assignment.scenario === 'node_transport_aware' &&
+      chain.assignment.transport_cost_in_osecan === false,
+      'national chain must bind assignment v10');
     var rows = chain.rows;
     requireTrue(Array.isArray(rows) && rows.length === 3, 'expected three national chain rows');
     requireTrue(rows.map(function (row) { return row.id; }).join(',') === '100m,119m,150m',
       'national chain rows are not 100m/119m/150m');
     var numericFields = [
       'harvest_m3', 'solid_m3', 'pulp_odt', 'process_pj',
-      'harvest_gross_pj', 'harvest_recoverable_pj', 'total_gross_pj'
+      'harvest_gross_pj', 'harvest_recoverable_pj', 'total_gross_pj',
+      'transport_cost_cad', 'mean_road_distance_km'
     ];
     rows.forEach(function (row) {
       numericFields.forEach(function (field) {
         requireTrue(Number.isFinite(row[field]) && row[field] >= 0,
           'national chain ' + row.id + ' has an invalid ' + field);
       });
+      requireTrue(row.transport_cost_cad > 0 && row.mean_road_distance_km > 0,
+        'national chain ' + row.id + ' transport values are missing');
       requireTrue(Math.abs(row.total_gross_pj - (row.process_pj + row.harvest_gross_pj)) <= 1e-6,
         'national chain total gross does not conserve for ' + row.id);
+      requireTrue(row.share_ge_150_km >= 0 && row.share_ge_150_km <= 1 &&
+        row.share_ge_300_km >= 0 && row.share_ge_300_km <= 1,
+        'national chain distance shares are invalid for ' + row.id);
     });
     var provenance = chain.coefficient_provenance;
     requireTrue(provenance && provenance.e1 && provenance.e1.count === 4 &&
       provenance.e1.provinces.length === 4 && provenance.e2c && provenance.e2c.count === 9 &&
       provenance.e2c.provinces.length === 9 && provenance.donor_product_coefficients === 0,
       'national chain E1/E2c provenance counts changed');
-    requireTrue(Array.isArray(chain.columns) && chain.columns.length === 6,
-      'national chain must carry six summary columns');
+    requireTrue(Array.isArray(chain.columns) && chain.columns.length === 8,
+      'national chain must carry eight summary columns');
     chain.columns.forEach(function (column) {
       requireTrue(column.field && typeof column.label === 'string' &&
         Number.isFinite(column.scale) && column.scale > 0 &&
@@ -7659,8 +7672,10 @@
     var reference = chain.reference;
     requireTrue(reference && reference.scenario === '119m' &&
       Number.isFinite(reference.process_availability_fraction) &&
-      Number.isFinite(reference.harvest_recovery_fraction),
-      'national chain reference fractions are missing');
+      Number.isFinite(reference.harvest_recovery_fraction) &&
+      Number.isFinite(reference.transport_cost_cad) &&
+      Number.isFinite(reference.mean_road_distance_km),
+      'national chain reference fractions or transport values are missing');
     requireTrue(Array.isArray(reference.tiers) && reference.tiers.length === 2,
       'expected two OSeCAN tier badges');
     var tierStreams = reference.tiers.map(function (tier) { return tier.stream; }).sort().join(',');
@@ -7674,8 +7689,8 @@
 
   function validateFacilities(data, manifest) {
     requireTrue(data && typeof data === 'object', 'facilities.json is missing');
-    requireTrue(data.schema_version === 'facilities/1', 'unexpected facilities schema_version ' + data.schema_version);
-    requireTrue(data.artifact === 'ui_facilities_v1', 'unexpected facilities artifact ' + data.artifact);
+    requireTrue(data.schema_version === 'facilities/2', 'unexpected facilities schema_version ' + data.schema_version);
+    requireTrue(data.artifact === 'ui_facilities_v2', 'unexpected facilities artifact ' + data.artifact);
     requireTrue(data.labels && data.labels.evidence === 'model_estimate' &&
       data.labels.observed === false && data.labels.policy_grade === false &&
       data.labels.ranking === 'none' && data.labels.read_only === true,
@@ -7721,6 +7736,8 @@
       'the default 119m scenario is missing');
     data.scenarios.forEach(function (scenario) {
       requireTrue(Array.isArray(scenario.rows) && scenario.rows.length > 0, 'scenario rows missing for ' + scenario.id);
+      requireTrue(scenario.source_artifact === 'national_facility_assignment_v10',
+        'scenario ' + scenario.id + ' is not sourced from assignment v10');
       requireTrue(scenario.rows.reduce(function (sum, row) { return sum + row.record_count; }, 0) === data.coverage.record_count,
         'scenario table rows do not conserve records for ' + scenario.id);
       var assigned = scenario.rows.reduce(function (sum, row) { return sum + row.assigned_m3_y; }, 0);
@@ -7728,8 +7745,21 @@
         'scenario table assigned volume does not conserve for ' + scenario.id);
       requireTrue(scenario.facility_assignments && typeof scenario.facility_assignments === 'object',
         'facility assignments missing for ' + scenario.id);
+      requireTrue(Number.isFinite(scenario.transport_cost_cad) && scenario.transport_cost_cad > 0,
+        'scenario transport cost missing for ' + scenario.id);
+      requireTrue(Number.isFinite(scenario.mean_road_distance_km) && scenario.mean_road_distance_km > 0,
+        'scenario mean distance missing for ' + scenario.id);
+      requireTrue(scenario.share_ge_150_km >= 0 && scenario.share_ge_150_km <= 1 &&
+        scenario.share_ge_300_km >= 0 && scenario.share_ge_300_km <= 1,
+        'scenario distance shares invalid for ' + scenario.id);
+      requireTrue(scenario.transport && Number.isFinite(scenario.transport.transport_cost_cad),
+        'scenario transport block missing for ' + scenario.id);
+      requireTrue(scenario.capacity_utilization >= 0 && scenario.capacity_utilization <= 1,
+        'scenario utilization outside [0, 1] for ' + scenario.id);
     });
-    requireTrue(manifest && manifest.schema_version === 'facilities/1', 'facility manifest schema mismatch');
+    requireTrue(data.base_assignment && data.base_assignment.artifact === 'national_facility_assignment_v10',
+      'base assignment must be assignment v10');
+    requireTrue(manifest && manifest.schema_version === 'facilities/2', 'facility manifest schema mismatch');
     requireTrue(manifest.validation && manifest.validation.ok === true, 'facility manifest validation is not ok');
     requireTrue(Array.isArray(manifest.generated) && manifest.generated.length === 1 &&
       manifest.generated[0].path === 'facilities/facilities.json' &&
@@ -7903,7 +7933,9 @@
     $('facility-stat-capacity-note').textContent = 'published Mm³/yr · ' + fmt(coverage.proxy_capacity_m3_y / 1e6, 2) + ' proxy';
     if (scenario) {
       $('facility-stat-scenario').textContent = fmt(scenario.assigned_m3 / 1e6, 3);
-      $('facility-stat-scenario-note').textContent = 'Mm³ assigned · ' + fmtPct(scenario.capacity_utilization, 1) + ' all eligible';
+      $('facility-stat-scenario-note').textContent = 'Mm³ assigned · ' +
+        fmtPct(scenario.capacity_utilization, 1) + ' eligible · ' +
+        fmt(scenario.transport_cost_cad / 1e9, 3) + ' B CAD transport';
     }
     $('facility-side-stats').innerHTML =
       '<div><dt>Records</dt><dd>' + fmt(coverage.record_count, 0) + '</dd></div>' +
@@ -7913,9 +7945,15 @@
       '<div><dt>Proxy count</dt><dd>' + fmt(coverage.proxy_count, 0) + '</dd></div>' +
       '<div><dt>Published capacity</dt><dd>' + fmt(coverage.published_capacity_m3_y / 1e6, 2) + ' Mm³</dd></div>' +
       '<div><dt>Proxy capacity</dt><dd>' + fmt(coverage.proxy_capacity_m3_y / 1e6, 2) + ' Mm³</dd></div>' +
-      '<div><dt>Assignment scenario</dt><dd>' + esc(scenario ? scenario.id : '—') + '</dd></div>' +
+      '<div><dt>Assignment scenario</dt><dd>' + esc(scenario ? scenario.id : '—') + ' · v10</dd></div>' +
       '<div><dt>Assigned</dt><dd>' + fmt(scenario ? scenario.assigned_m3 / 1e6 : null, 3) + ' Mm³</dd></div>' +
-      '<div><dt>Facilities used</dt><dd>' + fmt(scenario ? scenario.facilities_used : null, 0) + '</dd></div>';
+      '<div><dt>Facilities used</dt><dd>' + fmt(scenario ? scenario.facilities_used : null, 0) + '</dd></div>' +
+      (scenario ?
+        '<div><dt>Transport cost</dt><dd>' + fmt(scenario.transport_cost_cad / 1e9, 3) + ' B CAD/yr</dd></div>' +
+        '<div><dt>Mean road distance</dt><dd>' + fmt(scenario.mean_road_distance_km, 1) + ' km</dd></div>' +
+        '<div><dt>Share ≥150 km</dt><dd>' + fmtPct(scenario.share_ge_150_km, 1) + '</dd></div>' +
+        '<div><dt>Share ≥300 km</dt><dd>' + fmtPct(scenario.share_ge_300_km, 1) + '</dd></div>'
+        : '');
     var unlocatedNote = $('facility-unlocated-note');
     if (coverage.unlocated_count > 0) {
       unlocatedNote.hidden = false;
@@ -7931,7 +7969,8 @@
       $('facility-evidence-note').innerHTML =
         'Static export <span class="mono">' + esc(generated.path) + '</span> · ' + esc(fmtBytes(generated.bytes)) +
         ' · sha256 <span class="mono" title="' + esc(generated.sha256) + '">' + esc(generated.sha256.slice(0, 16)) + '…</span>' +
-        ' · ' + manifest.sources.length + ' source hashes · labels model_estimate / observed=false / policy_grade=false.';
+        ' · ' + manifest.sources.length + ' source hashes · labels model_estimate / observed=false / policy_grade=false. ' +
+        esc(data.caveats.transport || '');
       $('facility-export-note').innerHTML =
         'Read-only static JSON from committed CSVs. Manifest <a href="' + esc(DATA_ROOT + FACILITY_MANIFEST_PATH) + '" download>facilities/manifest.json</a>' +
         ' · payload <a href="' + esc(DATA_ROOT + FACILITY_DATA_PATH) + '" download>facilities/facilities.json</a>' +
@@ -7979,9 +8018,10 @@
       return '<tr data-scenario="' + esc(row.id) + '"><th scope="row" class="facility-chain-case">' +
         esc(row.label) + '</th>' + cells + '</tr>';
     }).join('');
-    table.innerHTML = '<caption>Frozen v4 national chain · ' + esc(chain.artifact) +
-      ' · values from committed CSVs. Tier badges mark the ' + esc(referenceLabel) +
-      ' reference case only.</caption>' + header + '<tbody>' + body + '</tbody>';
+    table.innerHTML = '<caption>Frozen v5.1 national chain · ' + esc(chain.artifact) +
+      ' · assignment v10 node transport-aware at 100/119/150 Mm³ · values from committed CSVs. ' +
+      'Products and residue are invariant to assignment; transport cost and mean distance are not. ' +
+      'Tier badges mark the ' + esc(referenceLabel) + ' reference case only.</caption>' + header + '<tbody>' + body + '</tbody>';
     tiersEl.innerHTML = '<span class="facility-chain-tiers-label">OSeCAN tier · ' +
       esc(referenceLabel) + '</span>' + chain.reference.tiers.map(function (tier) {
         return '<span class="facility-tier-badge" data-tier="' + esc(tier.tier) + '">' +
@@ -7995,6 +8035,7 @@
         fmt(provenance.e2c.count, 0) + '</span>' +
       '<span class="badge badge--ink">donor product coefficients ' +
         fmt(provenance.donor_product_coefficients, 0) + '</span>' +
+      '<span class="badge badge--ink">assignment v10</span>' +
       '<span class="badge badge--ink">model_estimate</span>' +
       '<span class="badge badge--ink">observed=false</span>' +
       '<span class="badge badge--ink">policy_grade=false</span>';
@@ -8042,9 +8083,10 @@
 
     var bodyRows = rows.map(function (row) {
       var color = facilityClassColor(row.facility_class);
-      var crossBorder = row.cross_border_m3_y > 0
-        ? '<small class="facility-subnote">cross-border ' + fmt(row.cross_border_m3_y / 1e6, 3) + '</small>'
-        : '<small class="facility-subnote">local-first</small>';
+      var crossBorder = '<small class="facility-subnote">' + fmt(row.assigned_facility_count, 0) + ' used' +
+        (row.cross_border_m3_y > 0
+          ? ' · cross-border ' + fmt(row.cross_border_m3_y / 1e6, 3)
+          : '') + '</small>';
       return '<tr data-province="' + esc(row.province) + '" data-class="' + esc(row.facility_class) + '">' +
         '<td class="facility-province-cell" data-label="Province">' + esc(row.province_label) +
           ' <span class="mono muted">' + esc(row.province) + '</span></td>' +
@@ -8070,7 +8112,7 @@
       bodyRows = '<tr><td colspan="8" class="facility-empty">No province × class rows match the selected filters.</td></tr>';
     }
     table.innerHTML =
-      '<caption>Capacity v3 base joined to chain v6 assignment. Capacity in Mm³/yr; assigned volume local-first. Utilization = assigned ÷ eligible capacity (located, operating records after proxy floor scaling).</caption>' +
+      '<caption>Capacity v3 base joined to assignment v10 node transport-aware (chain v5.1). Capacity in Mm³/yr and unchanged across scenarios; assigned volume is transport-aware. Utilization = assigned ÷ eligible v10 capacity (located, operating records after the unchanged 1.2x proxy floor).</caption>' +
       '<thead><tr><th>Province</th><th>Class</th><th class="num">Records</th>' +
       '<th class="num">Published<br>Mm³/yr</th><th class="num">Proxy<br>Mm³/yr</th>' +
       '<th class="num">Assigned<br>Mm³/yr</th><th class="num">Utilization</th><th>Evidence</th></tr></thead>' +

@@ -2,6 +2,21 @@
 
 ## 2026-11-23
 
+- **Updated the Facilities view to v5.1 transport-aware assignment.** The
+  100/119/150 Mm3 facility scenarios and province x class ledger now read the
+  assignment-v10 facility utilization/province CSVs instead of chain v6;
+  capacity-v3 counts/capacities and the eligible facility set remain
+  unchanged. The national chain summary reads chain v9 products/residue and
+  v10 transport: 2.702 / 3.392 / 5.018 billion CAD/yr and 255.3 / 270.3 /
+  319.8 km, with >=150 km shares 45.67 / 48.62 / 55.97% and >=300 km shares
+  27.36 / 30.16 / 33.99%. Facilities used are 270 / 296 / 333; products and
+  residue stay invariant. The static export is `facilities/2` /
+  `ui_facilities_v2` and is regenerated only from committed CSVs (33 source
+  hashes). The view remains one map and one table, read-only, with no
+  official OSeCAN change. Added v10 reproduction, transport-value and no-
+  stale-v6 tests; desktop/mobile and chain/table screenshots captured under
+  `tmp/facilities-v51-*.png`. No static publication was built.
+
 - **Extended assignment v10 to 100/150 Mm3 and froze chain v5.1.** Added
   `national_facility_assignment_v10_cases` (v10 case extension case files; 119 primary
   CSVs byte-identical), `facility_residue_supply_v9`,

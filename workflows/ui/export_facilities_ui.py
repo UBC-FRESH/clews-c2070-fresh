@@ -27,59 +27,64 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = "facilities/1"
-ARTIFACT = "ui_facilities_v1"
+SCHEMA_VERSION = "facilities/2"
+ARTIFACT = "ui_facilities_v2"
 OUTPUT_DIR = Path("ui/public/data/facilities")
 OUTPUT_FILE = "facilities.json"
 MANIFEST_FILE = "manifest.json"
 
 CAPACITY_DIR = Path("data/derived/national/facilities/national_facility_capacity_v3")
 INVENTORY_DIR = Path("data/derived/national/facilities/national_facility_inventory_v1")
-ASSIGNMENT_DIR = Path("data/derived/national/facilities/national_facility_assignment_v6")
-CHAIN_DIR = Path("data/derived/national/facilities/national_facility_chain_scenarios_v6")
+ASSIGNMENT_DIR = Path("data/derived/national/facilities/national_facility_assignment_v10")
+CHAIN_DIR = Path("data/derived/national/facilities/national_facility_chain_scenarios_v9")
 
-V4_CHAIN_DIR = Path("data/derived/national/facilities/national_facility_chain_scenarios_v7")
-V4_CHAIN_SUMMARY_CSV = V4_CHAIN_DIR / "scenario_summary.csv"
-V4_CHAIN_SUMMARY_JSON = V4_CHAIN_DIR / "summary.json"
-V4_CHAIN_MANIFEST = V4_CHAIN_DIR / "manifest.json"
+V10_CASE_SUMMARY_CSV = ASSIGNMENT_DIR / "v10_case_summary.csv"
+V10_SUMMARY_JSON = ASSIGNMENT_DIR / "summary.json"
+V10_MANIFEST = ASSIGNMENT_DIR / "manifest.json"
 
-V4_PRODUCT_CHAIN_DIR = Path("data/derived/national/facilities/national_product_chain_v5")
-V4_PRODUCT_CHAIN_SUMMARY = V4_PRODUCT_CHAIN_DIR / "summary.json"
-V4_PRODUCT_CHAIN_MANIFEST = V4_PRODUCT_CHAIN_DIR / "manifest.json"
-V4_E1_COEFFICIENTS = V4_PRODUCT_CHAIN_DIR / "e1_coefficient_replacement.csv"
-V4_E2C_EVIDENCE = V4_PRODUCT_CHAIN_DIR / "e2c_density_evidence.csv"
+CHAIN_SUMMARY_CSV = CHAIN_DIR / "scenario_summary.csv"
+CHAIN_SUMMARY_JSON = CHAIN_DIR / "summary.json"
+CHAIN_MANIFEST = CHAIN_DIR / "manifest.json"
+CHAIN_INVARIANCE_CSV = CHAIN_DIR / "v5_v6_product_residue_invariance.csv"
 
-V4_RESIDUE_DIR = Path("data/derived/national/facilities/facility_residue_supply_v7")
-V4_RESIDUE_NATIONAL_CSV = V4_RESIDUE_DIR / "national_residue_summary.csv"
-V4_RESIDUE_SUMMARY = V4_RESIDUE_DIR / "summary.json"
-V4_RESIDUE_MANIFEST = V4_RESIDUE_DIR / "manifest.json"
+V7_CHAIN_SUMMARY_CSV = (
+    Path("data/derived/national/facilities/national_facility_chain_scenarios_v7")
+    / "scenario_summary.csv"
+)
 
-V4_CURVE_DIR = Path("data/derived/national/facilities/national_residue_curve_v7")
-V4_CURVE_NATIONAL_CSV = V4_CURVE_DIR / "national_residue_curve.csv"
-V4_CURVE_SUMMARY = V4_CURVE_DIR / "summary.json"
-V4_CURVE_MANIFEST = V4_CURVE_DIR / "manifest.json"
+PRODUCT_CHAIN_DIR = Path("data/derived/national/facilities/national_product_chain_v5")
+PRODUCT_CHAIN_SUMMARY = PRODUCT_CHAIN_DIR / "summary.json"
+PRODUCT_CHAIN_MANIFEST = PRODUCT_CHAIN_DIR / "manifest.json"
+E1_COEFFICIENTS = PRODUCT_CHAIN_DIR / "e1_coefficient_replacement.csv"
+E2C_EVIDENCE = PRODUCT_CHAIN_DIR / "e2c_density_evidence.csv"
 
-V4_HANDOFF_DIR = Path("data/derived/national/facilities/forestry_osecan_handoff_v8")
-V4_HANDOFF_TIERS_CSV = V4_HANDOFF_DIR / "tier_positions_v3_2_vs_v4.csv"
-V4_HANDOFF_SUMMARY = V4_HANDOFF_DIR / "summary.json"
-V4_HANDOFF_MANIFEST = V4_HANDOFF_DIR / "manifest.json"
+RESIDUE_DIR = Path("data/derived/national/facilities/facility_residue_supply_v9")
+RESIDUE_NATIONAL_CSV = RESIDUE_DIR / "national_residue_summary.csv"
+RESIDUE_SUMMARY = RESIDUE_DIR / "summary.json"
+RESIDUE_MANIFEST = RESIDUE_DIR / "manifest.json"
 
-V4_SCENARIOS_DIR = Path("data/derived/national/facilities/forestry_osecan_scenarios_v7")
-V4_SCENARIOS_SUMMARY = V4_SCENARIOS_DIR / "summary.json"
-V4_SCENARIOS_MANIFEST = V4_SCENARIOS_DIR / "manifest.json"
+CURVE_DIR = Path("data/derived/national/facilities/national_residue_curve_v9")
+CURVE_NATIONAL_CSV = CURVE_DIR / "national_residue_curve.csv"
+CURVE_SUMMARY = CURVE_DIR / "summary.json"
+CURVE_MANIFEST = CURVE_DIR / "manifest.json"
+
+HANDOFF_DIR = Path("data/derived/national/facilities/forestry_osecan_handoff_v10")
+HANDOFF_TIERS_CSV = HANDOFF_DIR / "tier_positions_v3_2_vs_v4.csv"
+HANDOFF_SUMMARY = HANDOFF_DIR / "summary.json"
+HANDOFF_MANIFEST = HANDOFF_DIR / "manifest.json"
+
+SCENARIOS_DIR = Path("data/derived/national/facilities/forestry_osecan_scenarios_v9")
+SCENARIOS_TIERS_CSV = SCENARIOS_DIR / "tier_positions_v3_2_vs_v4.csv"
+SCENARIOS_SUMMARY = SCENARIOS_DIR / "summary.json"
+SCENARIOS_MANIFEST = SCENARIOS_DIR / "manifest.json"
 
 CAPACITY_CSV = CAPACITY_DIR / "national_facility_capacity_v3.csv"
 CAPACITY_SUMMARY = CAPACITY_DIR / "summary.json"
 CAPACITY_MANIFEST = CAPACITY_DIR / "manifest.json"
 INVENTORY_CSV = INVENTORY_DIR / "national_facilities.csv"
-ASSIGNMENT_CSV = ASSIGNMENT_DIR / "facility_assignment.csv"
-CHAIN_ASSIGNMENT_CSV = CHAIN_DIR / "scenario_assignment.csv"
-CHAIN_SUMMARY_CSV = CHAIN_DIR / "scenario_summary.csv"
-CHAIN_MANIFEST = CHAIN_DIR / "manifest.json"
 
 EXPECTED_SCENARIOS = ("100m", "119m", "150m")
 DEFAULT_SCENARIO = "119m"
-BASE_ASSIGNMENT_CASE = "province_capacity_floor"
 
 CLASS_ORDER = ("SAW", "PULP", "PANEL", "PELLET", "BIO", "OTHER")
 CLASS_LABELS = {
@@ -136,15 +141,22 @@ CAVEATS = {
         "not evidence of provincial self-sufficiency."
     ),
     "assignment": (
-        "Assigned volume is a local-first planning allocation, not a legal AAC, "
-        "sustainable-supply determination, or observed harvest outcome. The 1.2x "
-        "provincial floor scales proxy capacity only; published capacity is never "
-        "altered. Cross-border volume is only the local residual and is not a "
-        "trade forecast."
+        "Assigned volume is the assignment-v10 node-to-facility transport-aware "
+        "planning allocation, not a legal AAC, sustainable-supply determination, "
+        "or observed harvest outcome. The eligible facility set, capacity-v3 "
+        "bounds and the 1.2x proxy floor are unchanged across the three harvest "
+        "cases. Cross-border volume is a screening transport-allocation result, "
+        "not a trade forecast."
+    ),
+    "transport": (
+        "Transport cost is trucking only (transport cost v1 applied to "
+        "haversine x province-factor screening distances). It excludes feedstock, "
+        "processing, conversion, handling, storage, border, ferry and winter-road "
+        "costs. It is not an OSeCAN input, not observed, and not policy grade."
     ),
     "utilization": (
-        "Table utilization is assigned volume divided by eligible capacity: "
-        "located, operating records after the scenario's proxy floor scaling. "
+        "Table utilization is assigned volume divided by eligible v10 capacity: "
+        "located, operating records after the unchanged 1.2x proxy floor. "
         "It is not observed operating utilization and is not a performance "
         "ranking."
     ),
@@ -166,12 +178,15 @@ CAVEATS = {
         "contains no run or solver controls."
     ),
     "national_chain": (
-        "Frozen v4 national chain. E1 measured coefficients for BC/QC/NB/YT and "
-        "E2c imputed coefficients for nine jurisdictions; donor product "
-        "coefficients = 0. Rows 100/119/150 Mm³ are planning allocations, not "
-        "AACs. Harvest 0.60 is a reference recovery scenario, not a calibrated "
-        "factor. model_estimate · observed=false · policy_grade=false. No "
-        "official OSeCAN change and no new proxy capacity."
+        "Frozen v5.1 national chain. Assignment v10 node transport-aware flows at "
+        "100/119/150 Mm³; capacity v3 and the 1.2x floor are unchanged. E1 "
+        "measured coefficients for BC/QC/NB/YT and E2c imputed coefficients for "
+        "nine jurisdictions; donor product coefficients = 0. Products and residue "
+        "are invariant to assignment at fixed harvest; facility distribution and "
+        "truck transport cost are not. Transport cost is not an OSeCAN input. "
+        "Harvest 0.60 is a reference recovery scenario, not a calibrated factor. "
+        "model_estimate · observed=false · policy_grade=false. No official OSeCAN "
+        "change and no new proxy capacity."
     ),
 }
 
@@ -294,51 +309,58 @@ def _base_rows(capacity_rows: list[dict[str, str]]) -> dict[tuple[str, str], dic
     return base
 
 
-def _assignment_rows(rows: list[dict[str, str]], scenario: str) -> dict[str, dict[str, str]]:
-    selected: dict[str, dict[str, str]] = {}
-    for row in rows:
-        if row.get("scenario") != scenario:
-            continue
-        facility_id = row["facility_id"]
-        _require(facility_id not in selected, f"duplicate assignment for {facility_id} in {scenario}")
-        selected[facility_id] = row
-    return selected
+TRANSPORT_FIELDS = (
+    "transport_cost_cad",
+    "transport_cost_cad_m3",
+    "transport_cost_cad_gj",
+    "mean_road_distance_km",
+    "median_road_distance_km",
+    "p90_road_distance_km",
+    "max_road_distance_km",
+    "share_ge_150_km",
+    "share_ge_300_km",
+    "cross_border_share",
+    "proxy_share_of_assigned",
+)
+
+
+def _case_path(directory: Path, stem: str, case: str) -> Path:
+    if case == DEFAULT_SCENARIO:
+        return directory / f"{stem}.csv"
+    return directory / f"{stem}_{case}.csv"
 
 
 def _build_scenarios(
+    root: Path,
     capacity_rows: list[dict[str, str]],
     base: dict[tuple[str, str], dict[str, Any]],
-    chain_rows: list[dict[str, str]],
     chain_summary_rows: list[dict[str, str]],
-    assignment_rows: list[dict[str, str]],
+    case_summaries: list[dict[str, str]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     capacity_by_id = {row["facility_id"]: row for row in capacity_rows}
     summary_by_id = {row["scenario"]: row for row in chain_summary_rows}
     _require(set(summary_by_id) == set(EXPECTED_SCENARIOS), "chain scenario summary must cover 100m/119m/150m")
+    case_summary_by_id = {row["scenario"]: row for row in case_summaries}
+    _require(set(case_summary_by_id) == set(EXPECTED_SCENARIOS), "assignment v10 summary must cover 100m/119m/150m")
 
     scenarios: list[dict[str, Any]] = []
     for scenario_id in EXPECTED_SCENARIOS:
-        assignments = _assignment_rows(chain_rows, scenario_id)
-        _require(bool(assignments), f"no assignment rows for {scenario_id}")
-        summary = summary_by_id[scenario_id]
-        scale_by_province: dict[str, float] = {}
-        for assignment in assignments.values():
-            if not assignment["capacity_status"].startswith("proxy"):
-                continue
-            scale = _number(
-                assignment.get("floor_scale_factor"),
-                "floor_scale_factor",
-                assignment["facility_id"],
-                required=True,
+        utilization_rows = _read_csv(
+            _query(root, _case_path(ASSIGNMENT_DIR, "v10_facility_utilization", scenario_id))
+        )
+        province_rows = _read_csv(
+            _query(root, _case_path(ASSIGNMENT_DIR, "v10_province_summary", scenario_id))
+        )
+        case_summary = case_summary_by_id[scenario_id]
+        assignments: dict[str, dict[str, str]] = {}
+        for utilization_row in utilization_rows:
+            facility_id = utilization_row["facility_id"]
+            _require(
+                facility_id not in assignments,
+                f"duplicate v10 utilization row for {facility_id} in {scenario_id}",
             )
-            assert scale is not None
-            province = assignment["facility_province"]
-            if province in scale_by_province:
-                _require(
-                    abs(scale_by_province[province] - scale) <= 1e-9,
-                    f"{scenario_id} has inconsistent proxy floor scales for {province}",
-                )
-            scale_by_province[province] = scale
+            assignments[facility_id] = utilization_row
+        _require(bool(assignments), f"no v10 utilization rows for {scenario_id}")
 
         rows = {
             key: {
@@ -355,49 +377,55 @@ def _build_scenarios(
             }
             for key, bucket in base.items()
         }
-        for capacity_row in capacity_rows:
-            if not capacity_row["lat"].strip() or not capacity_row["lon"].strip():
-                continue
-            if capacity_row["status"] in {"disused", "temporarily_closed"}:
-                continue
-            capacity = _number(
-                capacity_row["capacity_m3_y"], "capacity_m3_y", capacity_row["facility_id"]
-            ) or 0.0
-            if capacity_row["capacity_status"] == "proxy":
-                capacity *= scale_by_province.get(capacity_row["province"], 1.0)
-            key = (capacity_row["province"], capacity_row["facility_class"])
-            rows[key]["eligible_capacity_m3_y"] += capacity
         assigned_ids: dict[tuple[str, str], set[str]] = defaultdict(set)
-        for facility_id, assignment in assignments.items():
-            _require(facility_id in capacity_by_id, f"assignment references unknown facility {facility_id}")
-            capacity = capacity_by_id[facility_id]
-            key = (capacity["province"], capacity["facility_class"])
+        for facility_id, utilization_row in assignments.items():
+            _require(
+                facility_id in capacity_by_id,
+                f"v10 assignment references unknown facility {facility_id}",
+            )
+            capacity_row = capacity_by_id[facility_id]
+            key = (capacity_row["province"], capacity_row["facility_class"])
             _require(key in rows, f"assignment class/province missing from capacity rows: {key}")
-            assigned = _number(assignment["assigned_m3"], "assigned_m3", facility_id, required=True)
+            assigned = _number(
+                utilization_row["assigned_m3"], "assigned_m3", facility_id, required=True
+            )
             assert assigned is not None
             _require(assigned >= 0, f"negative assigned volume for {facility_id}")
+            capacity = _number(
+                utilization_row["capacity_m3_y"], "capacity_m3_y", facility_id, required=True
+            )
+            assert capacity is not None
+            _require(capacity >= 0, f"negative v10 eligible capacity for {facility_id}")
+            if assigned > 0:
+                _require(capacity > 0, f"assigned volume without v10 capacity for {facility_id}")
+                _require(
+                    assigned <= capacity * 1.000001,
+                    f"assigned volume exceeds v10 capacity for {facility_id}",
+                )
             row = rows[key]
             row["assigned_m3_y"] += assigned
-            if assignment.get("cross_border") == "true":
-                row["cross_border_m3_y"] += assigned
-            else:
-                row["local_assigned_m3_y"] += assigned
-            if assignment["capacity_status"].startswith("published"):
+            row["local_assigned_m3_y"] += _number(
+                utilization_row["local_assigned_m3"], "local_assigned_m3", facility_id
+            ) or 0.0
+            row["cross_border_m3_y"] += _number(
+                utilization_row["cross_border_assigned_m3"],
+                "cross_border_assigned_m3",
+                facility_id,
+            ) or 0.0
+            if utilization_row["capacity_status"].startswith("published"):
                 row["published_assigned_m3_y"] += assigned
             else:
                 row["proxy_assigned_m3_y"] += assigned
-            assignment_capacity = _number(
-                assignment["capacity_m3_y"], "capacity_m3_y", facility_id, required=True
-            )
-            assert assignment_capacity is not None
-            _require(assignment_capacity > 0, f"non-positive assignment capacity for {facility_id}")
-            row["assignment_capacity_m3_y"] += assignment_capacity
-            assigned_ids[key].add(facility_id)
+            row["assignment_capacity_m3_y"] += capacity
+            row["eligible_capacity_m3_y"] += capacity
+            if utilization_row.get("used") == "true" or assigned > 0:
+                assigned_ids[key].add(facility_id)
 
         total_records = 0
         total_assigned = 0.0
         local_assigned = 0.0
         cross_border = 0.0
+        total_eligible = 0.0
         for key, row in rows.items():
             row["assigned_facility_count"] = len(assigned_ids[key])
             row["utilization"] = (
@@ -413,30 +441,82 @@ def _build_scenarios(
             total_assigned += row["assigned_m3_y"]
             local_assigned += row["local_assigned_m3_y"]
             cross_border += row["cross_border_m3_y"]
+            total_eligible += row["eligible_capacity_m3_y"]
 
         _require(total_records == len(capacity_rows), f"{scenario_id} table rows do not conserve records")
-        expected_assigned = _number(summary["assigned_m3"], "assigned_m3", scenario_id, required=True)
+        expected_assigned = _number(
+            case_summary["assigned_m3"], "assigned_m3", scenario_id, required=True
+        )
         assert expected_assigned is not None
         _require(
             abs(total_assigned - expected_assigned) <= 1e-3,
-            f"{scenario_id} assigned total {total_assigned} does not match chain summary {expected_assigned}",
+            f"{scenario_id} assigned total {total_assigned} does not match assignment v10 {expected_assigned}",
         )
-        expected_harvest = _number(summary["harvest_m3"], "harvest_m3", scenario_id, required=True)
+        expected_harvest = _number(
+            case_summary["harvest_case_m3"], "harvest_case_m3", scenario_id, required=True
+        )
         assert expected_harvest is not None
-        expected_facilities = _integer(summary["facilities_used"], "facilities_used", scenario_id)
+        expected_facilities = _integer(
+            case_summary["facilities_used"], "facilities_used", scenario_id
+        )
         _require(
-            len(assignments) == expected_facilities,
-            f"{scenario_id} facility count {len(assignments)} does not match chain summary {expected_facilities}",
+            len(assigned_ids.keys()) > 0 and sum(len(ids) for ids in assigned_ids.values()) == expected_facilities,
+            f"{scenario_id} facility count does not match assignment v10 {expected_facilities}",
         )
-        eligible_total = sum(row["eligible_capacity_m3_y"] for row in rows.values())
-        expected_utilization = _number(
-            summary["capacity_utilization"], "capacity_utilization", scenario_id, required=True
+        expected_used = _integer(
+            case_summary["facilities_used"], "facilities_used", scenario_id
         )
-        assert expected_utilization is not None
         _require(
-            abs((total_assigned / eligible_total) - expected_utilization) <= 1e-6,
-            f"{scenario_id} utilization does not reproduce the chain summary",
+            sum(1 for row in assignments.values() if row.get("used") == "true") == expected_used,
+            f"{scenario_id} used facility rows do not match assignment v10 {expected_used}",
         )
+        _require(total_eligible > 0, f"{scenario_id} eligible v10 capacity is not positive")
+        expected_utilization = total_assigned / total_eligible
+        chain_summary = summary_by_id[scenario_id]
+        chain_assigned = _number(
+            chain_summary["assigned_m3"], "assigned_m3", scenario_id, required=True
+        )
+        assert chain_assigned is not None
+        _require(
+            abs(total_assigned - chain_assigned) <= 1e-3,
+            f"{scenario_id} assigned total does not match chain v9 summary",
+        )
+        _require(
+            _integer(chain_summary["facilities_used"], "facilities_used", scenario_id)
+            == expected_facilities,
+            f"{scenario_id} chain v9 facility count does not match assignment v10",
+        )
+        province_assigned = sum(
+            _number(row["assigned_m3"], "assigned_m3", row["province"], required=True) or 0.0
+            for row in province_rows
+        )
+        province_capacity = sum(
+            _number(row["capacity_m3_y"], "capacity_m3_y", row["province"], required=True) or 0.0
+            for row in province_rows
+        )
+        _require(
+            abs(province_assigned - total_assigned) <= 1e-3,
+            f"{scenario_id} province summary assigned volume does not conserve",
+        )
+        _require(
+            abs(province_capacity - total_eligible) <= 1e-3,
+            f"{scenario_id} province summary eligible capacity does not conserve",
+        )
+
+        transport = {
+            field: _number(case_summary[field], field, scenario_id, required=True)
+            for field in TRANSPORT_FIELDS
+        }
+        for field, value in transport.items():
+            assert value is not None
+            _require(math.isfinite(value) and value >= 0, f"{scenario_id} has invalid {field}")
+        _require(
+            transport["transport_cost_cad"] > 0 and transport["mean_road_distance_km"] > 0,
+            f"{scenario_id} transport cost/distance is not positive",
+        )
+        for field in ("share_ge_150_km", "share_ge_300_km", "cross_border_share", "proxy_share_of_assigned"):
+            assert transport[field] is not None
+            _require(0 <= transport[field] <= 1, f"{scenario_id} {field} is outside [0, 1]")
 
         rows_sorted = sorted(
             rows.values(),
@@ -450,44 +530,37 @@ def _build_scenarios(
                 "assigned_m3": total_assigned,
                 "local_assigned_m3": local_assigned,
                 "cross_border_m3": cross_border,
-                "unassigned_m3": _number(summary["unassigned_m3"], "unassigned_m3", scenario_id) or 0.0,
-                "capacity_utilization": _number(
-                    summary["capacity_utilization"], "capacity_utilization", scenario_id, required=True
-                ),
+                "unassigned_m3": max(0.0, expected_harvest - total_assigned),
+                "capacity_utilization": expected_utilization,
                 "facilities_used": expected_facilities,
-                "capacity_case": summary["capacity_case"],
-                "source_artifact": "national_facility_chain_scenarios_v6",
+                "capacity_case": chain_summary.get("capacity_case") or "province_capacity_floor",
+                "source_artifact": "national_facility_assignment_v10",
+                "transport": {field: float(value) for field, value in transport.items()},
+                **{field: float(value) for field, value in transport.items()},
                 "rows": rows_sorted,
             }
         )
 
-    # Assignment v6 is the canonical 119 Mm3 local-processing base.  It must
-    # reproduce the 119m chain-assignment facility set and volume exactly.
-    base_assignments = _assignment_rows(assignment_rows, BASE_ASSIGNMENT_CASE)
-    chain_119 = _assignment_rows(chain_rows, DEFAULT_SCENARIO)
-    _require(
-        set(base_assignments) == set(chain_119),
-        "assignment v6 province_capacity_floor facility set does not match chain v6 119m",
-    )
-    for facility_id, base_row in base_assignments.items():
-        chain_row = chain_119[facility_id]
-        _require(
-            abs(float(base_row["assigned_m3"]) - float(chain_row["assigned_m3"])) <= 1e-3,
-            f"assignment v6 / chain v6 119m mismatch for {facility_id}",
-        )
+    primary = next(item for item in scenarios if item["id"] == DEFAULT_SCENARIO)
     return scenarios, [
         {
             "id": DEFAULT_SCENARIO,
-            "artifact": "national_facility_assignment_v6",
-            "capacity_case": BASE_ASSIGNMENT_CASE,
-            "facilities": len(base_assignments),
-            "assigned_m3": sum(float(row["assigned_m3"]) for row in base_assignments.values()),
+            "artifact": "national_facility_assignment_v10",
+            "capacity_case": primary["capacity_case"],
+            "facilities": primary["facilities_used"],
+            "assigned_m3": primary["assigned_m3"],
+            "transport_cost_cad": primary["transport_cost_cad"],
+            "mean_road_distance_km": primary["mean_road_distance_km"],
         }
     ]
 
 
 def _require_model_labels(labels: dict[str, Any], context: str) -> None:
-    _require(labels.get("model_estimate") is True, f"{context} must be a model estimate")
+    _require(
+        labels.get("model_estimate") is True
+        or labels.get("evidence_label") == "model_estimate",
+        f"{context} must be a model estimate",
+    )
     _require(labels.get("observed") is False, f"{context} observed must be false")
     _require(labels.get("policy_grade") is False, f"{context} policy_grade must be false")
     _require(labels.get("national_claim") is False, f"{context} national_claim must be false")
@@ -501,7 +574,10 @@ def _require_artifact(document: dict[str, Any], artifact: str, version: str, con
     _require(document.get("artifact") == artifact, f"{context} artifact is not {artifact}")
     _require(document.get("artifact_version") == version, f"{context} artifact_version is not {version}")
     if "status" in document:
-        _require(document.get("status") == "pass", f"{context} status is not pass")
+        _require(
+            document.get("status") in {"pass", "complete"},
+            f"{context} status is not pass/complete",
+        )
 
 
 def _close(actual: float, expected: float, tolerance: float = 1e-6) -> bool:
@@ -529,30 +605,44 @@ def _curve_national_row(
 
 
 def _build_national_chain(root: Path) -> dict[str, Any]:
-    chain_summary = _load_json(_query(root, V4_CHAIN_SUMMARY_JSON))
-    chain_manifest = _load_json(_query(root, V4_CHAIN_MANIFEST))
-    product_summary = _load_json(_query(root, V4_PRODUCT_CHAIN_SUMMARY))
-    product_manifest = _load_json(_query(root, V4_PRODUCT_CHAIN_MANIFEST))
-    residue_summary = _load_json(_query(root, V4_RESIDUE_SUMMARY))
-    residue_manifest = _load_json(_query(root, V4_RESIDUE_MANIFEST))
-    curve_summary = _load_json(_query(root, V4_CURVE_SUMMARY))
-    curve_manifest = _load_json(_query(root, V4_CURVE_MANIFEST))
-    handoff_summary = _load_json(_query(root, V4_HANDOFF_SUMMARY))
-    handoff_manifest = _load_json(_query(root, V4_HANDOFF_MANIFEST))
-    scenarios_summary = _load_json(_query(root, V4_SCENARIOS_SUMMARY))
-    scenarios_manifest = _load_json(_query(root, V4_SCENARIOS_MANIFEST))
+    chain_summary = _load_json(_query(root, CHAIN_SUMMARY_JSON))
+    chain_manifest = _load_json(_query(root, CHAIN_MANIFEST))
+    v10_summary = _load_json(_query(root, V10_SUMMARY_JSON))
+    v10_manifest = _load_json(_query(root, V10_MANIFEST))
+    product_summary = _load_json(_query(root, PRODUCT_CHAIN_SUMMARY))
+    product_manifest = _load_json(_query(root, PRODUCT_CHAIN_MANIFEST))
+    residue_summary = _load_json(_query(root, RESIDUE_SUMMARY))
+    residue_manifest = _load_json(_query(root, RESIDUE_MANIFEST))
+    curve_summary = _load_json(_query(root, CURVE_SUMMARY))
+    curve_manifest = _load_json(_query(root, CURVE_MANIFEST))
+    handoff_summary = _load_json(_query(root, HANDOFF_SUMMARY))
+    handoff_manifest = _load_json(_query(root, HANDOFF_MANIFEST))
+    scenarios_summary = _load_json(_query(root, SCENARIOS_SUMMARY))
+    scenarios_manifest = _load_json(_query(root, SCENARIOS_MANIFEST))
 
     _require_artifact(
         chain_summary,
-        "national_facility_chain_scenarios_v7",
-        "7.0.0",
-        "national chain v7 summary",
+        "national_facility_chain_scenarios_v9",
+        "9.0.0",
+        "national chain v9 summary",
     )
     _require_artifact(
         chain_manifest,
-        "national_facility_chain_scenarios_v7",
-        "7.0.0",
-        "national chain v7 manifest",
+        "national_facility_chain_scenarios_v9",
+        "9.0.0",
+        "national chain v9 manifest",
+    )
+    _require_artifact(
+        v10_summary,
+        "national_facility_assignment_v10",
+        "10.0.0",
+        "assignment v10 summary",
+    )
+    _require_artifact(
+        v10_manifest,
+        "national_facility_assignment_v10",
+        "10.0.0",
+        "assignment v10 manifest",
     )
     _require_artifact(
         product_summary,
@@ -568,90 +658,123 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
     )
     _require_artifact(
         residue_summary,
-        "facility_residue_supply_v7",
-        "7.0.0",
-        "facility residue supply v7 summary",
+        "facility_residue_supply_v9",
+        "9.0.0",
+        "facility residue supply v9 summary",
     )
     _require_artifact(
         residue_manifest,
-        "facility_residue_supply_v7",
-        "7.0.0",
-        "facility residue supply v7 manifest",
+        "facility_residue_supply_v9",
+        "9.0.0",
+        "facility residue supply v9 manifest",
     )
     _require_artifact(
         curve_summary,
-        "national_residue_curve_v7",
-        "7.0.0",
-        "national residue curve v7 summary",
+        "national_residue_curve_v9",
+        "9.0.0",
+        "national residue curve v9 summary",
     )
     _require_artifact(
         curve_manifest,
-        "national_residue_curve_v7",
-        "7.0.0",
-        "national residue curve v7 manifest",
+        "national_residue_curve_v9",
+        "9.0.0",
+        "national residue curve v9 manifest",
     )
     _require_artifact(
         handoff_summary,
-        "forestry_osecan_handoff_v8",
-        "8.0.0",
-        "OSeCAN handoff v8 summary",
+        "forestry_osecan_handoff_v10",
+        "10.0.0",
+        "OSeCAN handoff v10 summary",
     )
     _require_artifact(
         handoff_manifest,
-        "forestry_osecan_handoff_v8",
-        "8.0.0",
-        "OSeCAN handoff v8 manifest",
+        "forestry_osecan_handoff_v10",
+        "10.0.0",
+        "OSeCAN handoff v10 manifest",
     )
     _require_artifact(
         scenarios_summary,
-        "forestry_osecan_scenarios_v7",
-        "7.0.0",
-        "OSeCAN scenarios v7 summary",
+        "forestry_osecan_scenarios_v9",
+        "9.0.0",
+        "OSeCAN scenarios v9 summary",
     )
     _require_artifact(
         scenarios_manifest,
-        "forestry_osecan_scenarios_v7",
-        "7.0.0",
-        "OSeCAN scenarios v7 manifest",
+        "forestry_osecan_scenarios_v9",
+        "9.0.0",
+        "OSeCAN scenarios v9 manifest",
     )
 
     labels = chain_summary.get("labels") or {}
-    _require_model_labels(labels, "national chain v7 summary")
+    _require_model_labels(labels, "national chain v9 summary")
+    _require(labels.get("transport_cost_in_osecan") is False, "national chain v9 must keep transport outside OSeCAN")
+    _require(labels.get("capacity_change") is False, "national chain v9 must not change capacity")
+    _require(labels.get("product_change") is False, "national chain v9 must not change products")
+    _require(labels.get("residue_change") is False, "national chain v9 must not change residue")
     for context, document in (
-        ("national chain v7 manifest", chain_manifest),
+        ("national chain v9 manifest", chain_manifest),
+        ("assignment v10 summary", v10_summary),
+        ("assignment v10 manifest", v10_manifest),
         ("national product chain v5 summary", product_summary),
         ("national product chain v5 manifest", product_manifest),
-        ("facility residue supply v7 summary", residue_summary),
-        ("facility residue supply v7 manifest", residue_manifest),
-        ("national residue curve v7 summary", curve_summary),
-        ("national residue curve v7 manifest", curve_manifest),
-        ("OSeCAN handoff v8 summary", handoff_summary),
-        ("OSeCAN handoff v8 manifest", handoff_manifest),
-        ("OSeCAN scenarios v7 summary", scenarios_summary),
-        ("OSeCAN scenarios v7 manifest", scenarios_manifest),
+        ("facility residue supply v9 summary", residue_summary),
+        ("facility residue supply v9 manifest", residue_manifest),
+        ("national residue curve v9 summary", curve_summary),
+        ("national residue curve v9 manifest", curve_manifest),
+        ("OSeCAN handoff v10 summary", handoff_summary),
+        ("OSeCAN handoff v10 manifest", handoff_manifest),
+        ("OSeCAN scenarios v9 summary", scenarios_summary),
+        ("OSeCAN scenarios v9 manifest", scenarios_manifest),
     ):
         _require_model_labels(document.get("labels") or {}, context)
-
+        _require(
+            document.get("labels", {}).get("transport_cost_in_osecan", False) is False,
+            f"{context} must keep transport outside OSeCAN",
+        )
+    _require(
+        v10_summary.get("labels", {}).get("capacity_change") is False
+        and v10_summary.get("labels", {}).get("floor_change") is False,
+        "assignment v10 must not change capacity or the 1.2x floor",
+    )
     _require(
         chain_summary.get("scenario_order") == list(EXPECTED_SCENARIOS),
-        "national chain v7 scenario order is not 100m/119m/150m",
+        "national chain v9 scenario order is not 100m/119m/150m",
     )
-    _require(chain_summary.get("primary_scenario") == DEFAULT_SCENARIO, "national chain v7 reference is not 119m")
+    _require(chain_summary.get("primary_scenario") == DEFAULT_SCENARIO, "national chain v9 reference is not 119m")
+    _require(
+        list(v10_summary.get("cases") or {}) == list(EXPECTED_SCENARIOS),
+        "assignment v10 cases are not 100m/119m/150m",
+    )
+    _require(
+        (v10_summary.get("case_coverage") or {}).get("cases") == list(EXPECTED_SCENARIOS),
+        "assignment v10 case coverage is not 100m/119m/150m",
+    )
+    _require(
+        (v10_summary.get("case_coverage") or {}).get("capacity_change") is False
+        and (v10_summary.get("case_coverage") or {}).get("transport_curve_change") is False,
+        "assignment v10 case extension must keep capacity and transport curve unchanged",
+    )
+
     product_binding = chain_summary.get("product_chain") or {}
     _require(
         product_binding.get("artifact") == "national_product_chain_v5",
-        "national chain v7 does not bind product chain v5",
+        "national chain v9 does not bind product chain v5",
     )
     _require(product_binding.get("donor_product_provinces") == [], "donor product provinces must stay empty")
     _require(
         product_binding.get("recovery_scenarios") == [0.35, 0.6, 0.75],
-        "national chain v7 recovery scenarios changed",
+        "national chain v9 recovery scenarios changed",
     )
-
     measured_provinces = product_summary.get("measured_provinces")
     imputed_provinces = product_summary.get("imputed_provinces")
-    _require(isinstance(measured_provinces, list) and len(measured_provinces) == 4, "E1 measured province count is not four")
-    _require(isinstance(imputed_provinces, list) and len(imputed_provinces) == 9, "E2c imputed province count is not nine")
+    _require(
+        isinstance(measured_provinces, list) and len(measured_provinces) == 4,
+        "E1 measured province count is not four",
+    )
+    _require(
+        isinstance(imputed_provinces, list) and len(imputed_provinces) == 9,
+        "E2c imputed province count is not nine",
+    )
     _require(set(measured_provinces).isdisjoint(imputed_provinces), "E1 and E2c province sets overlap")
     _require(
         set(measured_provinces) | set(imputed_provinces) == set(PROVINCE_LABELS),
@@ -660,11 +783,11 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
     _require(product_summary.get("donor_provinces") == [], "product chain v5 donor provinces must stay empty")
     _require(
         set(product_binding.get("measured_provinces") or []) == set(measured_provinces),
-        "chain v7 measured provinces do not match product chain v5",
+        "chain v9 measured provinces do not match product chain v5",
     )
     _require(
         set(product_binding.get("density_calibrated_provinces") or []) == set(imputed_provinces),
-        "chain v7 E2c provinces do not match product chain v5",
+        "chain v9 E2c provinces do not match product chain v5",
     )
     coefficient_tiers = product_summary.get("coefficient_tiers") or {}
     _require(
@@ -681,17 +804,17 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
     )
     _require(
         chain_summary.get("coefficient_tiers") == coefficient_tiers,
-        "chain v7 coefficient tiers do not match product chain v5",
+        "chain v9 coefficient tiers do not match product chain v5",
     )
 
-    e1_rows = _read_csv(_query(root, V4_E1_COEFFICIENTS))
+    e1_rows = _read_csv(_query(root, E1_COEFFICIENTS))
     e1_provinces = {row["province"] for row in e1_rows}
     _require(e1_provinces == set(measured_provinces), "E1 coefficient rows do not cover the measured provinces")
     _require(
         all(row["tier"] == "measured_bucking_pilot" for row in e1_rows),
         "E1 coefficient rows carry an unexpected tier",
     )
-    e2c_rows = _read_csv(_query(root, V4_E2C_EVIDENCE))
+    e2c_rows = _read_csv(_query(root, E2C_EVIDENCE))
     e2c_provinces = {row["province"] for row in e2c_rows}
     _require(e2c_provinces == set(imputed_provinces), "E2c evidence rows do not cover the imputed provinces")
     _require(
@@ -702,18 +825,28 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
         "E2c evidence rows carry an unexpected tier",
     )
 
-    chain_rows = _read_csv(_query(root, V4_CHAIN_SUMMARY_CSV))
+    chain_rows = _read_csv(_query(root, CHAIN_SUMMARY_CSV))
     _require(
         [row["scenario"] for row in chain_rows] == list(EXPECTED_SCENARIOS),
-        "national chain v7 CSV must carry 100m/119m/150m in order",
+        "national chain v9 CSV must carry 100m/119m/150m in order",
     )
     scenario_details = chain_summary.get("scenarios") or {}
     _require(
         list(scenario_details) == list(EXPECTED_SCENARIOS),
-        "national chain v7 summary scenarios are not 100m/119m/150m",
+        "national chain v9 summary scenarios are not 100m/119m/150m",
     )
+    v10_case_rows = _read_csv(_query(root, V10_CASE_SUMMARY_CSV))
+    _require(
+        [row["scenario"] for row in v10_case_rows] == list(EXPECTED_SCENARIOS),
+        "assignment v10 case summary must carry 100m/119m/150m in order",
+    )
+    v7_rows = {
+        row["scenario"]: row for row in _read_csv(_query(root, V7_CHAIN_SUMMARY_CSV))
+    }
+    _require(set(v7_rows) == set(EXPECTED_SCENARIOS), "v7 invariance baseline is missing a harvest case")
+
     rows: list[dict[str, Any]] = []
-    for source_row in chain_rows:
+    for source_row, v10_row in zip(chain_rows, v10_case_rows, strict=True):
         scenario_id = source_row["scenario"]
         detail = scenario_details[scenario_id]
         for field in (
@@ -721,6 +854,8 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
             "sawlog_product_m3",
             "panel_product_m3",
             "pulp_product_odt",
+            "pellet_product_odt",
+            "bio_product_mwh",
             "process_residue_pj",
             "harvest_residue_gross_pj",
             "harvest_residue_recoverable_pj",
@@ -733,8 +868,28 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
             assert csv_value is not None and summary_value is not None
             _require(
                 _close(csv_value, summary_value),
-                f"national chain v7 CSV/summary mismatch for {scenario_id}.{field}",
+                f"national chain v9 CSV/summary mismatch for {scenario_id}.{field}",
             )
+        for field in (
+            "harvest_m3",
+            "sawlog_product_m3",
+            "panel_product_m3",
+            "pulp_product_odt",
+            "pellet_product_odt",
+            "bio_product_mwh",
+            "process_residue_pj",
+            "harvest_residue_gross_pj",
+            "harvest_residue_recoverable_pj",
+            "total_residue_gross_pj",
+        ):
+            v7_value = _number(v7_rows[scenario_id].get(field), field, f"v7 {scenario_id}", required=True)
+            v9_value = _number(source_row.get(field), field, scenario_id, required=True)
+            assert v7_value is not None and v9_value is not None
+            _require(
+                _close(v7_value, v9_value),
+                f"national chain v9 {scenario_id}.{field} is not invariant from v7",
+            )
+
         sawlog = _number(source_row["sawlog_product_m3"], "sawlog_product_m3", scenario_id, required=True)
         panel = _number(source_row["panel_product_m3"], "panel_product_m3", scenario_id, required=True)
         pulp = _number(source_row["pulp_product_odt"], "pulp_product_odt", scenario_id, required=True)
@@ -775,12 +930,80 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
         assert total_gross is not None and harvest_gross_odt is not None
         assert harvest_recoverable_odt is not None and harvest is not None
         solid = sawlog + panel
-        _require(solid > 0 and pulp > 0 and process >= 0 and harvest_gross > 0, f"{scenario_id} chain value is not positive")
-        _require(harvest_recoverable >= 0 and total_gross > 0 and harvest > 0, f"{scenario_id} chain total is not positive")
+        _require(
+            solid > 0 and pulp > 0 and process >= 0 and harvest_gross > 0,
+            f"{scenario_id} chain value is not positive",
+        )
+        _require(
+            harvest_recoverable >= 0 and total_gross > 0 and harvest > 0,
+            f"{scenario_id} chain total is not positive",
+        )
         _require(
             _close(total_gross, process + harvest_gross),
             f"{scenario_id} total gross PJ is not process plus harvest gross",
         )
+
+        expected_assigned = _number(
+            v10_row["assigned_m3"], "assigned_m3", f"v10 {scenario_id}", required=True
+        )
+        expected_facilities = _integer(
+            v10_row["facilities_used"], "facilities_used", f"v10 {scenario_id}"
+        )
+        summary_case = (v10_summary.get("cases") or {}).get(scenario_id) or {}
+        summary_metrics = summary_case.get("metrics") or {}
+        _require(bool(summary_metrics), f"assignment v10 summary is missing {scenario_id} metrics")
+        for field in ("assigned_m3", "facilities_used", "transport_cost_cad", "mean_road_distance_km"):
+            value = _number(
+                v10_row[field], field, f"v10 {scenario_id}", required=True
+            )
+            summary_value = _number(
+                str(summary_metrics.get(field, "")), field, f"v10 {scenario_id}", required=True
+            )
+            assert value is not None and summary_value is not None
+            _require(
+                _close(value, summary_value),
+                f"assignment v10 CSV/summary mismatch for {scenario_id}.{field}",
+            )
+        _require(
+            abs(harvest - (expected_assigned or 0.0)) <= 1.0,
+            f"{scenario_id} v10 assignment does not conserve the harvest case",
+        )
+        _require(
+            (expected_facilities) > 0,
+            f"{scenario_id} v10 facilities used is not positive",
+        )
+        for field in (
+            "transport_cost_cad",
+            "transport_cost_cad_m3",
+            "transport_cost_cad_gj",
+            "mean_road_distance_km",
+            "median_road_distance_km",
+            "p90_road_distance_km",
+            "max_road_distance_km",
+            "share_ge_150_km",
+            "share_ge_300_km",
+            "cross_border_m3",
+            "cross_border_share",
+            "proxy_share_of_assigned",
+        ):
+            value = _number(v10_row[field], field, f"v10 {scenario_id}", required=True)
+            assert value is not None
+            _require(math.isfinite(value) and value >= 0, f"{scenario_id} has invalid v10 {field}")
+        for field in ("share_ge_150_km", "share_ge_300_km", "cross_border_share", "proxy_share_of_assigned"):
+            value = _number(v10_row[field], field, f"v10 {scenario_id}", required=True)
+            assert value is not None
+            _require(0 <= value <= 1, f"{scenario_id} v10 {field} is outside [0, 1]")
+        _require(
+            (_number(v10_row["transport_cost_cad"], "transport_cost_cad", scenario_id, required=True) or 0)
+            > 0,
+            f"{scenario_id} v10 transport cost is not positive",
+        )
+        _require(
+            (_number(v10_row["mean_road_distance_km"], "mean_road_distance_km", scenario_id, required=True) or 0)
+            > 0,
+            f"{scenario_id} v10 mean distance is not positive",
+        )
+
         rows.append(
             {
                 "id": scenario_id,
@@ -792,8 +1015,43 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
                 "harvest_gross_pj": harvest_gross,
                 "harvest_recoverable_pj": harvest_recoverable,
                 "total_gross_pj": total_gross,
-                "_harvest_gross_odt": harvest_gross_odt,
-                "_harvest_recoverable_odt": harvest_recoverable_odt,
+                "transport_cost_cad": _number(
+                    v10_row["transport_cost_cad"], "transport_cost_cad", scenario_id, required=True
+                ),
+                "transport_cost_cad_m3": _number(
+                    v10_row["transport_cost_cad_m3"], "transport_cost_cad_m3", scenario_id, required=True
+                ),
+                "transport_cost_cad_gj": _number(
+                    v10_row["transport_cost_cad_gj"], "transport_cost_cad_gj", scenario_id, required=True
+                ),
+                "mean_road_distance_km": _number(
+                    v10_row["mean_road_distance_km"], "mean_road_distance_km", scenario_id, required=True
+                ),
+                "median_road_distance_km": _number(
+                    v10_row["median_road_distance_km"], "median_road_distance_km", scenario_id, required=True
+                ),
+                "p90_road_distance_km": _number(
+                    v10_row["p90_road_distance_km"], "p90_road_distance_km", scenario_id, required=True
+                ),
+                "max_road_distance_km": _number(
+                    v10_row["max_road_distance_km"], "max_road_distance_km", scenario_id, required=True
+                ),
+                "share_ge_150_km": _number(
+                    v10_row["share_ge_150_km"], "share_ge_150_km", scenario_id, required=True
+                ),
+                "share_ge_300_km": _number(
+                    v10_row["share_ge_300_km"], "share_ge_300_km", scenario_id, required=True
+                ),
+                "cross_border_m3": _number(
+                    v10_row["cross_border_m3"], "cross_border_m3", scenario_id, required=True
+                ),
+                "cross_border_share": _number(
+                    v10_row["cross_border_share"], "cross_border_share", scenario_id, required=True
+                ),
+                "proxy_share_of_assigned": _number(
+                    v10_row["proxy_share_of_assigned"], "proxy_share_of_assigned", scenario_id, required=True
+                ),
+                "facilities_used": expected_facilities,
             }
         )
 
@@ -813,10 +1071,28 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
         rows[0]["harvest_gross_pj"] < rows[1]["harvest_gross_pj"] < rows[2]["harvest_gross_pj"],
         "national chain harvest residue does not order 100 < 119 < 150",
     )
+    _require(
+        rows[0]["transport_cost_cad"] < rows[1]["transport_cost_cad"] < rows[2]["transport_cost_cad"],
+        "national chain transport cost does not order 100 < 119 < 150",
+    )
 
-    residue_rows = _read_csv(_query(root, V4_RESIDUE_NATIONAL_CSV))
+    invariance_rows = _read_csv(_query(root, CHAIN_INVARIANCE_CSV))
+    _require(len(invariance_rows) == 30, "chain v9 product/residue invariance table must carry 30 rows")
+    for row in invariance_rows:
+        _require(row["invariant"] == "true", f"chain v9 invariance failed for {row['scenario']}.{row['metric']}")
+        delta = _number(row["delta"], "delta", f"invariance {row['scenario']}.{row['metric']}", required=True)
+        assert delta is not None
+        _require(abs(delta) <= 1e-9, f"chain v9 invariance delta is nonzero for {row['scenario']}.{row['metric']}")
+
+    residue_rows = _read_csv(_query(root, RESIDUE_NATIONAL_CSV))
     residue_totals: dict[str, float] = {}
     for row in residue_rows:
+        if row["scenario"] != DEFAULT_SCENARIO:
+            continue
+        _require(
+            row["assignment"] == "v10_node_transport_aware",
+            "facility residue v9 119m must use assignment v10",
+        )
         metric = row["metric"]
         _require(metric not in residue_totals, f"duplicate residue metric {metric}")
         value = _number(row["value"], "value", f"residue metric {metric}", required=True)
@@ -829,13 +1105,13 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
         ("harvest_residue_recoverable_pj", "harvest_recoverable_pj"),
         ("combined_process_plus_harvest_gross_pj", "total_gross_pj"),
     ):
-        _require(metric in residue_totals, f"facility residue v7 is missing {metric}")
+        _require(metric in residue_totals, f"facility residue v9 is missing {metric}")
         _require(
             _close(residue_totals[metric], reference[field]),
-            f"facility residue v7 {metric} does not match the 119 Mm³ chain",
+            f"facility residue v9 {metric} does not match the 119 Mm³ chain",
         )
 
-    curve_rows = _read_csv(_query(root, V4_CURVE_NATIONAL_CSV))
+    curve_rows = _read_csv(_query(root, CURVE_NATIONAL_CSV))
     process_curve = _curve_national_row(
         curve_rows,
         "process_residue",
@@ -874,25 +1150,40 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
     assert process_curve_pj is not None and harvest_curve_pj is not None
     _require(
         _close(process_curve_pj, reference["process_pj"] * process_fraction),
-        "residue curve v7 process 50% does not apply the reference availability fraction",
+        "residue curve v9 process 50% does not apply the reference availability fraction",
     )
     _require(
         _close(harvest_curve_pj, reference["harvest_recoverable_pj"]),
-        "residue curve v7 harvest 60% does not match the 119 Mm³ chain",
+        "residue curve v9 harvest 60% does not match the 119 Mm³ chain",
     )
     for curve_row, context in (
         (process_curve, "process_availability_050"),
         (harvest_curve, "harvest_recovery_060"),
     ):
-        _require(curve_row["model_estimate"] == "true", f"residue curve v7 {context} is not a model estimate")
-        _require(curve_row["observed"] == "false", f"residue curve v7 {context} observed must be false")
-        _require(curve_row["policy_grade"] == "false", f"residue curve v7 {context} policy_grade must be false")
+        _require(curve_row["model_estimate"] == "true", f"residue curve v9 {context} is not a model estimate")
+        _require(curve_row["observed"] == "false", f"residue curve v9 {context} observed must be false")
+        _require(curve_row["policy_grade"] == "false", f"residue curve v9 {context} policy_grade must be false")
     for row in rows:
-        gross_odt = row["_harvest_gross_odt"]
-        recoverable_odt = row["_harvest_recoverable_odt"]
-        _require(gross_odt > 0, f"{row['id']} harvest gross odt is not positive")
+        harvest_gross_odt = _number(
+            next(source["harvest_residue_gross_odt"] for source in chain_rows if source["scenario"] == row["id"]),
+            "harvest_residue_gross_odt",
+            row["id"],
+            required=True,
+        )
+        harvest_recoverable_odt = _number(
+            next(
+                source["harvest_residue_recoverable_odt"]
+                for source in chain_rows
+                if source["scenario"] == row["id"]
+            ),
+            "harvest_residue_recoverable_odt",
+            row["id"],
+            required=True,
+        )
+        assert harvest_gross_odt is not None and harvest_recoverable_odt is not None
+        _require(harvest_gross_odt > 0, f"{row['id']} harvest gross odt is not positive")
         _require(
-            _close(recoverable_odt, gross_odt * harvest_fraction),
+            _close(harvest_recoverable_odt, harvest_gross_odt * harvest_fraction),
             f"{row['id']} harvest recoverable does not apply the reference recovery fraction",
         )
         _require(
@@ -900,13 +1191,13 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
             f"{row['id']} harvest recoverable PJ does not apply the reference recovery fraction",
         )
 
-    handoff_tier_rows = _read_csv(_query(root, V4_HANDOFF_TIERS_CSV))
-    _require(len(handoff_tier_rows) == 7, "OSeCAN handoff v8 tier table must carry seven cases")
-    handoff_tiers = {row["case"]: row for row in handoff_tier_rows}
-    _require(len(handoff_tiers) == len(handoff_tier_rows), "duplicate case in OSeCAN handoff v8 tier table")
+    handoff_tier_rows = _read_csv(_query(root, HANDOFF_TIERS_CSV))
+    _require(len(handoff_tier_rows) == 7, "OSeCAN handoff v10 tier table must carry seven cases")
+    handoff_tiers = {(row["stream"], row["case"]): row for row in handoff_tier_rows}
+    _require(len(handoff_tiers) == len(handoff_tier_rows), "duplicate case in OSeCAN handoff v10 tier table")
     supply_curve = handoff_summary.get("supply_curve") or {}
     case_tier = supply_curve.get("case_tier") or {}
-    upper_pj = _number(str(supply_curve.get("upper_pj", "")), "upper_pj", "OSeCAN handoff v8", required=True)
+    upper_pj = _number(str(supply_curve.get("upper_pj", "")), "upper_pj", "OSeCAN handoff v10", required=True)
     assert upper_pj is not None and upper_pj > 0
     tier_specs = (
         ("process", "process_availability_050", "process_pj", process_fraction),
@@ -918,19 +1209,21 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
     }
     tier_badges: list[dict[str, Any]] = []
     for stream, case, field, fraction in tier_specs:
-        handoff_row = handoff_tiers.get(case)
-        _require(handoff_row is not None, f"OSeCAN handoff v8 is missing tier case {case}")
-        _require(handoff_row["stream"] == stream, f"OSeCAN handoff v8 {case} stream mismatch")
-        _require(handoff_row["model_estimate"] == "true", f"OSeCAN handoff v8 {case} is not a model estimate")
-        _require(handoff_row["observed"] == "false", f"OSeCAN handoff v8 {case} observed must be false")
-        _require(handoff_row["policy_grade"] == "false", f"OSeCAN handoff v8 {case} policy_grade must be false")
+        handoff_row = handoff_tiers.get((stream, case))
+        _require(handoff_row is not None, f"OSeCAN handoff v10 is missing tier case {case}")
+        _require(handoff_row["model_estimate"] == "true", f"OSeCAN handoff v10 {case} is not a model estimate")
+        _require(handoff_row["observed"] == "false", f"OSeCAN handoff v10 {case} observed must be false")
+        _require(handoff_row["policy_grade"] == "false", f"OSeCAN handoff v10 {case} policy_grade must be false")
         tier = handoff_row["v4_e2c_tier"]
-        _require(bool(tier), f"OSeCAN handoff v8 {case} has no tier")
-        _require(case_tier.get(f"{stream}/{case}") == tier, f"OSeCAN handoff v8 {case} tier is inconsistent")
+        _require(bool(tier), f"OSeCAN handoff v10 {case} has no tier")
+        _require(
+            case_tier.get(f"{stream}/{case}") == tier,
+            f"OSeCAN handoff v10 {case} tier is inconsistent",
+        )
         if tier == "above_T4":
             _require(
                 tier_case_values[case] > upper_pj,
-                f"OSeCAN handoff v8 {case} says above_T4 but the 119 Mm³ case value is not",
+                f"OSeCAN handoff v10 {case} says above_T4 but the 119 Mm³ case value is not",
             )
         tier_badges.append(
             {
@@ -942,46 +1235,56 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
             }
         )
 
-    scenarios_tiers = scenarios_summary.get("tier_positions_v3_2_vs_v4") or []
-    _require(len(scenarios_tiers) == 21, "OSeCAN scenarios v7 must carry 21 tier positions")
-    scenario_tier_index: dict[tuple[str, str, str], dict[str, Any]] = {}
+    scenarios_tiers = _read_csv(_query(root, SCENARIOS_TIERS_CSV))
+    _require(len(scenarios_tiers) == 21, "OSeCAN scenarios v9 must carry 21 tier positions")
+    scenario_tier_index: dict[tuple[str, str, str], dict[str, str]] = {}
     for row in scenarios_tiers:
         key = (row["scenario"], row["stream"], row["case"])
         _require(key not in scenario_tier_index, f"duplicate OSeCAN scenario tier position {key}")
+        _require(row["model_estimate"] == "true", f"OSeCAN scenarios v9 {key} is not a model estimate")
+        _require(row["observed"] == "false", f"OSeCAN scenarios v9 {key} observed must be false")
+        _require(row["policy_grade"] == "false", f"OSeCAN scenarios v9 {key} policy_grade must be false")
         scenario_tier_index[key] = row
-    for row in rows:
-        for stream, case, field, fraction in tier_specs:
-            scenario_tier = scenario_tier_index.get((row["id"], stream, case))
-            _require(scenario_tier is not None, f"OSeCAN scenarios v7 is missing {row['id']}/{stream}/{case}")
+    row_by_id = {row["id"]: row for row in rows}
+    for scenario_id in EXPECTED_SCENARIOS:
+        row = row_by_id[scenario_id]
+        for stream, fraction in (("process", 0.25), ("process", 0.5), ("process", 0.75), ("harvest", 0.35), ("harvest", 0.6), ("harvest", 0.75)):
+            case = (
+                f"process_availability_{round(fraction * 100):03d}"
+                if stream == "process"
+                else f"harvest_recovery_{round(fraction * 100):03d}"
+            )
+            scenario_tier = scenario_tier_index.get((scenario_id, stream, case))
+            _require(
+                scenario_tier is not None,
+                f"OSeCAN scenarios v9 is missing {scenario_id}/{stream}/{case}",
+            )
             scenario_pj = _number(
                 str(scenario_tier.get("v4_e2c_pj", "")),
                 "v4_e2c_pj",
-                f"{row['id']}/{case}",
+                f"{scenario_id}/{case}",
                 required=True,
             )
             assert scenario_pj is not None
-            expected_case_pj = row[field] * fraction if stream == "process" else row[field]
+            expected_case_pj = (
+                row["process_pj"] * fraction
+                if stream == "process"
+                else row["harvest_gross_pj"] * fraction
+            )
             _require(
                 _close(scenario_pj, expected_case_pj),
-                f"OSeCAN scenarios v7 {row['id']}/{case} does not match the chain",
+                f"OSeCAN scenarios v9 {scenario_id}/{case} does not match the chain",
             )
-            _require(bool(scenario_tier.get("v4_e2c_tier")), f"OSeCAN scenarios v7 {row['id']}/{case} has no tier")
+            _require(
+                bool(scenario_tier.get("v4_e2c_tier")),
+                f"OSeCAN scenarios v9 {scenario_id}/{case} has no tier",
+            )
     for stream, case, _field, _fraction in tier_specs:
         reference_tier = scenario_tier_index[(DEFAULT_SCENARIO, stream, case)]["v4_e2c_tier"]
-        handoff_tier = handoff_tiers[case]["v4_e2c_tier"]
+        handoff_tier = handoff_tiers[(stream, case)]["v4_e2c_tier"]
         _require(
             reference_tier == handoff_tier,
-            f"OSeCAN scenarios v7 119 Mm³ {case} tier disagrees with handoff v8",
-        )
-
-    row_payloads = []
-    for row in rows:
-        row_payloads.append(
-            {
-                key: value
-                for key, value in row.items()
-                if not key.startswith("_")
-            }
+            f"OSeCAN scenarios v9 119 Mm³ {case} tier disagrees with handoff v10",
         )
 
     return {
@@ -994,6 +1297,13 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
             "policy_grade": labels["policy_grade"],
             "national_claim": labels["national_claim"],
             "official_osecan_changed": labels["official_osecan_changed"],
+            "transport_cost_in_osecan": labels["transport_cost_in_osecan"],
+        },
+        "assignment": {
+            "artifact": v10_summary["artifact"],
+            "scenario": "node_transport_aware",
+            "cases": list(EXPECTED_SCENARIOS),
+            "transport_cost_in_osecan": False,
         },
         "coefficient_provenance": {
             "e1": {
@@ -1016,6 +1326,8 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
             "process_availability_fraction": process_fraction,
             "harvest_case": "harvest_recovery_060",
             "harvest_recovery_fraction": harvest_fraction,
+            "transport_cost_cad": reference["transport_cost_cad"],
+            "mean_road_distance_km": reference["mean_road_distance_km"],
             "tiers": tier_badges,
         },
         "columns": [
@@ -1069,8 +1381,24 @@ def _build_national_chain(root: Path) -> dict[str, Any]:
                 "scale": 1,
                 "decimals": 3,
             },
+            {
+                "id": "transport_cost",
+                "field": "transport_cost_cad",
+                "label": "Transport",
+                "unit": "B CAD/yr",
+                "scale": 1_000_000_000,
+                "decimals": 3,
+            },
+            {
+                "id": "mean_distance",
+                "field": "mean_road_distance_km",
+                "label": "Mean distance",
+                "unit": "km",
+                "scale": 1,
+                "decimals": 1,
+            },
         ],
-        "rows": row_payloads,
+        "rows": rows,
     }
 
 
@@ -1193,11 +1521,10 @@ def build_payload(root: Path) -> dict[str, Any]:
     )
 
     base = _base_rows(capacity_rows)
-    chain_rows = _read_csv(_query(root, CHAIN_ASSIGNMENT_CSV))
     chain_summary_rows = _read_csv(_query(root, CHAIN_SUMMARY_CSV))
-    assignment_rows = _read_csv(_query(root, ASSIGNMENT_CSV))
+    case_summaries = _read_csv(_query(root, V10_CASE_SUMMARY_CSV))
     scenarios, base_assignment = _build_scenarios(
-        capacity_rows, base, chain_rows, chain_summary_rows, assignment_rows
+        root, capacity_rows, base, chain_summary_rows, case_summaries
     )
 
     classes = []
@@ -1240,17 +1567,44 @@ def build_payload(root: Path) -> dict[str, Any]:
 
     scenario_facilities: dict[str, dict[str, dict[str, Any]]] = {}
     for scenario in scenarios:
-        assignments = _assignment_rows(chain_rows, scenario["id"])
-        scenario_facilities[scenario["id"]] = {
-            facility_id: {
-                "assigned_m3_y": _number(row["assigned_m3"], "assigned_m3", facility_id, required=True),
+        utilization_rows = _read_csv(
+            _query(root, _case_path(ASSIGNMENT_DIR, "v10_facility_utilization", scenario["id"]))
+        )
+        selected: dict[str, dict[str, Any]] = {}
+        for row in utilization_rows:
+            assigned = _number(row["assigned_m3"], "assigned_m3", row["facility_id"], required=True)
+            assert assigned is not None
+            if row.get("used") != "true" and assigned <= 0:
+                continue
+            selected[row["facility_id"]] = {
+                "assigned_m3_y": assigned,
+                "capacity_m3_y": _number(
+                    row["capacity_m3_y"], "capacity_m3_y", row["facility_id"], required=True
+                ),
                 "capacity_status": row["capacity_status"],
-                "utilization": _number(row["utilization"], "utilization", facility_id),
-                "cross_border": row.get("cross_border") == "true",
-                "floor_scale_factor": _number(row.get("floor_scale_factor"), "floor_scale_factor", facility_id),
+                "utilization": _number(row["utilization"], "utilization", row["facility_id"]),
+                "cross_border": (
+                    _number(
+                        row["cross_border_assigned_m3"],
+                        "cross_border_assigned_m3",
+                        row["facility_id"],
+                    )
+                    or 0.0
+                )
+                > 0,
+                "local_assigned_m3_y": _number(
+                    row["local_assigned_m3"], "local_assigned_m3", row["facility_id"]
+                )
+                or 0.0,
+                "floor_scale_factor": _number(
+                    row.get("floor_scale_factor"), "floor_scale_factor", row["facility_id"]
+                ),
             }
-            for facility_id, row in assignments.items()
-        }
+        _require(
+            len(selected) == scenario["facilities_used"],
+            f"{scenario['id']} facility assignment rows do not match facilities used",
+        )
+        scenario_facilities[scenario["id"]] = selected
     for scenario in scenarios:
         scenario["facility_assignments"] = scenario_facilities[scenario["id"]]
 
@@ -1271,117 +1625,179 @@ def build_payload(root: Path) -> dict[str, Any]:
         _source_record(root, CAPACITY_SUMMARY, "capacity summary and coverage", "national_facility_capacity_v3"),
         _source_record(root, CAPACITY_MANIFEST, "capacity manifest", "national_facility_capacity_v3"),
         _source_record(root, INVENTORY_CSV, "inventory v1 source ledger", "national_facility_inventory_v1"),
-        _source_record(root, ASSIGNMENT_CSV, "119 Mm3 local-processing assignment", "national_facility_assignment_v6"),
-        _source_record(root, CHAIN_ASSIGNMENT_CSV, "100/119/150 Mm3 assignments", "national_facility_chain_scenarios_v6"),
-        _source_record(root, CHAIN_SUMMARY_CSV, "scenario utilization and totals", "national_facility_chain_scenarios_v6"),
-        _source_record(root, CHAIN_MANIFEST, "chain scenario manifest", "national_facility_chain_scenarios_v6"),
         _source_record(
             root,
-            V4_CHAIN_SUMMARY_CSV,
-            "v4 national chain scenario products and residue",
-            "national_facility_chain_scenarios_v7",
+            V10_CASE_SUMMARY_CSV,
+            "100/119/150 Mm3 assignment v10 totals, transport cost and distance",
+            "national_facility_assignment_v10",
         ),
         _source_record(
             root,
-            V4_CHAIN_SUMMARY_JSON,
-            "v4 national chain summary, labels and coefficient tiers",
-            "national_facility_chain_scenarios_v7",
+            V10_SUMMARY_JSON,
+            "assignment v10 summary, labels and case metrics",
+            "national_facility_assignment_v10",
         ),
         _source_record(
             root,
-            V4_CHAIN_MANIFEST,
-            "v4 national chain manifest",
-            "national_facility_chain_scenarios_v7",
+            V10_MANIFEST,
+            "assignment v10 manifest",
+            "national_facility_assignment_v10",
         ),
         _source_record(
             root,
-            V4_PRODUCT_CHAIN_SUMMARY,
-            "v4 product chain coefficient tiers and labels",
+            _case_path(ASSIGNMENT_DIR, "v10_facility_utilization", "100m"),
+            "100m v10 facility assignment and utilization",
+            "national_facility_assignment_v10",
+        ),
+        _source_record(
+            root,
+            _case_path(ASSIGNMENT_DIR, "v10_facility_utilization", "119m"),
+            "119m v10 facility assignment and utilization",
+            "national_facility_assignment_v10",
+        ),
+        _source_record(
+            root,
+            _case_path(ASSIGNMENT_DIR, "v10_facility_utilization", "150m"),
+            "150m v10 facility assignment and utilization",
+            "national_facility_assignment_v10",
+        ),
+        _source_record(
+            root,
+            _case_path(ASSIGNMENT_DIR, "v10_province_summary", "100m"),
+            "100m v10 province assignment and capacity totals",
+            "national_facility_assignment_v10",
+        ),
+        _source_record(
+            root,
+            _case_path(ASSIGNMENT_DIR, "v10_province_summary", "119m"),
+            "119m v10 province assignment and capacity totals",
+            "national_facility_assignment_v10",
+        ),
+        _source_record(
+            root,
+            _case_path(ASSIGNMENT_DIR, "v10_province_summary", "150m"),
+            "150m v10 province assignment and capacity totals",
+            "national_facility_assignment_v10",
+        ),
+        _source_record(
+            root,
+            CHAIN_SUMMARY_CSV,
+            "v5.1 national chain scenario products and residue",
+            "national_facility_chain_scenarios_v9",
+        ),
+        _source_record(
+            root,
+            CHAIN_SUMMARY_JSON,
+            "v5.1 national chain summary, labels and coefficient tiers",
+            "national_facility_chain_scenarios_v9",
+        ),
+        _source_record(
+            root,
+            CHAIN_MANIFEST,
+            "v5.1 national chain manifest",
+            "national_facility_chain_scenarios_v9",
+        ),
+        _source_record(
+            root,
+            CHAIN_INVARIANCE_CSV,
+            "v5.1 product/residue invariance rows",
+            "national_facility_chain_scenarios_v9",
+        ),
+        _source_record(
+            root,
+            PRODUCT_CHAIN_SUMMARY,
+            "product chain coefficient tiers and labels",
             "national_product_chain_v5",
         ),
         _source_record(
             root,
-            V4_PRODUCT_CHAIN_MANIFEST,
-            "v4 product chain manifest",
+            PRODUCT_CHAIN_MANIFEST,
+            "product chain manifest",
             "national_product_chain_v5",
         ),
         _source_record(
             root,
-            V4_E1_COEFFICIENTS,
-            "v4 E1 measured coefficient rows",
+            E1_COEFFICIENTS,
+            "E1 measured coefficient rows",
             "national_product_chain_v5",
         ),
         _source_record(
             root,
-            V4_E2C_EVIDENCE,
-            "v4 E2c imputed coefficient evidence",
+            E2C_EVIDENCE,
+            "E2c imputed coefficient evidence",
             "national_product_chain_v5",
         ),
         _source_record(
             root,
-            V4_RESIDUE_NATIONAL_CSV,
-            "v4 119 Mm3 national residue totals",
-            "facility_residue_supply_v7",
+            RESIDUE_NATIONAL_CSV,
+            "v5.1 119 Mm3 national residue totals",
+            "facility_residue_supply_v9",
         ),
         _source_record(
             root,
-            V4_RESIDUE_SUMMARY,
-            "v4 facility residue summary and labels",
-            "facility_residue_supply_v7",
+            RESIDUE_SUMMARY,
+            "v5.1 facility residue summary and labels",
+            "facility_residue_supply_v9",
         ),
         _source_record(
             root,
-            V4_RESIDUE_MANIFEST,
-            "v4 facility residue manifest",
-            "facility_residue_supply_v7",
+            RESIDUE_MANIFEST,
+            "v5.1 facility residue manifest",
+            "facility_residue_supply_v9",
         ),
         _source_record(
             root,
-            V4_CURVE_NATIONAL_CSV,
-            "v4 national residue curve rows",
-            "national_residue_curve_v7",
+            CURVE_NATIONAL_CSV,
+            "v5.1 national residue curve rows",
+            "national_residue_curve_v9",
         ),
         _source_record(
             root,
-            V4_CURVE_SUMMARY,
-            "v4 national residue curve summary and labels",
-            "national_residue_curve_v7",
+            CURVE_SUMMARY,
+            "v5.1 national residue curve summary and labels",
+            "national_residue_curve_v9",
         ),
         _source_record(
             root,
-            V4_CURVE_MANIFEST,
-            "v4 national residue curve manifest",
-            "national_residue_curve_v7",
+            CURVE_MANIFEST,
+            "v5.1 national residue curve manifest",
+            "national_residue_curve_v9",
         ),
         _source_record(
             root,
-            V4_HANDOFF_TIERS_CSV,
-            "v4 OSeCAN tier positions",
-            "forestry_osecan_handoff_v8",
+            HANDOFF_TIERS_CSV,
+            "v5.1 OSeCAN tier positions",
+            "forestry_osecan_handoff_v10",
         ),
         _source_record(
             root,
-            V4_HANDOFF_SUMMARY,
-            "v4 OSeCAN handoff summary, labels and supply curve",
-            "forestry_osecan_handoff_v8",
+            HANDOFF_SUMMARY,
+            "v5.1 OSeCAN handoff summary, labels and supply curve",
+            "forestry_osecan_handoff_v10",
         ),
         _source_record(
             root,
-            V4_HANDOFF_MANIFEST,
-            "v4 OSeCAN handoff manifest",
-            "forestry_osecan_handoff_v8",
+            HANDOFF_MANIFEST,
+            "v5.1 OSeCAN handoff manifest",
+            "forestry_osecan_handoff_v10",
         ),
         _source_record(
             root,
-            V4_SCENARIOS_SUMMARY,
-            "v4 OSeCAN scenario tier positions and labels",
-            "forestry_osecan_scenarios_v7",
+            SCENARIOS_TIERS_CSV,
+            "v5.1 OSeCAN scenario tier positions",
+            "forestry_osecan_scenarios_v9",
         ),
         _source_record(
             root,
-            V4_SCENARIOS_MANIFEST,
-            "v4 OSeCAN scenario manifest",
-            "forestry_osecan_scenarios_v7",
+            SCENARIOS_SUMMARY,
+            "v5.1 OSeCAN scenario summary and labels",
+            "forestry_osecan_scenarios_v9",
+        ),
+        _source_record(
+            root,
+            SCENARIOS_MANIFEST,
+            "v5.1 OSeCAN scenario manifest",
+            "forestry_osecan_scenarios_v9",
         ),
     ]
 
@@ -1464,6 +1880,21 @@ def _validation_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 ),
             }
         )
+        checks.append(
+            {
+                "name": f"transport_values:{scenario['id']}",
+                "ok": scenario["transport_cost_cad"] > 0
+                and scenario["mean_road_distance_km"] > 0
+                and 0 <= scenario["share_ge_150_km"] <= 1
+                and 0 <= scenario["share_ge_300_km"] <= 1,
+                "detail": {
+                    "transport_cost_cad": scenario["transport_cost_cad"],
+                    "mean_road_distance_km": scenario["mean_road_distance_km"],
+                    "share_ge_150_km": scenario["share_ge_150_km"],
+                    "share_ge_300_km": scenario["share_ge_300_km"],
+                },
+            }
+        )
     checks.append(
         {
             "name": "labels",
@@ -1505,8 +1936,26 @@ def _validation_checks(payload: dict[str, Any]) -> list[dict[str, Any]]:
                     "policy_grade": False,
                     "national_claim": False,
                     "official_osecan_changed": False,
+                    "transport_cost_in_osecan": False,
                 },
                 "detail": chain["labels"],
+            },
+            {
+                "name": "national_chain_transport",
+                "ok": len(chain["columns"]) == 8
+                and all(
+                    column["field"] in chain["rows"][0]
+                    for column in chain["columns"]
+                )
+                and all(
+                    row["transport_cost_cad"] > 0 and row["mean_road_distance_km"] > 0
+                    for row in chain["rows"]
+                ),
+                "detail": {
+                    "columns": [column["id"] for column in chain["columns"]],
+                    "transport_cost_cad": [row["transport_cost_cad"] for row in chain["rows"]],
+                    "mean_road_distance_km": [row["mean_road_distance_km"] for row in chain["rows"]],
+                },
             },
             {
                 "name": "national_chain_coefficients",

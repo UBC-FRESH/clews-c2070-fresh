@@ -12,7 +12,7 @@
   <script defer src="vendor/maplibre-gl.js"></script>
   <script defer src="publication-mode.js?v=7c6ba3951b75"></script>
   <script defer src="api.js"></script>
-  <script defer src="app.js?v=46625738aadf"></script>
+  <script defer src="app.js?v=59b57456cb67"></script>
 </head>
 <body>
   <a class="skip-link" href="#scenario-navigator">Skip to scenario navigator</a>
@@ -357,7 +357,7 @@
             <p class="kicker">Facility ledger · read-only</p>
             <h2>Facilities by class, capacity &amp; assignment</h2>
           </div>
-          <p class="panel-deck">The national facility inventory joined to capacity v3 and the 100/119/150 Mm³ local-first assignments. This is the facility point ledger, separate from the spatial supply Map. One map, one province × class table, filters, no ranking.</p>
+          <p class="panel-deck">The national facility inventory joined to capacity v3 and the 100/119/150 Mm³ assignment-v10 node transport-aware flows (chain v5.1). Capacity is unchanged across scenarios. This is the facility point ledger, separate from the spatial supply Map. One map, one province × class table, filters, no ranking.</p>
         </div>
 
         <div class="facility-caveat" role="note">
@@ -367,13 +367,13 @@
             <span class="badge badge--ink">policy_grade=false</span>
             <span class="badge badge--ink">no ranking</span>
           </div>
-          <p><strong>Proxy capacity caveat.</strong> Published capacity mixes infeed proxies, permitted input volume, finished-pellet bulk volume, and converted sawn output; the bases are not interchangeable. Class-median proxy capacity is a placeholder, not a measurement. Assignment is a local-first planning allocation, not an AAC or observed harvest. Read-only: no LP, OSeCAN, or run controls.</p>
+          <p><strong>Proxy capacity caveat.</strong> Published capacity mixes infeed proxies, permitted input volume, finished-pellet bulk volume, and converted sawn output; the bases are not interchangeable. Class-median proxy capacity is a placeholder, not a measurement. Assignment is a transport-aware planning allocation, not an AAC or observed harvest; products and residue are invariant to assignment at fixed harvest. Transport cost is trucking only and is not an OSeCAN input. Read-only: no LP, OSeCAN, or run controls.</p>
         </div>
 
         <section class="facility-chain-summary" aria-labelledby="facility-chain-title">
           <div class="facility-chain-head">
             <div>
-              <p class="kicker">Frozen v4 · E1 + E2c</p>
+              <p class="kicker">Frozen v5.1 · assignment v10</p>
               <h3 id="facility-chain-title">National chain summary</h3>
             </div>
             <div class="facility-chain-badges" id="facility-chain-badges" aria-live="polite"></div>
@@ -404,7 +404,7 @@
             <select id="facility-class"></select>
           </label>
           <button class="button button--quiet" id="facility-reset" type="button">Reset filters</button>
-          <p class="facility-scenario-note" id="facility-scenario-note">Scenario controls assigned volume and utilization only; capacity and class do not change.</p>
+          <p class="facility-scenario-note" id="facility-scenario-note">Scenario controls assignment-v10 assigned volume and utilization only; capacity, eligible facility set and class do not change.</p>
         </div>
 
         <div class="facility-layout">
@@ -417,8 +417,8 @@
               <div id="facility-legend-items"></div>
             </div>
           </div>
-          <aside class="facility-side" aria-label="Facility coverage, evidence and caveats">
-            <h3>Coverage &amp; evidence</h3>
+          <aside class="facility-side" aria-label="Facility coverage, evidence, transport and caveats">
+            <h3>Coverage, evidence &amp; transport</h3>
             <dl class="mini-stats" id="facility-side-stats"></dl>
             <div class="facility-unlocated-note" id="facility-unlocated-note" hidden></div>
             <div class="facility-legend-caveat">
@@ -435,7 +435,7 @@
               <h3 id="facility-table-title">Province × class ledger</h3>
               <p id="facility-table-status" aria-live="polite">Loading facility export…</p>
             </div>
-            <p class="method-note">Capacity is the capacity-v3 base; assigned volume is the selected local-first scenario. Utilization is assigned ÷ eligible capacity (located, operating records after proxy floor scaling).</p>
+            <p class="method-note">Capacity is the capacity-v3 base and is unchanged across scenarios; assigned volume is the selected assignment-v10 node transport-aware flow. Utilization is assigned ÷ eligible v10 capacity (located, operating records after the unchanged 1.2x proxy floor).</p>
           </div>
           <div class="table-wrap facilities-table-wrap">
             <table class="data-table facilities-table" id="facilities-table"></table>
