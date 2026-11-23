@@ -661,6 +661,27 @@ decide what blocks production readiness after the conceptual alpha.
   `national_claim=false`; no DUA, restricted data, UI change, official OSeCAN
   change, or unexpected `D`.
 
+- [x] P7.24 Freeze and document the 13-province open-data facility chain v3.
+  Completed: updated `docs/model-card-national-facility-chain.md` for the
+  inventory v1 → capacity v3 → assignment v6 → product-chain v4 → facility
+  residue v6 → residue curve v6 → chain scenarios v6 → OSeCAN handoff v7
+  chain; added `docs/handoff-national-facility-chain-v3.md`. E1 measured
+  coefficients cover BC/QC/NB/YT (591 stems) and E2 open-data imputation
+  covers AB/SK/MB/ON/NS/PE/NL/NT/NU (324 stems, 36 per province); no donor
+  provincial product coefficient is applied, and retained donor within-class
+  splits, routing, recovery fraction, and mill conversion ratios are labelled.
+  At 119 Mm³ v3 gives solid product 42.291 Mm³ (−10.35% vs donor product),
+  pulp 10.824 M odt (+13.62%), process residue 505.333 PJ (−1.80%), gross
+  harvest residue 390.418 PJ (+24.48%), recoverable harvest 234.251 PJ
+  (+19.86%), and total gross residue 895.751 PJ (+8.15%). OSeCAN harvest 60%
+  moves from T4 to above_T4; process tiers are unchanged
+  (T1/T3/above_T4/above_T4); all 13 zones are mapped with no `UNMAPPED` bucket
+  and the official OSeCAN tree is unchanged. The model is complete on open
+  data with no request, DUA, or approval dependency. Created annotated tag
+  `national-facility-chain-v3` at parent `029eef1` and recorded data commit
+  `d77472c`. Documentation and tag only; no code/model/UI change, no public
+  OSeCAN change, and no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

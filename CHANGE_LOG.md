@@ -2,6 +2,26 @@
 
 ## 2026-11-23
 
+- **Froze and documented the 13-province open-data facility chain v3.**
+  Updated `docs/model-card-national-facility-chain.md` and added
+  `docs/handoff-national-facility-chain-v3.md`; updated `ROADMAP.md`
+  (P7.24). E1 measured coefficients cover BC/QC/NB/YT (591 stems) and E2
+  open-data imputation covers AB/SK/MB/ON/NS/PE/NL/NT/NU (324 stems, 36 per
+  province), so zero donor provincial product coefficients remain in the
+  applied chain; the within-solid SAW/PANEL split, other-roundwood routing,
+  pellet/bio split, recovery fraction, and mill conversion ratios remain
+  donor assumptions and are labelled. At 119 Mm³ v3 gives solid product
+  42.291 Mm³ (−10.35% vs the donor-product chain), pulp 10.824 M odt
+  (+13.62%), process residue 505.333 PJ (−1.80%), gross harvest residue
+  390.418 PJ (+24.48%), recoverable harvest 234.251 PJ (+19.86%), and total
+  gross residue 895.751 PJ (+8.15%). OSeCAN harvest 60% moves from T4 to
+  above_T4; process tiers are unchanged, all 13 zones are mapped with no
+  `UNMAPPED` bucket, and the official OSeCAN tree is unchanged. No request,
+  DUA, or approval is required. Annotated tag `national-facility-chain-v3`
+  marks parent `029eef1` and records data commit `d77472c`. Documentation and
+  tag only; no code/model/UI change, no public OSeCAN change, and no
+  unexpected `D`.
+
 - **Integrated E2 imputed coefficients and branch/foliage residue into the
   13-province facility chain.** Added `e2_biomass_allometry.py` and
   `rules/e2_biomass_allometry_map.csv`; E2 stems now carry CFS branch and
