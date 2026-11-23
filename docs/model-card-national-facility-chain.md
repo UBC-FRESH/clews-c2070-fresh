@@ -23,6 +23,15 @@ commits `16e979a` (assignment v10), `1f0a02a` (greenfield siting), `5b7d717`
 number, artifact, or tag. The greenfield screen is not part of the chain, and
 transport cost remains a chain summary rather than an OSeCAN input.
 
+### Addendum and scope-decision pause
+
+The transport/siting analysis is consolidated in
+[`docs/addendum-national-transport-siting-v1.md`](addendum-national-transport-siting-v1.md)
+(annotated tag `national-transport-siting-addendum-v1`). The addendum freezes
+the v1 numbers, records the class-specific follow-up, and pauses further proxy
+and siting iteration pending a C2070 scope decision. It changes no v5.1
+number, artifact, or tag, and it adds no facility-chain result.
+
 ## v5.1 supersession summary
 
 Version 5.1 extends assignment v10 to the 100 and 150 Mm³ sensitivity cases;

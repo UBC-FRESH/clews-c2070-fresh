@@ -11,6 +11,15 @@
 | Evidence boundary | Road/route and cost screens, not observed routes or observed costs; no capital, permitting, class-capacity, landbase, investment, UI, or official OSeCAN change |
 | Scope boundary | Documentation/tag freeze only; no code, model artifact, UI, or official OSeCAN change at the freeze commit |
 
+## Addendum record
+
+A completed internal addendum consolidates this frozen v1 layer and the
+post-freeze class-specific follow-up, and records an explicit pause on further
+proxy and siting iteration pending a C2070 scope decision:
+[`docs/addendum-national-transport-siting-v1.md`](addendum-national-transport-siting-v1.md)
+(annotated tag `national-transport-siting-addendum-v1`). The addendum adds no
+model result and changes no number, artifact, or tag in this card.
+
 ## 1. Purpose and scope
 
 This card documents the transport and siting layer that sits between the

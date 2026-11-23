@@ -2,6 +2,27 @@
 
 ## 2026-11-23
 
+- **Froze the transport/siting addendum and scope-decision pause (P7.40).**
+  Added `docs/addendum-national-transport-siting-v1.md` as a completed,
+  frozen internal addendum consolidating the road-factor/OSRM audit v2 (81
+  pairs, 11 jurisdictions; proxy error 18.86% -> 8.87%), 525 supply nodes,
+  assignment v10 at 119 Mm3 (3.392 B CAD/yr, 270.289 km, 296 facilities,
+  1.95% cross-border, 54.08% proxy share), chain v5.1 all cases (2.702 /
+  3.392 / 5.018 B CAD/yr at 100/119/150 Mm3), transport cost v1 (11.50 CAD/m3
+  and 2.83 CAD/GJ at 100 km; 51.45 CAD/m3 at 500 km; T1/T2, T3, and T4
+  crossings about 85/115/127 km at face value), generic greenfield k-median
+  (k=20 1.749 B / 132.0 km versus existing-only 3.220 B / 255.8 km, -45.7%,
+  diminishing after k=13; 1.428 / 1.749 / 2.307 B at 100/119/150), break-even
+  thresholds (37.14-63.00 / 40.55-59.47 / 45.31-74.09 CAD per m3/yr; k=20
+  37.80/40.87/46.47), and class-specific siting (k=5 per class 3.179 B /
+  252.4 km versus generic 20 modules 1.749 B / 132.0 km, +81.8%). Added
+  addendum pointers in both model cards. Recorded the explicit stop rule: no
+  further proxy or siting iteration until Taco and the energy team confirm
+  facility siting/transport is in C2070 scope. Created annotated tag
+  `national-transport-siting-addendum-v1`; no earlier tag moved. Only
+  documentation changed: no code, model artifact, UI, or official OSeCAN
+  change, and no unexpected `D`.
+
 - **Added class-specific greenfield siting screen v1.** Added
   `greenfield_class_siting_v1`, its focused regression test, planning note, a
   post-freeze model-card subsection, and
