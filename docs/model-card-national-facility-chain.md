@@ -426,6 +426,15 @@ Provincial process residue is shown at 100% availability. The national process
 total is 498.751 PJ; the harvest totals are gross residue and the uniform 0.60
 recoverable value. Process and harvest columns are separate streams.
 
+**Harvest-residue component breakdown.**
+`data/derived/national/facilities/harvest_residue_component_breakdown_v1/`
+(module `workflows.national.facilities.harvest_residue_component_breakdown_v1`)
+splits the same 444.411 PJ gross harvest residue into stem 127.832 PJ, branch
+215.895 PJ and foliage 100.684 PJ (branch+foliage 316.579 PJ), using each
+province's E1/E2c branch share. Tops are not separately modelled; stem residue
+already includes stump, top and unmerchantable sections. The artifact adds no
+recovery constraint and changes no chain number.
+
 ### 5.4 Residue curve v7 and facility residue v7
 
 At 18.5 GJ/ODT, the national process-availability cases are **0 / 124.688 /

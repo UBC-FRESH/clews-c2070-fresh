@@ -1,5 +1,23 @@
 # Change Log
 
+## 2026-11-25
+
+- **Added harvest-residue component breakdown provenance v1 (P7.41).**
+  Added `harvest_residue_component_breakdown_v1`, its focused regression test,
+  and `data/derived/national/facilities/harvest_residue_component_breakdown_v1/`.
+  The artifact splits the 119 Mm3 chain gross harvest residue into stem
+  127.832 PJ (6.910 M odt), branch 215.895 PJ (11.670 M odt) and foliage
+  100.684 PJ (5.442 M odt), total 444.411 PJ (24.022 M odt); branch+foliage is
+  316.579 PJ. Branch/foliage uses E1 measured BC/QC/NB/YT ratios and E2c
+  synthetic 36-tree ratios for AB/SK/MB/ON/NS/PE/NL/NT; NU is zero. Tops are
+  not separately modelled and no tops number is invented. Uniform
+  0.35/0.60/0.75 recovery scenarios are 155.544 / 266.646 / 333.308 PJ; no
+  environmental or technical recovery constraint is modelled. Per-province
+  conservation and model-card §5.3 cross-checks pass; 10 focused tests and
+  ruff pass. Labels remain `model_estimate` / `observed=false` /
+  `policy_grade=false` / `national_claim=false`; no UI or official OSeCAN
+  change; no unexpected `D`.
+
 ## 2026-11-23
 
 - **Froze the transport/siting addendum and scope-decision pause (P7.40).**

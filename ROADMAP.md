@@ -1033,6 +1033,20 @@ decide what blocks production readiness after the conceptual alpha.
   earlier tag moved. Documentation only; no code, model artifact, UI, or
   official OSeCAN change; no unexpected `D`.
 
+- [x] P7.41 Add harvest-residue component breakdown provenance v1.
+  Completed: added `harvest_residue_component_breakdown_v1`, its focused
+  regression test, and
+  `data/derived/national/facilities/harvest_residue_component_breakdown_v1/`.
+  The artifact splits the 119 Mm3 chain gross harvest residue into stem
+  127.832 PJ, branch 215.895 PJ and foliage 100.684 PJ; total 444.411 PJ and
+  branch+foliage 316.579 PJ. E1 measured ratios cover BC/QC/NB/YT; E2c
+  synthetic 36-tree ratios cover AB/SK/MB/ON/NS/PE/NL/NT; NU is zero. Tops are
+  not separately modelled and no tops number is created. Recovery scenarios
+  are 155.544 / 266.646 / 333.308 PJ at 0.35/0.60/0.75; no environmental or
+  technical recovery constraint is modelled. Conservation, national totals,
+  labels and model-card §5.3 cross-checks pass; focused tests and ruff pass.
+  No UI or official OSeCAN change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
