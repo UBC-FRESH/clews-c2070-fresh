@@ -2,6 +2,28 @@
 
 ## 2026-11-27
 
+- **Rebuilt the OSeCAN handoff from the WS4-driven 119 Mm3 chain (P7.45).**
+  Added `forestry_osecan_handoff_ws4` with the frozen handoff-v10 13-zone
+  weights applied on the explicit origin-province WS4 basis. The WS4 chain is
+  origin-province, while handoff v10 process residue is facility-province, so
+  zone rows are not compared directly; only national totals and tier positions
+  are compared. Both `scaled_to_119m_control` (primary control-total basis) and
+  `ws4_achieved` are reported. Scaled national PJ: process 0 / 124.687729 /
+  249.375457 / 374.063186 at 0/25/50/75%, harvest 155.543779 / 266.646477 /
+  333.308097 at 0.35/0.60/0.75; achieved: 0 / 124.687785 / 249.375570 /
+  374.063355 and 155.543849 / 266.646598 / 333.308247. Every province's zone
+  weights sum to one; 182 zone rows conserve national totals (max PJ gap
+  1.31e-11). Frozen v5.1 21/21 tier positions match handoff v10; the WS4
+  119 Mm3 chain matches 7/7 per basis with zero tier changes, while the 100/150
+  positions are marked not available rather than fabricated. Added
+  `workflows/national/facilities/forestry_osecan_handoff_ws4.py`, focused tests,
+  `docs/ws4-osecan-handoff.md`, and the data artifact. Official OSeCAN tree
+  unchanged (146 files, `80caa91c...`, 0 changed files); frozen v10/v9/WS4
+  inputs unchanged; no unexpected `D`. Labels are `model_estimate` /
+  `observed=false` / `policy_grade=false` / `national_claim=false` /
+  `ws4_derived=true`; no UI, official OSeCAN, candidate-limit, or chain v5.1
+  change.
+
 - **Built the WS4-driven 119 Mm3 harvest and chain comparison (P7.44).**
   Selected 45 whole natural/unmanaged blocks (`offset >= 40`) from the
   national 990-m WS4 estate against the 118.9773391 Mm3 provincial control

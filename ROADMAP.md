@@ -1110,6 +1110,28 @@ decide what blocks production readiness after the conceptual alpha.
   `national_claim=false`; no UI, official OSeCAN, frozen chain v5.1, or
   national WS4 dataset change; no unexpected `D`.
 
+- [x] P7.45 Rebuild the OSeCAN handoff from the WS4-driven 119 Mm3 chain.
+  Completed: added
+  `workflows/national/facilities/forestry_osecan_handoff_ws4.py`,
+  `tests/test_ws4_osecan_handoff.py`, `docs/ws4-osecan-handoff.md`, and
+  `data/derived/national/facilities/forestry_osecan_handoff_ws4/`.
+  Applied the frozen handoff-v10 13-zone weights on the explicit
+  origin-province WS4 basis for both `scaled_to_119m_control` (primary) and
+  `ws4_achieved`; process availability 0/25/50/75%, harvest recovery
+  0.35/0.60/0.75%, LHV 18.5 GJ/ODT. Scaled national PJ: process 0 /
+  124.687729 / 249.375457 / 374.063186, harvest 155.543779 / 266.646477 /
+  333.308097; achieved: 0 / 124.687785 / 249.375570 / 374.063355 and
+  155.543849 / 266.646598 / 333.308247. All 13 zone weights sum to one per
+  province; 182 zone rows conserve national totals (max PJ gap 1.31e-11).
+  Frozen v5.1 21/21 tier positions match handoff v10; WS4 119 Mm3 matches
+  7/7 per basis with zero tier changes, and the 100/150 positions are marked
+  not available rather than fabricated. Official OSeCAN tree unchanged
+  (146 files, `80caa91c...`, 0 changed files); frozen v10/v9/WS4 input trees
+  unchanged; no unexpected `D`. Labels remain `model_estimate` /
+  `observed=false` / `policy_grade=false` / `national_claim=false` /
+  `ws4_derived=true`; no UI, official OSeCAN, candidate-limit, or chain v5.1
+  change.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
