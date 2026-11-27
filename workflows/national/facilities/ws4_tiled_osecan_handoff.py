@@ -11,6 +11,7 @@ unchanged.  Handoff v10 and the frozen residue curve v9 are read-only.
 
 from __future__ import annotations
 
+import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
@@ -43,6 +44,13 @@ CONTROL_TOTAL_M3 = handoff.CONTROL_TOTAL_M3
 ABS_TOL_ODT = handoff.ABS_TOL_ODT
 ABS_TOL_PJ = handoff.ABS_TOL_PJ
 ABS_TOL_WEIGHT = handoff.ABS_TOL_WEIGHT
+CHAIN_INPUT_FILES = (
+    "ws4_tiled_harvest.csv",
+    "ws4_tiled_coefficients.csv",
+    "ws4_tiled_product_chain.csv",
+    "ws4_tiled_vs_chain_v51_comparison.csv",
+    "ws4_tiled_selected_blocks.csv",
+)
 
 
 class Ws4TiledOsecanError(RuntimeError):
@@ -68,6 +76,20 @@ def _load_chain_residues(
         by_basis[basis] = parsed
         national_rows[basis] = national
     return by_basis, national_rows, schedule
+
+
+def _chain_input_hashes(chain_dir: Path) -> tuple[dict[str, str], str]:
+    """Hash the refreshed chain files this handoff consumes."""
+    hashes: dict[str, str] = {}
+    for name in CHAIN_INPUT_FILES:
+        path = chain_dir / name
+        if not path.is_file():
+            raise Ws4TiledOsecanError(f"refreshed chain input is missing: {path}")
+        hashes[handoff._relative(path)] = handoff._sha256(path)
+    digest = hashlib.sha256()
+    for relative, value in sorted(hashes.items()):
+        digest.update(f"{relative}:{value}\n".encode())
+    return hashes, digest.hexdigest()
 
 
 def _reconcile_chain(
@@ -318,6 +340,7 @@ def build(
     crosswalk = handoff._load_crosswalk()
     weights_by_province, flat_weights = handoff._load_zone_weights(crosswalk)
     by_basis, national_rows, schedule = _load_chain_residues(source)
+    chain_hashes, chain_hash = _chain_input_hashes(source)
     _reconcile_chain(by_basis, schedule)
 
     national_cases: dict[str, dict[tuple[str, str], tuple[float, float]]] = {}
@@ -590,6 +613,8 @@ def build(
         "title": ARTIFACT_TITLE,
         "labels": handoff.SUMMARY_LABELS | {"tiled_30m": True},
         "chain_dir": str(source.relative_to(REPO_ROOT)),
+        "chain_hash": chain_hash,
+        "chain_files": chain_hashes,
         "basis": {
             "bases": list(BASES),
             "primary": PRIMARY_BASIS,
@@ -654,6 +679,11 @@ def build(
         "title": ARTIFACT_TITLE,
         "labels": summary["labels"],
         "chain_dir": summary["chain_dir"],
+        "chain": {
+            "dir": summary["chain_dir"],
+            "hash": chain_hash,
+            "files": chain_hashes,
+        },
         "inputs": {
             handoff._relative(handoff.ZONE_WEIGHTS): handoff._sha256(handoff.ZONE_WEIGHTS),
             handoff._relative(handoff.V10_TIER_POSITIONS): handoff._sha256(handoff.V10_TIER_POSITIONS),

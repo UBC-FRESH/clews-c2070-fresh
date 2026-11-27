@@ -21,6 +21,7 @@ REQUIRED = (
     "ws4_tiled_selected_blocks.csv",
     "ws4_tiled_candidate_pool.csv",
     "ws4_tiled_sample_simulation.csv",
+    "thin_refresh_comparison.csv",
     "summary.json",
     "manifest.json",
     "WS4_TILED_CHAIN_119M.md",
@@ -130,6 +131,78 @@ def test_candidate_scan_fails_on_au_mismatch(tmp_path: Path) -> None:
         )
 
 
+def test_thin_tracks_are_excluded_from_natural_selection(
+    tmp_path: Path,
+) -> None:
+    dataset = _tiny_tile(tmp_path)
+    tracks = pd.read_parquet(dataset / "tracks.parquet")
+    tracks = pd.concat(
+        [
+            tracks,
+            pd.DataFrame(
+                {
+                    "track_id": [3],
+                    "name": [
+                        (
+                            "AU(T1)+IFM(unmanaged)+ORIGIN(natural)"
+                            "+SILV_STATE(thinned)+CURVE(c)+treatment()"
+                        )
+                    ],
+                }
+            ),
+        ],
+        ignore_index=True,
+    )
+    tracks.to_parquet(dataset / "tracks.parquet", index=False)
+    blocks = pd.read_parquet(dataset / "blocks.parquet")
+    blocks = pd.concat(
+        [
+            blocks,
+            pd.DataFrame(
+                {
+                    "block_id": [50],
+                    "track_id": [3],
+                    "offset": [80],
+                    "area_ha": [10_000.0],
+                }
+            ),
+        ],
+        ignore_index=True,
+    )
+    blocks.to_parquet(dataset / "blocks.parquet", index=False)
+
+    stats = chain._scan_tile_worker(
+        {
+            "tile_slug": "T1-ON-S11",
+            "province": "ON",
+            "au_code": "T1",
+            "dataset_dir": str(dataset),
+            "candidate_dir": str(tmp_path / "candidates"),
+            "per_tile_limit": 10,
+        }
+    )
+    assert stats["natural_tracks"] == 1
+    assert stats["thinned_tracks_excluded"] == 1
+    candidates = pd.read_parquet(tmp_path / "candidates/T1-ON-S11.parquet")
+    assert set(candidates["block_id"]) == {10, 30}
+    assert 50 not in set(candidates["block_id"])
+
+
+def test_coverage_manifest_hash_is_pinned() -> None:
+    verification = chain.verify_coverage_manifest()
+    assert (
+        verification["coverage_manifest_sha256"]
+        == chain.COVERAGE_MANIFEST_SHA256
+    )
+    assert verification["thin_propagated"] is True
+    assert verification["thin_tiles"] == 3345
+    assert verification["thin_tracks_added"] == 12892
+    payload = json.loads(chain.TILED_MANIFEST.read_text())
+    assert payload["thin_propagated"] is True
+    assert payload["thin_failed_tiles"] == 0
+    assert payload["thin_skipped_tiles"] == 0
+
+
 def test_greedy_select_is_unique_and_meets_target() -> None:
     frame = pd.DataFrame(
         {
@@ -169,6 +242,50 @@ def test_coverage_and_candidate_pool() -> None:
             assert row.pool_volume_m3 >= row.target_m3 * chain.POOL_MARGIN
             assert row.pool_margin >= chain.POOL_MARGIN
     assert len(manifest["completed_tiles"]) == 3345
+
+
+@requires_artifacts
+def test_thin_refresh_io_contract() -> None:
+    summary = _summary()
+    manifest = json.loads((chain.OUTPUT_DIR / "manifest.json").read_text())
+    for record in (summary, manifest):
+        assert (
+            record["coverage_manifest_sha256"]
+            == chain.COVERAGE_MANIFEST_SHA256
+        )
+        assert record["thin_propagated"] is True
+        assert record["cc_contract_hashes_unchanged"] is True
+        assert record["pre_thin_results_unchanged"] is True
+        assert record["rerun_utc"]
+        assert record["thin_refresh"]["mode"] == "full_rescan"
+    thin = summary["thin_refresh"]
+    assert thin["cc_contract_hash_count"] == 3345
+    assert thin["tiles_verified"] == 3345
+    assert thin["natural_fragments_blocks_unchanged"] is True
+    assert thin["thinned_tracks_excluded"] == thin["thin_tracks_added"] == 12892
+    assert summary["scan"]["thinned_tracks_excluded"] == 12892
+    assert summary["scan"]["natural_tracks"] > 0
+    tile_stats = pd.read_csv(
+        chain.OUTPUT_DIR / "ws4_tiled_tile_scan_summary.csv"
+    )
+    assert len(tile_stats) == 3345
+    assert tile_stats["thinned_tracks_excluded"].sum() == 12892
+    assert (tile_stats["thinned_tracks_excluded"] > 0).all()
+
+    comparison = pd.read_csv(chain.OUTPUT_DIR / chain.THIN_REFRESH_COMPARISON_CSV)
+    assert len(comparison) == thin["compared_rows"]
+    assert comparison["matches"].all()
+    assert thin["mismatch_count"] == 0
+    assert thin["max_abs_delta"] < chain.SELECTION_TOLERANCE_M3
+    selection = comparison[
+        (comparison["scope"] == "selection")
+        & (comparison["metric"] == "selected_block_keys_sha256")
+    ]
+    assert len(selection) == len(chain.PROVINCES) + 1
+    assert selection["matches"].all()
+    assert chain.THIN_REFRESH_COMPARISON_CSV in manifest["outputs"]
+    numeric_delta = pd.to_numeric(comparison["delta"], errors="coerce").dropna()
+    assert np.isfinite(numeric_delta.to_numpy()).all()
 
 
 @requires_artifacts
@@ -343,6 +460,19 @@ def test_osecan_tiers_and_official_tree() -> None:
     assert summary["osecan"]["secondary_7_of_7"] is True
     assert summary["osecan"]["frozen_21_of_21"] is True
     assert summary["osecan"]["official_unchanged"] is True
+    assert summary["osecan"]["official_detail"].startswith(
+        "146 files, 80caa91c"
+    )
+    assert len(summary["osecan"]["chain_hash"]) == 64
+    nested_manifest = json.loads(
+        (chain.OUTPUT_DIR / "osecan" / "manifest.json").read_text()
+    )
+    assert nested_manifest["chain"]["hash"] == summary["osecan"]["chain_hash"]
+    assert nested_manifest["chain"]["dir"] == summary["osecan"]["chain_dir"]
+    assert set(nested_manifest["chain"]["files"]) == {
+        chain._relative(chain.OUTPUT_DIR / name)
+        for name in osecan.CHAIN_INPUT_FILES
+    }
     tier_rows = pd.read_csv(
         chain.OUTPUT_DIR / "osecan" / "case_tier_positions.csv"
     )

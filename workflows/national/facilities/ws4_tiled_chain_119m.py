@@ -58,6 +58,14 @@ NATIONAL_990M_MANIFEST = (
 OUTPUT_DIR = DATA_ROOT / "derived/national/facilities/ws4_tiled_chain_119m"
 WORK_DIR = REPO_ROOT / "tmp/ws4_tiled_chain_119m"
 WS4_BIN = REPO_ROOT / ".venv-ws4/bin/ws4"
+COVERAGE_MANIFEST_SHA256 = (
+    "2f2d55a2f30eaf185c2ab50a9260a6bf2f092070cbad4eeb2b97242b003e1509"
+)
+PRE_THIN_COVERAGE_MANIFEST_SHA256 = (
+    "bb1f831b7ba5814d68d457f496a72bddc9e342aa49e50730858d8a8d5ba418eb"
+)
+THIN_PROPAGATION_PATH = TILED_ROOT / "thin_propagation.json"
+THIN_REFRESH_COMPARISON_CSV = "thin_refresh_comparison.csv"
 
 ARTIFACT = "ws4_tiled_chain_119m"
 ARTIFACT_VERSION = "1.0.0"
@@ -318,6 +326,121 @@ def _require_close(
         )
 
 
+def verify_coverage_manifest() -> dict[str, Any]:
+    """Verify the THIN-patched national coverage manifest by exact hash."""
+    if not TILED_MANIFEST.is_file():
+        raise Ws4TiledChainError(f"missing tiled manifest: {TILED_MANIFEST}")
+    actual = _sha256(TILED_MANIFEST)
+    if actual != COVERAGE_MANIFEST_SHA256:
+        raise Ws4TiledChainError(
+            "coverage manifest hash mismatch: "
+            f"expected {COVERAGE_MANIFEST_SHA256}, found {actual}"
+        )
+    payload = json.loads(TILED_MANIFEST.read_text(encoding="utf-8"))
+    if not _parse_bool(payload.get("thin_propagated"), "thin_propagated"):
+        raise Ws4TiledChainError("coverage manifest is not THIN-propagated")
+    thin_tiles = int(payload.get("thin_tiles", 0))
+    if thin_tiles != 3345:
+        raise Ws4TiledChainError(
+            f"coverage manifest THIN tile count is {thin_tiles}, expected 3345"
+        )
+    for field in ("thin_failed_tiles", "thin_skipped_tiles"):
+        count = int(payload.get(field, -1))
+        if count != 0:
+            raise Ws4TiledChainError(
+                f"coverage manifest {field} is {count}, expected 0"
+            )
+    thin_totals = payload.get("thin_totals")
+    if not isinstance(thin_totals, dict):
+        raise Ws4TiledChainError("coverage manifest has no thin_totals")
+    return {
+        "coverage_manifest_sha256": actual,
+        "thin_propagated": True,
+        "thin_tiles": thin_tiles,
+        "thin_tracks_added": int(thin_totals.get("tracks_added", 0)),
+        "thin_patch_hashes_sha256": str(
+            payload.get("thin_patch_hashes_sha256", "")
+        ),
+        "thin_propagated_utc": str(payload.get("thin_propagated_utc", "")),
+    }
+
+
+def verify_thin_contracts(tiles: pd.DataFrame, payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Verify every tile's per-tile THIN patch and CC contract hashes.
+
+    The propagation contract requires the natural/managed CC baseline contract
+    hash to be identical before and after the metadata-only THIN patch.  A
+    mismatch, a missing patch record, or a patch hash that disagrees with the
+    national manifest is a hard failure.
+    """
+    patch_hashes = payload.get("thin_patch_hashes")
+    if not isinstance(patch_hashes, dict) or len(patch_hashes) != len(tiles):
+        raise Ws4TiledChainError(
+            "national manifest thin_patch_hashes do not cover every tile"
+        )
+    contract_digest = hashlib.sha256()
+    tracks_added = 0
+    statuses: dict[str, int] = {}
+    for row in tiles.itertuples(index=False):
+        slug = str(row.tile_slug)
+        patch_path = Path(row.dataset_dir).parent / "thin_patch.json"
+        if not patch_path.is_file():
+            raise Ws4TiledChainError(f"missing THIN patch record: {patch_path}")
+        patch = json.loads(patch_path.read_text(encoding="utf-8"))
+        status = str(patch.get("status", ""))
+        statuses[status] = statuses.get(status, 0) + 1
+        if status != "patched":
+            raise Ws4TiledChainError(
+                f"{slug}: expected patched THIN status, found {status!r}"
+            )
+        if patch.get("dataset_path") != _relative(Path(row.dataset_dir)):
+            raise Ws4TiledChainError(f"{slug}: THIN patch dataset path mismatch")
+        if patch.get("patch_sha256") != patch_hashes.get(slug):
+            raise Ws4TiledChainError(
+                f"{slug}: THIN patch hash disagrees with national manifest"
+            )
+        before = str(patch.get("cc_contract_sha256_before", ""))
+        after = str(patch.get("cc_contract_sha256_after", ""))
+        if not before or before != after:
+            raise Ws4TiledChainError(
+                f"{slug}: natural/managed CC contract hash changed: "
+                f"{before!r} -> {after!r}"
+            )
+        if patch.get("natural_fragments_blocks_unchanged") is not True:
+            raise Ws4TiledChainError(
+                f"{slug}: natural fragments/blocks are not marked unchanged"
+            )
+        contract_digest.update(f"{slug}:{after}\n".encode())
+        tracks_added += int(patch.get("deltas", {}).get("tracks", 0))
+
+    if tracks_added != int(payload.get("thin_totals", {}).get("tracks_added", -1)):
+        raise Ws4TiledChainError(
+            "per-tile THIN track additions do not match the national manifest"
+        )
+    if THIN_PROPAGATION_PATH.is_file():
+        propagation = json.loads(THIN_PROPAGATION_PATH.read_text(encoding="utf-8"))
+        manifest_record = propagation.get("manifest", {})
+        if manifest_record.get("sha256") != COVERAGE_MANIFEST_SHA256:
+            raise Ws4TiledChainError(
+                "THIN propagation manifest hash disagrees with the coverage manifest"
+            )
+        if propagation.get("patch_hashes_sha256") != payload.get(
+            "thin_patch_hashes_sha256"
+        ):
+            raise Ws4TiledChainError(
+                "THIN propagation patch-hash digest disagrees with the coverage manifest"
+            )
+    return {
+        "tiles_verified": len(tiles),
+        "statuses": dict(sorted(statuses.items())),
+        "natural_fragments_blocks_unchanged": True,
+        "cc_contract_hashes_unchanged": True,
+        "cc_contract_hash_count": len(tiles),
+        "cc_contract_tree_sha256": contract_digest.hexdigest(),
+        "thin_tracks_added": tracks_added,
+    }
+
+
 def load_manifest_tiles() -> pd.DataFrame:
     """Return the built+validated tile catalogue with province and AU code."""
     if not TILED_MANIFEST.is_file():
@@ -405,15 +528,25 @@ def _curve_matrix(
     return pivot.index.to_numpy(dtype=np.int64), order, matrix
 
 
-def _natural_track_map(dataset_dir: Path) -> tuple[pd.DataFrame, pd.Series]:
+def _natural_track_map(
+    dataset_dir: Path,
+) -> tuple[pd.DataFrame, pd.Series, int]:
+    """Return the CC natural/unmanaged tracks and explicitly count THIN tracks.
+
+    THIN tracks are also ``IFM(unmanaged)+ORIGIN(natural)``; they must never
+    enter the natural/unmanaged candidate pool.  The third return value is the
+    number of ``SILV_STATE(thinned)`` tracks excluded from this tile, which the
+    scan aggregates against the national THIN propagation manifest.
+    """
     tracks = pd.read_parquet(
         dataset_dir / "tracks.parquet", columns=["track_id", "name"]
     )
     names = tracks["name"].astype(str)
+    thinned_mask = names.str.contains(r"SILV_STATE\(thinned\)", regex=True)
     natural_mask = (
         names.str.contains(r"IFM\(unmanaged\)", regex=True)
         & names.str.contains(r"ORIGIN\(natural\)", regex=True)
-        & ~names.str.contains(r"SILV_STATE\(thinned\)", regex=True)
+        & ~thinned_mask
     )
     natural = tracks[natural_mask].copy()
     if natural.empty:
@@ -445,7 +578,11 @@ def _natural_track_map(dataset_dir: Path) -> tuple[pd.DataFrame, pd.Series]:
     curve_map = natural_features.set_index("track_id")["curve_id"]
     if curve_map.index.duplicated().any():
         raise Ws4TiledChainError(f"duplicate feature track id: {dataset_dir}")
-    return natural_features[["track_id", "au_code", "curve_id", "label"]], curve_map
+    return (
+        natural_features[["track_id", "au_code", "curve_id", "label"]],
+        curve_map,
+        int(thinned_mask.sum()),
+    )
 
 
 def _scan_tile_worker(task: Mapping[str, Any]) -> dict[str, Any]:
@@ -456,7 +593,16 @@ def _scan_tile_worker(task: Mapping[str, Any]) -> dict[str, Any]:
     candidate_dir = Path(task["candidate_dir"])
     limit = int(task["per_tile_limit"])
 
-    natural, curve_map = _natural_track_map(dataset_dir)
+    expected_manifest_sha = str(task.get("dataset_manifest_sha256", ""))
+    if expected_manifest_sha:
+        actual_manifest_sha = _sha256(dataset_dir / "manifest.json")
+        if actual_manifest_sha != expected_manifest_sha:
+            raise Ws4TiledChainError(
+                f"{tile_slug}: dataset manifest hash changed: "
+                f"{expected_manifest_sha} -> {actual_manifest_sha}"
+            )
+
+    natural, curve_map, thinned_excluded = _natural_track_map(dataset_dir)
     au_codes = sorted({str(value) for value in natural["au_code"]})
     expected_au = str(task["au_code"])
     if au_codes != [expected_au]:
@@ -520,6 +666,7 @@ def _scan_tile_worker(task: Mapping[str, Any]) -> dict[str, Any]:
             "max_approx_volume_m3": 0.0,
             "mean_approx_volume_m3": 0.0,
             "natural_tracks": len(natural),
+            "thinned_tracks_excluded": thinned_excluded,
             "curve_count": len(curve_order),
             "candidate_path": "",
         }
@@ -547,6 +694,7 @@ def _scan_tile_worker(task: Mapping[str, Any]) -> dict[str, Any]:
         "max_approx_volume_m3": float(frame["approx_volume_m3"].max()),
         "mean_approx_volume_m3": float(frame["approx_volume_m3"].mean()),
         "natural_tracks": len(natural),
+        "thinned_tracks_excluded": thinned_excluded,
         "curve_count": len(curve_order),
         "candidate_path": str(candidate_path),
     }
@@ -664,7 +812,7 @@ def _exact_tile_worker(task: Mapping[str, Any]) -> pd.DataFrame:
         return pd.DataFrame()
     selected["block_id"] = selected["block_id"].astype("int64")
 
-    natural, curve_map = _natural_track_map(dataset_dir)
+    natural, curve_map, _thinned_excluded = _natural_track_map(dataset_dir)
     au_codes = sorted({str(value) for value in natural["au_code"]})
     if au_codes != [str(task["au_code"])]:
         raise Ws4TiledChainError(
@@ -1157,12 +1305,290 @@ def _comparison_rows_with_labels(
     return rows
 
 
+def _selection_key_digest(frame: pd.DataFrame) -> str:
+    keys = (
+        frame["province"].astype(str)
+        + "|"
+        + frame["tile_slug"].astype(str)
+        + "|"
+        + frame["block_id"].astype("int64").astype(str)
+    )
+    digest = hashlib.sha256()
+    for key in sorted(keys):
+        digest.update(f"{key}\n".encode())
+    return digest.hexdigest()
+
+
+def _selection_stats(frame: pd.DataFrame) -> dict[str, Any]:
+    if frame.empty:
+        return {
+            "selected_blocks": 0,
+            "selected_area_ha": 0.0,
+            "selected_harvest_m3": 0.0,
+            "selected_tile_count": 0,
+            "selected_block_keys_sha256": _selection_key_digest(frame),
+        }
+    return {
+        "selected_blocks": len(frame),
+        "selected_area_ha": float(frame["fragment_area_ha"].sum()),
+        "selected_harvest_m3": float(frame["exact_volume_m3"].sum()),
+        "selected_tile_count": int(frame["tile_slug"].nunique()),
+        "selected_block_keys_sha256": _selection_key_digest(frame),
+    }
+
+
+def _comparison_row(
+    *,
+    scope: str,
+    metric: str,
+    pre: Any,
+    post: Any,
+    unit: str = "",
+    province: str = "",
+    basis: str = "",
+    stream: str = "",
+    case: str = "",
+) -> dict[str, Any]:
+    pre_is_number = isinstance(pre, (int, float)) and not isinstance(pre, bool)
+    post_is_number = isinstance(post, (int, float)) and not isinstance(post, bool)
+    if pre_is_number and post_is_number:
+        delta: float | None = float(post) - float(pre)
+        matches = math.isclose(
+            float(pre), float(post), rel_tol=1e-12, abs_tol=1e-9
+        )
+        pre_value: Any = float(pre)
+        post_value: Any = float(post)
+    else:
+        delta = None
+        matches = str(pre) == str(post)
+        pre_value = str(pre)
+        post_value = str(post)
+    return {
+        "scope": scope,
+        "province": province,
+        "basis": basis,
+        "stream": stream,
+        "case": case,
+        "metric": metric,
+        "unit": unit,
+        "pre_thin": pre_value,
+        "post_thin": post_value,
+        "delta": delta,
+        "matches": matches,
+    }
+
+
+def _thin_refresh_comparison(
+    pre_thin_dir: Path,
+    *,
+    post_harvest: pd.DataFrame,
+    post_selected: pd.DataFrame,
+    post_national: Mapping[str, Mapping[str, Any]],
+    post_tiers: pd.DataFrame,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Compare refreshed results with the pre-THIN artifact row for row."""
+    pre_summary_path = pre_thin_dir / "summary.json"
+    pre_harvest_path = pre_thin_dir / "ws4_tiled_harvest.csv"
+    pre_selected_path = pre_thin_dir / "ws4_tiled_selected_blocks.csv"
+    pre_product_path = pre_thin_dir / "ws4_tiled_product_chain.csv"
+    pre_tiers_path = pre_thin_dir / "osecan" / "case_tier_positions.csv"
+    for path in (
+        pre_summary_path,
+        pre_harvest_path,
+        pre_selected_path,
+        pre_product_path,
+        pre_tiers_path,
+    ):
+        if not path.is_file():
+            raise Ws4TiledChainError(
+                f"pre-THIN comparison input is missing: {path}"
+            )
+
+    pre_summary = json.loads(pre_summary_path.read_text(encoding="utf-8"))
+    pre_harvest = pd.read_csv(pre_harvest_path)
+    pre_selected = pd.read_csv(pre_selected_path)
+    pre_product = pd.read_csv(pre_product_path)
+    pre_tiers = pd.read_csv(pre_tiers_path)
+
+    rows: list[dict[str, Any]] = []
+    for stats_pre, stats_post in (
+        (_selection_stats(pre_selected), _selection_stats(post_selected)),
+    ):
+        for metric, unit in (
+            ("selected_blocks", "count"),
+            ("selected_area_ha", "ha"),
+            ("selected_harvest_m3", "m3"),
+            ("selected_tile_count", "count"),
+            ("selected_block_keys_sha256", "sha256"),
+        ):
+            rows.append(
+                _comparison_row(
+                    scope="selection",
+                    province="CAN",
+                    metric=metric,
+                    unit=unit,
+                    pre=stats_pre[metric],
+                    post=stats_post[metric],
+                )
+            )
+
+    for province in PROVINCES:
+        pre_rows = pre_selected[pre_selected["province"] == province]
+        post_rows = post_selected[post_selected["province"] == province]
+        pre_stats = _selection_stats(pre_rows)
+        post_stats = _selection_stats(post_rows)
+        for metric, unit in (
+            ("selected_blocks", "count"),
+            ("selected_area_ha", "ha"),
+            ("selected_harvest_m3", "m3"),
+            ("selected_tile_count", "count"),
+            ("selected_block_keys_sha256", "sha256"),
+        ):
+            rows.append(
+                _comparison_row(
+                    scope="selection",
+                    province=province,
+                    metric=metric,
+                    unit=unit,
+                    pre=pre_stats[metric],
+                    post=post_stats[metric],
+                )
+            )
+
+    pre_harvest_by_province = pre_harvest.set_index("province")
+    post_harvest_by_province = post_harvest.set_index("province")
+    for province in PROVINCES:
+        for metric, unit in (
+            ("target_m3", "m3"),
+            ("achieved_m3", "m3"),
+            ("area_ha", "ha"),
+            ("block_count", "count"),
+            ("tile_count", "count"),
+        ):
+            rows.append(
+                _comparison_row(
+                    scope="harvest",
+                    province=province,
+                    metric=metric,
+                    unit=unit,
+                    pre=float(pre_harvest_by_province.loc[province, metric]),
+                    post=float(post_harvest_by_province.loc[province, metric]),
+                )
+            )
+
+    pre_national = pre_product[pre_product["geography_level"] == "national"]
+    for basis in BASES:
+        pre_basis = pre_national[pre_national["basis"] == basis]
+        if len(pre_basis) != 1:
+            raise Ws4TiledChainError(
+                f"pre-THIN product chain has no unique national {basis} row"
+            )
+        pre_row = pre_basis.iloc[0]
+        post_row = post_national[basis]
+        for metric, unit in METRICS:
+            rows.append(
+                _comparison_row(
+                    scope="chain",
+                    province="CAN",
+                    basis=basis,
+                    metric=metric,
+                    unit=unit,
+                    pre=float(pre_row[metric]),
+                    post=float(post_row[metric]),
+                )
+            )
+        rows.append(
+            _comparison_row(
+                scope="chain",
+                province="CAN",
+                basis=basis,
+                metric="scale_factor",
+                pre=float(pre_row["scale_factor"]),
+                post=float(post_row["scale_factor"]),
+            )
+        )
+
+    tier_keys = ["basis", "stream", "case"]
+    pre_tier_index = pre_tiers.set_index(tier_keys)
+    post_tier_index = post_tiers.set_index(tier_keys)
+    if len(pre_tier_index) != len(post_tier_index):
+        raise Ws4TiledChainError(
+            "pre/post OSeCAN tier position counts differ: "
+            f"{len(pre_tier_index)} != {len(post_tier_index)}"
+        )
+    if set(pre_tier_index.index) != set(post_tier_index.index):
+        raise Ws4TiledChainError("pre/post OSeCAN tier position keys differ")
+    for key in sorted(post_tier_index.index):
+        pre_row = pre_tier_index.loc[key]
+        post_row = post_tier_index.loc[key]
+        basis, stream, case = key
+        for metric, unit in (
+            ("national_pj", "PJ"),
+            ("national_odt", "ODT"),
+            ("tier", "tier"),
+        ):
+            rows.append(
+                _comparison_row(
+                    scope="osecan",
+                    basis=str(basis),
+                    stream=str(stream),
+                    case=str(case),
+                    metric=metric,
+                    unit=unit,
+                    pre=(
+                        float(pre_row[metric])
+                        if metric != "tier"
+                        else str(pre_row[metric])
+                    ),
+                    post=(
+                        float(post_row[metric])
+                        if metric != "tier"
+                        else str(post_row[metric])
+                    ),
+                )
+            )
+
+    def scope_matches(scope_name: str) -> bool:
+        return all(row["matches"] for row in rows if row["scope"] == scope_name)
+
+    numeric_deltas = [
+        abs(float(row["delta"]))
+        for row in rows
+        if row["delta"] is not None
+    ]
+    pre_coverage_sha = pre_summary.get("inputs", {}).get(
+        _relative(TILED_MANIFEST), ""
+    )
+    if pre_coverage_sha != PRE_THIN_COVERAGE_MANIFEST_SHA256:
+        raise Ws4TiledChainError(
+            "pre-THIN chain coverage manifest hash is not the expected "
+            f"{PRE_THIN_COVERAGE_MANIFEST_SHA256}: {pre_coverage_sha!r}"
+        )
+    mismatches = [row for row in rows if not row["matches"]]
+    result = {
+        "pre_thin_chain_dir": str(pre_thin_dir),
+        "pre_thin_generated_utc": pre_summary.get("generated_utc", ""),
+        "pre_thin_summary_sha256": _sha256(pre_summary_path),
+        "pre_thin_coverage_manifest_sha256": pre_coverage_sha,
+        "compared_rows": len(rows),
+        "mismatch_count": len(mismatches),
+        "max_abs_delta": max(numeric_deltas, default=0.0),
+        "selection_unchanged": scope_matches("selection"),
+        "harvest_unchanged": scope_matches("harvest"),
+        "chain_totals_unchanged": scope_matches("chain"),
+        "osecan_tiers_unchanged": scope_matches("osecan"),
+        "pre_thin_results_unchanged": not mismatches,
+    }
+    return rows, result
+
+
 def _validation_checks(
     harvest_rows: Sequence[Mapping[str, Any]],
     selected: pd.DataFrame,
     comparison: Sequence[Mapping[str, Any]],
     sample_rows: Sequence[Mapping[str, Any]],
     osecan_status: Mapping[str, Any],
+    thin_refresh: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     checks: list[dict[str, Any]] = []
 
@@ -1261,6 +1687,51 @@ def _validation_checks(
         bool(osecan_status.get("official_unchanged", False)),
         str(osecan_status.get("official_detail", "")),
     )
+    check(
+        "coverage manifest hash",
+        thin_refresh.get("coverage_manifest_sha256")
+        == COVERAGE_MANIFEST_SHA256,
+        (
+            f"{thin_refresh.get('coverage_manifest_sha256', '')} "
+            f"(expected {COVERAGE_MANIFEST_SHA256})"
+        ),
+    )
+    check(
+        "THIN propagation metadata",
+        bool(thin_refresh.get("thin_propagated", False))
+        and int(thin_refresh.get("thin_tiles", 0)) == 3345,
+        (
+            f"thin_propagated={thin_refresh.get('thin_propagated')} "
+            f"tiles={thin_refresh.get('thin_tiles')}"
+        ),
+    )
+    check(
+        "CC contract hashes unchanged",
+        bool(thin_refresh.get("cc_contract_hashes_unchanged", False)),
+        (
+            f"{thin_refresh.get('cc_contract_hash_count', 0)} per-tile contracts, "
+            f"tree={thin_refresh.get('cc_contract_tree_sha256', '')[:16]}..."
+        ),
+    )
+    check(
+        "thinned tracks excluded",
+        int(thin_refresh.get("thinned_tracks_excluded", -1))
+        == int(thin_refresh.get("thin_tracks_added", -2)),
+        (
+            f"excluded={thin_refresh.get('thinned_tracks_excluded')} "
+            f"added={thin_refresh.get('thin_tracks_added')}"
+        ),
+    )
+    if thin_refresh.get("pre_thin_results_unchanged") is not None:
+        check(
+            "pre-THIN results unchanged",
+            bool(thin_refresh["pre_thin_results_unchanged"]),
+            (
+                f"rows={thin_refresh.get('compared_rows')} "
+                f"mismatches={thin_refresh.get('mismatch_count')} "
+                f"max_abs_delta={thin_refresh.get('max_abs_delta')}"
+            ),
+        )
     return checks
 
 
@@ -1345,6 +1816,25 @@ def _write_report(
         ],
     )
     national = summary["national_harvest"]
+    thin = summary.get("thin_refresh", {})
+    thin_table = _md_table(
+        ["Refresh field", "Value"],
+        [
+            ["Coverage manifest SHA-256", str(thin.get("coverage_manifest_sha256", ""))],
+            ["Prior coverage manifest SHA-256", str(thin.get("pre_thin_coverage_manifest_sha256", ""))],
+            ["THIN propagated", str(thin.get("thin_propagated", False)).lower()],
+            ["THIN tiles", str(thin.get("thin_tiles", 0))],
+            ["THIN tracks excluded from selection", str(thin.get("thinned_tracks_excluded", 0))],
+            ["CC contracts unchanged", str(thin.get("cc_contract_hashes_unchanged", False)).lower()],
+            ["CC contract tiles", str(thin.get("cc_contract_hash_count", 0))],
+            ["CC contract tree SHA-256", str(thin.get("cc_contract_tree_sha256", ""))],
+            ["Full rescan / cache", str(thin.get("mode", ""))],
+            ["Pre-THIN results unchanged", str(thin.get("pre_thin_results_unchanged", "not run"))],
+            ["Comparison rows / mismatches", f"{thin.get('compared_rows', 0)} / {thin.get('mismatch_count', 0)}"],
+            ["Max absolute delta", str(thin.get("max_abs_delta", ""))],
+            ["Rerun UTC", str(thin.get("rerun_utc", ""))],
+        ],
+    )
     text = f"""# Tiled 30-m WS4 119 Mm3 chain
 
 **Artifact:** `{ARTIFACT}` **Version:** {ARTIFACT_VERSION}
@@ -1370,6 +1860,20 @@ This is full coverage of the built+validated tiled estate, not a fabricated
 dataset for the 217 explicitly skipped candidates. NU has a zero control target
 and all 203 NU candidates were skipped upstream as zero-harvest, so no NU
 dataset exists to scan.
+
+## 1b. THIN refresh
+
+{thin_table}
+
+The coverage was refreshed from the metadata-only THIN-patched national tiled
+manifest. Every tile's per-tile `thin_patch.json` records an identical
+natural/managed CC contract hash before and after the patch, and the parser
+explicitly excludes `SILV_STATE(thinned)` tracks from the natural/unmanaged
+candidate pool. The refreshed scan is compared row-for-row with the pre-THIN
+artifact in `{THIN_REFRESH_COMPARISON_CSV}`. `pre_thin_results_unchanged=true`
+means selection keys, selected area, harvest, chain totals and OSeCAN tier
+positions all match exactly; any difference is written to that CSV with its
+signed delta.
 
 ## 2. Two-pass method
 
@@ -1468,6 +1972,7 @@ def build(
     provinces: Sequence[str] | None = None,
     skip_simulation: bool = False,
     reuse_candidates: bool = False,
+    pre_thin_chain_dir: Path | None = None,
 ) -> dict[str, Any]:
     assert_no_unexpected_deletions()
     targets = chain.read_targets(CONTROL_CSV)
@@ -1478,17 +1983,29 @@ def build(
     else:
         requested = set(PROVINCES)
 
+    manifest_verification = verify_coverage_manifest()
     payload = json.loads(TILED_MANIFEST.read_text(encoding="utf-8"))
-    tiles = load_manifest_tiles()
-    tiles = tiles[tiles["province"].isin(requested)].reset_index(drop=True)
+    all_tiles = load_manifest_tiles()
+    thin_contracts = verify_thin_contracts(all_tiles, payload)
+    tiles = all_tiles[all_tiles["province"].isin(requested)].reset_index(drop=True)
     if tiles.empty:
         raise Ws4TiledChainError("no tiled datasets selected")
-    coverage = _coverage(payload, load_manifest_tiles())
+    coverage = _coverage(payload, all_tiles)
+
+    pre_thin_path: Path | None = None
+    if pre_thin_chain_dir is not None:
+        pre_thin_path = Path(pre_thin_chain_dir)
+        if not pre_thin_path.is_absolute():
+            pre_thin_path = REPO_ROOT / pre_thin_path
+        if not pre_thin_path.is_dir():
+            raise Ws4TiledChainError(
+                f"pre-THIN chain directory is missing: {pre_thin_path}"
+            )
 
     frozen_before = {
         "chain_v51": _tree_state(CHAIN_V51_DIR),
     }
-    tiled_manifest_before = _sha256(TILED_MANIFEST)
+    tiled_manifest_before = manifest_verification["coverage_manifest_sha256"]
     national_990m_before = (
         _sha256(NATIONAL_990M_MANIFEST) if NATIONAL_990M_MANIFEST.is_file() else ""
     )
@@ -1510,6 +2027,7 @@ def build(
                 "province": row.province,
                 "au_code": row.au_code,
                 "dataset_dir": row.dataset_dir,
+                "dataset_manifest_sha256": row.dataset_manifest_sha256,
                 "candidate_dir": str(candidate_dir),
                 "per_tile_limit": PER_TILE_CANDIDATE_LIMIT,
             }
@@ -1530,6 +2048,15 @@ def build(
             ["province", "tile_slug"]
         ).reset_index(drop=True)
         tile_stats.to_parquet(stats_path, index=False)
+
+    if "thinned_tracks_excluded" not in tile_stats.columns:
+        raise Ws4TiledChainError(
+            "candidate scan cache predates THIN exclusion evidence; rescan required"
+        )
+    if len(tile_stats) != len(tiles):
+        raise Ws4TiledChainError(
+            f"candidate scan covered {len(tile_stats)} of {len(tiles)} tiles"
+        )
 
     # Per-province candidate pools.
     pools: dict[str, pd.DataFrame] = {}
@@ -1765,15 +2292,74 @@ def build(
         chain_dir=OUTPUT_DIR,
         output_dir=OUTPUT_DIR / "osecan",
     )
+    generated = datetime.now(UTC).isoformat(timespec="seconds")
+
+    thin_refresh: dict[str, Any] = {
+        **manifest_verification,
+        **thin_contracts,
+        "thinned_tracks_excluded": int(
+            tile_stats["thinned_tracks_excluded"].sum()
+        ),
+        "thin_tracks_added": int(thin_contracts["thin_tracks_added"]),
+        "thin_propagated": True,
+        "cc_contract_hashes_unchanged": True,
+        "rerun_utc": generated,
+        "mode": "candidate_cache_reuse" if reuse_candidates else "full_rescan",
+    }
+    pre_thin_rows: list[dict[str, Any]] = []
+    if pre_thin_path is not None:
+        pre_thin_rows, pre_thin_result = _thin_refresh_comparison(
+            pre_thin_path,
+            post_harvest=pd.DataFrame(harvest_rows),
+            post_selected=selected_all,
+            post_national=national,
+            post_tiers=pd.read_csv(
+                OUTPUT_DIR / "osecan" / "case_tier_positions.csv"
+            ),
+        )
+        try:
+            pre_thin_result["pre_thin_chain_dir"] = _relative(pre_thin_path)
+        except ValueError:
+            pre_thin_result["pre_thin_chain_dir"] = str(pre_thin_path)
+        thin_refresh.update(pre_thin_result)
+    else:
+        thin_refresh["pre_thin_results_unchanged"] = None
+        thin_refresh["comparison_note"] = (
+            "No pre-THIN artifact directory was supplied; comparison not run."
+        )
 
     checks = _validation_checks(
-        harvest_rows, selected_all, comparison, sample_rows, osecan_result
+        harvest_rows,
+        selected_all,
+        comparison,
+        sample_rows,
+        osecan_result,
+        thin_refresh,
     )
     failed = [check for check in checks if not check["passed"]]
     if failed:
         raise Ws4TiledChainError(
             "validation checks failed: "
             + ", ".join(check["check"] for check in failed)
+        )
+
+    if pre_thin_rows:
+        _write_csv(
+            OUTPUT_DIR / THIN_REFRESH_COMPARISON_CSV,
+            [
+                "scope",
+                "province",
+                "basis",
+                "stream",
+                "case",
+                "metric",
+                "unit",
+                "pre_thin",
+                "post_thin",
+                "delta",
+                "matches",
+            ],
+            pre_thin_rows,
         )
 
     frozen_after = {
@@ -1790,7 +2376,6 @@ def build(
         raise Ws4TiledChainError("national 990-m manifest changed during the build")
     d_status = assert_no_unexpected_deletions()
 
-    generated = datetime.now(UTC).isoformat(timespec="seconds")
     national_harvest = {
         "target_m3": sum(float(row["target_m3"]) for row in harvest_rows),
         "achieved_m3": achieved_total,
@@ -1808,6 +2393,10 @@ def build(
     }
     if national_990m_before:
         inputs[_relative(NATIONAL_990M_MANIFEST)] = national_990m_before
+    reproduce = f".venv/bin/python -m {MODULE_PATH} --workers {DEFAULT_WORKERS}"
+    pre_thin_display = thin_refresh.get("pre_thin_chain_dir")
+    if pre_thin_display:
+        reproduce += f" --pre-thin-chain-dir {pre_thin_display}"
     summary: dict[str, Any] = {
         "artifact": ARTIFACT,
         "artifact_version": ARTIFACT_VERSION,
@@ -1817,6 +2406,14 @@ def build(
         "labels": LABELS,
         "inputs": inputs,
         "coverage": coverage,
+        "coverage_manifest_sha256": thin_refresh["coverage_manifest_sha256"],
+        "thin_propagated": True,
+        "cc_contract_hashes_unchanged": True,
+        "pre_thin_results_unchanged": thin_refresh.get(
+            "pre_thin_results_unchanged"
+        ),
+        "rerun_utc": generated,
+        "thin_refresh": thin_refresh,
         "scan": {
             "per_tile_candidate_limit": PER_TILE_CANDIDATE_LIMIT,
             "province_pool_limit": PROVINCE_POOL_LIMIT,
@@ -1834,6 +2431,10 @@ def build(
                 tile_stats["candidate_volume_m3"].sum()
             ),
             "zero_approx_blocks": int(tile_stats["zero_approx_blocks"].sum()),
+            "natural_tracks": int(tile_stats["natural_tracks"].sum()),
+            "thinned_tracks_excluded": int(
+                tile_stats["thinned_tracks_excluded"].sum()
+            ),
         },
         "province_pools": [
             {
@@ -1861,7 +2462,7 @@ def build(
         "osecan": osecan_result,
         "validation": {"checks": checks},
         "d_status": d_status,
-        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
+        "reproduce": reproduce,
     }
     _write_json(OUTPUT_DIR / "summary.json", summary)
 
@@ -1901,6 +2502,7 @@ def build(
         "max_approx_volume_m3",
         "mean_approx_volume_m3",
         "natural_tracks",
+        "thinned_tracks_excluded",
         "curve_count",
         *LABELS.keys(),
     ]
@@ -1953,6 +2555,14 @@ def build(
         "title": ARTIFACT_TITLE,
         "labels": LABELS,
         "inputs": inputs,
+        "coverage_manifest_sha256": thin_refresh["coverage_manifest_sha256"],
+        "thin_propagated": True,
+        "cc_contract_hashes_unchanged": True,
+        "pre_thin_results_unchanged": thin_refresh.get(
+            "pre_thin_results_unchanged"
+        ),
+        "rerun_utc": generated,
+        "thin_refresh": thin_refresh,
         "outputs": manifest_outputs,
         "osecan": {
             "root": _relative(osecan_dir),
@@ -1965,7 +2575,7 @@ def build(
         "coverage": coverage,
         "validation": {"checks": checks},
         "d_status": d_status,
-        "reproduce": f".venv/bin/python -m {MODULE_PATH}",
+        "reproduce": reproduce,
     }
     _write_json(OUTPUT_DIR / "manifest.json", manifest)
     return summary
@@ -1979,12 +2589,19 @@ def main() -> None:
     parser.add_argument("--provinces", nargs="*", default=None)
     parser.add_argument("--skip-simulation", action="store_true")
     parser.add_argument("--reuse-candidates", action="store_true")
+    parser.add_argument(
+        "--pre-thin-chain-dir",
+        type=Path,
+        default=None,
+        help="pre-THIN tiled chain artifact used for the refresh comparison",
+    )
     args = parser.parse_args()
     summary = build(
         workers=args.workers,
         provinces=args.provinces,
         skip_simulation=args.skip_simulation,
         reuse_candidates=args.reuse_candidates,
+        pre_thin_chain_dir=args.pre_thin_chain_dir,
     )
     print(
         json.dumps(
