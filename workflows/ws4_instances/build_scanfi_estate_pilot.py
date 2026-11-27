@@ -980,6 +980,22 @@ def build_inventory(
     )
 
     clique_pixel_sizes = np.bincount(fragment_block_ids, minlength=block_count + 1)[1:]
+    size_bins = ((1, 1), (2, 4), (5, 9), (10, 19), (20, 49), (50, None))
+    size_histogram = []
+    for lower, upper in size_bins:
+        upper_value = int(clique_pixel_sizes.max()) if upper is None else upper
+        count = int(
+            np.count_nonzero(
+                (clique_pixel_sizes >= lower) & (clique_pixel_sizes <= upper_value)
+            )
+        )
+        size_histogram.append(
+            {
+                "min_pixels": lower,
+                "max_pixels": upper,
+                "blocks": count,
+            }
+        )
     clique_summary = {
         "count": int(block_count),
         "pixels_mean": float(clique_pixel_sizes.mean()),
@@ -991,6 +1007,7 @@ def build_inventory(
         "area_ha_median": float(np.median(block_area)),
         "area_ha_max": float(block_area.max()),
         "singleton_blocks": int(np.count_nonzero(clique_pixel_sizes == 1)),
+        "size_histogram": size_histogram,
     }
 
     curve_usage = []
