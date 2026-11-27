@@ -2,6 +2,49 @@
 
 ## 2026-11-27
 
+- **Applied the share-based operable landbase screen and reran the sustainable
+  100/119/150 Mm3/yr cases (P7.54).** Added
+  `workflows/national/facilities/ws4_operable_cases.py`,
+  `workflows/national/facilities/ws4_operable_cases_osecan.py`,
+  `tests/test_ws4_operable_cases.py`, and `docs/ws4-operable-cases.md`. The
+  `screen_core30` input is SCANFI age >= 30, NBAC 2020 burned excluded, within
+  10 km of a public NRN road; no legal THLB, national slope DEM, or spatial
+  road overlay exists. The mask ranks blocks on
+  `blake2b(province:block_id)` and selects whole blocks to match each
+  province's `operable_share_of_treed` applied to the WS4 block forest area:
+  370,752 blocks / 75,374,046.00 ha (18.3280% of 411,250,630.32 ha) versus
+  77,050,071.64 ha published (-2.175% from the denominator difference). NU
+  and PE have no 2016 tenure coverage and no operable blocks; their targets
+  are recorded as shortfalls. All three cases keep their frozen provincial
+  shares, restrict eligibility to the mask and the 40-200 year MAI rotation,
+  disable the cross-province fallback, and run WS4 simulate for 100 years.
+  None is sustained. 100 Mm3: annual min/max/mean 94.4141/105.4949/98.6880
+  Mm3/yr, period shortfall 160.4216 Mm3, provincial shortfall 259.6635 Mm3,
+  310,750 blocks / 68,233,907.34 ha, shortfalls QC/NB/NL/PE/NS. 119 Mm3:
+  97.9475/123.0149/113.1749 Mm3/yr, period shortfall 623.2648 Mm3, provincial
+  752.8481 Mm3, 352,262 blocks / 76,782,772.53 ha, shortfalls
+  QC/NB/NL/SK/PE/NS. 150 Mm3: 111.6734/154.4895/132.6875 Mm3/yr, period
+  shortfall 1,774.8825 Mm3, provincial 1,896.9787 Mm3, 410,086 blocks /
+  89,775,342.54 ha, shortfalls QC/SK/NS/NL/NB/PE. Schedule-only maximum
+  nominal control / actual operable harvest: 68.4570/69.3438 Mm3/yr (100m
+  shares), 67.8543/69.2302 (119m), 61.4868/62.7054 (150m), excluding
+  jurisdictions without operable coverage from the adequacy test. Chain and
+  OSeCAN: 21/21 frozen reference positions; 100m 6/7 primary and 7/7 achieved,
+  119m 7/7 and 6/7, 150m 7/7 and 6/7; official 146-file OSeCAN tree
+  `80caa91c...` unchanged. Mask parquet is 29.6 MB; WS4 run product values are
+  annexed. Labels: `model_estimate=true`, `observed=false`,
+  `policy_grade=false`, `national_claim=false`, `ws4_derived=true`,
+  `sustainable_schedule=true`, `share_based_operable_proxy=true`,
+  `legal_thlb=false`, `slope_screen=false`, `official_osecan_changed=false`,
+  `chain_v51_unchanged=true`. No legal THLB/slope/spatial-road claim, no chain
+  v5.1 mutation, no full-forest artifact rewrite, no official OSeCAN change,
+  no UI change, and no unexpected `D`; WS4 validate and the operable tests
+  pass. Data commit `f78231f5c`; annexed product values and mask copied to
+  `arbutus-s3`.
+  Also fixed the stale `tests/test_ws4_chain_119m.py` manifest-hash test to
+  stop pinning the mutable docs model-card hash while keeping all data and
+  frozen-input hashes pinned.
+
 - **Extended the sustainable WS4 schedule to the 100 and 150 Mm3/yr cases and
   rebuilt the chain/OSeCAN for each (P7.53).** Added
   `workflows/national/facilities/ws4_sustainable_cases.py`,

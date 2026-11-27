@@ -621,8 +621,24 @@ def build_schedule(
     label: str = "province_control",
     target_period_m3: float = TARGET_PERIOD_M3,
     control_label: str = "frozen 119 Mm3 control",
+    eligibility_mask: np.ndarray | None = None,
+    national_fallback: bool = True,
 ) -> SelectionResult:
-    """Select whole blocks period by period and assign annual offsets."""
+    """Select whole blocks period by period and assign annual offsets.
+
+    ``eligibility_mask`` is an optional per-block boolean filter applied on
+    top of the rotation-age rule.  It lets an operability screen restrict the
+    harvest without relaxing rotation.  ``national_fallback`` controls
+    whether an unmet national target may be filled from any province; an
+    operable case disables it so provincial shortfalls stay visible.
+    """
+    if eligibility_mask is not None:
+        if eligibility_mask.shape != estate.block_ids.shape:
+            raise Ws4Sustainable119mError(
+                "eligibility mask shape does not match the WS4 block estate"
+            )
+        if eligibility_mask.dtype != bool:
+            raise Ws4Sustainable119mError("eligibility mask must be boolean")
     estate.reset()
     targets = _period_targets(
         province_shares, target_period_m3=target_period_m3
@@ -655,6 +671,8 @@ def build_schedule(
         age_start = estate.block_age_at(period_start)
         volume_start = estate.block_volumes_at(period_start)
         eligible = age_start >= estate.rotation
+        if eligibility_mask is not None:
+            eligible &= eligibility_mask
 
         selected_parts: list[np.ndarray] = []
         province_order: dict[int, np.ndarray] = {}
@@ -690,8 +708,8 @@ def build_schedule(
                 if target <= 0.0 or positions.size == 0:
                     province_order[code] = np.empty(0, dtype=np.int64)
                     province_cursor[code] = 0
-                    if target > 0.0:
-                        add_shortfall(period, province, target, 0.0, 0.0)
+                    # The top-up loop records exactly one shortfall when a
+                    # province has a positive target and no eligible block.
                     continue
                 order = positions[
                     np.lexsort(
@@ -761,56 +779,74 @@ def build_schedule(
 
         actual_total = float(loads.sum())
         # National fallback: fill a national gap from any remaining eligible
-        # block, oldest-first, without relaxing rotation.
+        # block, oldest-first, without relaxing rotation.  An operable case
+        # disables the cross-province fallback so an unmet provincial target
+        # stays visible instead of being hidden by another province's surplus.
         if actual_total + PROVINCE_TARGET_TOLERANCE_M3 < national_target:
-            if targets is None:
-                remaining = national_order[national_cursor:]
-            else:
-                parts = []
-                for code in range(province_count):
-                    order = province_order.get(code, np.empty(0, dtype=np.int64))
-                    cursor = province_cursor.get(code, 0)
-                    if cursor < order.size:
-                        parts.append(order[cursor:])
-                remaining = np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
-            if remaining.size:
-                remaining = remaining[
-                    np.lexsort(
-                        (
-                            estate.block_ids[remaining],
-                            -volume_start[remaining],
-                            -age_start[remaining],
-                        )
-                    )
-                ]
-                cursor = 0
-                while (
-                    actual_total + PROVINCE_TARGET_TOLERANCE_M3 < national_target
-                    and cursor < remaining.size
-                ):
-                    batch = remaining[cursor : cursor + 256]
-                    batch_volumes = _volumes_for_positions(
-                        estate, batch, period_start, np.arange(PERIOD_LENGTH)
-                    )
-                    for row in range(batch.size):
-                        candidate = loads + batch_volumes[row]
-                        year = int(np.argmin(candidate))
-                        loads[year] += batch_volumes[row, year]
-                        actual_total += batch_volumes[row, year]
-                        positions = np.append(positions, batch[row])
-                        volumes = np.vstack([volumes, batch_volumes[row]])
-                        years = np.append(years, year)
-                        cursor += 1
-                        if actual_total + PROVINCE_TARGET_TOLERANCE_M3 >= national_target:
-                            break
-                if actual_total + PROVINCE_TARGET_TOLERANCE_M3 < national_target:
-                    add_shortfall(
-                        period, "CAN", national_target, float(actual_total), actual_total
-                    )
-            else:
+            if not national_fallback:
                 add_shortfall(
                     period, "CAN", national_target, float(actual_total), actual_total
                 )
+            else:
+                if targets is None:
+                    remaining = national_order[national_cursor:]
+                else:
+                    parts = []
+                    for code in range(province_count):
+                        order = province_order.get(code, np.empty(0, dtype=np.int64))
+                        cursor = province_cursor.get(code, 0)
+                        if cursor < order.size:
+                            parts.append(order[cursor:])
+                    remaining = (
+                        np.concatenate(parts)
+                        if parts
+                        else np.empty(0, dtype=np.int64)
+                    )
+                if remaining.size:
+                    remaining = remaining[
+                        np.lexsort(
+                            (
+                                estate.block_ids[remaining],
+                                -volume_start[remaining],
+                                -age_start[remaining],
+                            )
+                        )
+                    ]
+                    cursor = 0
+                    while (
+                        actual_total + PROVINCE_TARGET_TOLERANCE_M3 < national_target
+                        and cursor < remaining.size
+                    ):
+                        batch = remaining[cursor : cursor + 256]
+                        batch_volumes = _volumes_for_positions(
+                            estate, batch, period_start, np.arange(PERIOD_LENGTH)
+                        )
+                        for row in range(batch.size):
+                            candidate = loads + batch_volumes[row]
+                            year = int(np.argmin(candidate))
+                            loads[year] += batch_volumes[row, year]
+                            actual_total += batch_volumes[row, year]
+                            positions = np.append(positions, batch[row])
+                            volumes = np.vstack([volumes, batch_volumes[row]])
+                            years = np.append(years, year)
+                            cursor += 1
+                            if (
+                                actual_total + PROVINCE_TARGET_TOLERANCE_M3
+                                >= national_target
+                            ):
+                                break
+                    if actual_total + PROVINCE_TARGET_TOLERANCE_M3 < national_target:
+                        add_shortfall(
+                            period,
+                            "CAN",
+                            national_target,
+                            float(actual_total),
+                            actual_total,
+                        )
+                else:
+                    add_shortfall(
+                        period, "CAN", national_target, float(actual_total), actual_total
+                    )
 
         if positions.size == 0:
             raise Ws4Sustainable119mError(
@@ -993,6 +1029,10 @@ def build_schedule(
         ),
         "period_target_m3": target_period_m3,
         "national_target_m3": national_target,
+        "eligibility_filter": (
+            "operable_mask" if eligibility_mask is not None else "none"
+        ),
+        "national_fallback": national_fallback,
         "selected_blocks": int(selected["block_id"].size),
         "unique_blocks": int(selected["block_id"].nunique()),
         "selected_area_ha": float(selected["area_ha"].sum()),

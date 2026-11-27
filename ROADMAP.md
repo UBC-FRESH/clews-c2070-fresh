@@ -1346,6 +1346,38 @@ decide what blocks production readiness after the conceptual alpha.
   no official OSeCAN change, no UI change, no unexpected `D`; data commit
   `f0e298097`.
 
+- [x] P7.54 Apply the share-based operable landbase screen and rerun the
+  sustainable 100/119/150 Mm3/yr cases. Completed: built a deterministic
+  province-share mask from `screen_core30` (SCANFI age >= 30, NBAC 2020 burned
+  excluded, within 10 km of a public NRN road) by ranking blocks on
+  `blake2b(province:block_id)` and taking whole blocks to the published
+  `operable_share_of_treed` applied to the WS4 990 m forest area. Mask:
+  370,752 blocks / 75,374,046.00 ha (18.3280% of 411,250,630.32 ha), versus
+  77,050,071.64 ha published (-2.175% because the WS4 block-forest denominator
+  is smaller than the SCANFI treed denominator). NU and PE have no 2016 tenure
+  coverage and no operable blocks; their targets are recorded as shortfalls.
+  The 100/119/150 cases keep their frozen provincial shares, restrict
+  eligibility to the mask and the 40-200 year MAI rotation, disable the
+  cross-province fallback, and run WS4 simulate for 100 years. None is
+  sustained: 100 Mm3 annual min/max/mean 94.4141/105.4949/98.6880 Mm3/yr,
+  period shortfall 160.4216 Mm3, provincial shortfall 259.6635 Mm3,
+  310,750 blocks / 68,233,907.34 ha; 119 Mm3 97.9475/123.0149/113.1749,
+  period shortfall 623.2648 Mm3, provincial 752.8481 Mm3, 352,262 blocks /
+  76,782,772.53 ha; 150 Mm3 111.6734/154.4895/132.6875, period shortfall
+  1,774.8825 Mm3, provincial 1,896.9787 Mm3, 410,086 blocks / 89,775,342.54 ha.
+  Shortfall provinces: 100m QC/NB/NL/PE/NS; 119m QC/NB/NL/SK/PE/NS; 150m
+  QC/SK/NS/NL/NB/PE. Schedule-only maximum nominal control / actual operable
+  harvest: 68.4570/69.3438 Mm3/yr for the 100m shares, 67.8543/69.2302 for
+  119m, 61.4868/62.7054 for 150m, when jurisdictions without operable coverage
+  are excluded from the adequacy test. Frozen v5.1 chain comparison and
+  OSeCAN handoff use the operable harvests: 21/21 frozen reference positions;
+  100m 6/7 primary and 7/7 achieved, 119m 7/7 primary and 6/7 achieved, 150m
+  7/7 primary and 6/7 achieved; official 146-file OSeCAN tree `80caa91c...`
+  unchanged. Added `docs/ws4-operable-cases.md` and
+  `tests/test_ws4_operable_cases.py`; no legal THLB/slope/spatial-road claim,
+  no chain v5.1 mutation, no full-forest artifact rewrite, no official OSeCAN
+  change, no UI change, and no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
