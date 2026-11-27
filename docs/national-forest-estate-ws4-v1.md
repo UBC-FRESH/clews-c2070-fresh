@@ -1,17 +1,23 @@
-# National forest-estate WS4 v1 — candidate release
+# National forest-estate WS4 v1 — adopted candidate release
 
-**Release:** `national-forest-estate-ws4-v1` (annotated tag)
-**Status:** candidate national forest-estate model
+**Release:** `national-forest-estate-ws4-v1` (annotated tag at `fae49ab`)
+**Full-coverage/adoption tag:** `national-forest-estate-ws4-v1.1` (annotated
+tag at the WS4 national chain release documentation commit)
+**Status:** adopted in-repo candidate national forest-estate model
+**adopted_candidate:** `true`
 **Evidence labels:** `model_estimate=true`, `observed=false`,
 `policy_grade=false`, `national_claim=false`
 **Boundary:** not official OSeCAN; not a chain v5.1 replacement; no UI change
 
 This document consolidates the WS4 national forest-estate work into one
-candidate release. It is a documentation/tag release only. It changes no
-model artifact, dataset, UI surface, frozen chain v5.1 artifact, or official
-OSeCAN file. The WS4 work is a **candidate sidecar**: it is reproducible and
-internally validated, but it is not an observed inventory, not a policy-grade
-product, and not an official OSeCAN or CLEWS-C2070 release.
+adopted-candidate release. It is a documentation/tag release only. It changes
+no model artifact, dataset, UI surface, frozen chain v5.1 artifact, or official
+OSeCAN file. The WS4 work is an **adopted in-repo candidate**: it is
+reproducible and internally validated, but it is not an observed inventory,
+not a policy-grade product, and not an official OSeCAN or CLEWS-C2070 release.
+The `national-forest-estate-ws4-v1.1` tag marks the completed full-coverage
+THIN propagation and the adopted-candidate status; the original
+`national-forest-estate-ws4-v1` tag remains at `fae49ab`.
 
 ## 1. Architecture
 
@@ -53,8 +59,9 @@ haul, cost, and AAC are outside the model.
 
 | Field | Value |
 |---|---|
-| Model | National forest-estate WS4 candidate |
-| Release tag | `national-forest-estate-ws4-v1` |
+| Model | National forest-estate WS4 adopted candidate |
+| Release tag | `national-forest-estate-ws4-v1`; full-coverage/adoption tag `national-forest-estate-ws4-v1.1` |
+| Adoption status | `adopted_candidate=true`; in-repo candidate for national chain/OSeCAN, not official OSeCAN |
 | Release type | Documentation/tag only; no model/data/UI/official artifact change |
 | Inventory | SCANFI v2 30 m age, landcover, and species crown closure |
 | Curves | Committed RSYC tile production library |
@@ -137,13 +144,17 @@ All 3,562 candidates are accounted for; the 217 skipped candidates are listed
 with an explicit reason and have no fabricated dataset. This is full 30-m
 geometric coverage of the built estate.
 
-**Coverage caveat:** the committed 3,345 tile datasets were built **CC-baseline**
-and predated the THIN builder change. THIN metadata has since been propagated
-to all 3,345 tiles in place (12,892 thinned tracks; 3,345/3,345 `ws4 validate`
-pass). Fragments, blocks, curves, groups, messages, natural/managed track ids,
-and CC rows are unchanged, so the full-coverage CC results are unchanged. The
-national 990-m and G2-pilot THIN evidence and the dedicated transition run
-below remain the behavioural evidence; no adoption or promotion is claimed.
+**THIN coverage:** the committed 3,345 tile datasets were built
+**CC-baseline** and predated the THIN builder change. THIN metadata has since
+been propagated to all 3,345 tiles in place: 12,892 thinned tracks and 51,568
+treatment rows were added, and 3,345/3,345 tiles pass `ws4 validate`.
+Fragments, blocks, curves, groups, messages, natural/managed track ids, and CC
+rows are unchanged; the CC contract hashes are unchanged and a pre/post chain
+rescan reports 0 mismatches, so the full-coverage CC results are unchanged and
+were not replaced. The national 990-m and G2-pilot THIN evidence and the
+dedicated transition run below remain the behavioural evidence. The estate is
+marked `adopted_candidate=true` as the in-repo candidate; this is not official
+OSeCAN adoption.
 
 ### 3.4 Tiled-aggregate 119 Mm3 chain
 
@@ -240,16 +251,19 @@ is not reproducible.
 | Staged tiled coverage | [`docs/ws4-tiled-30m-staged-national.md`](ws4-tiled-30m-staged-national.md) | `data/derived/ws4/tiled-30m/national_tiled_manifest.json` |
 | National 990-m 119 Mm3 chain | [`docs/ws4-chain-119m.md`](ws4-chain-119m.md) | `data/derived/national/facilities/ws4_chain_119m/` |
 | Tiled 119 Mm3 chain | [`docs/ws4-tiled-chain-119m.md`](ws4-tiled-chain-119m.md) | `data/derived/national/facilities/ws4_tiled_chain_119m/` |
+| WS4 national chain release (adopted candidate) | [`docs/national-facility-chain-ws4-v1.md`](national-facility-chain-ws4-v1.md) | `data/derived/national/facilities/ws4_tiled_chain_119m/` and `.../forestry_osecan_handoff_ws4/` |
 | OSeCAN handoff | [`docs/ws4-osecan-handoff.md`](ws4-osecan-handoff.md) | `data/derived/national/facilities/forestry_osecan_handoff_ws4/` |
 | THIN treatment | [`docs/ws4-thin-treatment.md`](ws4-thin-treatment.md) | `data/derived/ws4/thin-transition-national-990m/` |
 
 ## 6. Limitations
 
 - **THIN metadata coverage.** The full 30-m tiled coverage carries THIN
-  metadata after an in-place, metadata-only patch. Natural fragments, blocks,
-  curves, groups, messages, track ids, and CC rows are unchanged; the
-  full-coverage CC results were not rerun or replaced. THIN remains a state
-  transition, not a thinning-response model.
+  metadata after an in-place patch: 3,345/3,345 tiles patched and validated,
+  12,892 thinned tracks and 51,568 treatment rows added, and 0 CC contract
+  hashes changed. Natural fragments, blocks, curves, groups, messages, track
+  ids, and CC rows are unchanged; a pre/post chain rescan reports 0 mismatches,
+  so the full-coverage CC results were not rerun or replaced. THIN remains a
+  state transition, not a thinning-response model.
 - **State transition, not response.** THIN and planting record management
   state only. Natural, thinned, and managed tracks share one RSYC curve; no
   thinning, planting, silviculture, fertilization, or genetic yield response is
@@ -267,10 +281,10 @@ is not reproducible.
 - **Static inventory.** Age and landcover are the SCANFI 2025 snapshot; no
   natural disturbance, harvest-induced age reset, climate change, or future
   landcover transition is modeled.
-- **Sidecar/candidate, not official.** `model_estimate`, `observed=false`,
-  `policy_grade=false`, `national_claim=false`. Not official OSeCAN, not a
-  chain v5.1 replacement, and not a policy, investment, tenure, or national
-  supply product.
+- **Adopted candidate, not official.** `adopted_candidate=true`,
+  `model_estimate`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`. Not official OSeCAN, not a chain v5.1 replacement,
+  and not a policy, investment, tenure, or national supply product.
 
 ## 7. Evidence pointers
 
@@ -278,14 +292,20 @@ is not reproducible.
 |---|---|---|
 | 30-m G2 pilot | `62d4f93` | `6f23f22` |
 | National 990-m model | `cf03878` | `038400f` |
-| Tiled 30-m coverage | `a4455b5` | `60d748e` |
-| Tiled 119 Mm3 chain | `cd6156f` | `9f87baf` |
-| THIN treatment | `a023eeb` | `f90620d9` |
+| Full 30-m tiled coverage | `a4455b5` | `60d748e` |
+| THIN propagation to full tiled coverage | `0acc076` | `ee12167f` |
+| Prior tiled 119 Mm3 chain | `cd6156f` | `9f87baf` |
+| Tiled 119 Mm3 chain refresh on THIN-patched coverage | `51d6979` | `c4e0a78ad` |
 | National 990-m 119 Mm3 chain | `ab288b1` | `867351e` |
-| OSeCAN handoff | `45f1c57` | `4ce5cd8` |
+| THIN treatment | `a023eeb` | `f90620d9` |
+| WS4 chain and OSeCAN handoff | `45f1c57` | `4ce5cd8` |
+| Estate v1 candidate release (`national-forest-estate-ws4-v1` tag) | `fae49ab` | — |
 
 The data commits are in the `UBC-FRESH/clews-c2070-fresh-data` repository.
-The parent commits are in `UBC-FRESH/clews-c2070-fresh`.
+The parent commits are in `UBC-FRESH/clews-c2070-fresh`. The
+`national-facility-chain-ws4-v1` and `national-forest-estate-ws4-v1.1` tags
+mark the release documentation commit; the original
+`national-forest-estate-ws4-v1` tag remains at `fae49ab`.
 
 ## 8. Reproduce
 
@@ -348,12 +368,17 @@ Run the focused tests:
 The tiled coverage build is a distributed-scale job (58.548 GB of datasets
 and schedules at the committed stage profile); it is not a workstation smoke
 test. The committed tiled coverage and its 24-tile representative subset
-received an in-place, metadata-only THIN patch; they were not rebuilt. See the
-component documents for exact per-stage commands and fail-closed guards.
+received an in-place THIN metadata/state-transition patch; they were not
+rebuilt. See the component documents for exact per-stage commands and
+fail-closed guards.
 
 ## 9. Release checklist
 
-- [x] Model and chain evidence consolidated under one candidate release.
+- [x] Model and chain evidence consolidated under one adopted-candidate
+  release.
+- [x] Estate marked `adopted_candidate=true`; full-coverage/adoption tag
+  `national-forest-estate-ws4-v1.1` created at the chain release documentation
+  commit.
 - [x] `model_estimate`, `observed=false`, `policy_grade=false`,
   `national_claim=false` stated on the release.
 - [x] Official OSeCAN, frozen chain v5.1, UI, and model/data artifacts
@@ -363,4 +388,5 @@ component documents for exact per-stage commands and fail-closed guards.
 - [x] Demo schedules labelled not sustainable harvest.
 - [x] WS4 0.2.0 negative-offset patch requirement recorded.
 - [x] Data/parent commit pointers recorded.
-- [ ] Official OSeCAN adoption — not requested and not claimed.
+- [ ] Official OSeCAN adoption and integration — remains with the Taco/energy
+  team; not requested and not claimed.

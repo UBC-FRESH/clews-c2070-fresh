@@ -10,11 +10,16 @@ the old QC/M CAD net-value sensitivity is withdrawn. BC net value remains
 `not_estimated` because general logging and truck-haul $/m3 are not published;
 no combined national net value is computed.
 
-**Candidate release:** [`docs/national-forest-estate-ws4-v1.md`](docs/national-forest-estate-ws4-v1.md)
-consolidates the WS4 national forest-estate model under annotated tag
-`national-forest-estate-ws4-v1`. It is a `model_estimate` candidate sidecar
-(`observed=false`, `policy_grade=false`, `national_claim=false`), not official
-OSeCAN and not a chain v5.1 replacement.
+**Adopted candidate:** [`docs/national-facility-chain-ws4-v1.md`](docs/national-facility-chain-ws4-v1.md)
+promotes the WS4-derived national chain and origin-province OSeCAN handoff under
+annotated tags `national-facility-chain-ws4-v1` and
+`national-forest-estate-ws4-v1.1`; the estate model is
+`adopted_candidate=true`. The release is `model_estimate`
+(`observed=false`, `policy_grade=false`, `national_claim=false`), does not
+overwrite or move frozen `national-facility-chain-v5.1`, and does not change
+official OSeCAN. Official OSeCAN adoption remains with the Taco/energy team.
+The estate release card is
+[`docs/national-forest-estate-ws4-v1.md`](docs/national-forest-estate-ws4-v1.md).
 
 - [x] v2a source review — no public QC mill-settlement ledger; BMMB/MRNF, BC
   log-market, MRDEM, and THLB limits recorded.
@@ -1275,6 +1280,30 @@ decide what blocks production readiness after the conceptual alpha.
   and created annotated tag `national-forest-estate-ws4-v1` at the docs
   commit. No model, data, UI, chain v5.1, or official OSeCAN change; only
   docs, ROADMAP, and CHANGE_LOG; no unexpected `D`.
+
+- [x] P7.51 Promote the WS4-derived national chain/OSeCAN release and mark the
+  estate model adopted as a candidate. Completed: added
+  `docs/national-facility-chain-ws4-v1.md` and promoted the THIN-patched tiled
+  119 Mm3 chain plus origin-province OSeCAN handoff: 427 blocks / 126 tiles /
+  1,063,108.89 ha; exact 118,988,870.593 m3 versus 118,977,339.1 (+0.0097%);
+  scaled harvest exactly 118,977,339.1 m3; solid 37,673,172.685 versus
+  37,673,626.761 m3, pulp 12,066,424.418 versus 12,066,311.270 odt, process
+  498.750367 versus 498.750917 PJ, harvest gross 444.416608 versus 444.410766
+  PJ, harvest 60% 266.649965 versus 266.646460 PJ, total gross 943.166975
+  versus 943.161683 PJ. OSeCAN: 7/7 119 Mm3 tiers on both bases, 21/21 frozen
+  reference, official 146-file tree `80caa91c...` with 0 changed. Full 30-m
+  coverage THIN: 3,345/3,345 patched and validated, CC contract hashes
+  unchanged, 12,892 thinned tracks / 51,568 treatments added, pre/post chain
+  rescan 0 mismatches. THIN evidence: 588,608 m3 / 6,273.54 ha age-retained;
+  CC 671,252 m3; final managed 195,071 m3; external negative-offset patch
+  required. Marked the estate and chain release `adopted_candidate=true`.
+  Created annotated tags `national-facility-chain-ws4-v1` and
+  `national-forest-estate-ws4-v1.1` at the docs commit; the original
+  `national-forest-estate-ws4-v1` tag stays at `fae49ab` and frozen
+  `national-facility-chain-v5.1` is not moved. Documentation/tag only; only
+  docs, ROADMAP, and CHANGE_LOG changed; no model, data, or UI mutation;
+  official OSeCAN unchanged; no unexpected `D`. Official OSeCAN adoption
+  remains with the Taco/energy team.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

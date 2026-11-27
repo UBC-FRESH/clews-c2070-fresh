@@ -2,6 +2,38 @@
 
 ## 2026-11-27
 
+- **Promoted the WS4-derived national chain/OSeCAN release and marked the
+  estate model adopted as a candidate (P7.51).** Added
+  `docs/national-facility-chain-ws4-v1.md`; updated the national
+  facility-chain model card, the estate release card, ROADMAP, and this log.
+  The THIN-patched tiled 119 Mm3 chain selects 427 blocks / 126 tiles /
+  1,063,108.89 ha with exact 118,988,870.593 m3 versus 118,977,339.1
+  (+0.0097%) and scaled harvest exactly 118,977,339.1 m3; solid
+  37,673,172.685 versus 37,673,626.761 m3, pulp 12,066,424.418 versus
+  12,066,311.270 odt, process 498.750367 versus 498.750917 PJ, harvest gross
+  444.416608 versus 444.410766 PJ, harvest 60% 266.649965 versus 266.646460
+  PJ, total gross 943.166975 versus 943.161683 PJ. OSeCAN: 7/7 119 Mm3 tier
+  matches on both bases, 21/21 frozen reference, official 146-file tree
+  `80caa91c...` unchanged with 0 changed files. Full 30-m coverage THIN:
+  3,345/3,345 patched and validated, CC contract hashes unchanged, 12,892
+  thinned tracks / 51,568 treatments added, pre/post chain rescan 0
+  mismatches. THIN evidence: 588,608 m3 / 6,273.54 ha age-retained; CC
+  671,252 m3; final managed 195,071 m3; external
+  `patches/ws4-negative-offset-retain.patch` required. Marked
+  `adopted_candidate=true` on the chain and estate release surfaces. Created
+  annotated tags `national-facility-chain-ws4-v1` and
+  `national-forest-estate-ws4-v1.1` at the docs commit; the original
+  `national-forest-estate-ws4-v1` tag remains at `fae49ab`, and frozen
+  `national-facility-chain-v5.1` is not moved. Evidence pointers: estate v1
+  `fae49ab`; THIN propagation `0acc076` / data `ee12167f`; coverage `a4455b5`
+  / `60d748e`; tiled chain refresh `51d6979` / `c4e0a78ad`; prior tiled chain
+  `cd6156f` / `9f87baf`; national estate `cf03878` / `038400f`; G2 pilot
+  `62d4f93` / `6f23f22`; chain/OSeCAN `45f1c57` / `4ce5cd8`. Committed as
+  `Promote WS4-derived national chain release`. Documentation/tag only: no
+  model, data, UI, frozen v5.1, or official OSeCAN change; only docs,
+  ROADMAP, and CHANGE_LOG; no unexpected `D`. Official OSeCAN adoption
+  remains with the Taco/energy team.
+
 - **Consolidated and tagged the national forest-estate WS4 v1 candidate
   release (P7.50).** Added `docs/national-forest-estate-ws4-v1.md` as the
   release model card and evidence index covering the SCANFI 30-m inventory →

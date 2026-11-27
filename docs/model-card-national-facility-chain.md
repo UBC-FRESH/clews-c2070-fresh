@@ -12,6 +12,33 @@
 | Energy-side status | Read-only handoff; `official_osecan_changed=false`; transport cost is not in official tiers |
 | Scope boundary | Documentation/tag freeze only; no code, model artifact, UI, or public OSeCAN change at the freeze commit; no legal/AAC claim; no data request, DUA, or approval dependency |
 
+## WS4-derived national chain release (adopted candidate)
+
+| Field | Value |
+|---|---|
+| Release tag | `national-facility-chain-ws4-v1` (annotated) |
+| Estate tag | `national-forest-estate-ws4-v1.1` (annotated; same documentation commit) |
+| Status | New in-repo WS4-derived national chain release; candidate for adoption |
+| Adoption marker | `adopted_candidate=true` |
+| Frozen v5.1 | Tag and artifacts remain valid; not overwritten or moved |
+| Official OSeCAN | Unchanged; adoption by Taco/energy team still required before any official integration |
+| Input | THIN-patched full 30-m tiled coverage (3,345 datasets; 3,562 candidates accounted for; 203 zero-harvest NU and 14 no-forest skips); national 990-m estate with THIN; G2 30-m pilot |
+| Tiled 119 Mm³ chain | 427 blocks / 126 tiles / 1,063,108.89 ha; exact 118,988,870.593 m³ vs 118,977,339.1 (+0.0097%); scaled harvest exactly 118,977,339.1 m³ |
+| Products/residue vs v5.1 | solid 37,673,172.685 vs 37,673,626.761 m³; pulp 12,066,424.418 vs 12,066,311.270 odt; process 498.750367 vs 498.750917 PJ; harvest gross 444.416608 vs 444.410766 PJ; harvest 60% 266.649965 vs 266.646460 PJ; total gross 943.166975 vs 943.161683 PJ |
+| OSeCAN checks | 7/7 119 Mm³ tier matches on both bases; 21/21 frozen reference; official 146-file tree `80caa91c...`, 0 changed |
+| Full-coverage THIN | 3,345/3,345 patched and validated; CC contract hashes unchanged; 12,892 thinned tracks / 51,568 treatments added; pre/post chain rescan 0 mismatches |
+| THIN evidence | 588,608 m³ / 6,273.54 ha age-retained; CC 671,252 m³; final managed 195,071 m³; external `patches/ws4-negative-offset-retain.patch` required |
+| Change class | Documentation/tag only; no model, data, UI, frozen v5.1, or official OSeCAN change |
+
+The release document is
+[`docs/national-facility-chain-ws4-v1.md`](national-facility-chain-ws4-v1.md).
+It promotes the WS4 tiled chain and origin-province OSeCAN handoff to an
+in-repo release and marks the national forest-estate model
+`adopted_candidate=true`. It does not replace frozen chain v5.1 and does not
+integrate with official OSeCAN. The tiled schedule is a whole-block arithmetic
+verification, not a sustainable harvest, AAC, policy result, or investment
+case.
+
 ## Transport/siting companion card
 
 Road factors and OSRM evidence, transport cost v1, supply-node construction and
@@ -861,4 +888,9 @@ transport/siting documentation commit, records transport/siting data commits
 (break-even), and `068787d` (case screen), and does not move v5.1 or any earlier
 tag. The freeze commits are documentation and tag only; no code, model
 artifact, UI, or official OSeCAN file changed at those commits. The tags are the
-immutable references for the frozen numbers.
+immutable references for the frozen numbers. Annotated tags
+`national-facility-chain-ws4-v1` and `national-forest-estate-ws4-v1.1` mark the
+WS4-derived national chain release documentation commit. That release does not
+move `national-facility-chain-v5.1` or `national-forest-estate-ws4-v1`; it marks
+the national forest-estate model `adopted_candidate=true` pending Taco/energy
+adoption and does not integrate with official OSeCAN.
