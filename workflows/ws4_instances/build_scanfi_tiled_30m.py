@@ -1874,6 +1874,10 @@ def build_staged_manifest(
         else ("staged_in_progress" if built_total > 0 else "not_run")
     )
 
+    if storage_projections is None and isinstance(existing_manifest, Mapping):
+        storage_projections = existing_manifest.get("storage", {}).get(
+            "projection"
+        )
     if storage_projections is None:
         storage_projections = {}
     stage_storage = storage_projections.get("stages", {})
@@ -2478,6 +2482,11 @@ def run(
 
     storage_check: dict[str, Any] | None = None
     storage_projections: dict[str, Any] | None = None
+    if args.manifest_only and isinstance(existing_manifest, Mapping):
+        previous_storage = existing_manifest.get("storage", {})
+        if isinstance(previous_storage, Mapping):
+            storage_check = previous_storage.get("check")
+            storage_projections = previous_storage.get("projection")
     if staged and not args.manifest_only:
         storage_projections = storage_projection(
             frame, existing_manifest=existing_manifest
@@ -2516,15 +2525,16 @@ def run(
 
     expected_hashes = _expected_manifest_hashes(existing_manifest)
     skipped_no_forest: list[dict[str, Any]] = []
+    if isinstance(existing_manifest, Mapping):
+        skipped_no_forest = [
+            dict(item)
+            for item in existing_manifest.get("skipped_no_forest_tiles", [])
+            if isinstance(item, Mapping)
+        ]
+    skipped_no_forest_by_node = {
+        str(item["node_id"]): item for item in skipped_no_forest
+    }
     if args.manifest_only:
-        if isinstance(existing_manifest, Mapping):
-            skipped_no_forest = [
-                dict(item)
-                for item in existing_manifest.get(
-                    "skipped_no_forest_tiles", []
-                )
-                if isinstance(item, Mapping)
-            ]
         skip_ids = {str(item["node_id"]) for item in skipped_no_forest}
         load_frame = build_selected[
             ~build_selected["node_id"].astype(str).isin(skip_ids)
@@ -2550,14 +2560,15 @@ def run(
             if _is_no_forest_failure(str(failure["error"])):
                 node_id = str(failure["node_id"])
                 candidate = candidates_by_node.loc[node_id]
-                skipped_no_forest.append(
-                    {
+                if node_id not in skipped_no_forest_by_node:
+                    item = {
                         "node_id": node_id,
                         "province": str(candidate["province"]),
                         "harvest_m3": float(candidate["harvest_m3"]),
                         "reason": str(failure["error"]),
                     }
-                )
+                    skipped_no_forest.append(item)
+                    skipped_no_forest_by_node[node_id] = item
                 print(
                     f"explicitly skipping no-forest candidate {node_id}: "
                     f"{failure['error']}",
