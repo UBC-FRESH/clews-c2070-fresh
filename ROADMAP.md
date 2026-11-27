@@ -1344,7 +1344,7 @@ decide what blocks production readiness after the conceptual alpha.
   positions per case on both bases, official 146-file tree `80caa91c...`
   unchanged. Added `docs/ws4-sustainable-cases.md`; no chain v5.1 mutation,
   no official OSeCAN change, no UI change, no unexpected `D`; data commit
-  `64edb5f38`.
+  `f0e298097`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

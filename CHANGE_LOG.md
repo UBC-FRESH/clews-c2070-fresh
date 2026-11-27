@@ -35,7 +35,7 @@
   `national_claim=false`, `ws4_derived=true`, `sustainable_schedule=true`,
   `official_osecan_changed=false`. No chain v5.1 mutation, no official
   OSeCAN change, no 119 artifact rewrite, no UI change, and no unexpected
-  `D`; `ws4 validate` and the WS4 case tests pass. Data commit `64edb5f38`.
+  `D`; `ws4 validate` and the WS4 case tests pass. Data commits `64edb5f38` and `f0e298097` (manifest ordering).
 
 - **Built the sustainable 119 Mm3/yr WS4 schedule and chain on the national
   990 m estate (P7.52).** Added

@@ -725,7 +725,6 @@ def build_case_chain(
     }
     _write_json(spec.chain_dir / "summary.json", summary)
     _write_case_report(spec, summary, schedule_result)
-    _write_case_manifest(spec, summary)
     return summary
 
 
@@ -993,6 +992,7 @@ def _run_case(spec: CaseSpec, estate: base.Estate) -> dict[str, Any]:
         )
     }
     _write_json(spec.chain_dir / "summary.json", summary)
+    _write_case_manifest(spec, summary)
     return summary
 
 
