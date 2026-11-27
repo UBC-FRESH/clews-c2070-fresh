@@ -145,7 +145,8 @@ authority.
 
 QC is the binding province in every case. The 100m case also fails because NB,
 NL, PE, and NS cannot meet their allocated shares on the screened area. At
-119m, SK joins the shortfall set; at 150m, the QC shortfall dominates.
+119m, SK joins the shortfall set; at 150m, the QC shortfall dominates. Every
+10-year period (0–9) contains at least one shortfall in all three cases.
 
 No block is harvested under rotation or outside the operable mask. The selected
 block count includes reharvests after a full rotation: 71,311 / 82,582 /
