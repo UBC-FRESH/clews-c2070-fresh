@@ -584,20 +584,23 @@ def _assign_years(volumes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def _period_targets(
     province_shares: dict[str, float] | None,
+    *,
+    target_period_m3: float = TARGET_PERIOD_M3,
 ) -> dict[str, float] | None:
     if province_shares is None:
         return None
     targets: dict[str, float] = {}
     for province in PROVINCES:
-        target = TARGET_PERIOD_M3 * province_shares[province]
+        target = target_period_m3 * province_shares[province]
         if target <= 0.0:
             targets[province] = 0.0
             continue
         targets[province] = target
     total = math.fsum(targets.values())
-    if not math.isclose(total, TARGET_PERIOD_M3, rel_tol=1e-12):
+    if not math.isclose(total, target_period_m3, rel_tol=1e-12):
         raise Ws4Sustainable119mError(
-            f"province period targets sum to {total!r}, expected {TARGET_PERIOD_M3!r}"
+            f"province period targets sum to {total!r}, expected "
+            f"{target_period_m3!r}"
         )
     return targets
 
@@ -616,10 +619,14 @@ def build_schedule(
     *,
     province_shares: dict[str, float] | None,
     label: str = "province_control",
+    target_period_m3: float = TARGET_PERIOD_M3,
+    control_label: str = "frozen 119 Mm3 control",
 ) -> SelectionResult:
     """Select whole blocks period by period and assign annual offsets."""
     estate.reset()
-    targets = _period_targets(province_shares)
+    targets = _period_targets(
+        province_shares, target_period_m3=target_period_m3
+    )
     schedule_records: list[dict[str, Any]] = []
     selected_records: list[pd.DataFrame] = []
     period_records: list[dict[str, Any]] = []
@@ -627,7 +634,7 @@ def build_schedule(
     shortfall_records: list[dict[str, Any]] = []
     province_code = estate.province_code
     province_count = len(PROVINCES)
-    national_target = TARGET_PERIOD_M3
+    national_target = target_period_m3
 
     def add_shortfall(
         period: int, province: str, target: float, eligible: float, achieved: float
@@ -980,11 +987,11 @@ def build_schedule(
         "label": label,
         "selection_method": (
             "whole blocks, oldest-first, volume-aware; provincial period "
-            "targets from the frozen 119 Mm3 control"
+            f"targets from the {control_label}"
             if targets is not None
             else "whole blocks, oldest-first, volume-aware; national period target"
         ),
-        "period_target_m3": TARGET_PERIOD_M3,
+        "period_target_m3": target_period_m3,
         "national_target_m3": national_target,
         "selected_blocks": int(selected["block_id"].size),
         "unique_blocks": int(selected["block_id"].nunique()),
@@ -1005,7 +1012,10 @@ def build_schedule(
         if not shortfalls.empty
         else 0.0,
         "sustained_119m": bool(
-            period_rows["achieved_m3"].min() + 1e-6 >= TARGET_PERIOD_M3
+            period_rows["achieved_m3"].min() + 1e-6 >= target_period_m3
+        ),
+        "sustained": bool(
+            period_rows["achieved_m3"].min() + 1e-6 >= target_period_m3
         ),
         "blocks_reharvested": int(selected["block_id"].duplicated().sum()),
     }
@@ -1041,6 +1051,9 @@ def ensure_ws4_run(
     schedule: pd.DataFrame,
     schedule_path: Path = SCHEDULE_PATH,
     run_dir: Path = RUN_DIR,
+    *,
+    horizon: int = HORIZON,
+    dataset_dir: Path = DATASET_DIR,
 ) -> str:
     _write_csv(
         schedule_path,
@@ -1066,11 +1079,11 @@ def ensure_ws4_run(
             str(WS4_BIN),
             "simulate",
             "--dataset",
-            str(DATASET_DIR),
+            str(dataset_dir),
             "--schedule",
             str(schedule_path),
             "--years",
-            str(HORIZON),
+            str(horizon),
             "--out",
             str(run_dir),
         ],
@@ -1090,6 +1103,8 @@ def ensure_ws4_run(
 
 def extract_run_products(
     run_dir: Path = RUN_DIR,
+    *,
+    horizon: int = HORIZON,
 ) -> pd.DataFrame:
     path = run_dir / "product_values.csv"
     if not path.is_file():
@@ -1117,7 +1132,7 @@ def extract_run_products(
     if (values["value"] < -1e-9).any():
         raise Ws4Sustainable119mError("negative WS4 product value")
     offsets = sorted(values["offset"].astype(int).unique().tolist())
-    if offsets != list(range(HORIZON)):
+    if offsets != list(range(horizon)):
         raise Ws4Sustainable119mError(
             f"run wrote unexpected offsets: {offsets[:3]}...{offsets[-3:]}"
         )

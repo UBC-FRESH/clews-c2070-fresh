@@ -254,7 +254,9 @@ run.
   interprovincial trade are not re-run.
 - No official OSeCAN file, frozen chain v5.1 artifact, or UI surface is
   changed.
-- 100 Mm³ and 150 Mm³ scenarios are follow-up work, not part of this artifact.
+- The 100 Mm³ and 150 Mm³ cases are now built with the same scheduler and are
+  documented in [ws4-sustainable-cases.md](ws4-sustainable-cases.md); this 119
+  artifact is unchanged by that extension.
 
 ## 8. Reproduce
 
@@ -266,6 +268,10 @@ run.
 ## 9. Artifacts
 
 Data commit: `ce1670c62`.
+
+The 100 and 150 Mm³ cases are in
+`data/derived/national/facilities/ws4_sustainable_cases/`; see
+[ws4-sustainable-cases.md](ws4-sustainable-cases.md).
 
 | Path | Contents |
 |---|---|

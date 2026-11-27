@@ -1322,6 +1322,30 @@ decide what blocks production readiness after the conceptual alpha.
   `80caa91c...` unchanged. Added `docs/ws4-sustainable-119m.md`; no chain v5.1
   mutation, no official OSeCAN change, no UI change, no unexpected `D`.
 
+- [x] P7.53 Extend the sustainable WS4 schedule to the 100 and 150 Mm3/yr
+  cases and rebuild the chain/OSeCAN for each. Completed: the same 100-year,
+  ten-period, oldest-first whole-block scheduler as P7.52, using the frozen
+  100m and 150m `allocated_share` controls. 100 Mm3: 267,389 blocks /
+  71,658,851.94 ha, 10,110,499,830.7 m3 total, 100,096,807.1-102,955,282.3
+  m3/yr annual (mean 101,104,998.3), period min 1,001,491,188.0 versus
+  1,000,000,001.0 target, zero shortfall, no reharvest; raw rotation peaks
+  2/13/24 years capped and flagged to 40 years. 150 Mm3: 400,049 blocks /
+  106,577,235.27 ha, 15,124,767,231.7 m3 total, 149,997,027.4-153,495,684.4
+  m3/yr annual (mean 151,247,672.3), period min 1,501,156,257.2 versus
+  1,500,000,002.0 target, zero shortfall, 586 blocks reharvested after full
+  rotation; one annual offset is 2,972.8 m3 (0.0020%) below the nominal
+  annual rate while its period is above target, reported not forced. Frozen
+  v5.1 coefficients on the first-period average: 100 Mm3 solid
+  31,734,986.7 m3, pulp 10,157,930.5 odt, process 419.956046 PJ, harvest
+  gross 374.055208 PJ, harvest 60% 224.433125 PJ, total gross 794.011254 PJ;
+  150 Mm3 solid 46,741,639.1 m3, pulp 16,047,204.7 odt, process 640.905817
+  PJ, harvest gross 590.557241 PJ, harvest 60% 354.334345 PJ, total gross
+  1,231.463058 PJ. OSeCAN: 21/21 frozen v5.1 reference positions, 7/7 tier
+  positions per case on both bases, official 146-file tree `80caa91c...`
+  unchanged. Added `docs/ws4-sustainable-cases.md`; no chain v5.1 mutation,
+  no official OSeCAN change, no UI change, no unexpected `D`; data commit
+  `64edb5f38`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

@@ -2,6 +2,41 @@
 
 ## 2026-11-27
 
+- **Extended the sustainable WS4 schedule to the 100 and 150 Mm3/yr cases and
+  rebuilt the chain/OSeCAN for each (P7.53).** Added
+  `workflows/national/facilities/ws4_sustainable_cases.py`,
+  `workflows/national/facilities/ws4_sustainable_cases_osecan.py`,
+  `tests/test_ws4_sustainable_cases.py`, and
+  `docs/ws4-sustainable-cases.md`; generalized the 119 scheduler entry points
+  with backward-compatible defaults. 100 Mm3: 267,389 whole blocks /
+  71,658,851.94 ha, exact 10,110,499,830.7 m3 (101,104,998.3 m3/yr), annual
+  min 100,096,807.1 / max 102,955,282.3 m3/yr, CV 0.007418, period min
+  1,001,491,188.0 m3 versus 1,000,000,001.0 target, zero shortfall, no
+  reharvest. 150 Mm3: 400,049 blocks / 106,577,235.27 ha, exact
+  15,124,767,231.7 m3 (151,247,672.3 m3/yr), annual min 149,997,027.4 / max
+  153,495,684.4 m3/yr, CV 0.008033, period min 1,501,156,257.2 m3 versus
+  1,500,000,002.0 target, zero shortfall, 586 blocks reharvested after full
+  rotation. Raw rotation peaks are 2/13/24 years and are capped/flagged to
+  40 years for 100% of selected blocks; no under-rotation harvest. The 150
+  Mm3 annual LPT spread leaves one offset 2,972.8 m3 (0.0020%) below the
+  nominal annual rate while its period is 1,156,255.2 m3 above target; this
+  is reported, not forced. Frozen v5.1 coefficients on the first-period
+  average: 100 Mm3 solid 31,734,986.7 m3 (+0.1331%), pulp 10,157,930.5 odt
+  (+0.2094%), process 419.956046 PJ (+0.1713%), harvest gross 374.055208 PJ
+  (+0.2174%), harvest 60% 224.433125 PJ (+0.2174%), total gross 794.011254 PJ
+  (+0.1930%); 150 Mm3 solid 46,741,639.1 m3 (+1.3113%), pulp 16,047,204.7 odt
+  (+3.1916%), process 640.905817 PJ (+2.2398%), harvest gross 590.557241 PJ
+  (+3.0415%), harvest 60% 354.334345 PJ (+3.0415%), total gross 1,231.463058
+  PJ (+2.6227%). The 100-year achieved basis is within +0.77% to +1.50% of
+  the 100 target and +0.60% to +1.10% of the 150 target. OSeCAN handoff:
+  21/21 frozen v5.1 reference positions, 7/7 tier positions for 100 and 150
+  on both bases, official 146-file tree `80caa91c...` with 0 changed files.
+  Labels: `model_estimate=true`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`, `ws4_derived=true`, `sustainable_schedule=true`,
+  `official_osecan_changed=false`. No chain v5.1 mutation, no official
+  OSeCAN change, no 119 artifact rewrite, no UI change, and no unexpected
+  `D`; `ws4 validate` and the WS4 case tests pass. Data commit `64edb5f38`.
+
 - **Built the sustainable 119 Mm3/yr WS4 schedule and chain on the national
   990 m estate (P7.52).** Added
   `workflows/national/facilities/ws4_sustainable_119m.py`,
