@@ -3,7 +3,7 @@
 ## 2026-11-27
 
 - **Added staged, resumable national 30-m tiled WS4 coverage and ran Stages
-  1-2 (P7.47).** Extended
+  1-3 (P7.47).** Extended
   `workflows/ws4_instances/build_scanfi_tiled_30m.py` with a documented
   four-stage province plan (`--stage stage1..stage4`), hash+validation resume
   (`--resume`), datasets-only coverage mode (`--datasets-only`), deterministic
@@ -19,12 +19,15 @@
   passed 1,042/1,042. Stage 2 built and validated 709 tiles: 1,149,647,972
   fragments, 472,680,698 blocks, 103,468,317.48 ha forest; 4 no-forest
   slivers were skipped explicitly and the 2 pre-existing sample tiles were
-  preserved by hash+validation resume. Ten sample tiles were simulated for 20
-  years: 37,697,066.921 m3 harvested, 150,234.21 ha treated/managed, equal to
-  scheduled area. The cumulative manifest records 1,755 completed tiles,
-  2,304,927,857 fragments, 918,012,197 blocks, 207,443,507.13 ha forest,
-  30.740 GB local storage, 203 zero-harvest skips, 13 no-forest skips, 1,591
-  remaining in Stages 3-4, and `full_run.status=staged_in_progress`. Added
+  preserved by hash+validation resume. Stage 3 built and validated all 494
+  candidates: 616,371,709 fragments, 183,557,711 blocks, 55,473,453.81 ha
+  forest; the 2 pre-existing sample tiles were again preserved by
+  hash+validation resume. Fifteen sample tiles were simulated for 20 years:
+  45,262,114.861 m3 harvested, 208,589.13 ha treated/managed, equal to
+  scheduled area. The cumulative manifest records 2,247 completed tiles,
+  2,918,241,629 fragments, 1,100,492,279 blocks, 262,641,746.61 ha forest,
+  37.876 GB local storage, 203 zero-harvest skips, 13 no-forest skips, 1,099
+  remaining in Stage 4, and `full_run.status=staged_in_progress`. Added
   stage/resume/storage tests and `docs/ws4-tiled-30m-staged-national.md`;
   updated ROADMAP P7.47. Labels `model_estimate` / `observed=false` /
   `policy_grade=false` / `national_claim=false` / `tiled_30m=true`; no UI,

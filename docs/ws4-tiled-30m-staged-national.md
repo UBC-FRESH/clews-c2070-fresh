@@ -75,7 +75,7 @@ At the Stage 1 start the check reported:
 ```text
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1        15T  9.8T  4.8T  68% /srv/shared-data
-free = 5,157.849 GB
+free = 5,157.685 GB
 required minimum = 120.000 GB
 projected stage1 full-profile storage = 30.099 GB
 projected stage2 full-profile storage = 24.328 GB
@@ -159,36 +159,60 @@ The Stage 2 sample simulation ran on five newly built BC/AB tiles:
 - 24,481,322.215 m3 harvested over 20 years;
 - 75,686.31 ha treated/managed, exactly equal to 75,686.31 ha scheduled.
 
-Across both stages the sample simulation totals are 10 tiles,
-37,697,066.921 m3 harvested, and 150,234.21 ha treated/managed. These totals
+Across all three stages the sample simulation totals are 15 tiles,
+45,262,114.861 m3 harvested, and 208,589.13 ha treated/managed. These totals
 are transition evidence only and are not extrapolated to a stage or the
 nation. They are recorded in `sample_simulation` in the national manifest.
 
-Cumulative completed-tile totals after Stage 2 are 1,755 tiles,
-2,304,927,857 fragments, 918,012,197 blocks, 207,443,507.13 ha forest, and
-30.740 GB local storage.
+Cumulative completed-tile totals after Stage 3 are 2,247 tiles,
+2,918,241,629 fragments, 1,100,492,279 blocks, 262,641,746.61 ha forest, and
+37.876 GB local storage.
+
+### Stage 3 — Saskatchewan + Manitoba
+
+Stage 3 covered 494 candidates:
+
+- 494 tile datasets built and validated (492 newly built plus the 2
+  pre-existing sample tiles preserved by hash+validation resume);
+- 0 no-forest skips;
+- 0 Stage 3 candidates remaining.
+
+Stage 3 totals for the 494 built tiles:
+
+- 616,371,709 fragments;
+- 183,557,711 blocks;
+- 55,473,453.81 ha forest;
+- 7.200 GB local storage in dataset + schedule + manifest files;
+- every validation status is `pass`.
+
+The Stage 3 sample simulation ran on five newly built SK/MB tiles:
+
+- 5/5 simulations pass;
+- 7,565,047.940 m3 harvested over 20 years;
+- 58,354.92 ha treated/managed, exactly equal to 58,354.92 ha scheduled.
 
 ## 5. Coverage and remaining work
 
-After Stage 2:
+After Stage 3:
 
-- 1,755 tiles are built and validated (1,042 Stage 1 + 709 Stage 2 + the four
-  pre-existing Stage 3-4 sample tiles);
+- 2,247 tiles are built and validated (1,042 Stage 1 + 709 Stage 2 +
+  494 Stage 3 + the 2 pre-existing Stage 4 sample tiles);
 - 203 zero-harvest NU candidates and 13 no-forest slivers are explicitly
   skipped;
-- 1,591 candidates remain, in Stages 3-4.
+- 1,099 candidates remain in Stage 4 (2 pre-existing Stage 4 sample tiles are
+  already built).
 
 | Stage | Candidates | Built | Remaining | Status |
 |---|---:|---:|---:|---|
 | `stage1` | 1,254 | 1,042 | 0 | complete (with documented skips) |
 | `stage2` | 713 | 709 | 0 | complete (with documented skips) |
-| `stage3` | 494 | 2 | 492 | not started |
+| `stage3` | 494 | 494 | 0 | complete |
 | `stage4` | 1,101 | 2 | 1,099 | not started |
 
-The remaining full-profile storage projection is **71.65 GB** (per-stage
+The remaining full-profile storage projection is **64.52 GB** (per-stage
 projections minus actual used bytes) and is recorded as
 `storage.projected_remaining_bytes` in the manifest. The project does **not**
-claim national coverage: 1,591 candidates are not built.
+claim national coverage: 1,099 candidates are not built.
 
 ## 6. Commands
 

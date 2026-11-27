@@ -1157,7 +1157,7 @@ decide what blocks production readiness after the conceptual alpha.
   990-m, or G2 pilot change; no unexpected `D`.
 
 - [x] P7.47 Add staged, resumable national 30-m tiled WS4 coverage and run
-  Stages 1-2. Completed: extended
+  Stages 1-3. Completed: extended
   `workflows/ws4_instances/build_scanfi_tiled_30m.py` with the documented
   four-stage province plan (`--stage`), hash+validation resume (`--resume`),
   datasets-only coverage mode (`--datasets-only`), and deterministic
@@ -1174,16 +1174,18 @@ decide what blocks production readiness after the conceptual alpha.
   built and validated 709 tiles (1,149,647,972 fragments; 472,680,698 blocks;
   103,468,317.48 ha forest); 4 no-forest slivers were skipped explicitly, and
   the 2 pre-existing sample tiles were preserved by hash+validation resume.
-  Ten sample tiles were simulated for 20 years: 37,697,066.921 m3 harvested
-  and 150,234.21 ha treated/managed, equal to scheduled area. Cumulative
-  manifest: 1,755 completed tiles, 2,304,927,857 fragments, 918,012,197
-  blocks, 207,443,507.13 ha forest, 30.740 GB local storage; 203 zero-harvest
-  skips, 13 no-forest skips, 1,591 remaining in Stages 3-4;
-  `full_run.status=staged_in_progress`. Added stage/resume/storage tests and
-  `docs/ws4-tiled-30m-staged-national.md`. Labels `model_estimate` /
-  `observed=false` / `policy_grade=false` / `national_claim=false` /
-  `tiled_30m=true`; no UI, official OSeCAN, chain v5.1, national 990-m, G2
-  pilot, or 24-tile sample change; no unexpected `D`.
+  Stage 3 built and validated all 494 candidates (616,371,709 fragments;
+  183,557,711 blocks; 55,473,453.81 ha forest), again preserving the 2 sample
+  tiles by hash+validation resume. Fifteen sample tiles were simulated for 20
+  years: 45,262,114.861 m3 harvested and 208,589.13 ha treated/managed, equal
+  to scheduled area. Cumulative manifest: 2,247 completed tiles,
+  2,918,241,629 fragments, 1,100,492,279 blocks, 262,641,746.61 ha forest,
+  37.876 GB local storage; 203 zero-harvest skips, 13 no-forest skips, 1,099
+  remaining in Stage 4; `full_run.status=staged_in_progress`. Added
+  stage/resume/storage tests and `docs/ws4-tiled-30m-staged-national.md`.
+  Labels `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `tiled_30m=true`; no UI, official OSeCAN, chain
+  v5.1, national 990-m, G2 pilot, or 24-tile sample change; no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

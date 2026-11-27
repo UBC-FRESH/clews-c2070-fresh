@@ -606,8 +606,8 @@ def stage_counts(frame: pd.DataFrame) -> dict[str, dict[str, Any]]:
         counts[stage.name] = {
             "title": stage.title,
             "provinces": list(stage.provinces),
-            "candidate_tiles": int(len(selected)),
-            "positive_harvest_tiles": int(len(positive)),
+            "candidate_tiles": len(selected),
+            "positive_harvest_tiles": len(positive),
             "zero_harvest_tiles": int(len(selected) - len(positive)),
             "zero_harvest_provinces": sorted(
                 set(selected["province"].astype(str))
@@ -678,19 +678,19 @@ def storage_projection(
         selected = frame[frame["province"].astype(str).isin(stage.provinces)]
         stage_area = sum(province_areas[province] for province in stage.provinces)
         area_share = stage_area / national_area
-        area_projected = int(round(total_bytes * area_share))
-        mean_projected = int(round(mean_total * len(selected)))
+        area_projected = round(total_bytes * area_share)
+        mean_projected = round(mean_total * len(selected))
         projected = max(area_projected, mean_projected)
         dataset_ratio = dataset_bytes / total_bytes
         stages[stage.name] = {
-            "candidate_tiles": int(len(selected)),
+            "candidate_tiles": len(selected),
             "forest_area_ha": float(stage_area),
             "forest_area_share": float(area_share),
             "area_scaled_total_bytes": area_projected,
             "mean_per_candidate_total_bytes": mean_projected,
             "projected_total_bytes": projected,
-            "projected_dataset_bytes": int(round(projected * dataset_ratio)),
-            "projected_run_bytes": int(round(projected * (1.0 - dataset_ratio))),
+            "projected_dataset_bytes": round(projected * dataset_ratio),
+            "projected_run_bytes": round(projected * (1.0 - dataset_ratio)),
         }
     return {
         "basis": basis["basis"],
@@ -2110,10 +2110,14 @@ def write_staged_readme(manifest: Mapping[str, Any], root: Path) -> None:
             f"- Remaining stages: {', '.join(plan['remaining_stages']) or 'none'}",
             f"- Completed/validated tiles: {plan['completed_tiles']:,}",
             f"- Remaining tiles: {plan['remaining_tiles']:,}",
-            f"- Explicitly skipped zero-harvest tiles: "
-            f"{plan['skipped_zero_harvest_tiles']:,}",
-            f"- Explicitly skipped no-forest sliver tiles: "
-            f"{plan['skipped_no_forest_tiles']:,}",
+            (
+                f"- Explicitly skipped zero-harvest tiles: "
+                f"{plan['skipped_zero_harvest_tiles']:,}"
+            ),
+            (
+                f"- Explicitly skipped no-forest sliver tiles: "
+                f"{plan['skipped_no_forest_tiles']:,}"
+            ),
             "",
             "## Storage",
             "",
@@ -2127,11 +2131,15 @@ def write_staged_readme(manifest: Mapping[str, Any], root: Path) -> None:
                 f"- `df -h`: `{check['df_h']}`",
                 f"- Free: {check['free_gb']:,.3f} GB",
                 f"- Required minimum: {check['min_required_gb']:,.3f} GB",
-                f"- Projected full national: "
-                f"{storage['projected_full_run_bytes'] / 1e9:,.1f} GB",
+                (
+                    f"- Projected full national: "
+                    f"{storage['projected_full_run_bytes'] / 1e9:,.1f} GB"
+                ),
                 f"- Used by built tiles: {storage['used_bytes'] / 1e9:,.3f} GB",
-                f"- Projected remaining: "
-                f"{storage['projected_remaining_bytes'] / 1e9:,.1f} GB",
+                (
+                    f"- Projected remaining: "
+                    f"{storage['projected_remaining_bytes'] / 1e9:,.1f} GB"
+                ),
             ]
         )
     lines.extend(
@@ -2140,12 +2148,18 @@ def write_staged_readme(manifest: Mapping[str, Any], root: Path) -> None:
             "## Sample simulation",
             "",
             f"- Status: {manifest['sample_simulation']['status']}",
-            f"- Tiles simulated: "
-            f"{manifest['sample_simulation']['tiles_simulated']}",
-            f"- Harvested volume: "
-            f"{manifest['sample_simulation']['harvested_volume_m3']:,.3f} m3",
-            f"- Treated/managed area: "
-            f"{manifest['sample_simulation']['treated_area_ha']:,.3f} ha",
+            (
+                f"- Tiles simulated: "
+                f"{manifest['sample_simulation']['tiles_simulated']}"
+            ),
+            (
+                f"- Harvested volume: "
+                f"{manifest['sample_simulation']['harvested_volume_m3']:,.3f} m3"
+            ),
+            (
+                f"- Treated/managed area: "
+                f"{manifest['sample_simulation']['treated_area_ha']:,.3f} ha"
+            ),
             "",
             "## Commands",
             "",
