@@ -2,6 +2,32 @@
 
 ## 2026-11-27
 
+- **Built the WS4-driven 119 Mm3 harvest and chain comparison (P7.44).**
+  Selected 45 whole natural/unmanaged blocks (`offset >= 40`) from the
+  national 990-m WS4 estate against the 118.9773391 Mm3 provincial control
+  using a descending-volume greedy with a minimum-overshoot final block. No
+  block volume was scaled or fabricated. The one-year CC run at offset 0
+  harvested 118,977,392.880 m3 (+53.780 m3 versus target) on 1,083,739.05 ha
+  across 13 jurisdictions; NU remains zero. `ws4 validate` exits 0 and the
+  run reproduces selected block volume and area by province exactly. Applied
+  the frozen chain v5.1 per-province coefficients on `ws4_achieved` and
+  `scaled_to_119m_control` bases: solid 37,673,641.463 / 37,673,624.433 m3,
+  pulp 12,066,317.395 / 12,066,311.941 odt, process residue 498.751140 /
+  498.750915 PJ, harvest gross 444.410997 / 444.410796 PJ, harvest 60%
+  266.646598 / 266.646477 PJ, and total gross 943.162137 / 943.161711 PJ
+  versus frozen 37,673,626.761 m3, 12,066,311.270 odt, 498.750917 / 444.410766
+  / 266.646460 / 943.161683 PJ. Added the schedule, one-year run,
+  `data/derived/national/facilities/ws4_chain_119m/`,
+  `workflows/national/facilities/ws4_chain_119m.py`, focused tests, and
+  `docs/ws4-chain-119m.md`. The residue curve and OSeCAN handoff were not
+  rebuilt because the existing workflows are frozen to the v5.1 facility
+  assignment and zone weights; only chain totals were rebuilt and no tier
+  position is claimed. Labels are `model_estimate` / `observed=false` /
+  `policy_grade=false` / `national_claim=false` / `ws4_derived=true`;
+  `official_osecan_changed=false` and `chain_v51_unchanged=true`. No UI,
+  official OSeCAN, frozen chain v5.1, or national WS4 dataset change; no
+  unexpected `D`.
+
 - **Built the national WS4 forest estate at 990-m fragments (P7.43).** Kept
   SCANFI reads at 30 m but changed the WS4 fragment resolution to 990 m
   (33 × 33 pixels, 98.01 ha maximum) so the national estate is tractable as

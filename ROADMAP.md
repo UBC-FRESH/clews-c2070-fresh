@@ -1087,6 +1087,29 @@ decide what blocks production readiness after the conceptual alpha.
   `national_claim=false`; no UI, official OSeCAN, or chain v5.1 change; no
   unexpected `D`.
 
+- [x] P7.44 Build a WS4-driven 119 Mm3 harvest schedule and chain comparison
+  from the national 990-m estate. Completed: selected 45 whole natural/
+  unmanaged blocks (offset >= 40) against the 118.9773391 Mm3 provincial
+  control, without scaling block volumes, and simulated one CC year at offset
+  0. Achieved 118,977,392.880 m3 (+53.780 m3 overshoot) on 1,083,739.05 ha;
+  every province meets or exceeds its target, NU is zero. `ws4 validate`
+  exits 0 and the one-year run reproduces selected block volume and area
+  exactly. Applied the frozen v5.1 per-province coefficients on
+  `ws4_achieved` and `scaled_to_119m_control` bases: solid
+  37,673,641.463 / 37,673,624.433 m3, pulp 12,066,317.395 / 12,066,311.941
+  odt, process residue 498.751140 / 498.750915 PJ, harvest gross 444.410997 /
+  444.410796 PJ, harvest 60% 266.646598 / 266.646477 PJ, total gross
+  943.162137 / 943.161711 PJ versus frozen 37,673,626.761 m3, 12,066,311.270
+  odt, 498.750917 / 444.410766 / 266.646460 / 943.161683 PJ. Added
+  `workflows/national/facilities/ws4_chain_119m.py`, focused tests,
+  `docs/ws4-chain-119m.md`, the schedule, run, and
+  `data/derived/national/facilities/ws4_chain_119m/`. The residue curve and
+  OSeCAN handoff were not rebuilt because the existing workflows are frozen to
+  the v5.1 facility assignment and zone weights; no tier position is claimed.
+  Labels remain `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false`; no UI, official OSeCAN, frozen chain v5.1, or
+  national WS4 dataset change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
