@@ -24,7 +24,6 @@ adoption. Those are release steps outside this metadata patch.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures as futures
 import hashlib
 import json
 import os
@@ -34,7 +33,8 @@ import sys
 import tempfile
 import time
 from collections import Counter
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from concurrent import futures
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -438,7 +438,6 @@ def pair_natural_and_managed(
         ).append(identity)
 
     pairs: list[TrackPair] = []
-    used_thinned_ids: set[int] = set()
     for key in sorted(grouped):
         states = grouped[key]
         naturals = states.get("natural", [])
@@ -1090,10 +1089,6 @@ def patch_tile(
         name: table_fingerprint(dataset_dir / f"{name}.parquet")
         for name in TABLES
     }
-    before_hashes = {
-        name: table_sha256(dataset_dir / f"{name}.parquet")
-        for name in PATCHED_TABLES
-    }
     frames = load_patch_frames(dataset_dir)
     plan = plan_thin_patch(
         frames,
@@ -1271,7 +1266,7 @@ def run_validation_sweep(
             slug = pending[future]
             try:
                 results[slug] = future.result()
-            except Exception as error:  # pragma: no cover - defensive
+            except Exception as error:  # noqa: BLE001 - report any worker failure
                 results[slug] = {
                     "status": "fail",
                     "exit_code": None,
@@ -1552,7 +1547,7 @@ def run(
             slug = pending[future]
             try:
                 records[slug] = future.result()
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - report any worker failure
                 failures[slug] = f"{type(error).__name__}: {error}"
                 print(f"FAILED {slug}: {failures[slug]}", file=sys.stderr, flush=True)
             if done % 100 == 0 or done == len(selected_slugs):

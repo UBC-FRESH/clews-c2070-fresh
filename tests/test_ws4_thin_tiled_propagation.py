@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -68,11 +67,11 @@ def _synthetic_frames() -> dict[str, pd.DataFrame]:
     curves = pd.DataFrame(
         [
             {"curve_id": 1, "x": float(x), "y": 1.0}
-            for x in range(0, 601)
+            for x in range(601)
         ]
         + [
             {"curve_id": 2, "x": float(x), "y": float(x) * 0.5}
-            for x in range(0, 601)
+            for x in range(601)
         ],
         columns=["curve_id", "x", "y"],
     )
