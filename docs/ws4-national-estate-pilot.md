@@ -50,7 +50,9 @@ y:    598,648.106 ..    648,648.106
 The full 50-km rectangle is retained for the inventory window. It is
 transformed into the SCANFI raster's own custom NAD83 Canada Lambert CRS with
 `rasterio.warp.transform_geom`; the tile is **not** assumed to share the
-raster CRS. In this custom CRS the 50-km square lands in raster window
+raster CRS. In this custom CRS the x coordinate happens to align with
+EPSG:3978 but y is offset by about +6,585,076 m, so using the raster's own
+CRS is mandatory. The 50-km square lands in raster window
 `col_off=6019, row_off=73425, width=1668, height=1668`; 2,777,222 pixel centres
 fall inside the transformed rectangle.
 
