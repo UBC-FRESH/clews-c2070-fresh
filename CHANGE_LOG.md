@@ -1,5 +1,28 @@
 # Change Log
 
+## 2026-11-27
+
+- **Built the first WS4 national forest-estate pilot from SCANFI pixels and
+  RSYC curves (P7.42).** Selected `G2|BC|S32` as the highest-harvest BC 50-km
+  supply node (228,408.1768 m3; parent `G2|BC`, tile G2, row 3, col 2), rebuilt
+  its 50-km subcell from the EPSG:3978 RSYC tile, and transformed the polygon
+  into the SCANFI custom NAD83 Lambert CRS with rasterio/pyproj (the raster is
+  not EPSG:3978). Compiled 2,446,363 30-m forest fragments (220,172.67 ha) into
+  932,041 8-neighbour `(age_class, curve_key)` cliques across four G2 curves
+  (coniferous, generic broadleaf, PINU.CON, PSEU.MEN). Published the 12-table
+  WS4 dataset at `data/derived/ws4/scanfi-pilot-G2-BC-S32/dataset/` with a
+  hashed manifest, a 89,895-row CC schedule (17,844.30 ha), and a 50-year run.
+  `ws4 validate` exits 0; the simulation harvests 6,547,384.791 m3 and
+  establishes 17,844.30 ha of managed area (final managed yield
+  5,915,085.904 m3 at offset 49). The managed track intentionally shares the
+  natural RSYC curve: no planting-response data exists, so only the
+  management-state transition is modelled. Added the fail-closed builder
+  `workflows/ws4_instances/build_scanfi_estate_pilot.py`, focused fragment/
+  block/curve/schedule/validate-simulate tests, and
+  `docs/ws4-national-estate-pilot.md`. Labels remain `model_estimate` /
+  `sensitivity_only`; no UI, official OSeCAN, or chain v5.1 change; no
+  unexpected `D`.
+
 ## 2026-11-25
 
 - **Added harvest-residue component breakdown provenance v1 (P7.41).**

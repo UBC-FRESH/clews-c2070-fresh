@@ -1047,6 +1047,23 @@ decide what blocks production readiness after the conceptual alpha.
   labels and model-card §5.3 cross-checks pass; focused tests and ruff pass.
   No UI or official OSeCAN change; no unexpected `D`.
 
+- [x] P7.42 Build the first real WS4 forest-estate pilot from SCANFI pixels
+  and RSYC curves. Completed: selected the highest-harvest BC 50-km node
+  `G2|BC|S32` (228,408.1768 m3; tile G2, row 3, col 2), reconstructed its
+  50-km rectangle from the parent RSYC tile, transformed it into the SCANFI
+  custom Lambert CRS, and compiled 2,446,363 forest fragments (220,172.67 ha)
+  into 932,041 8-neighbour blocks using four G2 RSYC curves. Published the
+  12-table WS4 dataset at
+  `data/derived/ws4/scanfi-pilot-G2-BC-S32/dataset/` with a hashed manifest,
+  89,895-row CC schedule (17,844.30 ha), and a 50-year run. `ws4 validate`
+  exits 0; simulation harvests 6,547,384.791 m3 and establishes 17,844.30 ha
+  of managed area, with final managed yield 5,915,085.904 m3. The managed
+  track shares the natural RSYC curve; there is no planting-response claim.
+  Added `workflows/ws4_instances/build_scanfi_estate_pilot.py`, focused
+  tests, and `docs/ws4-national-estate-pilot.md`. Labels remain
+  `model_estimate` / `sensitivity_only`; no UI, official OSeCAN, or chain
+  v5.1 change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
