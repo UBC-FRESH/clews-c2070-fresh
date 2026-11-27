@@ -271,6 +271,39 @@ def test_ws4_validate_and_reconciliation() -> None:
         )
 
 
+@pytest.mark.slow
+def test_ws4_simulate_smoke(tmp_path) -> None:
+    if not operable.base.WS4_BIN.is_file():
+        pytest.skip("ws4 executable is not available")
+    if not operable.base.DATASET_DIR.is_dir():
+        pytest.skip("national WS4 dataset has not been built")
+    schedule = pd.read_csv(operable.CASES[0].output_dir / "schedule.csv").head(1)
+    schedule_path = tmp_path / "schedule.csv"
+    schedule.to_csv(schedule_path, index=False)
+    run_dir = tmp_path / "run"
+    result = operable.base.subprocess.run(
+        [
+            str(operable.base.WS4_BIN),
+            "simulate",
+            "--dataset",
+            str(operable.base.DATASET_DIR),
+            "--schedule",
+            str(schedule_path),
+            "--years",
+            "1",
+            "--out",
+            str(run_dir),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    values = operable.base.extract_run_products(run_dir, horizon=1)
+    assert sorted(values["offset"].unique().tolist()) == [0]
+    assert values["value"].sum() > 0.0
+
+
 @requires_artifacts
 def test_chain_and_osecan_tiers() -> None:
     for spec in operable.CASES:
