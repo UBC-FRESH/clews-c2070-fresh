@@ -6,6 +6,10 @@ Status: **model-estimate sensitivity sidecar**. `evidence_label=model_estimate`,
 No official OSeCAN change, no chain v5.1 change, no UI change, and no change to
 the national 990-m WS4 dataset or the G2 30-m pilot dataset.
 
+**Candidate release:** this tiled architecture is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 ## 1. What this is
 
 The national 990-m estate is one tractable dataset. This artifact implements the

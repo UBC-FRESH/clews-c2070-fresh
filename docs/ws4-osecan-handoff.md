@@ -11,6 +11,10 @@ This is a sidecar handoff built from the WS4-driven 119 Mm³ chain. It does not
 replace or mutate frozen chain v5.1, handoff v10, residue curve v9, or the
 official OSeCAN tree. No candidate activity limit is written into OSeCAN.
 
+**Candidate release:** this handoff is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 ## 1. Basis boundary
 
 The WS4 chain applies the frozen chain-v5.1 per-province product/residue

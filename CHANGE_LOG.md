@@ -2,6 +2,46 @@
 
 ## 2026-11-27
 
+- **Consolidated and tagged the national forest-estate WS4 v1 candidate
+  release (P7.50).** Added `docs/national-forest-estate-ws4-v1.md` as the
+  release model card and evidence index covering the SCANFI 30-m inventory →
+  pixel fragments → 8-neighbour `(age_class, curve_key)` blocks → WS4
+  tracks/strata/treatments/features/products/curves → validate/simulate →
+  119 Mm3 chain → origin-province OSeCAN handoff architecture. Status is
+  `model_estimate`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`; the release is not official OSeCAN and not a chain
+  v5.1 replacement. Recorded the G2 30-m pilot (2,446,363 fragments, 932,041
+  blocks, THIN + CC, validate pass, 50-year CC 6,547,384.791 m3 /
+  17,844.30 ha), the national 990-m estate (6,807,192 fragments, 1,984,017
+  blocks, 1,866 tracks before THIN / 2,799 after, 718 curves, 411.25M ha,
+  validate pass, 20-year demo 968,900,774.756 m3 / 7,514,902.98 ha, explicitly
+  not a sustainable harvest), the full 30-m tiled coverage (3,562 candidates;
+  3,345 built+validated; 203 NU zero-harvest and 14 no-forest skips;
+  4,560,930,641 fragments; 1,678,150,739 blocks; 410,483,757.69 ha;
+  58.548 GB; `full_run.status=complete`; 3,345/3,345 validate), the
+  tiled-aggregate 119 Mm3 chain (427 blocks / 126 tiles / 1,063,108.89 ha;
+  exact 118,988,870.593 m3 versus 118,977,339.1, +0.0097%; scaled solid
+  37,673,172.685 versus 37,673,626.761 m3, pulp 12,066,424.418 versus
+  12,066,311.270 odt, process 498.750367 versus 498.750917 PJ, harvest gross
+  444.416608 versus 444.410766 PJ, total gross 943.166975 versus 943.161683
+  PJ), and the OSeCAN handoff (origin-province; 7/7 tier matches on both
+  bases; 21/21 frozen reference; official 146-file tree `80caa91c...`
+  unchanged). Recorded the THIN transition (588,608.208 m3 on 6,273.54 ha
+  with age retained; CC at offset 10 671,252.422 m3; final managed
+  195,071.522 m3) and the external
+  `patches/ws4-negative-offset-retain.patch` requirement on installed WS4
+  0.2.0. The full 30-m coverage is CC-baseline and THIN was not propagated to
+  all 3,345 tiles; THIN/planting response is not modeled; national 990-m uses
+  group curves; no operability/tenure/AAC/cost. Evidence commits: pilot parent
+  `62d4f93` / data `6f23f22`; national `cf03878` / `038400f`; tiled coverage
+  `a4455b5` / `60d748e`; tiled chain `cd6156f` / `9f87baf`; THIN `a023eeb` /
+  `f90620d9`; WS4 chain `ab288b1` / `867351e`; OSeCAN `45f1c57` / `4ce5cd8`.
+  Linked the release from the WS4 component docs and the general model card,
+  updated ROADMAP, and created annotated tag
+  `national-forest-estate-ws4-v1`. Documentation/tag only: no model, data, UI,
+  chain v5.1, or official OSeCAN change; only docs, ROADMAP, and CHANGE_LOG;
+  no unexpected `D`.
+
 - **Added a WS4 THIN partial-cut state transition and THIN -> CC evidence
   (P7.49).** Added a per-curve thinned track
   (`AU(<p>)+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(thinned)+CURVE(<key>)+treatment()`)

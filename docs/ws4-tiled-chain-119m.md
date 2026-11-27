@@ -14,6 +14,10 @@ datasets, the national 990-m WS4 dataset, frozen chain v5.1, and official
 OSeCAN are unchanged (`official_osecan_changed=false`,
 `chain_v51_unchanged=true`).
 
+**Candidate release:** this chain is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 The schedule is a whole-block arithmetic verification, not a sustainable
 harvest, AAC, policy result, or investment case. No block volume, curve, or
 fragment is fabricated.

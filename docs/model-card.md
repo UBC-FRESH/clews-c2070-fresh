@@ -71,6 +71,18 @@ harvest recommendation crosses the interface.
 | Forestry UI | Static Forest Ledger plus optional FastAPI live runner | **53 scenarios / 18 families / 1 Pareto-eligible**; create/queue/SSE, cancel/retry, session hydration, Explore/Pareto/Compare, map drill-down/year playback, 13-zone table/heatmap, role badges, public/shared-analyst deployment units, per-instance `run_instance.sh`/systemd template isolation |
 | `policy_test_v1` | Draft Stage-1 constraint family: national peak-proxy reserve margin, reviewed capacity credits, build rates, explicit caps | `status=draft`, `policy_grade=false`; separate from `screening_v0`; interface test only |
 
+### WS4 national forest-estate candidate release
+
+The WS4 national forest-estate model is a separate candidate sidecar
+([`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md),
+annotated tag `national-forest-estate-ws4-v1`). It builds WS4 datasets from
+SCANFI 30-m inventory and RSYC curves at 30-m (G2 pilot and tiled coverage) and
+990-m (national estate) fragment resolutions, then applies the frozen chain
+v5.1 per-province coefficients to a 119 Mm³ schedule and emits an
+origin-province OSeCAN handoff. It is `model_estimate`, `observed=false`,
+`policy_grade=false`, `national_claim=false`; it does not change chain v5.1,
+the UI, or official OSeCAN. Its demo schedules are not sustainable harvest.
+
 ## 4. Reference results
 
 | Case | Objective (M$) | Cumulative 2021–2070 (Mt CO₂) | 2050 (Mt CO₂) | Labels | Use |

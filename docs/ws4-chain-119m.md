@@ -10,6 +10,10 @@ per-province product/residue coefficients. It is a **`model_estimate`**
 `national-facility-chain-v5.1` artifacts, and official OSeCAN are unchanged
 (`chain_v51_unchanged=true`, `official_osecan_changed=false`).
 
+**Candidate release:** this chain is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 The schedule is a whole-block arithmetic verification, not a sustainable
 harvest, AAC, policy result, or investment case. No block volume is scaled or
 fabricated.

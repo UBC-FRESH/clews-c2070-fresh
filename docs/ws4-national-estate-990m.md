@@ -10,6 +10,10 @@ UI, and makes no policy-grade, tenure, operability, investment, or national
 supply claim. `national_scope=true` and `national_claim=false` are recorded
 together in the manifest.
 
+**Candidate release:** this national estate is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 Output:
 
 ```text

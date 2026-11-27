@@ -8,6 +8,10 @@ coverage manifest, the tiled 30-m chain, the tiled OSeCAN handoff, or the UI,
 and makes no policy-grade, tenure, operability, investment, or national supply
 claim.
 
+**Candidate release:** this THIN evidence is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 The THIN treatment is a **state transition**, not a thinning-response model.
 Natural, thinned, and managed tracks share the same RSYC curve. No thinning,
 planting, silviculture, fertilization, or genetic yield response is claimed.

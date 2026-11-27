@@ -8,6 +8,10 @@ and the RSYC tile production library. It is a **`model_estimate` /
 **not** change chain v5.1, and makes no policy-grade, investment, tenure,
 operability, or national-supply claim.
 
+**Candidate release:** this pilot is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 Pilot output:
 
 ```text

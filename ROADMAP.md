@@ -10,6 +10,12 @@ the old QC/M CAD net-value sensitivity is withdrawn. BC net value remains
 `not_estimated` because general logging and truck-haul $/m3 are not published;
 no combined national net value is computed.
 
+**Candidate release:** [`docs/national-forest-estate-ws4-v1.md`](docs/national-forest-estate-ws4-v1.md)
+consolidates the WS4 national forest-estate model under annotated tag
+`national-forest-estate-ws4-v1`. It is a `model_estimate` candidate sidecar
+(`observed=false`, `policy_grade=false`, `national_claim=false`), not official
+OSeCAN and not a chain v5.1 replacement.
+
 - [x] v2a source review — no public QC mill-settlement ledger; BMMB/MRNF, BC
   log-market, MRDEM, and THLB limits recorded.
 - [x] v2b cost/revenue ledger — 2,888 rows (200 observed BC + 2,688 QC model
@@ -1246,6 +1252,29 @@ decide what blocks production readiness after the conceptual alpha.
   OSeCAN artifact were not rebuilt; the tiled chain's recorded national
   manifest hash is stale (`b4638c35...`) while its tiled results are unchanged.
   No unexpected `D`; no UI, frozen chain v5.1, or official OSeCAN change.
+
+- [x] P7.50 Consolidate and tag the WS4 national forest-estate candidate
+  release. Completed: added
+  `docs/national-forest-estate-ws4-v1.md` as the single model card and
+  evidence index for the candidate release, with the architecture, G2 30-m
+  pilot, national 990-m estate, full 30-m tiled coverage, tiled 119 Mm3 chain,
+  OSeCAN handoff, THIN transition, limitations, data/parent commits, and
+  reproduction commands. Recorded the candidate status
+  (`model_estimate`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`; not official OSeCAN, not a chain v5.1 replacement)
+  and the key evidence: G2 2,446,363 fragments / 932,041 blocks / 6,547,384.791
+  m3 over 50 years; national 990-m 6,807,192 fragments / 1,984,017 blocks /
+  2,799 tracks after THIN / 718 curves / 411.25M ha; full 30-m coverage 3,345
+  built+validated tiles / 4,560,930,641 fragments / 1,678,150,739 blocks /
+  410,483,757.69 ha / 58.548 GB / `full_run.status=complete`; tiled 119 Mm3
+  chain 427 blocks / 126 tiles / 1,063,108.89 ha / exact 118,988,870.593 m3
+  (+0.0097%); OSeCAN origin-province 7/7 tiers on both bases, 21/21 frozen
+  reference, official 146-file tree `80caa91c...` unchanged. The full 30-m
+  coverage is CC-baseline and THIN was not propagated to all 3,345 tiles.
+  Linked the release from the WS4 component docs and the general model card,
+  and created annotated tag `national-forest-estate-ws4-v1` at the docs
+  commit. No model, data, UI, chain v5.1, or official OSeCAN change; only
+  docs, ROADMAP, and CHANGE_LOG; no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

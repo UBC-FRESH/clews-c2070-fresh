@@ -8,6 +8,10 @@ accounted for), `model_estimate` / `sensitivity_only`.
 no UI change, and no change to the national 990-m WS4 dataset, the G2 30-m
 pilot, or the existing 24-tile representative sample.
 
+**Candidate release:** this staged coverage is consolidated in
+[`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
+under annotated tag `national-forest-estate-ws4-v1`.
+
 `data/derived/ws4/tiled-30m/national_tiled_manifest.json` records
 `full_run.status=complete`, 3,345 built+validated tiles, 203 explicit
 zero-harvest skips, 14 explicit no-forest skips, and 0 remaining. Only the
