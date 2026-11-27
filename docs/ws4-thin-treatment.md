@@ -3,10 +3,12 @@
 ## Status and non-claims
 
 This is a **`model_estimate` / `sensitivity_only`** model change. It is not
-official OSeCAN, does not change frozen chain v5.1, the national 30-m tiled
-coverage manifest, the tiled 30-m chain, the tiled OSeCAN handoff, or the UI,
-and makes no policy-grade, tenure, operability, investment, or national supply
-claim.
+official OSeCAN, does not change frozen chain v5.1, the tiled 30-m chain result
+values, the tiled OSeCAN handoff, or the UI, and makes no policy-grade, tenure,
+operability, investment, or national supply claim. The full 3,345-tile tiled
+30-m coverage now carries THIN metadata; its natural/managed blocks and CC
+results are unchanged. No adoption or promotion is claimed here; that is a
+separate release step.
 
 **Candidate release:** this THIN evidence is consolidated in
 [`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
@@ -99,12 +101,49 @@ Rebuilt in this change:
 
 Not rebuilt:
 
-- the full 3,345-tile 30-m coverage and its
-  `national_tiled_manifest.json`;
 - the 24-tile representative tiled sample under `data/derived/ws4/tiled-30m/`
   (none of its tile datasets were rewritten);
 - frozen chain v5.1, official OSeCAN, the tiled 30-m chain artifact, and the
   tiled OSeCAN handoff artifact.
+
+### 3.1 Full tiled 30-m coverage (metadata-only patch)
+
+The 3,345 built+validated tile datasets predated the shared builder change.
+They were patched in place by
+`workflows/ws4_instances/propagate_thin_tiled_30m.py` without rebuilding
+fragments, blocks, or curves:
+
+- one `SILV_STATE(thinned)` track appended per natural baseline track;
+- one strata row (`offset=0`, `next_age=300`, `cycle=0`) per thinned track;
+- natural THIN, thinned THIN, thinned CC, and managed THIN treatments;
+- thinned feature, THIN/CC products for every state, and the matching accounts;
+- natural/managed track ids, CC treatments, fragments, blocks, curves, groups,
+  and messages preserved.
+
+Cumulative added metadata:
+
+| Table | Rows added |
+|---|---:|
+| Tracks | 12,892 |
+| Strata | 12,892 |
+| Treatments | 51,568 |
+| Features | 12,892 |
+| Products | 103,136 |
+| Accounts / protoaccounts | 30,105 each |
+
+The patch is idempotent: a complete tile is skipped, and a partial tile is
+repaired by removing only THIN-derived rows before rebuilding them. Per-tile
+records live at `data/derived/ws4/tiled-30m/<tile>/thin_patch.json`; the
+cumulative report is
+`data/derived/ws4/tiled-30m/thin_propagation.json`.
+
+```bash
+.venv-ws4/bin/python -m workflows.ws4_instances.propagate_thin_tiled_30m \
+  --workers 32
+```
+
+The command also runs the independent 32-worker validation sweep and the THIN
+smoke transition. It does not commit, push, or claim adoption.
 
 ## 4. Validation
 
@@ -139,6 +178,23 @@ values. The pilot CC simulation is unchanged at 6,547,384.791 m3 harvested and
 17,844.30 ha treated, because natural/managed track ids and the CC schedule
 are unchanged by the appended thinned tracks.
 
+The full tiled coverage was validated independently after the metadata patch:
+
+- **3,345 / 3,345 tiles pass** `.venv-ws4/bin/ws4 validate` (32 workers,
+  0 failures);
+- a four-curve tile now carries 12 tracks, 12 strata, 24 treatments,
+  12 features, 48 products, and 15 account labels, matching the G2 pilot shape;
+- cumulative totals are 12,892 thinned tracks, 51,568 added treatment rows,
+  12,892 thinned features, 103,136 added product rows, and 30,105 added
+  account rows per account table;
+- natural fragments, blocks, curves, groups, and messages are byte-identical
+  to the pre-patch files; every per-tile record has equal CC contract hashes
+  before and after the patch.
+
+Validation counts and per-tile patch hashes are recorded in
+`data/derived/ws4/tiled-30m/national_tiled_manifest.json` and
+`data/derived/ws4/tiled-30m/thin_propagation.json`.
+
 ## 5. THIN -> CC transition evidence
 
 Artifact: `data/derived/ws4/thin-transition-national-990m/`.
@@ -169,11 +225,32 @@ No NaN appears in the account or product values. A second run on the G2 pilot
 (12 blocks, 12.15 ha) reproduces the same pattern: THIN 3,660.277 m3, CC
 4,059.951 m3, final managed 1,201.670 m3, final thinned 0.
 
+### 5.1 Tiled 30-m smoke
+
+The same check ran on the patched tile `A24-ON-S11` (20 blocks, 2.34 ha):
+
+| Evidence | Value |
+|---|---:|
+| THIN harvested volume | 261.765593 m3 |
+| THIN treated area | 2.34 ha |
+| `feature.Yield.thinned.Total` at offset 0 | 261.765593 m3 |
+| Expected pre-treatment volume | 261.765593 m3 |
+| Thinned CC harvest at offset 10 | 311.964353 m3 |
+| Thinned CC treated area | 2.34 ha |
+| Final managed value at offset 19 | 66.354348 m3 |
+| Final thinned value at offset 19 | 0.0 m3 |
+
+The retained thinned value equals the pre-treatment volume to machine
+precision, so the negative-offset sentinel works on the patched tiled tables.
+Artifact: `data/derived/ws4/thin-transition-tiled-30m-smoke/`.
+
 Run command:
 
 ```bash
-.venv/bin/python -m workflows.ws4_instances.run_ws4_thin_transition \
-  --max-blocks 40 --years 20
+.venv-ws4/bin/python -m workflows.ws4_instances.run_ws4_thin_transition \
+  --dataset data/derived/ws4/tiled-30m/A24-ON-S11/dataset \
+  --out data/derived/ws4/thin-transition-tiled-30m-smoke \
+  --max-blocks 20 --years 20
 ```
 
 ## 6. Chain and OSeCAN hash references
@@ -189,6 +266,14 @@ Their numeric results are bit-for-bit unchanged:
 - OSeCAN handoff status pass, official tree `80caa91c...` unchanged, 21/21
   frozen reference tiers, 7/7 WS4 tiers on both bases.
 
+The tiled THIN metadata patch changed the tiled national manifest hash from
+`bb1f831b7ba5814d68d457f496a72bddc9e342aa49e50730858d8a8d5ba418eb` to
+`2f2d55a2f30eaf185c2ab50a9260a6bf2f092070cbad4eeb2b97242b003e1509`;
+`data/derived/ws4/tiled-30m/thin_propagation.json` has SHA-256
+`45d158b3659330b8cbc75d89afdb9978d7a17ee1744e1deb6d11c0c14ed9b7f0`.
+Those changes are metadata only: the tiled chain, its schedule, and the
+OSeCAN handoff were not rerun and their result values are unchanged.
+
 The tiled 30-m chain artifact records the national 990-m manifest as a
 read-only input. Its recorded hash is now stale
 (`b4638c35084b0462bdd6545a87416551d71928833a263ffd0816ee5ba469dac5`);
@@ -202,11 +287,18 @@ was intentionally not rebuilt.
 ```bash
 .venv/bin/python -m workflows.ws4_instances.build_scanfi_estate_pilot --run-ws4
 .venv/bin/python -m workflows.ws4_instances.build_scanfi_national_estate --run-ws4
+.venv/bin/python -m workflows.ws4_instances.propagate_thin_tiled_30m \
+  --workers 32
 .venv/bin/python -m workflows.ws4_instances.run_ws4_thin_transition \
   --max-blocks 40 --years 20
 .venv/bin/python -m workflows.national.facilities.ws4_chain_119m
 .venv/bin/python -m workflows.national.facilities.forestry_osecan_handoff_ws4
 ```
+
+The tiled propagation command patches metadata only; it does not rebuild the
+3,345 datasets, does not rerun the CC simulations, and does not change the
+tiled chain or OSeCAN handoff. A rerun skips complete tiles, so it is safe to
+run after a partial patch or a validation failure.
 
 The national rebuild resets its output directory, so the WS4 119 Mm3 schedule
 and run live under that directory and must be regenerated by the chain command

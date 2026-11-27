@@ -137,10 +137,13 @@ All 3,562 candidates are accounted for; the 217 skipped candidates are listed
 with an explicit reason and have no fabricated dataset. This is full 30-m
 geometric coverage of the built estate.
 
-**Coverage caveat:** the committed 3,345 tile datasets are **CC-baseline**.
-They contain one CC treatment and predate the THIN builder change. THIN was
-**not propagated** to all 3,345 tiles. The THIN evidence is national 990-m and
-G2-pilot scoped, plus the dedicated transition run below.
+**Coverage caveat:** the committed 3,345 tile datasets were built **CC-baseline**
+and predated the THIN builder change. THIN metadata has since been propagated
+to all 3,345 tiles in place (12,892 thinned tracks; 3,345/3,345 `ws4 validate`
+pass). Fragments, blocks, curves, groups, messages, natural/managed track ids,
+and CC rows are unchanged, so the full-coverage CC results are unchanged. The
+national 990-m and G2-pilot THIN evidence and the dedicated transition run
+below remain the behavioural evidence; no adoption or promotion is claimed.
 
 ### 3.4 Tiled-aggregate 119 Mm3 chain
 
@@ -242,9 +245,11 @@ is not reproducible.
 
 ## 6. Limitations
 
-- **CC-baseline coverage.** The full 30-m tiled coverage contains one CC
-  treatment and predates the THIN builder change. THIN was not propagated to
-  all 3,345 tiles.
+- **THIN metadata coverage.** The full 30-m tiled coverage carries THIN
+  metadata after an in-place, metadata-only patch. Natural fragments, blocks,
+  curves, groups, messages, track ids, and CC rows are unchanged; the
+  full-coverage CC results were not rerun or replaced. THIN remains a state
+  transition, not a thinning-response model.
 - **State transition, not response.** THIN and planting record management
   state only. Natural, thinned, and managed tracks share one RSYC curve; no
   thinning, planting, silviculture, fertilization, or genetic yield response is

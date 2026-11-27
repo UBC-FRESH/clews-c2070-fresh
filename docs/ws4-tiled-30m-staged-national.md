@@ -8,6 +8,13 @@ accounted for), `model_estimate` / `sensitivity_only`.
 no UI change, and no change to the national 990-m WS4 dataset, the G2 30-m
 pilot, or the existing 24-tile representative sample.
 
+The full 3,345-tile coverage now also carries the WS4 THIN state-transition
+metadata. The propagation was metadata-only: fragments, blocks, curves,
+groups, and messages are unchanged, natural/managed track ids and CC rows are
+preserved, and no full-coverage CC result was rerun or replaced. All
+3,345 patched tiles pass `ws4 validate` (3,345/3,345). No adoption or
+promotion is claimed here.
+
 **Candidate release:** this staged coverage is consolidated in
 [`docs/national-forest-estate-ws4-v1.md`](national-forest-estate-ws4-v1.md)
 under annotated tag `national-forest-estate-ws4-v1`.
@@ -253,6 +260,48 @@ is built+validated or explicitly skipped. Labels remain `model_estimate` /
 `observed=false` / `policy_grade=false` / `national_claim=false`: this is full
 30-m geometric coverage, not a policy-grade or official OSeCAN product.
 
+### 5.1 THIN propagation over the full coverage
+
+`workflows/ws4_instances/propagate_thin_tiled_30m.py` patched the 3,345
+built datasets in place. It did not rebuild any fragment, block, curve, group,
+or message table. Each tile now has one thinned track per natural baseline
+track, its strata row, natural THIN / thinned THIN / thinned CC / managed THIN
+treatments, the thinned feature, THIN/CC products for every state, and the
+matching account labels.
+
+| Quantity | Value |
+|---|---:|
+| Tiles patched | 3,345 |
+| Tiles skipped as already complete | 0 |
+| Failures | 0 |
+| Thinned tracks added | 12,892 |
+| Strata rows added | 12,892 |
+| Treatment rows added | 51,568 |
+| Features added | 12,892 |
+| Product rows added | 103,136 |
+| Account rows added | 30,105 per account table |
+| `ws4 validate` | 3,345 / 3,345 pass |
+| CC contract hashes changed | 0 |
+
+Natural/managed track ids, CC treatments, and the existing feature/product
+rows are unchanged. Because the fragment, block, and curve tables are
+byte-identical and the CC contract hash is equal before and after, the
+full-coverage CC results are unchanged; they were not rerun.
+
+The THIN smoke on `A24-ON-S11` retained the pre-treatment volume exactly:
+261.765593 m3 harvested on 2.34 ha, `feature.Yield.thinned.Total` at offset 0
+= 261.765593 m3 = the expected pre-treatment curve volume; the later CC at
+offset 10 harvested 311.964353 m3 and moved 2.34 ha to managed. Final
+managed value was 66.354348 m3 and final thinned value was 0.0 m3.
+
+Per-tile records are at `data/derived/ws4/tiled-30m/<tile>/thin_patch.json`;
+counts, validation, hashes, and the smoke evidence are in
+`data/derived/ws4/tiled-30m/thin_propagation.json` and the national manifest's
+`thin_*` fields. The patched national manifest has SHA-256
+`2f2d55a2f30eaf185c2ab50a9260a6bf2f092070cbad4eeb2b97242b003e1509`;
+`thin_propagation.json` has SHA-256
+`45d158b3659330b8cbc75d89afdb9978d7a17ee1744e1deb6d11c0c14ed9b7f0`.
+
 ## 6. Commands
 
 Run one stage, resumable, datasets + validation only, with a five-tile
@@ -289,6 +338,17 @@ Use `--resume` with the full command after a partial run. Do not start a stage
 when the storage gate reports less than 120 GB free or less free space than the
 projected stage size.
 
+Patch THIN metadata across the completed coverage, validate every tile, and
+run the tiled smoke:
+
+```bash
+.venv-ws4/bin/python -m workflows.ws4_instances.propagate_thin_tiled_30m \
+  --workers 32
+```
+
+The command is idempotent and does not rebuild datasets, rerun CC, commit, or
+push.
+
 ## 7. Validation, labels, and limitations
 
 Every built tile is validated by `.venv-ws4/bin/ws4 validate`. The build is
@@ -305,9 +365,10 @@ dataset, not official OSeCAN, and not a chain v5.1 change.
 
 Known limitations:
 
-- the committed coverage datasets predate the builder's THIN treatment (one CC
-  treatment in these artifacts), no thinning or planting yield response, and no operability/tenure/road/
-  mill model;
+- the coverage datasets carry THIN metadata but remain a state-transition
+  model: natural, thinned, and managed tracks share one RSYC curve, no
+  thinning or planting yield response is modeled, and there is no
+  operability/tenure/road/mill model;
 - province clipping uses the simplified ADM1 boundary and reproduces the
   committed geometry to <0.01 ha, not a legal survey;
 - zero-harvest NU and the nine no-forest slivers are covered by the stage plan
