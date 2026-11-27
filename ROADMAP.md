@@ -1378,6 +1378,34 @@ decide what blocks production readiness after the conceptual alpha.
   no chain v5.1 mutation, no full-forest artifact rewrite, no official OSeCAN
   change, no UI change, and no unexpected `D`.
 
+- [x] P7.55 Consolidate and tag the WS4 sustainable/operable supply evidence.
+  Completed: added `docs/national-sustainable-supply-ws4-v1.md` as the single
+  evidence pointer for the full-forest sustainable 100/119/150 Mm3 cases and
+  the `screen_core30` share-based operable rerun, and created annotated tag
+  `national-sustainable-supply-ws4-v1` at the docs commit. Full-forest cases
+  are period-sustained with zero period shortfalls: 100 Mm3 annual
+  100.0968-102.9553 (mean 101.1050), 119 Mm3 119.0433-122.1610 (mean
+  119.8839), 150 Mm3 149.9970-153.4957 (mean 151.2477; one annual offset
+  0.0020% low, period above target). Chain deltas vs v5.1 primary: 100
+  +0.13%/+0.21%/+0.17% solid/pulp/process; 119 -0.36%/+0.27%/-0.03%; 150
+  +1.31%/+3.19%/+2.24%; each case 7/7 tier positions on both bases, 21/21
+  frozen reference. The operable mask is 370,752 blocks / 75,374,046 ha
+  (18.328% of 411,250,630.32 ha) versus the published 77,050,071.64 ha
+  (-2.175% denominator difference); 100/119/150 are not sustained, with annual
+  minima 94.4141/97.9475/111.6734 Mm3/yr and period shortfalls
+  160.4216/623.2648/1,774.8825 Mm3. Schedule-only maximum nominal/operable
+  68.4570/69.3438, 67.8543/69.2302, and 61.4868/62.7054 Mm3/yr; shortfalls
+  occur in QC/SK/NB/NL/PE/NS and every 10-year period has at least one
+  provincial shortfall. Operable OSeCAN: 100m 6/7 primary and 7/7 achieved,
+  119m 7/7 and 6/7, 150m 7/7 and 6/7, 21/21 frozen reference; official
+  146-file tree `80caa91c...` unchanged. Recorded parent/data commits
+  `ffea298`/`ce1670c62`, `21bf4bf`/`64edb5f38`, `c8af906`/`f0e298097`, and
+  `b9e86a0`/`ba4a87aec`; chain/OSeCAN and estate tags
+  `national-facility-chain-ws4-v1` and `national-forest-estate-ws4-v1.1` stay
+  at `c363468`, frozen `national-facility-chain-v5.1` stays at `546a3d5`.
+  Documentation/tag only; only docs, ROADMAP, and CHANGE_LOG changed; no
+  model, data, UI, chain v5.1, or official OSeCAN change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

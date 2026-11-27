@@ -24,6 +24,13 @@ required before any official OSeCAN integration. This document is a
 documentation/tag release only: no model artifact, dataset, UI surface, frozen
 chain v5.1 artifact, or official OSeCAN file is changed.
 
+**Sustainable/operable successor evidence:** the full-forest sustainable
+100/119/150 Mm³/yr cases and the `screen_core30` share-based operable rerun are
+consolidated in
+[`docs/national-sustainable-supply-ws4-v1.md`](national-sustainable-supply-ws4-v1.md)
+(annotated tag `national-sustainable-supply-ws4-v1`). That release does not
+move this tag, frozen chain v5.1, or official OSeCAN.
+
 ## 1. Status and adoption boundary
 
 | Field | Value |

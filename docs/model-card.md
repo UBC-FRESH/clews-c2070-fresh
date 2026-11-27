@@ -81,7 +81,19 @@ SCANFI 30-m inventory and RSYC curves at 30-m (G2 pilot and tiled coverage) and
 v5.1 per-province coefficients to a 119 Mm³ schedule and emits an
 origin-province OSeCAN handoff. It is `model_estimate`, `observed=false`,
 `policy_grade=false`, `national_claim=false`; it does not change chain v5.1,
-the UI, or official OSeCAN. Its demo schedules are not sustainable harvest.
+the UI, or official OSeCAN. Its earlier demo schedules are not sustainable
+harvest.
+
+The full-forest sustainable 100/119/150 Mm³/yr cases and the share-based
+`screen_core30` operable rerun are consolidated in
+[`docs/national-sustainable-supply-ws4-v1.md`](national-sustainable-supply-ws4-v1.md)
+(annotated tag `national-sustainable-supply-ws4-v1`). The full-forest cases
+are period-sustained with zero period shortfalls but are not policy supply.
+The operable cases are **not** sustained under the frozen provincial shares:
+period shortfalls are 160.4216 / 623.2648 / 1,774.8825 Mm³ and the
+schedule-only maximum nominal levels are 68.4570 / 67.8543 / 61.4868 Mm³/yr.
+The operable screen is an area-share proxy with no legal THLB, slope DEM, or
+spatial road overlay; PE and NU have no tenure coverage.
 
 ## 4. Reference results
 

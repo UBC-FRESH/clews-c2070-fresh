@@ -2,6 +2,36 @@
 
 ## 2026-11-27
 
+- **Consolidated and tagged the WS4 sustainable/operable supply evidence
+  (P7.55).** Added `docs/national-sustainable-supply-ws4-v1.md` and annotated
+  tag `national-sustainable-supply-ws4-v1`. The release records the
+  full-forest sustainable 100/119/150 Mm3 cases (national 990 m WS4, 40-200
+  year rotation cap, 100 years in ten 10-year periods, annual LPT spread):
+  annual 100.0968-102.9553 (mean 101.1050), 119.0433-122.1610 (mean 119.8839),
+  and 149.9970-153.4957 (mean 151.2477) Mm3/yr, all with zero period
+  shortfalls; the 150 Mm3 case has one annual offset 0.0020% below the nominal
+  annual rate while its period is above target. Chain deltas vs frozen v5.1
+  primary: 100 +0.13% solid/+0.21% pulp/+0.17% process, 119 -0.36%/+0.27%/
+  -0.03%, 150 +1.31%/+3.19%/+2.24%; each case matches 7/7 tier positions on
+  both bases and 21/21 frozen reference positions. The operable
+  `screen_core30` share-based mask is 370,752 blocks / 75,374,046 ha (18.328%
+  of 411,250,630.32 ha) versus the published 77,050,071.64 ha (-2.175%
+  denominator difference). The 100/119/150 cases are not sustained: annual
+  minima 94.4141/97.9475/111.6734 Mm3/yr, period shortfalls
+  160.4216/623.2648/1,774.8825 Mm3, schedule-only maximum nominal/operable
+  68.4570/69.3438, 67.8543/69.2302, and 61.4868/62.7054 Mm3/yr. Shortfall
+  provinces are QC/SK/NB/NL/PE/NS, and every 10-year period has at least one
+  provincial shortfall; no rotation relaxation or out-of-mask harvest.
+  Operable OSeCAN: 100m 6/7 primary and 7/7 achieved, 119m 7/7 and 6/7, 150m
+  7/7 and 6/7, 21/21 frozen reference. Official OSeCAN tree is the unchanged
+  146-file tree `80caa91c...`; frozen chain v5.1 is unchanged. Recorded
+  parent/data commits `ffea298`/`ce1670c62`, `21bf4bf`/`64edb5f38`,
+  `c8af906`/`f0e298097`, and `b9e86a0`/`ba4a87aec`; chain/OSeCAN and estate
+  tags `national-facility-chain-ws4-v1` and `national-forest-estate-ws4-v1.1`
+  remain at `c363468`. Documentation/tag only; only docs, ROADMAP, and
+  CHANGE_LOG changed; no model, data, UI, chain v5.1, or official OSeCAN
+  change; no unexpected `D`.
+
 - **Applied the share-based operable landbase screen and reran the sustainable
   100/119/150 Mm3/yr cases (P7.54).** Added
   `workflows/national/facilities/ws4_operable_cases.py`,

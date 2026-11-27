@@ -39,6 +39,26 @@ integrate with official OSeCAN. The tiled schedule is a whole-block arithmetic
 verification, not a sustainable harvest, AAC, policy result, or investment
 case.
 
+## WS4 sustainable/operable supply release (candidate)
+
+| Field | Value |
+|---|---|
+| Release tag | `national-sustainable-supply-ws4-v1` (annotated) |
+| Status | Candidate sustainable/operable supply release; not official OSeCAN |
+| Full-forest 100/119/150 | Period-sustained, zero period shortfalls; annual means 101.1050 / 119.8839 / 151.2477 Mm³/yr; 7/7 tier matches on both bases per case (21/21 frozen reference) |
+| Operable 100/119/150 | Not sustained; period shortfalls 160.4216 / 623.2648 / 1,774.8825 Mm³; schedule-only maximum nominal 68.4570 / 67.8543 / 61.4868 Mm³/yr |
+| Official OSeCAN | Unchanged; 146 files, `80caa91c...` |
+| Frozen chain v5.1 | Unchanged; tag not moved |
+| Change class | Documentation/tag only; no model, data, UI, chain v5.1, or official OSeCAN change |
+
+The release document is
+[`docs/national-sustainable-supply-ws4-v1.md`](national-sustainable-supply-ws4-v1.md).
+It consolidates the full-forest sustainable cases and the `screen_core30`
+share-based operable rerun, with parent/data commit pointers. The full-forest
+cases are volume-arithmetic sustainability diagnostics, not policy supply. The
+operable screen has no legal THLB, slope DEM, or spatial road overlay, and PE
+and NU have no tenure coverage.
+
 ## Transport/siting companion card
 
 Road factors and OSRM evidence, transport cost v1, supply-node construction and

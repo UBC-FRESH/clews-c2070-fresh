@@ -19,6 +19,13 @@ The `national-forest-estate-ws4-v1.1` tag marks the completed full-coverage
 THIN propagation and the adopted-candidate status; the original
 `national-forest-estate-ws4-v1` tag remains at `fae49ab`.
 
+**Sustainable/operable evidence:** the full-forest sustainable 100/119/150
+Mm³/yr cases and the `screen_core30` share-based operable rerun are consolidated
+in
+[`docs/national-sustainable-supply-ws4-v1.md`](national-sustainable-supply-ws4-v1.md)
+(annotated tag `national-sustainable-supply-ws4-v1`). That release does not
+move this tag, frozen chain v5.1, or official OSeCAN.
+
 ## 1. Architecture
 
 The estate is built from measured 30-m SCANFI inventory and the committed
