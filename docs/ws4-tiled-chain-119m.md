@@ -18,6 +18,15 @@ The schedule is a whole-block arithmetic verification, not a sustainable
 harvest, AAC, policy result, or investment case. No block volume, curve, or
 fragment is fabricated.
 
+The committed tiled chain was built before the THIN treatment was added to the
+national 990-m dataset. Its recorded national-990m input hash is therefore
+stale (`b4638c35084b0462bdd6545a87416551d71928833a263ffd0816ee5ba469dac5`);
+the current national manifest hash is
+`a1f2dd8d0a506b056ce01a475f8adbaa26c2471bf103e8b819f81e7f0a670ee3`. The tiled
+datasets and all tiled chain/OSeCAN results are unchanged. A rerun would
+refresh only that input hash and generated metadata; it was not run because the
+full 3,345-tile coverage was intentionally not rebuilt.
+
 ## Artifacts
 
 | Path | Role |

@@ -2,6 +2,42 @@
 
 ## 2026-11-27
 
+- **Added a WS4 THIN partial-cut state transition and THIN -> CC evidence
+  (P7.49).** Added a per-curve thinned track
+  (`AU(<p>)+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(thinned)+CURVE(<key>)+treatment()`)
+  to the shared pilot/national builder. Natural/managed track ids remain
+  unchanged and the thinned tracks are appended after them. THIN is
+  `begin=20,end=40,new_track=thinned,offset=-1,retain=0`; the negative offset
+  is the WS4 partial-cut sentinel that retains the fragment's current age.
+  Thinned THIN is a self transition; thinned CC is
+  `begin=40,end=1000,new_track=managed,offset=0`; managed THIN is self and the
+  existing natural/managed CC treatments remain. Added
+  `feature.Yield.<p>.thinned.Total` and THIN/CC
+  `product.HarvestedVolume`/`product.Treated` labels for every state. Rebuilt
+  the national 990-m dataset (6,807,192 fragments, 1,984,017 blocks, 2,799
+  tracks, 2,799 strata, 5,598 treatments, 2,799 features, 11,196 products,
+  195 account labels) and the G2 30-m pilot (2,446,363 fragments, 932,041
+  blocks, 12 tracks, 24 treatments, 48 products, 15 account labels); both
+  `ws4 validate` exit 0. The national CC simulation is unchanged at
+  968,900,774.756 m3 harvested and 7,514,902.98 ha treated; the pilot CC run is
+  unchanged at 6,547,384.791 m3 and 17,844.30 ha. Added
+  `workflows/ws4_instances/run_ws4_thin_transition.py`, the
+  `patches/ws4-negative-offset-retain.patch` sentinel patch, tests, and
+  `docs/ws4-thin-treatment.md`. A 40-block, 13-province transition run applied
+  THIN at offset 0 and CC at offset 10: THIN harvested 588,608.208 m3 and
+  treated 6,273.540 ha; the offset-0 thinned feature equals the pre-treatment
+  volume (age retained); CC harvested 671,252.422 m3 at age+10, moved the same
+  6,273.540 ha to managed (final managed 195,071.522 m3), and left zero
+  thinned value. Reran the national WS4 119 Mm3 chain and OSeCAN handoff to
+  refresh the national manifest hash; all numeric results are unchanged
+  (118,977,392.87970258 m3, 45 rows, official OSeCAN `80caa91c...` unchanged,
+  21/21 frozen reference and 7/7 WS4 tiers). No thinning or planting yield
+  response is claimed. The full 3,345-tile coverage, 24-tile tiled sample,
+  tiled chain, and tiled OSeCAN artifact were not rebuilt; the tiled chain's
+  recorded national manifest hash is stale (`b4638c35...`) while its tiled
+  results are unchanged. No unexpected `D`; no UI, frozen chain v5.1, or
+  official OSeCAN change.
+
 - **Built the 119 Mm3 chain and OSeCAN handoff from the full national 30-m
   tiled WS4 coverage (P7.48).** Added
   `workflows/national/facilities/ws4_tiled_chain_119m.py` and

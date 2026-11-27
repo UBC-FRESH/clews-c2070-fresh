@@ -443,3 +443,17 @@ def test_ws4_validate_and_simulate_smoke(tmp_path) -> None:
         float(expected["volume_m3"]), rel=1e-9, abs=1e-6
     )
     assert math.isfinite(observed) and observed > 0.0
+
+
+@requires_artifacts
+def test_natural_tracks_exclude_thinned_state() -> None:
+    tracks = pd.read_parquet(chain.DATASET_DIR / "tracks.parquet")
+    thinned = tracks[
+        tracks["name"].astype(str).str.contains(r"SILV_STATE\(thinned\)")
+    ]
+    assert not thinned.empty
+    natural = chain._natural_tracks(chain.DATASET_DIR)
+    assert len(natural) == tracks["name"].astype(str).str.contains(
+        r"\+SILV_STATE\(baseline\)"
+    ).sum()
+    assert not natural["label"].str.contains(r"\.thinned\.").any()

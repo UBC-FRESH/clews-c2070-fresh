@@ -107,6 +107,13 @@ AREA_CURVE_ID = 1
 TREATMENT = "CC"
 TREATMENT_BEGIN = 40
 TREATMENT_END = 1000
+# WS4 partial-cut sentinel: a negative treatment offset keeps the fragment's
+# current age instead of resetting it to the treatment offset.
+THIN_TREATMENT = "THIN"
+THIN_BEGIN = 20
+THIN_END = 40
+THIN_OFFSET = -1
+THIN_RETAIN = 0
 
 LABELS = {
     "evidence_label": "model_estimate",
@@ -1271,92 +1278,154 @@ def build_ws4_tables(
     for index, spec in enumerate(specs):
         natural_track = 2 * index + 1
         managed_track = natural_track + 1
+        # The thinned tracks are appended after the existing natural/managed
+        # pairs so existing track ids and CC references remain stable.
+        thinned_track = 2 * len(specs) + index + 1
         yield_curve_id = index + 2
         for x, y in zip(CURVE_DOMAIN, spec.curve_values(), strict=True):
             curve_rows.append(
                 {"curve_id": yield_curve_id, "x": float(x), "y": float(y)}
             )
-        track_rows.append(
-            {
-                "track_id": natural_track,
-                "name": _track_name(
-                    tile_id=tile_id,
-                    ifm="unmanaged",
-                    origin="natural",
-                    silv_state="baseline",
-                    curve_key=spec.key,
-                ),
-            }
+        track_rows.extend(
+            [
+                {
+                    "track_id": natural_track,
+                    "name": _track_name(
+                        tile_id=tile_id,
+                        ifm="unmanaged",
+                        origin="natural",
+                        silv_state="baseline",
+                        curve_key=spec.key,
+                    ),
+                },
+                {
+                    "track_id": thinned_track,
+                    "name": _track_name(
+                        tile_id=tile_id,
+                        ifm="unmanaged",
+                        origin="natural",
+                        silv_state="thinned",
+                        curve_key=spec.key,
+                    ),
+                },
+                {
+                    "track_id": managed_track,
+                    "name": _track_name(
+                        tile_id=tile_id,
+                        ifm="managed",
+                        origin="planted",
+                        silv_state="cc_pl",
+                        curve_key=spec.key,
+                    ),
+                },
+            ]
         )
-        track_rows.append(
-            {
-                "track_id": managed_track,
-                "name": _track_name(
-                    tile_id=tile_id,
-                    ifm="managed",
-                    origin="planted",
-                    silv_state="cc_pl",
-                    curve_key=spec.key,
-                ),
-            }
-        )
-        for track in (natural_track, managed_track):
+        for track in (natural_track, thinned_track, managed_track):
             strata_rows.append(
                 {"track_id": track, "offset": 0, "next_age": 300, "cycle": 0}
             )
-        treatment_rows.append(
-            {
-                "track_id": natural_track,
-                "begin": TREATMENT_BEGIN,
-                "end": TREATMENT_END,
-                "treatment": TREATMENT,
-                "new_track": managed_track,
-                "offset": 0,
-                "retain": 0,
-            }
-        )
-        treatment_rows.append(
-            {
-                "track_id": managed_track,
-                "begin": TREATMENT_BEGIN,
-                "end": TREATMENT_END,
-                "treatment": TREATMENT,
-                "new_track": managed_track,
-                "offset": 0,
-                "retain": 0,
-            }
-        )
-        feature_rows.append(
-            {
-                "track_id": natural_track,
-                "label": "feature.Yield.unmanaged.Total",
-                "curve_id": yield_curve_id,
-            }
-        )
-        feature_rows.append(
-            {
-                "track_id": managed_track,
-                "label": "feature.Yield.managed.Total",
-                "curve_id": yield_curve_id,
-            }
-        )
-        for track, ifm in ((natural_track, "unmanaged"), (managed_track, "managed")):
-            product_rows.append(
+        treatment_rows.extend(
+            [
                 {
-                    "track_id": track,
+                    "track_id": natural_track,
+                    "begin": THIN_BEGIN,
+                    "end": THIN_END,
+                    "treatment": THIN_TREATMENT,
+                    "new_track": thinned_track,
+                    "offset": THIN_OFFSET,
+                    "retain": THIN_RETAIN,
+                },
+                {
+                    "track_id": natural_track,
+                    "begin": TREATMENT_BEGIN,
+                    "end": TREATMENT_END,
                     "treatment": TREATMENT,
-                    "label": f"product.HarvestedVolume.{ifm}.CC",
+                    "new_track": managed_track,
+                    "offset": 0,
+                    "retain": 0,
+                },
+                {
+                    "track_id": thinned_track,
+                    "begin": THIN_BEGIN,
+                    "end": THIN_END,
+                    "treatment": THIN_TREATMENT,
+                    "new_track": thinned_track,
+                    "offset": THIN_OFFSET,
+                    "retain": THIN_RETAIN,
+                },
+                {
+                    "track_id": thinned_track,
+                    "begin": TREATMENT_BEGIN,
+                    "end": TREATMENT_END,
+                    "treatment": TREATMENT,
+                    "new_track": managed_track,
+                    "offset": 0,
+                    "retain": 0,
+                },
+                {
+                    "track_id": managed_track,
+                    "begin": THIN_BEGIN,
+                    "end": THIN_END,
+                    "treatment": THIN_TREATMENT,
+                    "new_track": managed_track,
+                    "offset": THIN_OFFSET,
+                    "retain": THIN_RETAIN,
+                },
+                {
+                    "track_id": managed_track,
+                    "begin": TREATMENT_BEGIN,
+                    "end": TREATMENT_END,
+                    "treatment": TREATMENT,
+                    "new_track": managed_track,
+                    "offset": 0,
+                    "retain": 0,
+                },
+            ]
+        )
+        feature_rows.extend(
+            [
+                {
+                    "track_id": natural_track,
+                    "label": "feature.Yield.unmanaged.Total",
                     "curve_id": yield_curve_id,
-                }
-            )
-            product_rows.append(
+                },
                 {
-                    "track_id": track,
-                    "treatment": TREATMENT,
-                    "label": f"product.Treated.{ifm}.CC",
-                    "curve_id": AREA_CURVE_ID,
-                }
-            )
+                    "track_id": thinned_track,
+                    "label": "feature.Yield.thinned.Total",
+                    "curve_id": yield_curve_id,
+                },
+                {
+                    "track_id": managed_track,
+                    "label": "feature.Yield.managed.Total",
+                    "curve_id": yield_curve_id,
+                },
+            ]
+        )
+        for track, state in (
+            (natural_track, "unmanaged"),
+            (thinned_track, "thinned"),
+            (managed_track, "managed"),
+        ):
+            for treatment, curve_id in (
+                (THIN_TREATMENT, yield_curve_id),
+                (TREATMENT, yield_curve_id),
+            ):
+                product_rows.append(
+                    {
+                        "track_id": track,
+                        "treatment": treatment,
+                        "label": f"product.HarvestedVolume.{state}.{treatment}",
+                        "curve_id": curve_id,
+                    }
+                )
+                product_rows.append(
+                    {
+                        "track_id": track,
+                        "treatment": treatment,
+                        "label": f"product.Treated.{state}.{treatment}",
+                        "curve_id": AREA_CURVE_ID,
+                    }
+                )
 
     tracks = pd.DataFrame(track_rows, columns=["track_id", "name"]).astype(
         {"track_id": "int64", "name": "string"}
@@ -1430,8 +1499,9 @@ def build_ws4_tables(
                 (
                     f"compiled {len(inventory.fragments)} SCANFI forest fragments "
                     f"into {len(inventory.blocks)} 8-neighbour blocks across "
-                    f"{len(specs)} RSYC curves; "
-                    "managed track shares the natural RSYC curve (no planting response)"
+                    f"{len(specs)} RSYC curves; thinned, managed, and natural "
+                    "tracks share the natural RSYC curve "
+                    "(no thinning or planting yield response)"
                 )
             ],
         }
@@ -1589,7 +1659,9 @@ def write_manifest(
             "connectivity": "8-neighbour",
             "curve_domain": [int(CURVE_DOMAIN[0]), int(CURVE_DOMAIN[-1])],
             "managed_curve_same_as_natural": True,
+            "thinned_curve_same_as_natural": True,
             "planting_yield_response": "none: no data in this pilot",
+            "thinning_yield_response": "none: no data in this pilot",
         },
         "metadata": metadata,
     }

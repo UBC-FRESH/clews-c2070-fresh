@@ -410,9 +410,11 @@ def _natural_track_map(dataset_dir: Path) -> tuple[pd.DataFrame, pd.Series]:
         dataset_dir / "tracks.parquet", columns=["track_id", "name"]
     )
     names = tracks["name"].astype(str)
-    natural_mask = names.str.contains(
-        r"IFM\(unmanaged\)", regex=True
-    ) & names.str.contains(r"ORIGIN\(natural\)", regex=True)
+    natural_mask = (
+        names.str.contains(r"IFM\(unmanaged\)", regex=True)
+        & names.str.contains(r"ORIGIN\(natural\)", regex=True)
+        & ~names.str.contains(r"SILV_STATE\(thinned\)", regex=True)
+    )
     natural = tracks[natural_mask].copy()
     if natural.empty:
         raise Ws4TiledChainError(f"no natural/unmanaged tracks: {dataset_dir}")

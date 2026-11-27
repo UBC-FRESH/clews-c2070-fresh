@@ -301,7 +301,8 @@ dataset, not official OSeCAN, and not a chain v5.1 change.
 
 Known limitations:
 
-- one CC treatment, no planting yield response, and no operability/tenure/road/
+- the committed coverage datasets predate the builder's THIN treatment (one CC
+  treatment in these artifacts), no thinning or planting yield response, and no operability/tenure/road/
   mill model;
 - province clipping uses the simplified ADM1 boundary and reproduces the
   committed geometry to <0.01 ha, not a legal survey;

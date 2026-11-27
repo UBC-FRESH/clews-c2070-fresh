@@ -61,6 +61,11 @@ from workflows.ws4_instances.build_scanfi_estate_pilot import (
     RSYC_LIBRARY_CSV,
     RSYC_TILES_GPKG,
     SUPPLY_NODES_CSV,
+    THIN_BEGIN,
+    THIN_END,
+    THIN_OFFSET,
+    THIN_RETAIN,
+    THIN_TREATMENT,
     WS4_BIN,
     CurveSpec,
     ScanfiEstateError,
@@ -1180,88 +1185,147 @@ def build_ws4_tables(
         province = PROVINCE_ORDER[province_index]
         spec = used_specs[curve_index]
         managed_track = natural_track + 1
+        # The thinned tracks are appended after the existing natural/managed
+        # pairs so existing track ids and CC references remain stable.
+        thinned_track = 2 * len(pair_rows) + (natural_track + 1) // 2
         curve_id = curve_index + 2
-        track_rows.append(
-            {
-                "track_id": natural_track,
-                "name": _track_name(
-                    province,
-                    ifm="unmanaged",
-                    origin="natural",
-                    silv_state="baseline",
-                    curve_key=spec.key,
-                ),
-            }
+        track_rows.extend(
+            [
+                {
+                    "track_id": natural_track,
+                    "name": _track_name(
+                        province,
+                        ifm="unmanaged",
+                        origin="natural",
+                        silv_state="baseline",
+                        curve_key=spec.key,
+                    ),
+                },
+                {
+                    "track_id": thinned_track,
+                    "name": _track_name(
+                        province,
+                        ifm="unmanaged",
+                        origin="natural",
+                        silv_state="thinned",
+                        curve_key=spec.key,
+                    ),
+                },
+                {
+                    "track_id": managed_track,
+                    "name": _track_name(
+                        province,
+                        ifm="managed",
+                        origin="planted",
+                        silv_state="cc_pl",
+                        curve_key=spec.key,
+                    ),
+                },
+            ]
         )
-        track_rows.append(
-            {
-                "track_id": managed_track,
-                "name": _track_name(
-                    province,
-                    ifm="managed",
-                    origin="planted",
-                    silv_state="cc_pl",
-                    curve_key=spec.key,
-                ),
-            }
-        )
-        for track in (natural_track, managed_track):
+        for track in (natural_track, thinned_track, managed_track):
             strata_rows.append(
                 {"track_id": track, "offset": 0, "next_age": 300, "cycle": 0}
             )
-        treatment_rows.append(
-            {
-                "track_id": natural_track,
-                "begin": TREATMENT_BEGIN,
-                "end": TREATMENT_END,
-                "treatment": TREATMENT,
-                "new_track": managed_track,
-                "offset": 0,
-                "retain": 0,
-            }
-        )
-        treatment_rows.append(
-            {
-                "track_id": managed_track,
-                "begin": TREATMENT_BEGIN,
-                "end": TREATMENT_END,
-                "treatment": TREATMENT,
-                "new_track": managed_track,
-                "offset": 0,
-                "retain": 0,
-            }
-        )
-        feature_rows.append(
-            {
-                "track_id": natural_track,
-                "label": f"feature.Yield.{province}.unmanaged.Total",
-                "curve_id": curve_id,
-            }
-        )
-        feature_rows.append(
-            {
-                "track_id": managed_track,
-                "label": f"feature.Yield.{province}.managed.Total",
-                "curve_id": curve_id,
-            }
-        )
-        for track, ifm in ((natural_track, "unmanaged"), (managed_track, "managed")):
-            product_rows.append(
+        treatment_rows.extend(
+            [
                 {
-                    "track_id": track,
+                    "track_id": natural_track,
+                    "begin": THIN_BEGIN,
+                    "end": THIN_END,
+                    "treatment": THIN_TREATMENT,
+                    "new_track": thinned_track,
+                    "offset": THIN_OFFSET,
+                    "retain": THIN_RETAIN,
+                },
+                {
+                    "track_id": natural_track,
+                    "begin": TREATMENT_BEGIN,
+                    "end": TREATMENT_END,
                     "treatment": TREATMENT,
-                    "label": f"product.HarvestedVolume.{province}.{ifm}.CC",
+                    "new_track": managed_track,
+                    "offset": 0,
+                    "retain": 0,
+                },
+                {
+                    "track_id": thinned_track,
+                    "begin": THIN_BEGIN,
+                    "end": THIN_END,
+                    "treatment": THIN_TREATMENT,
+                    "new_track": thinned_track,
+                    "offset": THIN_OFFSET,
+                    "retain": THIN_RETAIN,
+                },
+                {
+                    "track_id": thinned_track,
+                    "begin": TREATMENT_BEGIN,
+                    "end": TREATMENT_END,
+                    "treatment": TREATMENT,
+                    "new_track": managed_track,
+                    "offset": 0,
+                    "retain": 0,
+                },
+                {
+                    "track_id": managed_track,
+                    "begin": THIN_BEGIN,
+                    "end": THIN_END,
+                    "treatment": THIN_TREATMENT,
+                    "new_track": managed_track,
+                    "offset": THIN_OFFSET,
+                    "retain": THIN_RETAIN,
+                },
+                {
+                    "track_id": managed_track,
+                    "begin": TREATMENT_BEGIN,
+                    "end": TREATMENT_END,
+                    "treatment": TREATMENT,
+                    "new_track": managed_track,
+                    "offset": 0,
+                    "retain": 0,
+                },
+            ]
+        )
+        feature_rows.extend(
+            [
+                {
+                    "track_id": natural_track,
+                    "label": f"feature.Yield.{province}.unmanaged.Total",
                     "curve_id": curve_id,
-                }
-            )
-            product_rows.append(
+                },
                 {
-                    "track_id": track,
-                    "treatment": TREATMENT,
-                    "label": f"product.Treated.{province}.{ifm}.CC",
-                    "curve_id": AREA_CURVE_ID,
-                }
-            )
+                    "track_id": thinned_track,
+                    "label": f"feature.Yield.{province}.thinned.Total",
+                    "curve_id": curve_id,
+                },
+                {
+                    "track_id": managed_track,
+                    "label": f"feature.Yield.{province}.managed.Total",
+                    "curve_id": curve_id,
+                },
+            ]
+        )
+        for track, state in (
+            (natural_track, "unmanaged"),
+            (thinned_track, "thinned"),
+            (managed_track, "managed"),
+        ):
+            for treatment in (THIN_TREATMENT, TREATMENT):
+                product_rows.append(
+                    {
+                        "track_id": track,
+                        "treatment": treatment,
+                        "label": f"product.HarvestedVolume.{province}.{state}.{treatment}",
+                        "curve_id": curve_id,
+                    }
+                )
+                product_rows.append(
+                    {
+                        "track_id": track,
+                        "treatment": treatment,
+                        "label": f"product.Treated.{province}.{state}.{treatment}",
+                        "curve_id": AREA_CURVE_ID,
+                    }
+                )
 
     tracks = pd.DataFrame(track_rows, columns=["track_id", "name"]).astype(
         {"track_id": "int64", "name": "string"}
@@ -1346,9 +1410,9 @@ def build_ws4_tables(
                         f"compiled {len(fragments)} SCANFI 990-m forest fragments "
                         f"into {len(blocks)} 8-neighbour blocks across "
                         f"{len(unique_pairs)} province-curve pairs and "
-                        f"{curve_count} RSYC group curves; "
-                        "managed tracks share the natural RSYC curves "
-                        "(no planting response)"
+                        f"{curve_count} RSYC group curves; thinned, managed, "
+                        "and natural tracks share the natural RSYC curves "
+                        "(no thinning or planting response)"
                     )
                 ],
             }
@@ -1362,15 +1426,34 @@ def _validate_ws4_frames(frames: Mapping[str, pd.DataFrame]) -> None:
     """Fail on any cross-table reference or curve-domain defect."""
     tracks = frames["tracks"]
     track_ids = set(tracks["track_id"])
+    if tracks["track_id"].duplicated().any():
+        raise ScanfiEstateError("tracks: duplicate track ids")
     for name in ("blocks", "strata", "treatments", "features", "products"):
         unknown = set(frames[name]["track_id"]) - track_ids
         if unknown:
             raise ScanfiEstateError(f"{name}: unknown track ids {sorted(unknown)[:5]}")
+    for name in ("strata", "features", "products"):
+        missing = track_ids - set(frames[name]["track_id"])
+        if missing:
+            raise ScanfiEstateError(
+                f"{name}: tracks without rows {sorted(missing)[:5]}"
+            )
     unknown_new = set(frames["treatments"]["new_track"]) - track_ids
     if unknown_new:
         raise ScanfiEstateError(
             f"treatments: unknown new_track ids {sorted(unknown_new)[:5]}"
         )
+    thin = frames["treatments"][frames["treatments"]["treatment"] == THIN_TREATMENT]
+    if thin.empty:
+        raise ScanfiEstateError("treatments: no THIN rows")
+    if not (thin["offset"] == THIN_OFFSET).all():
+        raise ScanfiEstateError("treatments: THIN offset is not the retain sentinel")
+    if not (
+        (thin["begin"] == THIN_BEGIN)
+        & (thin["end"] == THIN_END)
+        & (thin["retain"] == THIN_RETAIN)
+    ).all():
+        raise ScanfiEstateError("treatments: THIN window/retain is inconsistent")
     unknown_blocks = set(frames["fragments"]["block_id"]) - set(
         frames["blocks"]["block_id"]
     )
@@ -1543,7 +1626,9 @@ def write_manifest(
             "curve_domain": [int(CURVE_DOMAIN[0]), int(CURVE_DOMAIN[-1])],
             "curve_basis": "RSYC tile coniferous/broadleaf group; generic fallback",
             "managed_curve_same_as_natural": True,
+            "thinned_curve_same_as_natural": True,
             "planting_yield_response": "none: no data in this build",
+            "thinning_yield_response": "none: no data in this build",
             "clique_policy": (
                 "connected (age_class, curve_key, province); 50-km subcells "
                 "do not clip cliques"

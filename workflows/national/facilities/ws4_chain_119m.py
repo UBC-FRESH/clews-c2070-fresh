@@ -282,7 +282,9 @@ def _parse_tracks(dataset_dir: Path) -> pd.DataFrame:
 def _natural_tracks(dataset_dir: Path) -> pd.DataFrame:
     tracks = _parse_tracks(dataset_dir)
     natural = tracks[
-        (tracks["ifm"] == "unmanaged") & (tracks["origin"] == "natural")
+        (tracks["ifm"] == "unmanaged")
+        & (tracks["origin"] == "natural")
+        & tracks["name"].str.contains(r"\+SILV_STATE\(baseline\)", regex=True)
     ].copy()
     if natural.empty:
         raise Ws4Chain119mError("no natural/unmanaged WS4 tracks")

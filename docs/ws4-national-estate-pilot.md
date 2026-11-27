@@ -148,19 +148,44 @@ Coefficients (b1, b2, b3, b4):
 
 ## 4. WS4 tracks and treatments
 
-For each curve key there are two tracks (8 tracks total):
+For each curve key there are three tracks (12 tracks total):
 
 ```text
 natural: AU(G2)+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(baseline)+CURVE(<key>)+treatment()
+thinned: AU(G2)+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(thinned)+CURVE(<key>)+treatment()
 managed: AU(G2)+IFM(managed)+ORIGIN(planted)+SILV_STATE(cc_pl)+CURVE(<key>)+treatment()
 ```
 
-Each track has one `CC` treatment with `begin=40`, `end=1000`, `offset=0`,
-`retain=0`. The natural treatment points to its managed counterpart; the
-managed treatment points to itself. The managed track uses the **same** RSYC
-curve as the natural track. This pilot has no planting yield-response data, so
-the managed track records the management-state transition only; it does not
-claim a planting response.
+Each track offers `THIN` and `CC` treatments:
+
+| From | Treatment | Begin | End | New track | Offset | Retain |
+|---|---|---:|---:|---|---:|---:|
+| natural | THIN | 20 | 40 | thinned | -1 | 0 |
+| natural | CC | 40 | 1000 | managed | 0 | 0 |
+| thinned | THIN | 20 | 40 | thinned | -1 | 0 |
+| thinned | CC | 40 | 1000 | managed | 0 | 0 |
+| managed | THIN | 20 | 40 | managed | -1 | 0 |
+| managed | CC | 40 | 1000 | managed | 0 | 0 |
+
+The negative THIN offset is the WS4 partial-cut sentinel: it keeps the
+fragment's current age instead of resetting it to the treatment offset. The
+thinned track uses the **same** RSYC curve as the natural and managed tracks.
+This pilot has no thinning or planting yield-response data, so `THIN` and the
+managed transition record state and produce volume at the pre-treatment curve
+only; they do not claim a silvicultural response.
+
+Features are `feature.Yield.unmanaged.Total`, `feature.Yield.thinned.Total`,
+and `feature.Yield.managed.Total`, all on the same curve id. Products pair each
+state with each treatment:
+
+```text
+product.HarvestedVolume.<state>.THIN    product.Treated.<state>.THIN
+product.HarvestedVolume.<state>.CC      product.Treated.<state>.CC
+```
+
+The products table has 48 rows (4 curves x 3 states x 2 treatments x 2
+product kinds); `accounts`/`protoaccounts` have one row per unique label
+(15 rows) with `sum=1.0`.
 
 Curve IDs are stable: area curve 1, RSYC curves 2..5 in sorted `curve_key`
 order. Blocks map to `curve:<key>` groups.
@@ -174,14 +199,14 @@ order. Blocks map to `curve:<key>` groups.
 |---|---:|
 | fragments | 2,446,363 |
 | blocks | 932,041 |
-| tracks | 8 |
-| strata | 8 |
-| treatments | 8 |
+| tracks | 12 |
+| strata | 12 |
+| treatments | 24 |
 | curves | 3,005 |
-| features | 8 |
-| products | 16 |
-| protoaccounts | 6 |
-| accounts | 6 |
+| features | 12 |
+| products | 48 |
+| protoaccounts | 15 |
+| accounts | 15 |
 | groups | 932,041 |
 | messages | 1 |
 
@@ -236,8 +261,10 @@ simulation shows both nonzero harvested volume and nonzero managed area.
 - Single 50-km pilot tile and a single 50-year schedule; not a national run.
 - 30-m fragments retained because the tile has 2.446M forest pixels, below the
   2.5M aggregation trigger. No 60/90-m aggregation was used.
-- Managed and natural tracks share one RSYC curve; there is no planting,
-  silviculture, fertilization, or genetic yield response.
+- Natural, thinned, and managed tracks share one RSYC curve; there is no
+  thinning, planting, silviculture, fertilization, or genetic yield response.
+  `THIN` is a partial-cut state transition recorded at the same curve; it is
+  not a growth model.
 - No operability, tenure, THLB, road, slope, riparian, cutblock, green-up, or
   spatial-topology constraints. Pixel cliques are inventory blocks, not
   operable units.

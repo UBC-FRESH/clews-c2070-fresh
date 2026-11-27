@@ -67,9 +67,14 @@ excluded by the clip. This difference is expected and is not a data loss.
 - **Tables**: the twelve canonical WS4 tables (`fragments`, `blocks`, `tracks`,
   `strata`, `treatments`, `curves`, `features`, `products`, `protoaccounts`,
   `accounts`, `groups`, `messages`) plus `manifest.json`.
-- **Treatment**: one clear-cut (CC) treatment at age class 40; managed and
-  natural tracks share the same RSYC curve because there is no planting
-  yield-response data.
+- **Treatment**: the shared builder now emits a natural -> thinned `THIN`
+  partial cut at age 20-40 (negative offset retains age) and a thinned -> managed
+  `CC` at age 40, alongside the existing clear-cut (CC). All three tracks share
+  the same RSYC curve: there is no thinning or planting yield-response data.
+  The committed 3,345-tile coverage and the 24-tile representative sample
+  predate this builder change and were not rebuilt; their schedules remain the
+  10% CC schedule and their datasets contain only the original natural/managed
+  tracks.
 
 ### 2.3 Output contract
 
@@ -206,8 +211,10 @@ does not fabricate a tile, curve, block, or schedule row.
 
 ## 6. Limitations
 
-- **One CC treatment only.** There is no alternative silviculture, partial
-  harvest, or treatment optimization.
+- **No partial harvest in the committed artifacts.** The builder emits THIN,
+  but the committed coverage/sample datasets predate it and contain only the
+  original natural/managed CC tracks. There is no treatment optimization in
+  either case, and THIN claims no thinning yield response.
 - **No planting response.** The managed track shares the natural RSYC curve;
   it records the management-state transition, not a yield gain.
 - **Curve resolution is the pilot's exact -> group -> generic mapping.** Species

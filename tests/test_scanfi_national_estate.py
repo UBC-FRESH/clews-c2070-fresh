@@ -309,7 +309,7 @@ def test_ws4_tables_have_complete_references_and_no_extra_tracks() -> None:
     assert set(frames["treatments"]["track_id"]) == track_ids
     assert set(frames["treatments"]["new_track"]) <= track_ids
     assert len(frames["features"]) == len(tracks)
-    assert len(frames["products"]) == 2 * len(tracks)
+    assert len(frames["products"]) == 4 * len(tracks)
     assert len(frames["groups"]) == len(blocks)
     assert frames["groups"]["block_id"].tolist() == blocks["block_id"].tolist()
     assert set(frames["features"]["curve_id"]) <= set(curves["curve_id"])
@@ -325,12 +325,50 @@ def test_ws4_tables_have_complete_references_and_no_extra_tracks() -> None:
     assert set(
         curves.loc[curves["curve_id"] == AREA_CURVE_ID, "y"].unique()
     ) == {1.0}
-    natural = frames["treatments"][frames["treatments"]["track_id"] == 1].iloc[0]
-    assert natural["new_track"] == 2
-    assert set(frames["treatments"]["treatment"]) == {"CC"}
-    assert (frames["treatments"]["begin"] == 40).all()
-    assert (frames["treatments"]["end"] == 1000).all()
-    assert (frames["treatments"]["offset"] == 0).all()
+    natural_thin = frames["treatments"][
+        (frames["treatments"]["track_id"] == 1)
+        & (frames["treatments"]["treatment"] == "THIN")
+    ].iloc[0]
+    natural_cc = frames["treatments"][
+        (frames["treatments"]["track_id"] == 1)
+        & (frames["treatments"]["treatment"] == "CC")
+    ].iloc[0]
+    thinned_id = int(natural_thin["new_track"])
+    thinned_thin = frames["treatments"][
+        (frames["treatments"]["track_id"] == thinned_id)
+        & (frames["treatments"]["treatment"] == "THIN")
+    ].iloc[0]
+    thinned_cc = frames["treatments"][
+        (frames["treatments"]["track_id"] == thinned_id)
+        & (frames["treatments"]["treatment"] == "CC")
+    ].iloc[0]
+    assert natural_thin["offset"] == -1
+    assert natural_thin["begin"] == 20
+    assert natural_thin["end"] == 40
+    assert thinned_thin["new_track"] == thinned_id
+    assert thinned_thin["offset"] == -1
+    assert thinned_cc["new_track"] == 2
+    assert thinned_cc["offset"] == 0
+    assert natural_cc["new_track"] == 2
+    track_names = tracks.set_index("track_id")["name"]
+    assert "+SILV_STATE(thinned)" in track_names[thinned_id]
+    assert "+SILV_STATE(baseline)" in track_names[1]
+    assert "+SILV_STATE(cc_pl)" in track_names[2]
+    feature_labels = set(frames["features"]["label"].astype(str))
+    assert any(label.endswith(".unmanaged.Total") for label in feature_labels)
+    assert any(label.endswith(".thinned.Total") for label in feature_labels)
+    assert any(label.endswith(".managed.Total") for label in feature_labels)
+    product_labels = set(frames["products"]["label"].astype(str))
+    for state in ("unmanaged", "thinned", "managed"):
+        for treatment in ("THIN", "CC"):
+            assert any(
+                label.endswith(f".{state}.{treatment}")
+                for label in product_labels
+            )
+    for name in ("tracks", "strata", "treatments", "features", "products",
+                 "accounts", "protoaccounts"):
+        assert not frames[name].isna().any(axis=None)
+    assert set(frames["treatments"]["treatment"]) == {"THIN", "CC"}
     assert (frames["treatments"]["retain"] == 0).all()
     assert (frames["strata"]["next_age"] == 300).all()
     assert (frames["strata"]["cycle"] == 0).all()
@@ -341,7 +379,7 @@ def test_ws4_tables_have_complete_references_and_no_extra_tracks() -> None:
         assert set(accounts["account"]) == labels
         assert set(accounts["group"]) == {"_ALL_"}
         assert (accounts["sum"] == 1.0).all()
-    assert len(tracks) == 2 * len(np.unique(
+    assert len(tracks) == 3 * len(np.unique(
         assignment.block_province.astype(np.int64) * len(specs)
         + assignment.block_curve_index
     ))
@@ -435,6 +473,11 @@ def test_committed_national_dataset_contract_if_present() -> None:
     fragments = pd.read_parquet(dataset / "fragments.parquet")
     blocks = pd.read_parquet(dataset / "blocks.parquet")
     groups = pd.read_parquet(dataset / "groups.parquet")
+    tracks = pd.read_parquet(dataset / "tracks.parquet")
+    treatments = pd.read_parquet(dataset / "treatments.parquet")
+    features = pd.read_parquet(dataset / "features.parquet")
+    products = pd.read_parquet(dataset / "products.parquet")
+    accounts = pd.read_parquet(dataset / "accounts.parquet")
     assert len(fragments) == metadata["fragments"]
     assert len(blocks) == metadata["blocks"]
     assert fragments["area_ha"].sum() == pytest.approx(blocks["area_ha"].sum())
@@ -443,3 +486,22 @@ def test_committed_national_dataset_contract_if_present() -> None:
     assert groups["block_id"].tolist() == blocks["block_id"].tolist()
     assert fragments["age"].min() > 0
     assert fragments["area_ha"].max() <= WS4_FRAGMENT_AREA_HA + 1e-9
+    assert len(tracks) == summary["counts"]["tracks"]
+    assert tracks["name"].str.contains(r"SILV_STATE\(thinned\)").sum() == (
+        summary["counts"]["province_curve_pairs"]
+    )
+    thin = treatments[treatments["treatment"].eq("THIN")]
+    assert len(thin) == 3 * summary["counts"]["province_curve_pairs"]
+    assert thin["offset"].eq(-1).all()
+    assert thin["begin"].eq(20).all() and thin["end"].eq(40).all()
+    feature_labels = features["label"].astype(str)
+    assert feature_labels.str.endswith(".unmanaged.Total").any()
+    assert feature_labels.str.endswith(".thinned.Total").any()
+    assert feature_labels.str.endswith(".managed.Total").any()
+    labels = set(features["label"].astype(str)) | set(
+        products["label"].astype(str)
+    )
+    assert set(accounts["account"].astype(str)) == labels
+    assert accounts["sum"].eq(1.0).all()
+    for frame in (tracks, treatments, features, products, accounts):
+        assert not frame.isna().any(axis=None)

@@ -112,30 +112,46 @@ For each used `(province, curve_key)` pair:
 
 ```text
 natural: AU(<province>)+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(baseline)+CURVE(<key>)+treatment()
+thinned: AU(<province>)+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(thinned)+CURVE(<key>)+treatment()
 managed: AU(<province>)+IFM(managed)+ORIGIN(planted)+SILV_STATE(cc_pl)+CURVE(<key>)+treatment()
 ```
 
-Each track has one `CC` treatment with `begin=40`, `end=1000`, `offset=0`,
-`retain=0`. The natural treatment points to its managed counterpart; the
-managed treatment points to itself. The managed track uses the **same** RSYC
-curve as its natural track: there is no planting, silviculture, fertilization,
-or genetic yield-response data in this build.
+Each track offers `THIN` and `CC`:
+
+| From | Treatment | Begin | End | New track | Offset | Retain |
+|---|---|---:|---:|---|---:|---:|
+| natural | THIN | 20 | 40 | thinned | -1 | 0 |
+| natural | CC | 40 | 1000 | managed | 0 | 0 |
+| thinned | THIN | 20 | 40 | thinned | -1 | 0 |
+| thinned | CC | 40 | 1000 | managed | 0 | 0 |
+| managed | THIN | 20 | 40 | managed | -1 | 0 |
+| managed | CC | 40 | 1000 | managed | 0 | 0 |
+
+The negative THIN offset is the WS4 partial-cut sentinel: the fragment keeps
+its current age instead of resetting to zero. The thinned, managed, and
+natural tracks use the **same** RSYC curve: there is no thinning, planting,
+silviculture, fertilization, or genetic yield-response data in this build.
+`THIN` records a partial-cut state transition and produces volume on the
+pre-treatment curve; it is not a thinning-response model.
 
 Features:
 
 ```text
 feature.Yield.<province>.unmanaged.Total
+feature.Yield.<province>.thinned.Total
 feature.Yield.<province>.managed.Total
 ```
 
-Products:
+Products (each state x treatment x product kind):
 
 ```text
-product.HarvestedVolume.<province>.unmanaged.CC
-product.HarvestedVolume.<province>.managed.CC
-product.Treated.<province>.unmanaged.CC
-product.Treated.<province>.managed.CC
+product.HarvestedVolume.<province>.<state>.THIN
+product.HarvestedVolume.<province>.<state>.CC
+product.Treated.<province>.<state>.THIN
+product.Treated.<province>.<state>.CC
 ```
+
+where `<state>` is `unmanaged`, `thinned`, or `managed`.
 
 Curves use `x = 0` then `1..600` from the published RSYC equation:
 
@@ -165,8 +181,8 @@ label, group `_ALL_`, attribute = account = label, and `sum=1.0`.
 | **Forest area** | **411,250,630.32 ha (4,112,506.30 km²)** |
 | Used curves | 718 of 770 resolved |
 | Province-curve pairs | 933 |
-| Tracks (natural + managed) | 1,866 |
-| Accounts / protoaccounts labels | 78 |
+| Tracks (natural + thinned + managed) | 2,799 |
+| Accounts / protoaccounts labels | 195 |
 
 The 4.87M ha difference between forest-class pixels and included fragments is
 forest outside the RSYC tile-province allocation grid (for example, southern
@@ -280,10 +296,12 @@ by province, offset 0:
 
 The simulated treated area equals the scheduled block area exactly. All
 scheduled natural-track fragments transition to their managed track, so the
-run has both nonzero harvested volume and nonzero managed area. Product totals
-are 26 labels across 13 provinces (harvested volume and treated area, each for
-unmanaged and managed tracks); all provinces have nonzero harvest and treated
-area. The product/account labels are the provincial labels written in the
+run has both nonzero harvested volume and nonzero managed area. The CC run
+produces 52 product labels across 13 provinces (harvested volume and treated
+area, each for the unmanaged and managed tracks); all provinces have nonzero
+harvest and treated area. The dataset also carries THIN and thinned-state
+labels for the partial-cut treatment, which the CC-only schedule does not
+invoke. The product/account labels are the provincial labels written in the
 dataset, not renamed during simulation.
 
 ## 6. Manifest and provenance
@@ -304,11 +322,11 @@ Key dataset table SHA-256 values:
 
 | Table | Rows | SHA-256 |
 |---|---:|---|
-| `fragments.parquet` | 6,807,192 | `66003777f1d3d52764f141584208d609359edf9433a70d84730853608000864a644fb6f1` |
+| `fragments.parquet` | 6,807,192 | `f1d3d52764f141584208d609359edf9433a70d84730853608000864a644fb6f1` |
 | `blocks.parquet` | 1,984,017 | `a6eac3812fe4a857a7c39c2cb09ea329312677cb994129990f33eae630e7fabf` |
 | `groups.parquet` | 1,984,017 | `d3998afba3bcdf71df6b2802a614e838b65d951b339771b1ee5cb7d8afe5340c` |
 | `curves.parquet` | 432,119 | `f28749fd02c024bc28f8721d640b094156e18d7baca658332a3f87a6e03a2364` |
-| `tracks.parquet` | 1,866 | `8973760b9058f5dbebaf24b1a0b67cee4d8f088c319468fe875ad9831443d507` |
+| `tracks.parquet` | 2,799 | `aea0422f25e62e1d2c8c60ca6513710e06da6c8c63bc42596aed4755ef30408a` |
 
 Metadata labels: `model_estimate`, `observed=false`, `policy_grade=false`,
 `national_claim=false`, `official_osecan_changed=false`, `ui_changed=false`,
@@ -322,10 +340,11 @@ and schedule sample.
   broadleaf group curve, with the tile generic curve as the broadleaf fallback.
   Species-specific curves are not used nationally because the SCANFI species
   rasters are not processed in this build.
-- **No planting response.** Managed and natural tracks share one RSYC curve.
-  The managed track records the management-state transition and the `CC`
-  treatment only. There is no planting, silviculture, fertilization, genetic
-  gain, or regeneration-delay response.
+- **No thinning or planting response.** Natural, thinned, and managed tracks
+  share one RSYC curve. The thinned track records the `THIN` partial-cut state
+  transition at the pre-treatment age; the managed track records the `CC`
+  management-state transition. There is no thinning, planting, silviculture,
+  fertilization, genetic gain, or regeneration-delay response.
 - **Not operable.** No tenure, THLB, road, slope, riparian, cutblock, green-up,
   patch-size, harvest-flow, or spatial-topology constraints. Pixel cliques are
   inventory blocks, not cutblocks or operable units.

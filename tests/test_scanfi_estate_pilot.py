@@ -220,23 +220,72 @@ def test_ws4_tables_and_curve_domain() -> None:
         if curve_id != AREA_CURVE_ID:
             assert group.loc[group["x"] == 0.0, "y"].iloc[0] == 0.0
 
-    assert set(frames["tracks"]["track_id"]) == {1, 2, 3, 4}
+    assert set(frames["tracks"]["track_id"]) == {1, 2, 3, 4, 5, 6}
     assert set(frames["blocks"]["track_id"]) <= set(frames["tracks"]["track_id"])
     assert set(frames["fragments"]["block_id"]) == set(frames["blocks"]["block_id"])
     assert set(frames["fragments"]["track_id"]) <= set(frames["tracks"]["track_id"])
     assert set(frames["features"]["curve_id"]) <= set(curves["curve_id"])
     assert set(frames["products"]["curve_id"]) <= set(curves["curve_id"])
+    assert len(frames["features"]) == len(frames["tracks"])
+    assert len(frames["products"]) == 4 * len(frames["tracks"])
 
-    natural = frames["treatments"][frames["treatments"]["track_id"] == 1].iloc[0]
-    managed = frames["treatments"][frames["treatments"]["track_id"] == 2].iloc[0]
-    assert natural["new_track"] == 2
-    assert managed["new_track"] == 2
-    assert natural["begin"] == managed["begin"] == 40
-    assert set(frames["treatments"]["treatment"]) == {"CC"}
+    natural_thin = frames["treatments"][
+        (frames["treatments"]["track_id"] == 1)
+        & (frames["treatments"]["treatment"] == "THIN")
+    ].iloc[0]
+    thinned_id = int(natural_thin["new_track"])
+    thinned_thin = frames["treatments"][
+        (frames["treatments"]["track_id"] == thinned_id)
+        & (frames["treatments"]["treatment"] == "THIN")
+    ].iloc[0]
+    natural_cc = frames["treatments"][
+        (frames["treatments"]["track_id"] == 1)
+        & (frames["treatments"]["treatment"] == "CC")
+    ].iloc[0]
+    managed_cc = frames["treatments"][
+        (frames["treatments"]["track_id"] == 2)
+        & (frames["treatments"]["treatment"] == "CC")
+    ].iloc[0]
+    assert thinned_thin["new_track"] == thinned_id
+    assert natural_thin["begin"] == thinned_thin["begin"] == 20
+    assert natural_thin["end"] == thinned_thin["end"] == 40
+    assert natural_thin["offset"] == thinned_thin["offset"] == -1
+    assert natural_cc["new_track"] == managed_cc["new_track"] == 2
+    assert set(frames["treatments"]["treatment"]) == {"THIN", "CC"}
+    names = frames["tracks"].set_index("track_id")["name"]
+    assert "+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(baseline)" in names[1]
+    assert (
+        "+IFM(unmanaged)+ORIGIN(natural)+SILV_STATE(thinned)"
+        in names[thinned_id]
+    )
+    assert "+IFM(managed)+ORIGIN(planted)+SILV_STATE(cc_pl)" in names[2]
+    assert set(frames["features"]["label"]) == {
+        "feature.Yield.unmanaged.Total",
+        "feature.Yield.thinned.Total",
+        "feature.Yield.managed.Total",
+    }
+    assert set(frames["products"]["treatment"]) == {"THIN", "CC"}
+    assert set(frames["products"]["label"]) == {
+        f"product.{kind}.{state}.{treatment}"
+        for kind in ("HarvestedVolume", "Treated")
+        for state in ("unmanaged", "thinned", "managed")
+        for treatment in ("THIN", "CC")
+    }
+    for state in ("unmanaged", "thinned", "managed"):
+        state_curve = frames["features"].loc[
+            frames["features"]["label"].str.contains(
+                rf"\.{state}\.Total$", regex=True
+            ),
+            "curve_id",
+        ]
+        assert state_curve.nunique() == len(resolution.specs)
+    for name in ("tracks", "strata", "treatments", "features", "products",
+                 "accounts", "protoaccounts"):
+        assert not frames[name].isna().any(axis=None)
 
     for table_name in ("accounts", "protoaccounts"):
         accounts = frames[table_name]
-        assert len(accounts) == 6
+        assert len(accounts) == 15
         assert set(accounts["group"]) == {"_ALL_"}
         assert set(accounts["sum"]) == {1.0}
         assert (accounts["attribute"] == accounts["account"]).all()
@@ -349,3 +398,127 @@ def test_ws4_validate_and_simulate_smoke(tmp_path: Path) -> None:
     ].sum()
     assert harvested > 0.0
     assert treated > 0.0
+
+
+@pytest.mark.slow
+def test_thin_retains_age_then_cc_moves_to_managed(tmp_path: Path) -> None:
+    """THIN keeps the current age; the later CC moves the block to managed."""
+    if not WS4_BIN.is_file():
+        pytest.skip("ws4 executable is not available")
+    age, landcover, max_closure, species = _grid_inventory()
+    resolution = _resolution()
+    inventory = build_inventory(
+        age=age,
+        landcover=landcover,
+        max_closure=max_closure,
+        dominant_species=species,
+        species_layers=["blackSpruce", "lodgepolePine"],
+        resolution=resolution,
+        tile_id="T1",
+        inside_pixels=age.size,
+        inside_mask=np.ones(age.shape, dtype=bool),
+    )
+    frames = build_ws4_tables(inventory, tile_id="T1", resolution=resolution)
+    dataset = tmp_path / "dataset"
+    write_dataset(frames, dataset)
+    manifest = {
+        "schema_version": "0.1",
+        "tables": {name: f"{name}.parquet" for name in _table_schema()},
+        "sources": [],
+        "options": {"period_length": 1, "recipe": "test", "model": "II"},
+        "metadata": {},
+    }
+    (dataset / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+    blocks = frames["blocks"]
+    selected = blocks.loc[blocks["offset"] == 40].iloc[0]
+    schedule = pd.DataFrame(
+        [
+            {"block_id": int(selected["block_id"]), "treatment": "THIN", "offset": 0},
+            {"block_id": int(selected["block_id"]), "treatment": "CC", "offset": 10},
+        ]
+    )
+    schedule_path = tmp_path / "schedule.csv"
+    schedule.to_csv(schedule_path, index=False)
+    run_dir = tmp_path / "run"
+    result = subprocess.run(
+        [
+            str(WS4_BIN),
+            "simulate",
+            "--dataset",
+            str(dataset),
+            "--schedule",
+            str(schedule_path),
+            "--years",
+            "20",
+            "--out",
+            str(run_dir),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    accounts = pd.read_csv(run_dir / "account_values.csv")
+    products = pd.read_csv(run_dir / "product_values.csv")
+    assert not accounts["value"].isna().any()
+    assert not products["value"].isna().any()
+
+    tracks = frames["tracks"].set_index("track_id")["name"]
+    thinned_track = int(
+        next(track for track, name in tracks.items() if "SILV_STATE(thinned)" in name)
+    )
+    thinned_curve = int(
+        frames["features"].loc[
+            frames["features"]["track_id"] == thinned_track, "curve_id"
+        ].iloc[0]
+    )
+    curve = (
+        frames["curves"].loc[frames["curves"]["curve_id"] == thinned_curve]
+        .set_index("x")["y"]
+    )
+    fragments = frames["fragments"]
+    selected_fragments = fragments.loc[
+        fragments["block_id"] == selected["block_id"]
+    ]
+    expected_thin = float(
+        sum(
+            row.area_ha * float(curve.loc[float(row.age)])
+            for row in selected_fragments.itertuples(index=False)
+        )
+    )
+    expected_cc = float(
+        sum(
+            row.area_ha * float(curve.loc[float(row.age) + 10.0])
+            for row in selected_fragments.itertuples(index=False)
+        )
+    )
+    assert expected_thin > 0.0
+    assert expected_cc > expected_thin
+
+    at_zero = (
+        accounts.loc[accounts["offset"] == 0].groupby("account")["value"].sum()
+    )
+    assert at_zero["feature.Yield.thinned.Total"] == pytest.approx(
+        expected_thin, rel=1e-12, abs=1e-6
+    )
+    thin_products = products.groupby("account")["value"].sum()
+    assert thin_products[
+        "product.HarvestedVolume.unmanaged.THIN"
+    ] == pytest.approx(expected_thin, rel=1e-12, abs=1e-6)
+    assert thin_products[
+        "product.HarvestedVolume.thinned.CC"
+    ] == pytest.approx(expected_cc, rel=1e-12, abs=1e-6)
+    assert thin_products["product.Treated.thinned.CC"] == pytest.approx(
+        float(selected["area_ha"]), rel=1e-12, abs=1e-6
+    )
+
+    final_offset = int(accounts["offset"].max())
+    final = (
+        accounts.loc[accounts["offset"] == final_offset]
+        .groupby("account")["value"]
+        .sum()
+    )
+    assert final["feature.Yield.managed.Total"] > 0.0
+    assert final["feature.Yield.thinned.Total"] == pytest.approx(0.0)

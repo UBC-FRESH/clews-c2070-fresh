@@ -1216,6 +1216,37 @@ decide what blocks production readiness after the conceptual alpha.
   official OSeCAN, frozen chain v5.1, national 990-m dataset, or tiled dataset
   change; no unexpected `D`.
 
+- [x] P7.49 Add a THIN partial-cut state transition and THIN -> CC evidence.
+  Completed: added a per-curve thinned track
+  (`SILV_STATE(thinned)`) to the shared pilot/national builder while preserving
+  existing natural/managed track ids. Natural/managed tracks keep their CC
+  treatments; THIN is `begin=20,end=40,offset=-1,retain=0` (negative offset is
+  the WS4 partial-cut sentinel that retains current age). Thinned CC is
+  `begin=40,end=1000,new_track=managed,offset=0`; managed THIN self and
+  managed CC remain. Added `feature.Yield.<p>.thinned.Total`; THIN/CC
+  harvested and treated products for unmanaged/thinned/managed states; 195
+  national account labels and 15 pilot labels, all `sum=1.0`. Rebuilt the
+  national 990-m dataset (6,807,192 fragments, 1,984,017 blocks, 2,799 tracks,
+  5,598 treatments, 11,196 products) and G2 pilot (2,446,363 fragments,
+  932,041 blocks, 12 tracks, 24 treatments, 48 products); both validate exit
+  0. The national CC simulation is unchanged at 968,900,774.756 m3 and
+  7,514,902.98 ha. A 40-block, 13-province THIN -> CC simulation
+  (`data/derived/ws4/thin-transition-national-990m/`) harvested 588,608.208 m3
+  and treated 6,273.540 ha at THIN offset 0; the thinned feature at offset 0
+  equals the pre-treatment volume, proving age retention. The CC at offset 10
+  harvested 671,252.422 m3 at age+10, moved the same 6,273.540 ha to managed
+  (final managed value 195,071.522 m3), and left zero thinned value. Added
+  `workflows/ws4_instances/run_ws4_thin_transition.py`, the WS4
+  negative-offset sentinel patch in `patches/`, tests, and
+  `docs/ws4-thin-treatment.md`. Reran the national WS4 119 Mm3 chain and
+  OSeCAN handoff to refresh the dataset-manifest hash; numeric results are
+  unchanged (118,977,392.87970258 m3, 45 rows; official OSeCAN 21/21 and 7/7
+  tiers unchanged). No thinning or planting yield response is claimed. The
+  full 3,345-tile coverage, 24-tile tiled sample, tiled chain, and tiled
+  OSeCAN artifact were not rebuilt; the tiled chain's recorded national
+  manifest hash is stale (`b4638c35...`) while its tiled results are unchanged.
+  No unexpected `D`; no UI, frozen chain v5.1, or official OSeCAN change.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

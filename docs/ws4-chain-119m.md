@@ -28,8 +28,10 @@ fabricated.
 
 1. Read the national WS4 `fragments`, `blocks`, `tracks`, `features`, and
    `curves` tables.
-2. Parse `AU(<province>)` from each natural/unmanaged track name and join the
-   track's `feature.Yield.<province>.unmanaged.Total` curve.
+2. Restrict to `SILV_STATE(baseline)` natural/unmanaged tracks (the appended
+   `SILV_STATE(thinned)` tracks are excluded), parse `AU(<province>)` from the
+   track name, and join the track's
+   `feature.Yield.<province>.unmanaged.Total` curve.
 3. Compute fragment volume as `area_ha × curve(age)` at the exact integer age;
    sum fragments to block volume. Block area is checked against fragment area.
 4. Keep natural/unmanaged blocks with `offset >= 40`. Select whole blocks per
