@@ -360,6 +360,7 @@ def test_chain_and_osecan_tiers() -> None:
 def test_levels_and_labels() -> None:
     combined = _combined()
     assert combined["status"] == "pass"
+    assert combined["sustainability_status"] == "shortfall"
     expected_labels = {
         "model_estimate": True,
         "observed": False,

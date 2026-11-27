@@ -39,8 +39,8 @@
   `chain_v51_unchanged=true`. No legal THLB/slope/spatial-road claim, no chain
   v5.1 mutation, no full-forest artifact rewrite, no official OSeCAN change,
   no UI change, and no unexpected `D`; WS4 validate and the operable tests
-  pass. Data commit `f78231f5c`; annexed product values and mask copied to
-  `arbutus-s3`.
+  pass. Data commits `f78231f5c` and `ba4a87aec`; annexed product values and
+  mask copied to `arbutus-s3`.
   Also fixed the stale `tests/test_ws4_chain_119m.py` manifest-hash test to
   stop pinning the mutable docs model-card hash while keeping all data and
   frozen-input hashes pinned.

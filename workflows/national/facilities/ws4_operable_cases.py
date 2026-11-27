@@ -2291,11 +2291,15 @@ def build() -> dict[str, Any]:
         and osecan_summary["official_unchanged"]
         else "fail"
     )
+    any_sustained = any(
+        case_summaries[spec.key]["schedule"]["sustained"] for spec in CASES
+    )
     summary: dict[str, Any] = {
         "artifact": ARTIFACT,
         "artifact_version": ARTIFACT_VERSION,
         "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "status": status,
+        "sustainability_status": "sustained" if any_sustained else "shortfall",
         "title": ARTIFACT_TITLE,
         "labels": LABELS,
         "operable_screen": mask_summary,
