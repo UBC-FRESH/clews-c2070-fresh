@@ -1064,6 +1064,29 @@ decide what blocks production readiness after the conceptual alpha.
   `model_estimate` / `sensitivity_only`; no UI, official OSeCAN, or chain
   v5.1 change; no unexpected `D`.
 
+- [x] P7.43 Build the national WS4 forest estate at 990-m fragments.
+  Completed: changed the WS4 fragment resolution from the pilot's 30-m pixel
+  to 990 m (33 × 33 SCANFI pixels) while retaining 30-m inventory reads.
+  Chunk-scanned 21,246,666,606 aligned SCANFI pixels once (499 s), mapped
+  7,234,331 990-m block centres through the true 50-km node allocation
+  geometry, and compiled 6,807,192 forest fragments (411,250,630.32 ha) into
+  1,984,017 8-neighbour blocks. Used 718 RSYC tile group curves across 933
+  province-curve pairs (1,866 natural/managed tracks); broadleaf falls back to
+  the tile generic curve and no species-specific curve is used nationally.
+  Published the 12-table WS4 dataset at
+  `data/derived/ws4/scanfi-national-990m/dataset/` with resolution labels
+  `inventory_resolution=30m` and `ws4_fragment_resolution=990m`, a hashed
+  manifest, a 33,284-row province-stratified CC schedule (7,514,902.98 ha),
+  and a 20-year run. `ws4 validate` exits 0; simulation harvests
+  968,900,774.756 m3, establishes 7,514,902.98 ha of managed area, and reports
+  final managed yield 448,784,158.666 m3. Forest outside the RSYC
+  tile-province allocation is reported, not imputed (4,874,088.24 ha).
+  Added `workflows/ws4_instances/build_scanfi_national_estate.py`, focused
+  tests, and `docs/ws4-national-estate-990m.md`. Labels remain
+  `model_estimate` / `sensitivity_only`; `national_scope=true` but
+  `national_claim=false`; no UI, official OSeCAN, or chain v5.1 change; no
+  unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

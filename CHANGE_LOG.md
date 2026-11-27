@@ -2,6 +2,33 @@
 
 ## 2026-11-27
 
+- **Built the national WS4 forest estate at 990-m fragments (P7.43).** Kept
+  SCANFI reads at 30 m but changed the WS4 fragment resolution to 990 m
+  (33 × 33 pixels, 98.01 ha maximum) so the national estate is tractable as
+  one dataset. Chunk-scanned 21,246,666,606 aligned pixels once in 8-block-row
+  strips, aggregated 6,807,192 forest fragments (411,250,630.32 ha / 4.1125M
+  km²), and labelled 1,984,017 8-neighbour blocks without clipping at 50-km
+  subcell windows. Parent assignment used the true
+  `subcell ∩ (tile ∩ province)` allocation geometry at 990 m; 4,874,088.24 ha
+  of forest-class pixels outside that allocation are reported as excluded,
+  not imputed. Resolved 770 RSYC tile group/generic curves and used 718 across
+  933 province-curve pairs and 1,866 natural/managed tracks. Broadleaf uses the
+  tile generic fallback where the literal broadleaf group row is absent; no
+  species-specific curve is used nationally. Published the 12-table WS4
+  dataset at `data/derived/ws4/scanfi-national-990m/dataset/` with
+  `inventory_resolution=30m`, `ws4_fragment_resolution=990m`, source hashes for
+  the two rasters, RSYC CSV, RSYC tile GPKG, and 50-km node CSV, a 33,284-row
+  province-stratified CC schedule (2.0% of eligible blocks; 7,514,902.98 ha),
+  and a 20-year run. `ws4 validate` exits 0; simulation harvests
+  968,900,774.756 m3, establishes 7,514,902.98 ha of managed area, and reports
+  final managed yield 448,784,158.666 m3 and final unmanaged yield
+  49,594,899,616.869 m3 at offset 19. Added
+  `workflows/ws4_instances/build_scanfi_national_estate.py`, focused unit and
+  slow WS4 smoke tests, and `docs/ws4-national-estate-990m.md`. Labels remain
+  `model_estimate` / `observed=false` / `policy_grade=false`;
+  `national_scope=true` but `national_claim=false`; no UI, official OSeCAN, or
+  chain v5.1 change; no unexpected `D`.
+
 - **Built the first WS4 national forest-estate pilot from SCANFI pixels and
   RSYC curves (P7.42).** Selected `G2|BC|S32` as the highest-harvest BC 50-km
   supply node (228,408.1768 m3; parent `G2|BC`, tile G2, row 3, col 2), rebuilt
