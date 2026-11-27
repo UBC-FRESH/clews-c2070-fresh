@@ -2,6 +2,33 @@
 
 ## 2026-11-27
 
+- **Built the tiled 30-m national WS4 architecture and representative run
+  (P7.46).** Added one WS4 dataset per committed 50-km supply node, with each
+  30-m SCANFI forest pixel as a fragment and 8-neighbour equal
+  `(age_class, curve_key)` cliques as blocks. The inventory geometry is the
+  50-km subcell intersected with its province (the committed
+  `subcell_geometry_area_ha`), so the 3,562 candidates (3,164 unique
+  rectangles; 398 multi-province rectangles) partition the land base. Built all
+  24 representative tiles: the highest-harvest node in each of 12
+  positive-harvest provinces plus all 13 committed PEI nodes across six parent
+  tiles; NU has zero harvest and is skipped. Selected totals: 27,164,931
+  fragments, 10,075,337 blocks, 2,444,843.79 ha forest, 576.06 MB local
+  storage. All 24 `ws4 validate` runs exit 0 and all 24 20-year/10% CC
+  simulations pass with treated area equal to scheduled area. The national
+  manifest lists all 3,562 candidates, per-tile counts/validation/simulation,
+  provenance hashes, totals, extrapolation, and the exact full-run command.
+  Area-scaled full-national projection: ~4.57B fragments, ~1.69B blocks,
+  ~96.9 GB total (57.6 GB dataset + 37.5 GB run outputs); the full build was
+  not run and `full_run.status=not_run`. Added
+  `workflows/ws4_instances/build_scanfi_tiled_30m.py`,
+  `tests/test_ws4_tiled_30m.py`, and `docs/ws4-tiled-30m-national.md`; the
+  pilot builder now exposes generic node selectors, province geometry helpers,
+  precomputed source records, and sparse block labelling. Labels
+  `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `tiled_30m=true` / `tile_resolution_m=30000` /
+  `inventory_resolution=30m`; no UI, official OSeCAN, chain v5.1, national
+  990-m, or G2 pilot change; no unexpected `D`.
+
 - **Rebuilt the OSeCAN handoff from the WS4-driven 119 Mm3 chain (P7.45).**
   Added `forestry_osecan_handoff_ws4` with the frozen handoff-v10 13-zone
   weights applied on the explicit origin-province WS4 basis. The WS4 chain is

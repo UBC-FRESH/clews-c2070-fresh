@@ -38,9 +38,14 @@ import rasterio
 from rasterio.features import rasterize
 from rasterio.warp import transform_geom
 from rasterio.windows import Window
-from scipy import ndimage
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
 from shapely.geometry import Polygon, shape
 from shapely.validation import make_valid
+
+from workflows.national.facilities.national_facility_inventory import (
+    PROVINCES,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = REPO_ROOT / "data"
@@ -283,7 +288,8 @@ def _write_gitattributes(out_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def select_pilot_node(path: Path = SUPPLY_NODES_CSV) -> PilotNode:
+def load_supply_nodes(path: Path = SUPPLY_NODES_CSV) -> pd.DataFrame:
+    """Load and validate the committed 50-km supply-node table."""
     if not path.is_file():
         raise ScanfiEstateError(f"supply-node table is missing: {path}")
     frame = pd.read_csv(path)
@@ -302,42 +308,94 @@ def select_pilot_node(path: Path = SUPPLY_NODES_CSV) -> PilotNode:
     missing = required - set(frame.columns)
     if missing:
         raise ScanfiEstateError(f"{path}: missing columns {sorted(missing)}")
-    british_columbia = frame[frame["province"].astype(str) == "BC"].copy()
-    if british_columbia.empty:
-        raise ScanfiEstateError(f"{path}: no BC supply nodes")
-    british_columbia["harvest_m3"] = pd.to_numeric(
-        british_columbia["harvest_m3"], errors="raise"
+    if not frame["node_id"].is_unique:
+        raise ScanfiEstateError(f"{path}: duplicate node_id values")
+    frame = frame.copy()
+    for column in ("row", "col"):
+        frame[column] = pd.to_numeric(frame[column], errors="raise").astype(int)
+    for column in ("lat", "lon", "harvest_m3", "subcell_area_ha"):
+        frame[column] = pd.to_numeric(frame[column], errors="raise")
+    for row in frame.itertuples(index=False):
+        expected = f"{row.tile_id}|{row.province}|S{row.row}{row.col}"
+        if str(row.node_id) != expected:
+            raise ScanfiEstateError(
+                f"{path}: node_id {row.node_id!r} does not match {expected!r}"
+            )
+        if not (1 <= int(row.row) <= GRID_SIZE and 1 <= int(row.col) <= GRID_SIZE):
+            raise ScanfiEstateError(
+                f"{path}: row/col outside 3x3 grid for {row.node_id!r}"
+            )
+        if str(row.province) not in PROVINCES:
+            raise ScanfiEstateError(
+                f"{path}: unknown province {row.province!r} in {row.node_id!r}"
+            )
+        if not all(
+            math.isfinite(float(getattr(row, field)))
+            for field in ("lat", "lon", "harvest_m3", "subcell_area_ha")
+        ):
+            raise ScanfiEstateError(
+                f"{path}: non-finite numeric value in {row.node_id!r}"
+            )
+        if float(row.harvest_m3) < 0.0:
+            raise ScanfiEstateError(
+                f"{path}: negative harvest for {row.node_id!r}"
+            )
+        if float(row.subcell_area_ha) <= 0.0:
+            raise ScanfiEstateError(
+                f"{path}: invalid productive subcell area for {row.node_id!r}"
+            )
+    return frame
+
+
+def node_from_row(row: Any) -> PilotNode:
+    """Parse one supply-node row into a validated :class:`PilotNode`."""
+    return PilotNode(
+        node_id=str(row.node_id),
+        parent_node_id=str(row.parent_node_id),
+        tile_id=str(row.tile_id),
+        province=str(row.province),
+        row=int(row.row),
+        col=int(row.col),
+        lat=float(row.lat),
+        lon=float(row.lon),
+        harvest_m3=float(row.harvest_m3),
+        subcell_area_ha=float(row.subcell_area_ha),
     )
-    best = british_columbia.sort_values(
+
+
+def select_supply_node(
+    node_id: str, path: Path = SUPPLY_NODES_CSV
+) -> PilotNode:
+    """Select one committed supply node by ``node_id``."""
+    frame = load_supply_nodes(path)
+    matches = frame[frame["node_id"].astype(str) == node_id]
+    if len(matches) != 1:
+        raise ScanfiEstateError(
+            f"{path}: expected one node {node_id!r}, found {len(matches)}"
+        )
+    return node_from_row(matches.iloc[0])
+
+
+def select_province_top_node(
+    province: str, path: Path = SUPPLY_NODES_CSV
+) -> PilotNode:
+    """Select the highest-harvest 50-km subnode in one province."""
+    frame = load_supply_nodes(path)
+    subset = frame[frame["province"].astype(str) == province].copy()
+    if subset.empty:
+        raise ScanfiEstateError(f"{path}: no {province} supply nodes")
+    subset = subset[subset["harvest_m3"] > 0.0]
+    if subset.empty:
+        raise ScanfiEstateError(f"{path}: no positive-harvest {province} supply nodes")
+    best = subset.sort_values(
         ["harvest_m3", "node_id"], ascending=[False, True]
     ).iloc[0]
-    row = int(best["row"])
-    col = int(best["col"])
-    if not (1 <= row <= GRID_SIZE and 1 <= col <= GRID_SIZE):
-        raise ScanfiEstateError(
-            f"{path}: selected row/col outside 3x3 grid: {row!r}/{col!r}"
-        )
-    node = PilotNode(
-        node_id=str(best["node_id"]),
-        parent_node_id=str(best["parent_node_id"]),
-        tile_id=str(best["tile_id"]),
-        province=str(best["province"]),
-        row=row,
-        col=col,
-        lat=float(best["lat"]),
-        lon=float(best["lon"]),
-        harvest_m3=float(best["harvest_m3"]),
-        subcell_area_ha=float(best["subcell_area_ha"]),
-    )
-    if node.node_id != f"{node.tile_id}|{node.province}|S{node.row}{node.col}":
-        raise ScanfiEstateError(
-            f"node_id {node.node_id!r} does not match tile/province/row/col"
-        )
-    if not math.isfinite(node.subcell_area_ha) or node.subcell_area_ha <= 0.0:
-        raise ScanfiEstateError(
-            f"supply node has invalid productive subcell area: {node.subcell_area_ha}"
-        )
-    return node
+    return node_from_row(best)
+
+
+def select_pilot_node(path: Path = SUPPLY_NODES_CSV) -> PilotNode:
+    """Select the committed BC pilot node (highest BC harvest)."""
+    return select_province_top_node("BC", path)
 
 
 def load_tile_geometry(tile_id: str, path: Path = RSYC_TILES_GPKG) -> Any:
@@ -371,18 +429,52 @@ def subcell_polygon(tile_geometry: Any, row: int, col: int) -> Polygon:
     )
 
 
+def load_province_geometry(
+    province: str, path: Path = BOUNDARY_GEOJSON
+) -> Any:
+    """Load one ADM1 province geometry in EPSG:3978, fail-closed."""
+    if province not in PROVINCES:
+        raise ScanfiEstateError(f"unknown province code: {province!r}")
+    if not path.is_file():
+        raise ScanfiEstateError(f"province boundary file is missing: {path}")
+    provinces = gpd.read_file(path).to_crs(3978)
+    if "shapeName" not in provinces.columns:
+        raise ScanfiEstateError(f"{path}: missing shapeName column")
+    wanted = PROVINCES[province]
+    matches = provinces[provinces["shapeName"].astype(str) == wanted]
+    if len(matches) != 1:
+        raise ScanfiEstateError(
+            f"{path}: expected one geometry for {province} ({wanted}), "
+            f"found {len(matches)}"
+        )
+    geometry = make_valid(matches.iloc[0].geometry)
+    if geometry.is_empty or geometry.area <= 0.0:
+        raise ScanfiEstateError(f"{path}: invalid {province} geometry")
+    return geometry
+
+
+def province_intersection_polygon(
+    polygon_3978: Any,
+    province: str,
+    path: Path = BOUNDARY_GEOJSON,
+) -> Any:
+    """Intersect an EPSG:3978 polygon with one province, fail-closed."""
+    geometry = make_valid(polygon_3978.intersection(load_province_geometry(province, path)))
+    if geometry.is_empty or geometry.area <= 0.0:
+        raise ScanfiEstateError(
+            f"polygon has no positive intersection with {province}"
+        )
+    return geometry
+
+
 def province_intersection_area(polygon_3978: Any, province: str = "BC") -> float:
     if not BOUNDARY_GEOJSON.is_file():
         return float("nan")
-    provinces = gpd.read_file(BOUNDARY_GEOJSON).to_crs(3978)
-    names = {"BC": "British Columbia"}
-    match = provinces[
-        provinces["shapeName"].astype(str) == names.get(province, province)
-    ]
-    if match.empty:
+    try:
+        geometry = province_intersection_polygon(polygon_3978, province)
+    except ScanfiEstateError:
         return float("nan")
-    geometry = make_valid(match.iloc[0].geometry)
-    return float(make_valid(polygon_3978.intersection(geometry)).area / 10_000.0)
+    return float(geometry.area / 10_000.0)
 
 
 # ---------------------------------------------------------------------------
@@ -606,9 +698,15 @@ def resolve_curves(
         raise ScanfiEstateError(f"RSYC library has no rows for {tile_id}|{province}")
     for column in ("b1", "b2", "b3", "b4"):
         subset[column] = pd.to_numeric(subset[column], errors="raise")
-    if (subset[["b1", "b2", "b3", "b4"]] <= 0.0).any().any():
+    if not np.all(np.isfinite(subset[["b1", "b2", "b3", "b4"]].to_numpy())):
         raise ScanfiEstateError(
-            f"RSYC library for {tile_id}|{province} has non-positive coefficients"
+            f"RSYC library for {tile_id}|{province} has non-finite coefficients"
+        )
+    # A negative b4 is a published fit shape (flagged by the RSYC library as
+    # ``negative_b4_published_fit``); b1-b3 must still be positive.
+    if (subset[["b1", "b2", "b3"]] <= 0.0).any().any():
+        raise ScanfiEstateError(
+            f"RSYC library for {tile_id}|{province} has non-positive b1/b2/b3"
         )
 
     coefficient_sets: dict[str, set[tuple[float, float, float, float]]] = defaultdict(
@@ -679,12 +777,39 @@ def resolve_curves(
         ),
         None,
     )
+    # Group rows are keyed by ``source_species`` rather than by the literal
+    # ``species`` column: a tile conifer group may be repeated on ABIE.BAL,
+    # LARI.LAR, PINU.RES, ... rows.  Resolve one group curve per code and fail
+    # if the same group carries two different curves.
+    group_specs: dict[str, CurveSpec] = {}
+    for row in subset.itertuples(index=False):
+        spec = make_spec(row)
+        source = str(row.source_species).lower()
+        species = str(row.species)
+        group_code: str | None = None
+        if source == "coniferous" or species == "CONIFEROUS":
+            group_code = "CONIFEROUS"
+        elif source == "broadleaf" or species == "BROADLEAF":
+            group_code = "BROADLEAF"
+        if group_code is None:
+            continue
+        existing_group = group_specs.get(group_code)
+        if existing_group is not None and existing_group.key != spec.key:
+            raise ScanfiEstateError(
+                f"RSYC group {group_code} has two different curves for "
+                f"{tile_id}|{province}: {existing_group.key!r} and {spec.key!r}"
+            )
+        group_specs[group_code] = spec
 
     def resolve_code(code: str) -> tuple[CurveSpec | None, str]:
         exact = by_species.get(code)
         if exact is not None:
             return exact, "exact"
+        if code in group_specs:
+            return group_specs[code], "group"
         group = CODE_TO_GROUP.get(code)
+        if group is not None and group in group_specs:
+            return group_specs[group], "group"
         if group is not None and group in by_species:
             return by_species[group], "group"
         if generic_spec is not None:
@@ -770,6 +895,9 @@ def resolve_curves(
             > 1
         ),
         "generic_curve_key": generic_spec.key if generic_spec is not None else None,
+        "group_curves": {
+            code: spec.key for code, spec in sorted(group_specs.items())
+        },
         "species_resolution": species_resolution,
         "landcover_resolution": landcover_resolution,
     }
@@ -799,21 +927,62 @@ class Inventory:
 
 
 def _label_blocks(code_grid: np.ndarray, forest: np.ndarray) -> tuple[np.ndarray, int]:
-    if not forest.any():
+    """Label 8-neighbour connected components of equal codes in one pass.
+
+    The sparse graph keeps the cost proportional to the number of forest pixels
+    instead of scanning the full window once per distinct code.  Component ids
+    are arbitrary here; :func:`_relabel_by_first_pixel` imposes row-major order.
+    """
+    if code_grid.shape != forest.shape:
+        raise ScanfiEstateError("code grid and forest mask differ in shape")
+    positions = np.flatnonzero(forest)
+    fragment_count = positions.size
+    if fragment_count == 0:
         return np.zeros(code_grid.shape, dtype=np.int32), 0
-    labels = np.zeros(code_grid.shape, dtype=np.int32)
-    next_label = 1
-    structure = np.ones((3, 3), dtype=np.uint8)
-    for code in np.unique(code_grid[forest]):
-        mask = code_grid == code
-        components, count = ndimage.label(mask, structure=structure)
-        if count == 0:
-            raise ScanfiEstateError(
-                f"block labelling produced no component for code {code}"
-            )
-        labels[mask] = components[mask] + next_label - 1
-        next_label += count
-    return labels, next_label - 1
+    rows, cols = code_grid.shape
+    cell_index = np.full(code_grid.shape, -1, dtype=np.int32)
+    cell_index.ravel()[positions] = np.arange(fragment_count, dtype=np.int32)
+    edge_sources: list[np.ndarray] = []
+    edge_targets: list[np.ndarray] = []
+    directions = ((0, 1), (1, 0), (1, 1), (1, -1))
+    for delta_row, delta_col in directions:
+        if delta_row == 0:
+            source_slice = (slice(None), slice(0, cols - 1))
+            target_slice = (slice(None), slice(1, cols))
+        elif delta_col == 0:
+            source_slice = (slice(0, rows - 1), slice(None))
+            target_slice = (slice(1, rows), slice(None))
+        elif delta_col > 0:
+            source_slice = (slice(0, rows - 1), slice(0, cols - 1))
+            target_slice = (slice(1, rows), slice(1, cols))
+        else:
+            source_slice = (slice(0, rows - 1), slice(1, cols))
+            target_slice = (slice(1, rows), slice(0, cols - 1))
+        source_index = cell_index[source_slice]
+        target_index = cell_index[target_slice]
+        same_code = code_grid[source_slice] == code_grid[target_slice]
+        mask = (source_index >= 0) & (target_index >= 0) & same_code
+        if mask.any():
+            edge_sources.append(source_index[mask].astype(np.int32))
+            edge_targets.append(target_index[mask].astype(np.int32))
+    if not edge_sources:
+        full_labels = np.zeros(code_grid.shape, dtype=np.int32)
+        full_labels.ravel()[positions] = np.arange(
+            1, fragment_count + 1, dtype=np.int32
+        )
+        return full_labels, fragment_count
+    sources = np.concatenate(edge_sources)
+    targets = np.concatenate(edge_targets)
+    graph = coo_matrix(
+        (np.ones(len(sources), dtype=np.uint8), (sources, targets)),
+        shape=(fragment_count, fragment_count),
+    )
+    block_count, labels = connected_components(
+        graph, directed=False, return_labels=True
+    )
+    full_labels = np.zeros(code_grid.shape, dtype=np.int32)
+    full_labels.ravel()[positions] = labels.astype(np.int32) + 1
+    return full_labels, int(block_count)
 
 
 def _relabel_by_first_pixel(
@@ -1356,16 +1525,62 @@ def write_manifest(
     node: PilotNode,
     inventory: Inventory,
     resolution: CurveResolution,
-    source_paths: Sequence[Path],
+    source_paths: Sequence[Path] | None = None,
+    source_records: Sequence[Mapping[str, Any]] | None = None,
+    extra_metadata: Mapping[str, Any] | None = None,
+    labels: Mapping[str, Any] = LABELS,
+    recipe: str = "SCANFI_RSYC_pilot",
+    pilot_name: str = "ws4-national-estate-pilot-v1",
 ) -> dict[str, Any]:
-    tables = {name: f"{name}.parquet" for name in _table_schema()}
+    if source_records is None and source_paths is None:
+        raise ScanfiEstateError("manifest requires source_paths or source_records")
+    if source_records is not None and source_paths is not None:
+        raise ScanfiEstateError(
+            "manifest accepts source_paths or source_records, not both"
+        )
+    records = (
+        list(source_records)
+        if source_records is not None
+        else _source_records(source_paths or ())
+    )
+    metadata = {
+        **labels,
+        "pilot": pilot_name,
+        "node_id": node.node_id,
+        "parent_node_id": node.parent_node_id,
+        "tile_id": node.tile_id,
+        "province": node.province,
+        "row": node.row,
+        "col": node.col,
+        "lat": node.lat,
+        "lon": node.lon,
+        "harvest_m3": node.harvest_m3,
+        "subcell_area_ha": node.subcell_area_ha,
+        "forest_fragments": inventory.counts["forest_fragments"],
+        "blocks": inventory.counts["blocks"],
+        "forest_area_ha": inventory.counts["forest_area_ha"],
+        "curve_keys": [spec.key for spec in resolution.specs],
+        "curve_specs": curve_spec_records(resolution),
+        "curve_diagnostics": resolution.diagnostics,
+        "resource_unit": "30-m SCANFI pixel",
+        "area_basis": "pixel count x 0.09 ha",
+        "ws4": ws4_provenance(),
+        "built_utc": _utc_now(),
+    }
+    if extra_metadata is not None:
+        overlap = set(extra_metadata) & set(metadata)
+        if overlap:
+            raise ScanfiEstateError(
+                f"extra manifest metadata would overwrite {sorted(overlap)}"
+            )
+        metadata.update(extra_metadata)
     manifest = {
         "schema_version": "0.1",
-        "tables": tables,
-        "sources": _source_records(source_paths),
+        "tables": {name: f"{name}.parquet" for name in _table_schema()},
+        "sources": records,
         "options": {
             "period_length": 1,
-            "recipe": "SCANFI_RSYC_pilot",
+            "recipe": recipe,
             "model": "II",
             "resolution_m": PIXEL_SIZE_M,
             "fragment_area_ha": PIXEL_AREA_HA,
@@ -1376,30 +1591,7 @@ def write_manifest(
             "managed_curve_same_as_natural": True,
             "planting_yield_response": "none: no data in this pilot",
         },
-        "metadata": {
-            **LABELS,
-            "pilot": "ws4-national-estate-pilot-v1",
-            "node_id": node.node_id,
-            "parent_node_id": node.parent_node_id,
-            "tile_id": node.tile_id,
-            "province": node.province,
-            "row": node.row,
-            "col": node.col,
-            "lat": node.lat,
-            "lon": node.lon,
-            "harvest_m3": node.harvest_m3,
-            "subcell_area_ha": node.subcell_area_ha,
-            "forest_fragments": inventory.counts["forest_fragments"],
-            "blocks": inventory.counts["blocks"],
-            "forest_area_ha": inventory.counts["forest_area_ha"],
-            "curve_keys": [spec.key for spec in resolution.specs],
-            "curve_specs": curve_spec_records(resolution),
-            "curve_diagnostics": resolution.diagnostics,
-            "resource_unit": "30-m SCANFI pixel",
-            "area_basis": "pixel count x 0.09 ha",
-            "ws4": ws4_provenance(),
-            "built_utc": _utc_now(),
-        },
+        "metadata": metadata,
     }
     dataset_dir.joinpath("manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n",
@@ -1588,12 +1780,14 @@ def write_pilot_readme(out_dir: Path, summary: Mapping[str, Any]) -> None:
 def build_pilot(
     *,
     out_dir: Path,
+    node: PilotNode | None = None,
     sample_fraction: float = 0.1,
     years: int = 50,
     run_ws4: bool = False,
 ) -> dict[str, Any]:
     assert_no_unexpected_deletions()
-    node = select_pilot_node()
+    if node is None:
+        node = select_pilot_node()
     tile_geometry = load_tile_geometry(node.tile_id)
     polygon = subcell_polygon(tile_geometry, node.row, node.col)
     if not math.isclose(polygon.area / 10_000.0, 250_000.0, abs_tol=1e-3):

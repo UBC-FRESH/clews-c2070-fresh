@@ -1132,6 +1132,30 @@ decide what blocks production readiness after the conceptual alpha.
   `ws4_derived=true`; no UI, official OSeCAN, candidate-limit, or chain v5.1
   change.
 
+- [x] P7.46 Build the tiled 30-m national WS4 architecture and representative
+  run. Completed: added
+  `workflows/ws4_instances/build_scanfi_tiled_30m.py`,
+  `tests/test_ws4_tiled_30m.py`, and `docs/ws4-tiled-30m-national.md`; the
+  pilot builder now exposes node selectors and fast sparse block labelling.
+  Each tile is one committed 50-km supply node intersected with its province,
+  so the 3,562 candidates (3,164 unique rectangles, 398 multi-province
+  rectangles) partition the land base instead of double-counting. Built all 24
+  representative tiles: the highest-harvest node in each of 12 positive-harvest
+  provinces plus all 13 committed PEI nodes across six parent tiles; NU has
+  zero harvest and is skipped. Selected totals: 27,164,931 fragments,
+  10,075,337 blocks, 2,444,843.79 ha forest, 576.06 MB local storage. All 24
+  `ws4 validate` exit 0; all 24 20-year/10% CC simulations pass with treated
+  area equal to scheduled area. The national manifest lists all 3,562
+  candidates, per-tile counts/validation/simulation, provenance hashes,
+  total/extrapolated scale, and the exact `--all` command. Area-scaled full
+  national projection: ~4.57B fragments, ~1.69B blocks, ~96.9 GB total
+  (57.6 GB dataset + 37.5 GB run outputs) at the selected run profile. The full
+  national 30-m build was **not** run; `full_run.status=not_run`. Labels
+  `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `tiled_30m=true` / `tile_resolution_m=30000` /
+  `inventory_resolution=30m`; no UI, official OSeCAN, chain v5.1, national
+  990-m, or G2 pilot change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
