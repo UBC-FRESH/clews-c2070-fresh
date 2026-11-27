@@ -2,6 +2,35 @@
 
 ## 2026-11-27
 
+- **Built the sustainable 119 Mm3/yr WS4 schedule and chain on the national
+  990 m estate (P7.52).** Added
+  `workflows/national/facilities/ws4_sustainable_119m.py`,
+  `workflows/national/facilities/ws4_sustainable_osecan_handoff.py`,
+  `tests/test_ws4_sustainable_119m.py`, and
+  `docs/ws4-sustainable-119m.md`. The 100-year schedule selects 318,820 whole
+  blocks / 84,348,104.4 ha from 1,984,017 blocks / 411,250,630.32 ha; exact
+  harvest is 11,988,389,080.134 m3, 119,883,890.8 m3/yr. Annual harvest
+  minimum 119,043,264.5 m3/yr, maximum 122,161,035.7 m3/yr, CV 0.008461;
+  period minimum 1,190,648,029.4 m3 versus 1,189,773,391.0 target; zero
+  period shortfall; 119 Mm3/yr sustained for 100 years. Rotation raw peaks
+  are 1/2/13/24 years and are capped/flagged to 40 years for 100% of selected
+  blocks; no block is harvested twice in 100 years and no block is harvested
+  under rotation. Provincial period targets use the frozen 119 Mm3 control
+  shares so the chain/OSeCAN handoff remains comparable; the national
+  oldest-first free run is reported only as a sensitivity (BC 78.60% of
+  harvest, 6/7 tier positions if used). Frozen v5.1 coefficients on the
+  100-year annual average give solid 37,538,259.6 m3 (-0.3593%), pulp
+  12,098,450.1 odt (+0.2663%), process 498.576637 PJ (-0.0349%), harvest
+  gross 446.391611 PJ (+0.4457%), harvest 60% 267.834967 PJ (+0.4457%), and
+  total gross 944.968248 PJ (+0.1915%) on the 118,977,339.1 m3 basis. OSeCAN
+  handoff: 7/7 119 Mm3 tier positions on both bases, 21/21 frozen reference,
+  official 146-file tree `80caa91c...` with 0 changed files. Labels:
+  `model_estimate=true`, `observed=false`, `policy_grade=false`,
+  `national_claim=false`, `ws4_derived=true`, `sustainable_schedule=true`,
+  `official_osecan_changed=false`. No chain v5.1 mutation, no official OSeCAN
+  change, no UI change, and no unexpected `D`; `ws4 validate` and 9 tests
+  pass. Data commit `ce1670c62`.
+
 - **Promoted the WS4-derived national chain/OSeCAN release and marked the
   estate model adopted as a candidate (P7.51).** Added
   `docs/national-facility-chain-ws4-v1.md`; updated the national

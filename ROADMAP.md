@@ -1305,6 +1305,23 @@ decide what blocks production readiness after the conceptual alpha.
   official OSeCAN unchanged; no unexpected `D`. Official OSeCAN adoption
   remains with the Taco/energy team.
 
+- [x] P7.52 Build and simulate a sustainable 119 Mm3/yr WS4 schedule and rebuild
+  the chain/OSeCAN from the sustainable harvest. Completed: 100-year schedule
+  on the national 990 m estate (1,984,017 blocks / 411,250,630.32 ha),
+  318,820 whole blocks / 84,348,104.4 ha, exact 11,988,389,080.134 m3
+  (119,883,890.8 m3/yr). Annual min 119,043,264.5 m3/yr, max 122,161,035.7
+  m3/yr, CV 0.008461; period min 1,190,648,029.4 m3 versus 1,189,773,391.0
+  target; zero shortfall; sustained 100 years. Rotation raw peaks 1/2/13/24
+  years capped/flagged to 40 years; no under-rotation harvest and no
+  reharvest. Provincial period targets use the frozen 119 Mm3 control shares;
+  the national oldest-first free run is a sensitivity only (BC 78.60%).
+  Frozen v5.1 chain: solid 37,538,259.6 m3, pulp 12,098,450.1 odt, process
+  498.576637 PJ, harvest gross 446.391611 PJ, harvest 60% 267.834967 PJ,
+  total gross 944.968248 PJ on the 118,977,339.1 m3 basis. OSeCAN: 7/7 tier
+  positions on both bases, 21/21 frozen reference, official 146-file tree
+  `80caa91c...` unchanged. Added `docs/ws4-sustainable-119m.md`; no chain v5.1
+  mutation, no official OSeCAN change, no UI change, no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
