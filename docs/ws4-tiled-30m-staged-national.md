@@ -5,8 +5,9 @@ accounted for), `model_estimate` / `sensitivity_only`.
 `evidence_label=model_estimate`, `observed=false`, `policy_grade=false`,
 `national_claim=false`, `tiled_30m=true`, `tile_resolution_m=30000`,
 `inventory_resolution=30m`. No official OSeCAN change, no chain v5.1 change,
-no UI change, and no change to the national 990-m WS4 dataset, the G2 30-m
-pilot, or the existing 24-tile representative sample.
+no UI change, and no change to the national 990-m WS4 dataset or the G2 30-m
+pilot. The existing 24-tile representative sample is part of the full coverage
+and received the same metadata-only THIN patch.
 
 The full 3,345-tile coverage now also carries the WS4 THIN state-transition
 metadata. The propagation was metadata-only: fragments, blocks, curves,

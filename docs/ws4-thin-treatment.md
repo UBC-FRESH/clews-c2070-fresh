@@ -101,10 +101,11 @@ Rebuilt in this change:
 
 Not rebuilt:
 
-- the 24-tile representative tiled sample under `data/derived/ws4/tiled-30m/`
-  (none of its tile datasets were rewritten);
 - frozen chain v5.1, official OSeCAN, the tiled 30-m chain artifact, and the
   tiled OSeCAN handoff artifact.
+
+The 24-tile representative sample is a subset of the full coverage and
+received the same metadata-only THIN patch; its datasets were not rebuilt.
 
 ### 3.1 Full tiled 30-m coverage (metadata-only patch)
 

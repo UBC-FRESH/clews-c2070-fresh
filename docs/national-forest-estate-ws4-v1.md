@@ -347,9 +347,9 @@ Run the focused tests:
 
 The tiled coverage build is a distributed-scale job (58.548 GB of datasets
 and schedules at the committed stage profile); it is not a workstation smoke
-test. The committed tiled coverage and 24-tile sample are CC-baseline and were
-not rebuilt for THIN. See the component documents for exact per-stage commands
-and fail-closed guards.
+test. The committed tiled coverage and its 24-tile representative subset
+received an in-place, metadata-only THIN patch; they were not rebuilt. See the
+component documents for exact per-stage commands and fail-closed guards.
 
 ## 9. Release checklist
 
@@ -358,7 +358,8 @@ and fail-closed guards.
   `national_claim=false` stated on the release.
 - [x] Official OSeCAN, frozen chain v5.1, UI, and model/data artifacts
   explicitly unchanged.
-- [x] Full 30-m coverage and its CC-baseline/THIN caveat stated.
+- [x] Full 30-m coverage, its THIN metadata patch, and unchanged CC baseline
+  stated.
 - [x] Demo schedules labelled not sustainable harvest.
 - [x] WS4 0.2.0 negative-offset patch requirement recorded.
 - [x] Data/parent commit pointers recorded.
