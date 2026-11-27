@@ -508,9 +508,11 @@ def _load_zone_weights(
     return by_province, flat
 
 
-def _load_harvest_schedule() -> dict[str, dict[str, float]]:
+def _load_harvest_schedule(
+    path: Path = WS4_HARVEST,
+) -> dict[str, dict[str, float]]:
     rows = _read_rows(
-        WS4_HARVEST,
+        path,
         [
             "province",
             "target_m3",
@@ -571,9 +573,10 @@ def _load_harvest_schedule() -> dict[str, dict[str, float]]:
 
 def _parse_province_residues(
     basis: str,
+    path: Path = WS4_PRODUCT_CHAIN,
 ) -> tuple[dict[str, ProvinceResidue], dict[str, Any]]:
     rows = _read_rows(
-        WS4_PRODUCT_CHAIN,
+        path,
         [
             "province",
             "geography_level",

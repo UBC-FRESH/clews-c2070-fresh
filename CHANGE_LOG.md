@@ -2,6 +2,42 @@
 
 ## 2026-11-27
 
+- **Built the 119 Mm3 chain and OSeCAN handoff from the full national 30-m
+  tiled WS4 coverage (P7.48).** Added
+  `workflows/national/facilities/ws4_tiled_chain_119m.py` and
+  `ws4_tiled_osecan_handoff.py`, focused tests, and
+  `docs/ws4-tiled-chain-119m.md`. Scanned all 3,345 built/validated tile
+  datasets (3,562 candidates accounted for; 203 NU zero-harvest and 14
+  no-forest skips), reading 1,678,150,739 blocks and 1,431,297,895 eligible
+  blocks. Pass 1 ranked `area_ha × curve(block offset)` and retained the top
+  20,000 eligible blocks per tile (62,163,912 candidates; 13.456 billion m3
+  approximate). A per-province top-2,000,000 pool passed the 10% margin, and
+  pass 2 computed exact fragment-age volumes for the top 50,000 provincial
+  candidates before re-selecting whole blocks. Final selection: 427 blocks in
+  126 tiles, 1,063,108.89 ha, exact harvest 118,988,870.593 m3 versus
+  118,977,339.1 m3 (+11,531.493 m3, 0.0097%); every province meets or exceeds
+  target, NU is zero. Exact/approximate ratios range 1.0036-1.0619 by
+  province. Frozen v5.1 coefficients give solid 37,676,824.035 /
+  37,673,172.685 m3, pulp 12,067,593.917 / 12,066,424.418 odt, process
+  residue 498.798706 / 498.750367 PJ, harvest gross 444.459682 / 444.416608
+  PJ, harvest 60% 266.675809 / 266.649965 PJ, total gross 943.258388 /
+  943.166975 PJ on `ws4_achieved` / `scaled_to_119m_control` versus frozen
+  37,673,626.761 m3, 12,066,311.270 odt, 498.750917 / 444.410766 / 266.646460
+  / 943.161683 PJ; the scaled national harvest is exactly 118,977,339.1 m3.
+  The origin-province OSeCAN handoff uses frozen v10 zone weights and official
+  tiers: 182 zone rows conserve national totals, frozen reference 21/21
+  matches handoff v10, tiled 119 Mm3 tier positions match 7/7 on both bases,
+  and official OSeCAN is unchanged (146 files, `80caa91c...`, 0 changed).
+  Three selected tiles passed `ws4 validate` and one-year `CC` simulation,
+  reproducing exact selected volume/area (max volume delta 1.2e-10 m3). Added
+  `data/derived/national/facilities/ws4_tiled_chain_119m/` including the
+  nested `osecan/` zone/tier files, summary, manifest, and report. Candidate
+  Parquet staging remains in gitignored `tmp/`. Labels `model_estimate` /
+  `observed=false` / `policy_grade=false` / `national_claim=false` /
+  `ws4_derived=true` / `tiled_30m=true` / `official_osecan_changed=false`;
+  no UI, official OSeCAN, frozen chain v5.1, national 990-m dataset, or tiled
+  dataset change; no unexpected `D`.
+
 - **Added staged, resumable national 30-m tiled WS4 coverage and completed
   all four stages (P7.47).** Extended
   `workflows/ws4_instances/build_scanfi_tiled_30m.py` with a documented

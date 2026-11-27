@@ -1185,6 +1185,37 @@ decide what blocks production readiness after the conceptual alpha.
   `tiled_30m=true`; no UI, official OSeCAN, chain v5.1, national 990-m, G2
   pilot, or 24-tile sample change; no unexpected `D`.
 
+- [x] P7.48 Build the 119 Mm3 chain and OSeCAN handoff from the full national
+  30-m tiled WS4 coverage. Completed: scanned all 3,345 built/validated tile
+  datasets (3,562 candidates accounted for; 203 zero-harvest and 14 no-forest
+  skips), reading 1,678,150,739 blocks and 1,431,297,895 eligible blocks.
+  Pass 1 ranked `area_ha × curve(block offset)` and kept the top 20,000
+  candidates per tile (62,163,912 candidates; 13.456 billion m3 approximate).
+  Pass 2 computed exact fragment-age volumes for the top 50,000 provincial
+  candidates and re-selected whole blocks. Selected 427 blocks in 126 tiles,
+  1,063,108.89 ha, exact harvest 118,988,870.593 m3 versus the 118,977,339.1
+  m3 control (+11,531.493 m3, 0.0097%); every province meets or exceeds its
+  target, NU is zero. Applied frozen v5.1 per-province coefficients on
+  `ws4_achieved` and `scaled_to_119m_control`: solid 37,676,824.035 /
+  37,673,172.685 m3, pulp 12,067,593.917 / 12,066,424.418 odt, process
+  residue 498.798706 / 498.750367 PJ, harvest gross 444.459682 / 444.416608
+  PJ, harvest 60% 266.675809 / 266.649965 PJ, total gross 943.258388 /
+  943.166975 PJ versus frozen 37,673,626.761 m3, 12,066,311.270 odt,
+  498.750917 / 444.410766 / 266.646460 / 943.161683 PJ. Rebuilt the
+  origin-province OSeCAN handoff with frozen v10 zone weights and official
+  tier definitions: 182 zone rows conserve national totals, frozen reference
+  21/21 matches handoff v10, and tiled 119 Mm3 tiers match 7/7 on both bases.
+  Official OSeCAN unchanged (146 files, `80caa91c...`, 0 changed). Three
+  selected tiles passed `ws4 validate` and one-year `CC` simulation, exactly
+  reproducing selected exact volume and area. Added
+  `workflows/national/facilities/ws4_tiled_chain_119m.py`,
+  `workflows/national/facilities/ws4_tiled_osecan_handoff.py`, focused tests,
+  `docs/ws4-tiled-chain-119m.md`, and the data artifact. Labels
+  `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `ws4_derived=true` / `tiled_30m=true`; no UI,
+  official OSeCAN, frozen chain v5.1, national 990-m dataset, or tiled dataset
+  change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
