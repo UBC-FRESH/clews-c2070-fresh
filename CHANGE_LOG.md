@@ -2,6 +2,31 @@
 
 ## 2026-11-27
 
+- **Added staged, resumable national 30-m tiled WS4 coverage and ran Stage 1
+  (P7.47).** Extended
+  `workflows/ws4_instances/build_scanfi_tiled_30m.py` with a documented
+  four-stage province plan (`--stage stage1..stage4`), hash+validation resume
+  (`--resume`), datasets-only coverage mode (`--datasets-only`), deterministic
+  `--simulate-sample N`, and an explicit 120 GB storage gate. Stage counts from
+  the committed candidate CSV: stage1 Atlantic+territories 1,254 (NB 50, NS 47,
+  PE 13, NL 243, YT 232, NT 466, NU 203); stage2 BC+AB 713; stage3 SK+MB 494;
+  stage4 ON+QC 1,101; total 3,562. The gate reported 5,173.326 GB free and
+  30.099 GB projected Stage 1 full-profile storage. Stage 1 built and
+  validated 1,042 tiles: 1,147,599,965 fragments, 442,911,757 blocks,
+  103,283,996.9 ha forest, 15.053 GB datasets/schedules. The 203 zero-harvest
+  NU candidates and 9 no-forest slivers were skipped explicitly with reasons;
+  no tile, curve, or simulation was fabricated. A 32-worker independent
+  `ws4 validate` sweep passed 1,042/1,042. Five newly built tiles were
+  simulated for 20 years: 14,064,633.471 m3 harvested, 72,883.71 ha
+  treated/managed, equal to scheduled area. The cumulative manifest records
+  1,048 completed tiles (including six pre-existing Stage 2-4 sample tiles),
+  203 zero-harvest skips, 9 no-forest skips, 2,302 remaining, and
+  `full_run.status=staged_in_progress`. Added stage/resume/storage tests and
+  `docs/ws4-tiled-30m-staged-national.md`; updated ROADMAP P7.47. Labels
+  `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `tiled_30m=true`; no UI, official OSeCAN, chain
+  v5.1, national 990-m, G2 pilot, or 24-tile sample change; no unexpected `D`.
+
 - **Built the tiled 30-m national WS4 architecture and representative run
   (P7.46).** Added one WS4 dataset per committed 50-km supply node, with each
   30-m SCANFI forest pixel as a fragment and 8-neighbour equal

@@ -1,7 +1,8 @@
-"""Contract tests for the tiled 30-m national WS4 sample."""
+"""Contract tests for the tiled 30-m national WS4 sample and staged build."""
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 from collections import deque
@@ -73,14 +74,17 @@ def test_manifest_completeness_and_no_fabricated_tiles() -> None:
     frame = tiled.load_candidates()
     manifest = _manifest()
     candidates = manifest["candidates"]
-    selected_tiles = manifest["selected_tiles"]
+    completed = manifest["completed_tiles"]
     assert manifest["artifact"] == "ws4_tiled_30m_national_v1"
     assert manifest["status"] == "pass"
-    assert manifest["scope"]["scope"] == "representative"
+    assert manifest["scope"]["scope"] == "staged"
     assert manifest["scope"]["full_national_30m_run"] is False
-    assert manifest["full_run"]["status"] == "not_run"
+    assert manifest["full_run"]["status"] == "staged_in_progress"
     assert "--all" in manifest["full_run"]["command"]
-    assert "not run" in manifest["scope"]["full_national_statement"].lower()
+    assert manifest["full_run"]["datasets"] == 3562
+    assert "staged national coverage" in manifest["scope"][
+        "full_national_statement"
+    ].lower()
 
     assert manifest["tile_grid"]["candidate_tile_datasets"] == len(frame) == 3562
     assert manifest["tile_grid"]["unique_rectangles"] == 3164
@@ -89,7 +93,7 @@ def test_manifest_completeness_and_no_fabricated_tiles() -> None:
     assert {candidate["node_id"] for candidate in candidates} == set(
         frame["node_id"].astype(str)
     )
-    assert sum(int(candidate["selected"]) for candidate in candidates) == 24
+    assert all(candidate["stage"] in tiled.STAGES for candidate in candidates)
     for candidate in candidates:
         assert set(candidate) >= {
             "node_id",
@@ -100,46 +104,59 @@ def test_manifest_completeness_and_no_fabricated_tiles() -> None:
             "harvest_m3",
             "selected",
             "selection_reasons",
+            "stage",
+            "zero_harvest",
         }
-        expected_selected = bool(candidate["selection_reasons"])
-        assert bool(candidate["selected"]) is expected_selected
         assert candidate["tile_slug"] == tiled.tile_slug(candidate["node_id"])
+        assert candidate["stage"] == tiled.PROVINCE_STAGE[candidate["province"]]
 
-    assert len(selected_tiles) == 24
-    assert {row["node_id"] for row in selected_tiles} == {
-        candidate["node_id"]
-        for candidate in candidates
-        if candidate["selected"]
+    plan = manifest["stage_plan"]
+    assert plan["candidate_tiles"] == 3562
+    assert plan["stage_order"] == list(tiled.STAGE_ORDER)
+    assert {
+        stage: item["candidate_tiles"] for stage, item in plan["stages"].items()
+    } == {
+        "stage1": 1254,
+        "stage2": 713,
+        "stage3": 494,
+        "stage4": 1101,
     }
-    for row in selected_tiles:
+    assert plan["completed_tiles"] + plan["remaining_tiles"] + plan[
+        "skipped_zero_harvest_tiles"
+    ] + plan["skipped_no_forest_tiles"] == 3562
+    assert plan["completed_tiles"] == len(completed)
+    assert "stage1" in plan["completed_stages"]
+    assert set(plan["remaining_stages"]) == {"stage2", "stage3", "stage4"}
+
+    assert completed
+    assert len(completed) == manifest["totals"]["selected_tiles"]
+    for row in completed:
         assert row["validation_status"] == "pass"
         assert row["validation_exit_code"] == 0
-        assert row["simulation_status"] == "pass"
         assert row["forest_fragments"] > 0
         assert row["blocks"] > 0
         assert row["forest_area_ha"] > 0.0
         assert row["forest_area_ha"] <= row["geometry_area_ha"] + 1e-6
+        assert row["stage"] == tiled.PROVINCE_STAGE[row["province"]]
         dataset_dir = tiled.REPO_ROOT / row["dataset_path"]
-        assert (dataset_dir / "manifest.json").is_file()
-        tile_manifest = json.loads(
-            (dataset_dir / "manifest.json").read_text(encoding="utf-8")
+        tile_manifest = dataset_dir / "manifest.json"
+        assert tile_manifest.is_file()
+        assert row["dataset_manifest_sha256"] == tiled.sha256_file(
+            tile_manifest
         )
-        assert tile_manifest["metadata"]["node_id"] == row["node_id"]
-        assert tile_manifest["metadata"]["tiled_30m"] is True
-        assert (
-            tile_manifest["metadata"]["inventory_resolution"]
-            == "30m"
-        )
-        assert tile_manifest["metadata"]["national_claim"] is False
+        tile_payload = json.loads(tile_manifest.read_text(encoding="utf-8"))
+        assert tile_payload["metadata"]["node_id"] == row["node_id"]
+        assert tile_payload["metadata"]["tiled_30m"] is True
+        assert tile_payload["metadata"]["inventory_resolution"] == "30m"
+        assert tile_payload["metadata"]["national_claim"] is False
 
     totals = manifest["totals"]
-    assert totals["selected_tiles"] == 24
     assert totals["selected_fragments"] == sum(
-        row["forest_fragments"] for row in selected_tiles
+        row["forest_fragments"] for row in completed
     )
-    assert totals["selected_blocks"] == sum(row["blocks"] for row in selected_tiles)
+    assert totals["selected_blocks"] == sum(row["blocks"] for row in completed)
     assert totals["selected_forest_area_ha"] == pytest.approx(
-        sum(row["forest_area_ha"] for row in selected_tiles)
+        sum(row["forest_area_ha"] for row in completed)
     )
     assert manifest["extrapolation"]["candidate_tile_datasets"] == 3562
     area_scaled = manifest["extrapolation"][
@@ -148,6 +165,64 @@ def test_manifest_completeness_and_no_fabricated_tiles() -> None:
     assert area_scaled is not None
     assert area_scaled["forest_area_ha"] == pytest.approx(411250630.32)
     assert area_scaled["forest_fragments"] > totals["selected_fragments"]
+
+    sample = manifest["representative_sample"]
+    assert sample["built_tiles"] == sample["expected_tiles"] == 24
+    simulation = manifest["sample_simulation"]
+    assert simulation["status"] == "pass"
+    assert simulation["tiles_simulated"] > 0
+    assert simulation["harvested_volume_m3"] > 0.0
+    assert simulation["treated_area_ha"] > 0.0
+
+
+@requires_artifacts
+def test_stage1_per_tile_validation_and_explicit_skips() -> None:
+    manifest = _manifest()
+    stage = manifest["stage_plan"]["stages"]["stage1"]
+    assert stage["candidate_tiles"] == 1254
+    assert stage["positive_harvest_tiles"] == 1051
+    assert stage["zero_harvest_tiles"] == 203
+    assert stage["skipped_zero_harvest_tiles"] == 203
+    assert stage["built_tiles"] >= 1042
+    assert stage["validated_tiles"] == stage["built_tiles"]
+    assert stage["remaining_tiles"] == 0
+    assert stage["complete"] is True
+    built = [
+        row for row in stage["tiles"] if row["validation_status"] == "pass"
+    ]
+    no_forest = [
+        row
+        for row in stage["tiles"]
+        if row["validation_status"] == "skipped_no_forest"
+    ]
+    assert len(built) == stage["built_tiles"]
+    assert len(no_forest) == stage["skipped_no_forest_tiles"]
+    for row in built:
+        assert row["validation_exit_code"] == 0
+        assert row["dataset_manifest_sha256"] == tiled.sha256_file(
+            tiled.TILED_DIR / row["tile_slug"] / "dataset" / "manifest.json"
+        )
+    for row in no_forest:
+        assert row["skip_reason"]
+        assert "no forest" in row["skip_reason"].lower() or "no pixels" in row[
+            "skip_reason"
+        ].lower()
+        assert not (tiled.TILED_DIR / row["tile_slug"] / "dataset").exists()
+
+    if WS4_BIN.is_file() and built:
+        for row in built[:: max(1, len(built) // 3)][:3]:
+            result = subprocess.run(
+                [
+                    str(WS4_BIN),
+                    "validate",
+                    "--dataset",
+                    str(tiled.TILED_DIR / row["tile_slug"] / "dataset"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result.returncode == 0, result.stdout + result.stderr
 
 
 @requires_artifacts
@@ -243,13 +318,119 @@ def test_every_selected_dataset_has_labels_and_geometry() -> None:
 @requires_artifacts
 def test_no_extra_tile_directories() -> None:
     manifest = _manifest()
-    expected = {row["tile_slug"] for row in manifest["selected_tiles"]}
+    expected = {row["tile_slug"] for row in manifest["completed_tiles"]}
     actual = {
         path.name
         for path in tiled.TILED_DIR.iterdir()
         if path.is_dir() and not path.name.startswith(".")
     }
     assert actual == expected
+    assert len(actual) == manifest["stage_plan"]["completed_tiles"]
+
+
+def test_stage_plan_covers_every_candidate_exactly_once() -> None:
+    frame = tiled.load_candidates()
+    counts = tiled.stage_counts(frame)
+    assert set(counts) == {"stage1", "stage2", "stage3", "stage4"}
+    assert counts["stage1"]["candidate_tiles"] == 1254
+    assert counts["stage1"]["positive_harvest_tiles"] == 1051
+    assert counts["stage1"]["zero_harvest_tiles"] == 203
+    assert counts["stage1"]["zero_harvest_provinces"] == ["NU"]
+    assert counts["stage2"]["candidate_tiles"] == 713
+    assert counts["stage3"]["candidate_tiles"] == 494
+    assert counts["stage4"]["candidate_tiles"] == 1101
+    assert sum(item["candidate_tiles"] for item in counts.values()) == 3562
+    seen: set[str] = set()
+    for stage, item in counts.items():
+        selected = tiled.stage_candidate_frame(frame, stage)
+        assert len(selected) == item["candidate_tiles"]
+        ids = set(selected["node_id"].astype(str))
+        assert seen.isdisjoint(ids), f"{stage} overlaps an earlier stage"
+        seen |= ids
+        assert set(selected["province"].astype(str)) == set(item["provinces"])
+    assert seen == set(frame["node_id"].astype(str))
+    assert tiled.PROVINCE_STAGE.keys() == set(tiled.PROVINCES)
+
+
+def test_stage_scope_and_zero_harvest_accounting() -> None:
+    frame = tiled.load_candidates()
+    args = argparse.Namespace(
+        stage="stage1", all=False, only_node=None
+    )
+    selected, diagnostics, scope = tiled._selected_frame_for_scope(frame, args)
+    assert scope == "stage:stage1"
+    assert len(selected) == 1254
+    assert diagnostics["candidate_tiles"] == 1254
+    assert diagnostics["zero_harvest_tiles"] == 203
+    zero = selected[selected["harvest_m3"] <= 0.0]
+    assert len(zero) == 203
+    assert set(zero["province"].astype(str)) == {"NU"}
+
+
+def test_resume_decision_skips_valid_and_rejects_invalid(
+    tmp_path: Path,
+) -> None:
+    dataset = tmp_path / "dataset"
+    dataset.mkdir()
+    manifest = dataset / "manifest.json"
+    manifest.write_text('{"schema_version": "0.1"}\n', encoding="utf-8")
+    expected = tiled.sha256_file(manifest)
+    validated: list[Path] = []
+
+    def validator(path: Path) -> dict:
+        validated.append(path)
+        return {"exit_code": 0}
+
+    reusable, reason = tiled.resume_decision(
+        dataset, expected, validator=validator
+    )
+    assert reusable is True
+    assert reason == "hash_match"
+    assert validated == [dataset]
+
+    reusable, reason = tiled.resume_decision(
+        dataset, "0" * 64, validator=validator
+    )
+    assert reusable is False
+    assert reason == "manifest_hash_mismatch"
+    assert validated == [dataset]
+
+    def invalid(path: Path) -> dict:
+        raise RuntimeError("invalid dataset")
+
+    reusable, reason = tiled.resume_decision(
+        dataset, expected, validator=invalid
+    )
+    assert reusable is False
+    assert reason == "validation_failed"
+
+    reusable, reason = tiled.resume_decision(
+        tmp_path / "missing", None, validator=validator
+    )
+    assert reusable is False
+    assert reason == "missing_dataset"
+
+    reusable, reason = tiled.resume_decision(
+        dataset, None, validator=validator
+    )
+    assert reusable is True
+    assert reason == "bootstrapped_hash"
+
+
+def test_storage_projection_covers_stages() -> None:
+    manifest = _manifest()
+    frame = tiled.load_candidates()
+    projection = tiled.storage_projection(
+        frame, existing_manifest=manifest
+    )
+    assert projection["full_national_total_bytes"] > 0
+    assert sum(
+        item["candidate_tiles"] for item in projection["stages"].values()
+    ) == 3562
+    for stage in tiled.STAGE_ORDER:
+        item = projection["stages"][stage]
+        assert item["projected_total_bytes"] >= item["projected_dataset_bytes"]
+        assert 0.0 < item["forest_area_share"] < 1.0
 
 
 def test_fast_block_labelling_matches_reference() -> None:

@@ -1156,6 +1156,31 @@ decide what blocks production readiness after the conceptual alpha.
   `inventory_resolution=30m`; no UI, official OSeCAN, chain v5.1, national
   990-m, or G2 pilot change; no unexpected `D`.
 
+- [x] P7.47 Add staged, resumable national 30-m tiled WS4 coverage and run
+  Stage 1. Completed: extended
+  `workflows/ws4_instances/build_scanfi_tiled_30m.py` with the documented
+  four-stage province plan (`--stage`), hash+validation resume (`--resume`),
+  datasets-only coverage mode (`--datasets-only`), and deterministic
+  `--simulate-sample N` transition evidence; `--all` remains the eventual full
+  run. Stage candidates from the committed CSV: stage1 Atlantic+territories
+  1,254 (NB 50, NS 47, PE 13, NL 243, YT 232, NT 466, NU 203); stage2 BC+AB
+  713; stage3 SK+MB 494; stage4 ON+QC 1,101; total 3,562. Storage gate on
+  `/srv/shared-data`: 5,173.326 GB free versus the 120 GB minimum and 30.099 GB
+  projected Stage 1 full-profile storage. Stage 1 built and validated 1,042
+  tiles (1,147,599,965 fragments; 442,911,757 blocks; 103,283,996.9 ha forest;
+  15.053 GB datasets/schedules); 203 zero-harvest NU candidates and 9
+  no-forest slivers were skipped explicitly rather than fabricated. An
+  independent 32-worker `ws4 validate` sweep revalidated 1,042/1,042 with zero
+  failures. Five newly built tiles were simulated for 20 years: 14,064,633.471
+  m3 harvested and 72,883.71 ha treated/managed, equal to scheduled area.
+  Cumulative manifest: 1,048 completed tiles (including six pre-existing
+  Stage 2-4 sample tiles), 203 zero-harvest skips, 9 no-forest skips, 2,302
+  remaining; `full_run.status=staged_in_progress`. Added stage/resume/storage
+  tests and `docs/ws4-tiled-30m-staged-national.md`. Labels
+  `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `tiled_30m=true`; no UI, official OSeCAN, chain
+  v5.1, national 990-m, G2 pilot, or 24-tile sample change; no unexpected `D`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
