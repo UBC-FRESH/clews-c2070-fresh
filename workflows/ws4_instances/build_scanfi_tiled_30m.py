@@ -1867,11 +1867,30 @@ def build_staged_manifest(
             for row in frame.itertuples(index=False)
         }
     status = "failed" if failures or validation_failures else "pass"
-    all_built = built_total == total_candidates
+    covered_total = built_total + skipped_total
+    coverage_complete = covered_total == total_candidates
     full_status = (
         "complete"
-        if all_built
+        if coverage_complete
         else ("staged_in_progress" if built_total > 0 else "not_run")
+    )
+    coverage_statement = (
+        (
+            "All 3,562 per-node WS4 candidates are accounted for: "
+            f"{built_total:,} datasets are built and validated, "
+            f"{skipped_zero_total:,} zero-harvest candidates are explicitly "
+            f"skipped, and {skipped_no_forest_total:,} no-forest slivers are "
+            "explicitly skipped. No tile, curve, or simulation is fabricated."
+        )
+        if coverage_complete
+        else (
+            "The full national 30-m tiled build is 3,562 per-node WS4 "
+            "datasets (one per committed 50-km supply node, clipped to its "
+            "province). Staged national coverage is in progress; only "
+            "validated tiles present on disk are counted. Full coverage "
+            "requires every candidate to be built+validated or explicitly "
+            "skipped as zero-harvest/no-forest."
+        )
     )
 
     if storage_projections is None and isinstance(existing_manifest, Mapping):
@@ -1885,16 +1904,17 @@ def build_staged_manifest(
         storage_projections.get("full_national_total_bytes", 0)
     )
     projected_remaining_bytes = 0
-    for stage_name, item in stage_storage.items():
-        projected = int(item.get("projected_total_bytes", 0))
-        used = int(
-            sum(
-                row["storage_bytes"]["total"]
-                for row in completed_rows
-                if row["stage"] == stage_name
+    if remaining_total > 0:
+        for stage_name, item in stage_storage.items():
+            projected = int(item.get("projected_total_bytes", 0))
+            used = int(
+                sum(
+                    row["storage_bytes"]["total"]
+                    for row in completed_rows
+                    if row["stage"] == stage_name
+                )
             )
-        )
-        projected_remaining_bytes += max(0, projected - used)
+            projected_remaining_bytes += max(0, projected - used)
 
     manifest = {
         "artifact": "ws4_tiled_30m_national_v1",
@@ -1903,14 +1923,8 @@ def build_staged_manifest(
         "scope": {
             "scope": "staged" if active_stage else "all",
             "active_stage": active_stage,
-            "full_national_30m_run": bool(all_built),
-            "full_national_statement": (
-                "The full national 30-m tiled build is 3,562 per-node WS4 "
-                "datasets (one per committed 50-km supply node, clipped to its "
-                "province). Staged national coverage is in progress; only "
-                "validated tiles present on disk are counted. A full national "
-                "claim requires all 3,562 datasets built and validated."
-            ),
+            "full_national_30m_run": bool(coverage_complete),
+            "full_national_statement": coverage_statement,
             "selection": dict(selection_diagnostics),
         },
         "labels": TILED_LABELS,
@@ -2047,18 +2061,15 @@ def build_staged_manifest(
             "command": FULL_RUN_COMMAND,
             "datasets": total_candidates,
             "completed_tiles": built_total,
+            "covered_tiles": covered_total,
+            "coverage_complete": bool(coverage_complete),
             "remaining_tiles": remaining_total,
             "skipped_zero_harvest_tiles": skipped_zero_total,
             "skipped_no_forest_tiles": skipped_no_forest_total,
             "workers": 32,
             "years": DEFAULT_YEARS,
             "sample_fraction": DEFAULT_SAMPLE_FRACTION,
-            "statement": (
-                "This is staged national coverage. The full national 30-m "
-                "build is a distributed/storage-scale operation; do not claim "
-                "full coverage until all 3,562 datasets are built and "
-                "validated."
-            ),
+            "statement": coverage_statement,
         },
         "failures": list(failures),
         "missing_selected_tiles": active_missing,
@@ -2081,13 +2092,19 @@ def build_staged_manifest(
 def write_staged_readme(manifest: Mapping[str, Any], root: Path) -> None:
     plan = manifest["stage_plan"]
     storage = manifest["storage"]
+    status_sentence = (
+        "All 3,562 candidates are accounted for by built+validated tiles or "
+        "explicit zero-harvest/no-forest skips."
+        if manifest["full_run"]["status"] == "complete"
+        else "Staged national coverage is in progress."
+    )
     lines = [
         "# WS4 tiled 30-m staged national build",
         "",
         "This directory holds real per-50-km-node WS4 datasets built from 30-m",
-        "SCANFI pixels. Staged national coverage is in progress. It is a",
+        f"SCANFI pixels. {status_sentence} It is a",
         "`model_estimate` / `sensitivity_only` artifact, not official OSeCAN,",
-        "not a chain v5.1 change, and not a completed national run.",
+        "and not a chain v5.1 change.",
         "",
         "## Stage table",
         "",

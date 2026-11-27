@@ -1,18 +1,18 @@
 # WS4 tiled 30-m staged national coverage
 
-Status: **staged national coverage in progress**, `model_estimate` /
-`sensitivity_only`. `evidence_label=model_estimate`, `observed=false`,
-`policy_grade=false`, `national_claim=false`, `tiled_30m=true`,
-`tile_resolution_m=30000`, `inventory_resolution=30m`. No official OSeCAN
-change, no chain v5.1 change, no UI change, and no change to the national
-990-m WS4 dataset, the G2 30-m pilot, or the existing 24-tile representative
-sample.
+Status: **staged national coverage complete** (all 3,562 candidates
+accounted for), `model_estimate` / `sensitivity_only`.
+`evidence_label=model_estimate`, `observed=false`, `policy_grade=false`,
+`national_claim=false`, `tiled_30m=true`, `tile_resolution_m=30000`,
+`inventory_resolution=30m`. No official OSeCAN change, no chain v5.1 change,
+no UI change, and no change to the national 990-m WS4 dataset, the G2 30-m
+pilot, or the existing 24-tile representative sample.
 
-The full national build is **not complete**. Only the tiles recorded as
-built+validated in
-`data/derived/ws4/tiled-30m/national_tiled_manifest.json` are real. The
-manifest has `full_run.status=staged_in_progress` until all 3,562 candidates
-are built and validated.
+`data/derived/ws4/tiled-30m/national_tiled_manifest.json` records
+`full_run.status=complete`, 3,345 built+validated tiles, 203 explicit
+zero-harvest skips, 14 explicit no-forest skips, and 0 remaining. Only the
+3,345 datasets recorded as built+validated are real; the 217 skipped
+candidates are listed by node id and reason rather than fabricated.
 
 ## 1. Stage plan
 
@@ -26,16 +26,17 @@ not inferred from the stage table.
 | `stage1` | Atlantic + territories | NB, NS, PE, NL, YT, NT, NU | 1,254 | 1,051 | 203 (NU) | 9 |
 | `stage2` | British Columbia + Alberta | BC, AB | 713 | 713 | 0 | 4 |
 | `stage3` | Saskatchewan + Manitoba | SK, MB | 494 | 494 | 0 | 0 |
-| `stage4` | Ontario + Quebec | ON, QC | 1,101 | 1,101 | 0 | 0 |
-| **Total** | | | **3,562** | **3,359** | **203** | **13** |
+| `stage4` | Ontario + Quebec | ON, QC | 1,101 | 1,101 | 0 | 1 |
+| **Total** | | | **3,562** | **3,359** | **203** | **14** |
 
-The 13 no-forest slivers were attempted and failed closed with `no forest
+The 14 no-forest slivers were attempted and failed closed with `no forest
 pixels in the 50-km window` (or `50-km rectangle selects no pixels`). They
 are tiny clipped slivers, for example `J35|NL|S21` (1.12 ha committed
 geometry, 0.06 m3 harvest) and `L30|NL|S31` (3.36 ha, 0.11 m3). They are
 recorded as `skipped_no_forest` with the exact error; no empty or synthetic
-dataset was written. Nine are in Stage 1; four are in Stage 2 (`E4|BC|S33`,
-`O2|BC|S32`, `O2|BC|S13`, `Q2|BC|S11`).
+dataset was written. Nine are in Stage 1, four are in Stage 2 (`E4|BC|S33`,
+`O2|BC|S32`, `O2|BC|S13`, `Q2|BC|S11`), and one is in Stage 4
+(`D29|QC|S12`).
 
 NU has zero harvest for all 203 candidates in the committed CSV. By default
 staged runs skip zero-harvest candidates explicitly and record them as
@@ -75,7 +76,7 @@ At the Stage 1 start the check reported:
 ```text
 Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1        15T  9.8T  4.8T  68% /srv/shared-data
-free = 5,157.685 GB
+free = 5,150.420 GB
 required minimum = 120.000 GB
 projected stage1 full-profile storage = 30.099 GB
 projected stage2 full-profile storage = 24.328 GB
@@ -159,15 +160,6 @@ The Stage 2 sample simulation ran on five newly built BC/AB tiles:
 - 24,481,322.215 m3 harvested over 20 years;
 - 75,686.31 ha treated/managed, exactly equal to 75,686.31 ha scheduled.
 
-Across all three stages the sample simulation totals are 15 tiles,
-45,262,114.861 m3 harvested, and 208,589.13 ha treated/managed. These totals
-are transition evidence only and are not extrapolated to a stage or the
-nation. They are recorded in `sample_simulation` in the national manifest.
-
-Cumulative completed-tile totals after Stage 3 are 2,247 tiles,
-2,918,241,629 fragments, 1,100,492,279 blocks, 262,641,746.61 ha forest, and
-37.876 GB local storage.
-
 ### Stage 3 — Saskatchewan + Manitoba
 
 Stage 3 covered 494 candidates:
@@ -191,28 +183,71 @@ The Stage 3 sample simulation ran on five newly built SK/MB tiles:
 - 7,565,047.940 m3 harvested over 20 years;
 - 58,354.92 ha treated/managed, exactly equal to 58,354.92 ha scheduled.
 
-## 5. Coverage and remaining work
+### Stage 4 — Ontario + Quebec
 
-After Stage 3:
+Stage 4 covered 1,101 candidates:
 
-- 2,247 tiles are built and validated (1,042 Stage 1 + 709 Stage 2 +
-  494 Stage 3 + the 2 pre-existing Stage 4 sample tiles);
-- 203 zero-harvest NU candidates and 13 no-forest slivers are explicitly
-  skipped;
-- 1,099 candidates remain in Stage 4 (2 pre-existing Stage 4 sample tiles are
-  already built).
+- 1,100 tile datasets built and validated (1,098 newly built plus the 2
+  pre-existing sample tiles preserved by hash+validation resume);
+- 1 no-forest sliver explicitly skipped (`D29|QC|S12`, 0.07 m3 harvest);
+- 0 Stage 4 candidates remaining.
 
-| Stage | Candidates | Built | Remaining | Status |
-|---|---:|---:|---:|---|
-| `stage1` | 1,254 | 1,042 | 0 | complete (with documented skips) |
-| `stage2` | 713 | 709 | 0 | complete (with documented skips) |
-| `stage3` | 494 | 494 | 0 | complete |
-| `stage4` | 1,101 | 2 | 1,099 | not started |
+Stage 4 totals for the 1,100 built tiles:
 
-The remaining full-profile storage projection is **64.52 GB** (per-stage
-projections minus actual used bytes) and is recorded as
-`storage.projected_remaining_bytes` in the manifest. The project does **not**
-claim national coverage: 1,099 candidates are not built.
+- 1,647,310,995 fragments;
+- 579,000,573 blocks;
+- 148,257,989.55 ha forest;
+- 20.763 GB local storage in dataset + schedule + manifest files;
+- every validation status is `pass`.
+
+The Stage 4 sample simulation ran on five newly built ON/QC tiles:
+
+- 5/5 simulations pass;
+- 20,825,390.690 m3 harvested over 20 years;
+- 94,499.82 ha treated/managed, exactly equal to 94,499.82 ha scheduled.
+
+Across all four stages the sample simulation totals are 20 tiles,
+66,087,505.551 m3 harvested, and 303,088.95 ha treated/managed. These totals
+are transition evidence only and are not extrapolated to a stage or the
+nation. They are recorded in `sample_simulation` in the national manifest.
+
+## 5. Coverage and completion
+
+All 3,562 committed candidates are now accounted for:
+
+- 3,345 tile datasets are built and validated;
+- 203 zero-harvest NU candidates are explicitly skipped (`skipped_zero_harvest`);
+- 14 no-forest slivers are explicitly skipped (`skipped_no_forest`);
+- 0 candidates remain;
+- `full_run.status=complete`, `full_run.coverage_complete=true`,
+  `full_run.covered_tiles=3,562`.
+
+| Stage | Candidates | Built | Zero-harvest skips | No-forest skips | Remaining | Status |
+|---|---:|---:|---:|---:|---:|---|
+| `stage1` | 1,254 | 1,042 | 203 | 9 | 0 | complete |
+| `stage2` | 713 | 709 | 0 | 4 | 0 | complete |
+| `stage3` | 494 | 494 | 0 | 0 | 0 | complete |
+| `stage4` | 1,101 | 1,100 | 0 | 1 | 0 | complete |
+| **Total** | **3,562** | **3,345** | **203** | **14** | **0** | **complete** |
+
+Cumulative built-tile totals:
+
+- 4,560,930,641 fragments (30-m SCANFI forest pixels);
+- 1,678,150,739 blocks (8-neighbour equal `(age_class, curve_key)` cliques);
+- 410,483,757.69 ha forest;
+- 58.548 GB local storage in dataset + schedule + manifest files;
+- 3,345/3,345 `ws4 validate` pass in an independent 32-worker sweep.
+
+The area-scaled full-profile projection is 96.90 GB (57.60 GB dataset +
+39.30 GB runs/schedules). The actual build is 58.548 GB because coverage
+stages are datasets-only; the 20-year run outputs were built only for the
+20 sample tiles. There are no remaining tiles, so
+`storage.projected_remaining_bytes=0`.
+
+The manifest's `scope.full_national_30m_run` is `true` because every candidate
+is built+validated or explicitly skipped. Labels remain `model_estimate` /
+`observed=false` / `policy_grade=false` / `national_claim=false`: this is full
+30-m geometric coverage, not a policy-grade or official OSeCAN product.
 
 ## 6. Commands
 

@@ -78,13 +78,26 @@ def test_manifest_completeness_and_no_fabricated_tiles() -> None:
     assert manifest["artifact"] == "ws4_tiled_30m_national_v1"
     assert manifest["status"] == "pass"
     assert manifest["scope"]["scope"] == "staged"
-    assert manifest["scope"]["full_national_30m_run"] is False
-    assert manifest["full_run"]["status"] == "staged_in_progress"
+    assert manifest["full_run"]["status"] in {
+        "staged_in_progress",
+        "complete",
+    }
+    assert manifest["scope"]["full_national_30m_run"] is (
+        manifest["full_run"]["status"] == "complete"
+    )
     assert "--all" in manifest["full_run"]["command"]
     assert manifest["full_run"]["datasets"] == 3562
-    assert "staged national coverage" in manifest["scope"][
-        "full_national_statement"
-    ].lower()
+    if manifest["full_run"]["status"] == "complete":
+        assert manifest["full_run"]["coverage_complete"] is True
+        assert manifest["full_run"]["covered_tiles"] == 3562
+        assert manifest["full_run"]["remaining_tiles"] == 0
+        assert "accounted for" in manifest["scope"][
+            "full_national_statement"
+        ].lower()
+    else:
+        assert "staged national coverage" in manifest["scope"][
+            "full_national_statement"
+        ].lower()
 
     assert manifest["tile_grid"]["candidate_tile_datasets"] == len(frame) == 3562
     assert manifest["tile_grid"]["unique_rectangles"] == 3164
@@ -182,6 +195,32 @@ def test_manifest_completeness_and_no_fabricated_tiles() -> None:
     assert simulation["tiles_simulated"] > 0
     assert simulation["harvested_volume_m3"] > 0.0
     assert simulation["treated_area_ha"] > 0.0
+
+
+@requires_artifacts
+def test_all_candidates_accounted_for_after_stage4() -> None:
+    manifest = _manifest()
+    plan = manifest["stage_plan"]
+    full_run = manifest["full_run"]
+    assert full_run["status"] == "complete"
+    assert full_run["coverage_complete"] is True
+    assert full_run["covered_tiles"] == 3562
+    assert full_run["remaining_tiles"] == 0
+    assert manifest["scope"]["full_national_30m_run"] is True
+    assert plan["completed_stages"] == list(tiled.STAGE_ORDER)
+    assert plan["remaining_stages"] == []
+    assert plan["remaining_tiles"] == 0
+    assert (
+        plan["completed_tiles"]
+        + plan["skipped_zero_harvest_tiles"]
+        + plan["skipped_no_forest_tiles"]
+        == 3562
+    )
+    for stage in tiled.STAGE_ORDER:
+        item = plan["stages"][stage]
+        assert item["complete"] is True
+        assert item["remaining_tiles"] == 0
+        assert item["built_tiles"] == item["validated_tiles"]
 
 
 @requires_artifacts

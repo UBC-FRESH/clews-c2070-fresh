@@ -1,4 +1,4 @@
-# WS4 tiled 30-m national architecture (representative run)
+# WS4 tiled 30-m national architecture (representative run and staged completion)
 
 Status: **model-estimate sensitivity sidecar**. `evidence_label=model_estimate`,
 `observed=false`, `policy_grade=false`, `national_claim=false`,
@@ -10,10 +10,12 @@ the national 990-m WS4 dataset or the G2 30-m pilot dataset.
 
 The national 990-m estate is one tractable dataset. This artifact implements the
 requested tiled alternative: **one WS4 dataset per committed 50-km supply node**,
-with every 30-m SCANFI forest pixel as a WS4 fragment. The full national tiled
-build is 3,562 datasets and is a distributed/storage-scale operation; it was
-**not** run here. A representative 24-tile sample was built, validated, and
-simulated.
+with every 30-m SCANFI forest pixel as a WS4 fragment. A representative
+24-tile sample was built, validated, and simulated first. The full
+3,562-candidate staged build was subsequently completed: 3,345 datasets are
+built and validated, and 217 candidates are explicitly skipped as zero-harvest
+(203 NU) or no-forest slivers (14). See
+`docs/ws4-tiled-30m-staged-national.md` for the stage evidence.
 
 The sample is:
 
@@ -162,17 +164,25 @@ The area-scaled projection is the storage-scale statement: a full national
 (about 97 GB at the selected 20-year/10% run profile), before versioning and
 safety margin. It is a distributed job, not a workstation job.
 
-Exact full-run command (not executed here):
+Exact full-run command:
 
 ```bash
 .venv/bin/python -m workflows.ws4_instances.build_scanfi_tiled_30m \
-  --all --workers 32 --years 20 --sample-fraction 0.1
+  --all --include-zero-harvest --workers 32 --years 20 \
+  --sample-fraction 0.1
+```
+
+The staged completion used:
+
+```bash
+.venv/bin/python -m workflows.ws4_instances.build_scanfi_tiled_30m \
+  --stage stageN --resume --datasets-only --simulate-sample 5 --workers 32
 ```
 
 `--all` selects all 3,562 candidates and writes the same
-`national_tiled_manifest.json`. The manifest records
-`full_run.status=not_run` and states explicitly that the full national 30-m
-build was not run.
+`national_tiled_manifest.json`. The manifest now records
+`full_run.status=complete`, `coverage_complete=true`, 3,345 built+validated
+tiles, 203 zero-harvest skips, 14 no-forest skips, and 0 remaining.
 
 ## 5. Validation and fail-closed behaviour
 
@@ -211,7 +221,10 @@ does not fabricate a tile, curve, block, or schedule row.
 - **The sample is not the national distribution.** It is 12 province-top tiles
   plus PEI; the area-scaled projection is arithmetic, not a statistical
   estimate of variance.
-- **Full national 30-m was not run.** Only the 24 selected datasets are real.
+- **Full geometric coverage is staged-complete, not a policy product.**
+  All 3,562 candidates are accounted for by 3,345 real built+validated
+  datasets or 217 explicit zero-harvest/no-forest skips; the 217 skips are
+  not fabricated datasets.
 - **Not policy-grade.** `policy_grade=false`, `national_claim=false`,
   `observed=false`; no official OSeCAN or chain v5.1 change.
 

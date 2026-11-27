@@ -2,37 +2,33 @@
 
 ## 2026-11-27
 
-- **Added staged, resumable national 30-m tiled WS4 coverage and ran Stages
-  1-3 (P7.47).** Extended
+- **Added staged, resumable national 30-m tiled WS4 coverage and completed
+  all four stages (P7.47).** Extended
   `workflows/ws4_instances/build_scanfi_tiled_30m.py` with a documented
   four-stage province plan (`--stage stage1..stage4`), hash+validation resume
   (`--resume`), datasets-only coverage mode (`--datasets-only`), deterministic
-  `--simulate-sample N`, and an explicit 120 GB storage gate. Stage counts from
-  the committed candidate CSV: stage1 Atlantic+territories 1,254 (NB 50, NS 47,
-  PE 13, NL 243, YT 232, NT 466, NU 203); stage2 BC+AB 713; stage3 SK+MB 494;
-  stage4 ON+QC 1,101; total 3,562. The gate reported 5,157.849 GB free versus
-  the 120 GB minimum; projected full-profile storage is 30.099 GB for Stage 1
-  and 24.328 GB for Stage 2. Stage 1 built and validated 1,042 tiles:
-  1,147,599,965 fragments, 442,911,757 blocks, 103,283,996.9 ha forest. The
-  203 zero-harvest NU candidates and 9 no-forest slivers were skipped
-  explicitly with reasons; a 32-worker independent `ws4 validate` sweep
-  passed 1,042/1,042. Stage 2 built and validated 709 tiles: 1,149,647,972
-  fragments, 472,680,698 blocks, 103,468,317.48 ha forest; 4 no-forest
-  slivers were skipped explicitly and the 2 pre-existing sample tiles were
-  preserved by hash+validation resume. Stage 3 built and validated all 494
-  candidates: 616,371,709 fragments, 183,557,711 blocks, 55,473,453.81 ha
-  forest; the 2 pre-existing sample tiles were again preserved by
-  hash+validation resume. Fifteen sample tiles were simulated for 20 years:
-  45,262,114.861 m3 harvested, 208,589.13 ha treated/managed, equal to
-  scheduled area. The cumulative manifest records 2,247 completed tiles,
-  2,918,241,629 fragments, 1,100,492,279 blocks, 262,641,746.61 ha forest,
-  37.876 GB local storage, 203 zero-harvest skips, 13 no-forest skips, 1,099
-  remaining in Stage 4, and `full_run.status=staged_in_progress`. Added
-  stage/resume/storage tests and `docs/ws4-tiled-30m-staged-national.md`;
-  updated ROADMAP P7.47. Labels `model_estimate` / `observed=false` /
-  `policy_grade=false` / `national_claim=false` / `tiled_30m=true`; no UI,
-  official OSeCAN, chain v5.1, national 990-m, G2 pilot, or 24-tile sample
-  change; no unexpected `D`.
+  `--simulate-sample N`, an explicit 120 GB storage gate, and cumulative
+  built/skipped coverage accounting. Stage counts from the committed candidate
+  CSV: stage1 Atlantic+territories 1,254 (NB 50, NS 47, PE 13, NL 243, YT 232,
+  NT 466, NU 203); stage2 BC+AB 713; stage3 SK+MB 494; stage4 ON+QC 1,101;
+  total 3,562. The gate reported 5,150.420 GB free versus the 120 GB minimum;
+  projected full-profile storage 96.900 GB. Stage 1 built and validated 1,042
+  tiles with 203 NU zero-harvest skips and 9 no-forest skips; Stage 2 built
+  and validated 709 tiles with 4 no-forest skips; Stage 3 built and validated
+  all 494 tiles; Stage 4 built and validated 1,100 tiles with 1 no-forest skip
+  (`D29|QC|S12`). All 3,562 candidates are accounted for: 3,345
+  built+validated, 203 zero-harvest skips, 14 no-forest skips, 0 remaining;
+  `full_run.status=complete`, `coverage_complete=true`. Cumulative built
+  totals: 4,560,930,641 fragments, 1,678,150,739 blocks,
+  410,483,757.69 ha forest, 58.548 GB local storage. Twenty sample tiles were
+  simulated for 20 years: 66,087,505.551 m3 harvested, 303,088.95 ha
+  treated/managed, equal to scheduled area. Independent 32-worker validation
+  sweeps passed 1,100/1,100 new Stage 4 tiles and 3,345/3,345 total built
+  tiles. Added stage/resume/storage tests and
+  `docs/ws4-tiled-30m-staged-national.md`; updated ROADMAP P7.47. Labels
+  `model_estimate` / `observed=false` / `policy_grade=false` /
+  `national_claim=false` / `tiled_30m=true`; no UI, official OSeCAN, chain
+  v5.1, national 990-m, G2 pilot, or 24-tile sample change; no unexpected `D`.
 
 - **Built the tiled 30-m national WS4 architecture and representative run
   (P7.46).** Added one WS4 dataset per committed 50-km supply node, with each
