@@ -413,6 +413,7 @@ def _combined_tier_comparison(
     ],
     v10_rows: Sequence[Mapping[str, str]],
     tiers: Mapping[str, Mapping[str, Any]],
+    spec_by_key: Mapping[str, cases.CaseSpec],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for v10 in v10_rows:
@@ -457,7 +458,7 @@ def _combined_tier_comparison(
             "chain_v51_unchanged": "true",
         }
         if scenario in national_cases_by_case:
-            spec = cases.CASE_BY_KEY[scenario]
+            spec = spec_by_key[scenario]
             national_cases = national_cases_by_case[scenario]
             row["comparison_status"] = "compared_national_totals_origin_province"
             for basis, suffix in (
@@ -664,7 +665,7 @@ def _zone_summary(
     }
 
 
-def _report(summary: Mapping[str, Any]) -> str:
+def _report(summary: Mapping[str, Any], case_dirs: Mapping[str, Path]) -> str:
     case_table = "\n".join(
         [
             "| Case | Basis | Stream | Case | National PJ | Tier | v10 PJ | v10 tier |",
@@ -725,8 +726,8 @@ and the 119 Mm3 case artifacts are unchanged.
 
 ## 1. Source
 
-- Case chains: `{_relative(cases.CASES_ROOT / "100m")}` and
-  `{_relative(cases.CASES_ROOT / "150m")}`
+- Case chains: `{_relative(Path(case_dirs["100m"]))}` and
+  `{_relative(Path(case_dirs["150m"]))}`
 - Zone weights: frozen handoff v10 `zone_allocation_weights.csv`
 - Tier thresholds: official OSeCAN `national_supply_curve/tier_definitions.csv`
 - Process cases: 0%, 25%, 50%, 75% of process residue
@@ -772,7 +773,10 @@ def build(
     *,
     case_dirs: Mapping[str, Path],
     output_dir: Path,
+    case_specs: Sequence[cases.CaseSpec] | None = None,
 ) -> dict[str, Any]:
+    specs = tuple(case_specs) if case_specs is not None else cases.CASES
+    spec_by_key = {spec.key: spec for spec in specs}
     target = Path(output_dir).resolve()
     if handoff.OSECAN_DIR in target.parents or target == handoff.OSECAN_DIR:
         raise Ws4SustainableCasesOsecanError(
@@ -823,7 +827,7 @@ def build(
     chain_hashes: dict[str, str] = {}
     chain_hash: str | None = None
     max_province_zone_gap_pj = 0.0
-    for spec in cases.CASES:
+    for spec in specs:
         chain_dir = Path(case_dirs[spec.key]).resolve()
         hashes, digest = _chain_files(chain_dir)
         chain_hashes.update(hashes)
@@ -915,7 +919,9 @@ def build(
             case_tier_rows,
         )
 
-    comparison_rows = _combined_tier_comparison(national_cases_by_case, v10_rows, tiers)
+    comparison_rows = _combined_tier_comparison(
+        national_cases_by_case, v10_rows, tiers, spec_by_key
+    )
     tier_fields = [
         "scenario",
         "basis",
@@ -991,7 +997,7 @@ def build(
     )
     handoff._write_csv(target / "case_zone_summary.csv", zone_fields, zone_rows)
 
-    if len(case_zone_summaries) != len(cases.CASES):
+    if len(case_zone_summaries) != len(specs):
         raise Ws4SustainableCasesOsecanError("zone summary is missing a case")
     zone_summary: dict[str, Any] = {
         "zone_ids": list(ZONE_ORDER),
@@ -1015,11 +1021,11 @@ def build(
         "max_province_zone_gap_pj": max_province_zone_gap_pj,
         "cases": {
             spec.key: case_zone_summaries[index]
-            for index, spec in enumerate(cases.CASES)
+            for index, spec in enumerate(specs)
         },
     }
     expected_zone_rows = (
-        len(cases.CASES)
+        len(specs)
         * 2
         * len(ZONE_ORDER)
         * (len(PROCESS_CASES) + len(HARVEST_CASES))
@@ -1100,7 +1106,7 @@ def build(
                 "secondary_matches": case_checks[spec.key]["secondary_matches"],
                 "tier_positions": [row for row in tier_rows if row["case"] == spec.key],
             }
-            for spec in cases.CASES
+            for spec in specs
         },
         "tier_rows": tier_rows,
         "tier_comparison": comparison_rows,
@@ -1114,7 +1120,7 @@ def build(
                 "odt": national_cases_by_case[spec.key][basis][(stream, case)][0],
                 "pj": national_cases_by_case[spec.key][basis][(stream, case)][1],
             }
-            for spec in cases.CASES
+            for spec in specs
             for basis in (spec.primary_basis, SECONDARY_BASIS)
             for stream, stream_cases in (
                 ("process", PROCESS_CASES),
@@ -1132,7 +1138,8 @@ def build(
     handoff._write_json(target / "summary.json", summary)
     (target / REPORT_NAME).write_text(
         _report(
-            {**summary, "tier_rows": tier_rows, "tier_comparison": comparison_rows}
+            {**summary, "tier_rows": tier_rows, "tier_comparison": comparison_rows},
+            case_dirs,
         ),
         encoding="utf-8",
     )
@@ -1152,7 +1159,7 @@ def build(
                 "chain_dir": _relative(Path(case_dirs[spec.key])),
                 "primary_basis": spec.primary_basis,
             }
-            for spec in cases.CASES
+            for spec in specs
         },
         "chain_hashes": chain_hashes,
         "inputs": {

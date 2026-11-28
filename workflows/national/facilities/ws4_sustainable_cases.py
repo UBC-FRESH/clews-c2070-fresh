@@ -111,6 +111,7 @@ class CaseSpec:
     artifact: str
     artifact_title: str
     report_name: str
+    dataset_dir: Path = base.DATASET_DIR
 
 
 def _case(
@@ -118,6 +119,7 @@ def _case(
     target_annual_m3: float,
     *,
     artifact_title: str,
+    dataset_dir: Path = base.DATASET_DIR,
 ) -> CaseSpec:
     return CaseSpec(
         key=key,
@@ -133,6 +135,7 @@ def _case(
         artifact=f"ws4_sustainable_{key}",
         artifact_title=artifact_title,
         report_name=f"WS4_SUSTAINABLE_{key.upper()}.md",
+        dataset_dir=dataset_dir,
     )
 
 
@@ -686,7 +689,7 @@ def build_case_chain(
             "comparison": comparison_rows,
         },
         "ws4": {
-            "dataset": _relative(base.DATASET_DIR),
+            "dataset": _relative(spec.dataset_dir),
             "schedule": _relative(spec.output_dir / "schedule.csv"),
             "run_dir": _relative(spec.output_dir / "run_100y"),
             "validate": validate_text,
@@ -882,8 +885,8 @@ and an unchanged official OSeCAN tree.
 
 def _case_inputs(spec: CaseSpec) -> dict[str, str]:
     return {
-        _relative(base.DATASET_DIR / "manifest.json"): _sha256(
-            base.DATASET_DIR / "manifest.json"
+        _relative(spec.dataset_dir / "manifest.json"): _sha256(
+            spec.dataset_dir / "manifest.json"
         ),
         _relative(spec.control_csv): _sha256(spec.control_csv),
         _relative(SCENARIO_SUMMARY): _sha256(SCENARIO_SUMMARY),
@@ -938,7 +941,7 @@ def _run_case(spec: CaseSpec, estate: base.Estate) -> dict[str, Any]:
         schedule_path=spec.output_dir / "schedule.csv",
         run_dir=spec.output_dir / "run_100y",
         horizon=HORIZON,
-        dataset_dir=base.DATASET_DIR,
+        dataset_dir=spec.dataset_dir,
     )
     run_values = base.extract_run_products(
         spec.output_dir / "run_100y", horizon=HORIZON

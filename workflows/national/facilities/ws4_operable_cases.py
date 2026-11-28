@@ -154,9 +154,19 @@ class OperableCaseSpec:
     artifact: str
     artifact_title: str
     report_name: str
+    dataset_dir: Path = base.DATASET_DIR
+    mask_dir: Path = MASK_DIR
+    full_forest_summary: Path | None = None
 
 
-def _case(key: str, target_annual_m3: float) -> OperableCaseSpec:
+def _case(
+    key: str,
+    target_annual_m3: float,
+    *,
+    dataset_dir: Path = base.DATASET_DIR,
+    mask_dir: Path = MASK_DIR,
+    full_forest_summary: Path | None = None,
+) -> OperableCaseSpec:
     return OperableCaseSpec(
         key=key,
         target_annual_m3=target_annual_m3,
@@ -171,6 +181,13 @@ def _case(key: str, target_annual_m3: float) -> OperableCaseSpec:
         artifact=f"ws4_operable_{key}",
         artifact_title=f"Sustainable operable {key} WS4 schedule and chain",
         report_name=f"WS4_OPERABLE_{key.upper()}.md",
+        dataset_dir=dataset_dir,
+        mask_dir=mask_dir,
+        full_forest_summary=(
+            full_forest_summary
+            if full_forest_summary is not None
+            else FULL_FOREST_CASE_SUMMARIES[key]
+        ),
     )
 
 
@@ -391,7 +408,9 @@ def select_blocks_for_share(
     return order[:best]
 
 
-def build_operable_mask(estate: base.Estate) -> tuple[np.ndarray, pd.DataFrame, dict[str, Any]]:
+def build_operable_mask(
+    estate: base.Estate, mask_dir: Path = MASK_DIR
+) -> tuple[np.ndarray, pd.DataFrame, dict[str, Any]]:
     """Build and persist the deterministic share-based operable block mask."""
     screen = load_operable_screen().set_index("province")
     road = load_road_classes()
@@ -529,11 +548,11 @@ def build_operable_mask(estate: base.Estate) -> tuple[np.ndarray, pd.DataFrame, 
     if int(mask_frame["operable_block"].sum()) == 0:
         raise Ws4OperableCasesError("operable mask selected no blocks")
 
-    MASK_DIR.mkdir(parents=True, exist_ok=True)
-    mask_frame.to_parquet(MASK_DIR / "operable_mask.parquet", index=False)
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    mask_frame.to_parquet(mask_dir / "operable_mask.parquet", index=False)
     summary_records = _json_records(summary)
     _write_csv(
-        MASK_DIR / "operable_mask_summary.csv",
+        mask_dir / "operable_mask_summary.csv",
         list(summary.columns),
         summary_records,
     )
@@ -640,12 +659,12 @@ def build_operable_mask(estate: base.Estate) -> tuple[np.ndarray, pd.DataFrame, 
         },
         "d_status": assert_no_unexpected_deletions(),
     }
-    _write_json(MASK_DIR / "mask_summary.json", mask_summary)
-    _write_mask_report(mask_summary)
+    _write_json(mask_dir / "mask_summary.json", mask_summary)
+    _write_mask_report(mask_summary, mask_dir)
     return mask, summary, mask_summary
 
 
-def _write_mask_report(summary: Mapping[str, Any]) -> None:
+def _write_mask_report(summary: Mapping[str, Any], mask_dir: Path = MASK_DIR) -> None:
     rows = summary["by_province"]
     table = "\n".join(
         [
@@ -723,7 +742,7 @@ than the SCANFI treed denominator.
 - NU and PE have no 2016 tenure coverage and intentionally have no operable
   blocks.
 """
-    (MASK_DIR / "OPERABLE_MASK.md").write_text(report, encoding="utf-8")
+    (mask_dir / "OPERABLE_MASK.md").write_text(report, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -1156,9 +1175,9 @@ def _md_table(header: list[str], rows: list[list[str]]) -> str:
     return "\n".join(lines)
 
 
-def _full_forest_summary(key: str) -> dict[str, Any]:
-    path = FULL_FOREST_CASE_SUMMARIES[key]
-    if not path.is_file():
+def _full_forest_summary(spec: OperableCaseSpec) -> dict[str, Any]:
+    path = spec.full_forest_summary
+    if path is None or not path.is_file():
         raise Ws4OperableCasesError(f"missing full-forest case summary: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -1293,7 +1312,7 @@ def build_case_chain(
         .sort_index()
         .to_dict()
     )
-    full = _full_forest_summary(spec.key)
+    full = _full_forest_summary(spec)
     full_schedule = full["schedule"]
     full_sustained = bool(
         full_schedule.get("sustained", full_schedule.get("sustained_119m"))
@@ -1317,8 +1336,8 @@ def build_case_chain(
         },
         "operable_screen": {
             "screen_case": SCREEN_CASE,
-            "mask_dir": _relative(MASK_DIR),
-            "mask_summary": _relative(MASK_DIR / "mask_summary.json"),
+            "mask_dir": _relative(spec.mask_dir),
+            "mask_summary": _relative(spec.mask_dir / "mask_summary.json"),
             "selected_area_ha": mask_summary["national"]["selected_area_ha"],
             "selected_blocks": mask_summary["national"]["selected_blocks"],
             "published_operable_proxy_ha": mask_summary["national"][
@@ -1377,7 +1396,7 @@ def build_case_chain(
             "comparison": comparison_rows,
         },
         "full_forest_reference": {
-            "source": _relative(FULL_FOREST_CASE_SUMMARIES[spec.key]),
+            "source": _relative(spec.full_forest_summary),
             "target_annual_m3": full["target"]["annual_m3"],
             "sustained": full_sustained,
             "annual_min_m3": full_schedule["annual_min_m3"],
@@ -1388,7 +1407,7 @@ def build_case_chain(
         },
         "max_sustainable": dict(max_level),
         "ws4": {
-            "dataset": _relative(base.DATASET_DIR),
+            "dataset": _relative(spec.dataset_dir),
             "schedule": _relative(spec.output_dir / "schedule.csv"),
             "run_dir": _relative(spec.output_dir / "run_100y"),
             "validate": validate_text,
@@ -1778,7 +1797,7 @@ def _run_case(
         schedule_path=spec.output_dir / "schedule.csv",
         run_dir=spec.output_dir / "run_100y",
         horizon=HORIZON,
-        dataset_dir=base.DATASET_DIR,
+        dataset_dir=spec.dataset_dir,
     )
     run_values = base.extract_run_products(
         spec.output_dir / "run_100y", horizon=HORIZON
@@ -1848,15 +1867,15 @@ def _run_case(
 
 def _case_inputs(spec: OperableCaseSpec, mask_summary: Mapping[str, Any]) -> dict[str, str]:
     return {
-        _relative(base.DATASET_DIR / "manifest.json"): _sha256(
-            base.DATASET_DIR / "manifest.json"
+        _relative(spec.dataset_dir / "manifest.json"): _sha256(
+            spec.dataset_dir / "manifest.json"
         ),
         _relative(spec.control_csv): _sha256(spec.control_csv),
         _relative(SCREEN_CSV): _sha256(SCREEN_CSV),
         _relative(ROAD_CLASSES_CSV): _sha256(ROAD_CLASSES_CSV),
         _relative(GAPS_CSV): _sha256(GAPS_CSV),
-        _relative(MASK_DIR / "mask_summary.json"): _sha256(
-            MASK_DIR / "mask_summary.json"
+        _relative(spec.mask_dir / "mask_summary.json"): _sha256(
+            spec.mask_dir / "mask_summary.json"
         ),
         _relative(SCENARIO_SUMMARY): _sha256(SCENARIO_SUMMARY),
         _relative(chain.CHAIN_V51_CSV): _sha256(chain.CHAIN_V51_CSV),

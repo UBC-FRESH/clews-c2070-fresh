@@ -1436,6 +1436,45 @@ decide what blocks production readiness after the conceptual alpha.
   OSeCAN change, chain v5.1 mutation, UI change, or unexpected `D`. Data
   commit `1d39f9eb4`.
 
+- [x] P7.57 Rerun the sustainable 100/150 and operable 100/119/150 Mm3/yr WS4
+  cases on the transformed national RSYC curves and rebuild the chain/OSeCAN
+  evidence. Completed: reused the existing schedulers with only the dataset
+  path changed to
+  `data/derived/ws4/scanfi-national-990m-transformed/dataset` (718/718 curves
+  mapped, V100 maximum absolute error 0.000500 m3/ha versus the 0.01
+  tolerance, `ws4 validate` passes). Sustainable 100 Mm3: annual
+  100.2499-103.1923 Mm3/yr (mean 101.1221, CV 0.008491), zero period
+  shortfall, 212,570 blocks / 61,732,654.83 ha, area-weighted mean rotation
+  53.45 years, no reharvest. Sustainable 150 Mm3: annual
+  150.5393-153.8005 (mean 151.6402, CV 0.007858), zero period shortfall,
+  313,862 blocks / 93,151,017.36 ha, 541 reharvests, mean rotation 53.75
+  years. Versus the original-curve 100/150 cases the transformed scheduler
+  selects 20.5%/21.5% fewer blocks and 13.9%/12.6% fewer hectares; mean
+  rotation rises from 40 to 53.45/53.75 years. First-period/achieved chain
+  deltas versus frozen v5.1: 100 solid +0.514%/+0.704%, pulp
+  +0.830%/+1.477%, process +0.681%/+1.088%, harvest gross +0.919%/+1.501%,
+  total gross +0.793%/+1.283%; 150 solid +1.309%/+0.780%, pulp
+  +3.697%/+1.375%, process +2.493%/+1.074%, harvest gross +3.520%/+1.277%,
+  total gross +2.984%/+1.171%. Rebuilt OSeCAN: 21/21 frozen v5.1 reference
+  positions, 100m 7/7 primary and 7/7 achieved, 150m 7/7 and 7/7; official
+  146-file tree `80caa91c...` unchanged. The operable `screen_core30`
+  province-share mask is block-for-block identical to the original-curve
+  mask: 370,752 blocks / 75,374,046 ha (18.328% of WS4 forest). Operable
+  100/119/150 are not sustained: annual minima
+  98.2434/102.6644/104.4241 Mm3/yr, period shortfalls
+  34.6651/377.7192/1,645.1650 Mm3, provincial shortfalls
+  67.2620/457.3300/1,761.3301 Mm3; schedule-only maximum nominal/operable
+  76.0498/77.1195, 76.2780/77.0942, and 68.4448/70.3013 Mm3/yr versus
+  68.4570/69.3438, 67.8543/69.2302, and 61.4868/62.7054 Mm3/yr on the
+  original curves. Operable OSeCAN: 21/21 frozen reference, 100m 6/7 primary
+  and 7/7 achieved, 119m 7/7 and 6/7, 150m 7/7 and 6/7; official unchanged.
+  Added `workflows/national/facilities/ws4_transformed_cases.py`,
+  `tests/test_ws4_transformed_cases.py`, and
+  `docs/ws4-transformed-cases.md`; parameterized the existing case specs by
+  dataset, mask, and full-forest reference while keeping original defaults.
+  No original dataset, original case, chain v5.1, official OSeCAN, or UI
+  change; no unexpected `D`. Data commit `4dd708e11`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.
