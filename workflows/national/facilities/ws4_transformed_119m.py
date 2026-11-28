@@ -136,15 +136,48 @@ def ensure_dataset() -> dict[str, Any]:
 
 
 def _label_handoff() -> dict[str, Any]:
-    """Add transformed-curve labels to the OSeCAN handoff summary/manifest."""
-    summary_path = CHAIN_DIR / "osecan" / "summary.json"
-    manifest_path = CHAIN_DIR / "osecan" / "manifest.json"
+    """Add transformed-curve labels to the OSeCAN handoff artifacts."""
+    target = CHAIN_DIR / "osecan"
+    summary_path = target / "summary.json"
+    manifest_path = target / "manifest.json"
+    for path in sorted(target.glob("*.csv")):
+        frame = pd.read_csv(path)
+        frame["transformed_curves"] = "true"
+        frame.to_csv(path, index=False, lineterminator="\n")
+    report_path = target / "FORESTRY_OSECAN_HANDOFF_WS4_SUSTAINABLE.md"
+    if report_path.is_file():
+        report = report_path.read_text(encoding="utf-8")
+        old_labels = (
+            "**Labels:** `model_estimate=true`, `observed=false`, "
+            "`policy_grade=false`,\n`national_claim=false`, `ws4_derived=true`, "
+            "`sustainable_schedule=true`,\n`official_osecan_changed=false`, "
+            "`chain_v51_unchanged=true`."
+        )
+        new_labels = (
+            "**Labels:** `model_estimate=true`, `observed=false`, "
+            "`policy_grade=false`,\n`national_claim=false`, `ws4_derived=true`, "
+            "`sustainable_schedule=true`, `transformed_curves=true`,\n"
+            "`official_osecan_changed=false`, `chain_v51_unchanged=true`."
+        )
+        if old_labels not in report:
+            raise RuntimeError("OSeCAN report label block changed unexpectedly")
+        report_path.write_text(
+            report.replace(old_labels, new_labels, 1), encoding="utf-8"
+        )
     summary = _read_json(summary_path)
     summary.setdefault("labels", {}).update(LABELS)
     _write_json(summary_path, summary)
     if manifest_path.is_file():
         manifest = _read_json(manifest_path)
         manifest.setdefault("labels", {}).update(LABELS)
+        manifest["outputs"] = {
+            path.name: {
+                "bytes": path.stat().st_size,
+                "sha256": handoff.handoff._sha256(path),
+            }
+            for path in sorted(target.iterdir())
+            if path.is_file() and path.name != "manifest.json"
+        }
         _write_json(manifest_path, manifest)
     return summary
 
