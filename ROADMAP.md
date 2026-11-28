@@ -1406,6 +1406,36 @@ decide what blocks production readiness after the conceptual alpha.
   Documentation/tag only; only docs, ROADMAP, and CHANGE_LOG changed; no
   model, data, UI, chain v5.1, or official OSeCAN change; no unexpected `D`.
 
+- [x] P7.56 Feed the national transformed RSYC curves into the national 990 m
+  WS4 model and rerun the sustainable 119 Mm3 case, chain, and OSeCAN handoff.
+  Completed: copied the original 12-table dataset to
+  `data/derived/ws4/scanfi-national-990m-transformed/` without mutating the
+  original; mapped 718 of 718 referenced WS4 curves to 718 RSYC model IDs
+  (curve 1 unreferenced and unchanged); aggregated 3,948 transformed cell
+  curves into model group curves by forest area; replaced ages 0, 1-200, and
+  201-600 (held at age 200); V100 maximum absolute error 0.000500 m3/ha
+  (tolerance 0.01); `ws4 validate` passes. The 100-year, ten-period,
+  whole-block oldest-first scheduler with the frozen provincial 119 Mm3 shares
+  sustains the target with zero period shortfall: annual
+  119.2540-121.7776 Mm3/yr (mean 120.0561, CV 0.007310), 253,476 blocks /
+  72,388,258.65 ha, no reharvest, area-weighted mean rotation 53.97 years.
+  Frozen v5.1 coefficients on the 100-year 119m basis give solid
+  37,547,496.5 m3 (-0.335%), pulp 12,099,425.9 odt (+0.274%), process
+  498.601926 PJ (-0.030%), harvest gross 445.837090 PJ (+0.321%), harvest 60%
+  267.502254 PJ (+0.321%), total gross 944.439016 PJ (+0.135%). The first-period
+  119m basis gives solid 37,538,173.8 m3, pulp 12,088,679.9 odt, process
+  498.451203 PJ, harvest gross 446.765843 PJ, harvest 60% 268.059506 PJ, total
+  gross 945.217046 PJ. Rebuilt OSeCAN from the transformed chain: 21/21 frozen
+  v5.1 reference positions, 7/7 119 Mm3 tiers on both bases, official 146-file
+  tree `80caa91c...` unchanged. Added
+  `workflows/national/facilities/ws4_transformed_dataset.py`,
+  `workflows/national/facilities/ws4_transformed_119m.py`,
+  `tests/test_ws4_transformed_119m.py`, and
+  `docs/ws4-transformed-119m.md`; parameterized the existing sustainable
+  workflow by case. No original-dataset mutation, chain v5.1 mutation, official
+  OSeCAN change, chain v5.1 mutation, UI change, or unexpected `D`. Data
+  commit `1d39f9eb4`.
+
 ## Phase 8: Conceptual Alpha Release Preparation
 
 Release milestone: `v0.1.0a1 Conceptual Alpha`.

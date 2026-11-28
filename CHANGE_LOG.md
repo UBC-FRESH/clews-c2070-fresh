@@ -1,5 +1,42 @@
 # Change Log
 
+## 2026-11-28
+
+- **Fed the national transformed RSYC curves into the national 990 m WS4 model
+  and reran the sustainable 119 Mm3 case, chain, and OSeCAN handoff.** Copied
+  the original 12-table national dataset to
+  `data/derived/ws4/scanfi-national-990m-transformed/` and left the original
+  untouched. Parsed 718 `CURVE(<model_id>)` track mappings and the
+  `feature.Yield.*.Total` features, found no curve-to-model conflict and no
+  missing model, and aggregated 3,948 transformed cell curves into 718
+  forest-area-weighted model group curves. Replaced curve values at age 0 = 0,
+  ages 1-200 = transformed volume, and ages 201-600 = the age-200 hold; curve 1
+  is unreferenced and unchanged. V100 maximum absolute error is 0.000500
+  m3/ha versus the 0.01 tolerance; `ws4 validate` passes. The unchanged
+  100-year, ten-period whole-block oldest-first scheduler with frozen
+  provincial 119 Mm3 shares sustains the target with zero period shortfall:
+  annual 119.2540-121.7776 Mm3/yr (mean 120.0561, CV 0.007310), 253,476 blocks
+  / 72,388,258.65 ha, no reharvest, area-weighted mean rotation 53.97 years.
+  The transformed case selects fewer blocks and hectares than the original
+  RSYC 119 case (318,820 blocks / 84,348,104.4 ha; annual
+  119.0433-122.1610, mean 119.8839) because volume per hectare at the cap is
+  higher. Frozen v5.1 on the 100-year 119m basis: solid 37,547,496.5 m3
+  (-0.335%), pulp 12,099,425.9 odt (+0.274%), process 498.601926 PJ (-0.030%),
+  harvest gross 445.837090 PJ (+0.321%), harvest 60% 267.502254 PJ (+0.321%),
+  total gross 944.439016 PJ (+0.135%). First-period 119m basis: solid
+  37,538,173.8 m3, pulp 12,088,679.9 odt, process 498.451203 PJ, harvest gross
+  446.765843 PJ, harvest 60% 268.059506 PJ, total gross 945.217046 PJ. Rebuilt
+  OSeCAN from the transformed chain: 21/21 frozen reference, 7/7 119 Mm3 tiers
+  on both bases, official 146-file tree `80caa91c...` unchanged. Added
+  `workflows/national/facilities/ws4_transformed_dataset.py`,
+  `workflows/national/facilities/ws4_transformed_119m.py`,
+  `tests/test_ws4_transformed_119m.py`, and
+  `docs/ws4-transformed-119m.md`; parameterized
+  `workflows/national/facilities/ws4_sustainable_119m.py` with a case config
+  while keeping its defaults. No original-dataset mutation, chain v5.1
+  mutation, official OSeCAN change, UI change, or unexpected `D`. Data commit
+  `1d39f9eb4`.
+
 ## 2026-11-27
 
 - **Consolidated and tagged the WS4 sustainable/operable supply evidence

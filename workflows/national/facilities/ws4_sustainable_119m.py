@@ -94,6 +94,75 @@ ROW_LABELS: dict[str, str] = {
     "chain_v51_unchanged": "true",
 }
 BASES: tuple[str, str] = ("sustainable_119m", "sustainable_achieved")
+DEFAULT_CAVEATS: tuple[str, ...] = (
+    (
+        "The schedule is a national even-flow arithmetic model, not an AAC, "
+        "policy result, tenure plan, or investment case."
+    ),
+    (
+        "The full forest estate is used; no operability, tenure, road, slope, "
+        "or mill-capacity screen is applied."
+    ),
+    (
+        "Provincial period targets use the frozen 119 Mm3 control shares so "
+        "the chain and OSeCAN handoff remain comparable with the existing "
+        "WS4 119 Mm3 lane. A national oldest-first free run is reported as "
+        "a sensitivity in the report and is not the chain basis."
+    ),
+    (
+        "Rotation is the integer age of maximum MAI on the RSYC yield curve, "
+        "capped to 40-200 years; the raw peak is below 40 for these curves "
+        "and is flagged."
+    ),
+    (
+        "Whole blocks are selected. Provincial achieved volume can overshoot "
+        "the target by the final block because no block is split or scaled."
+    ),
+    (
+        "Frozen chain v5.1 coefficients are applied to the WS4 harvest by "
+        "origin province. Facility assignment, mill capacity, transport, "
+        "and interprovincial trade are not re-run."
+    ),
+    ("No official OSeCAN file, frozen chain v5.1 artifact, or UI surface is changed."),
+)
+
+
+@dataclass(frozen=True)
+class Case:
+    """Paths and labels for one sustainable WS4 dataset/case."""
+
+    artifact: str
+    artifact_version: str
+    artifact_title: str
+    dataset_dir: Path
+    output_dir: Path
+    chain_dir: Path
+    labels: Mapping[str, bool]
+    row_labels: Mapping[str, str]
+    report_name: str
+    caveats: tuple[str, ...] = DEFAULT_CAVEATS
+    curve_note: str = "natural RSYC yield curve"
+
+    @property
+    def schedule_path(self) -> Path:
+        return self.output_dir / "schedule.csv"
+
+    @property
+    def run_dir(self) -> Path:
+        return self.output_dir / "run_100y"
+
+
+DEFAULT_CASE = Case(
+    artifact=ARTIFACT,
+    artifact_version=ARTIFACT_VERSION,
+    artifact_title=ARTIFACT_TITLE,
+    dataset_dir=DATASET_DIR,
+    output_dir=OUTPUT_DIR,
+    chain_dir=CHAIN_DIR,
+    labels=LABELS,
+    row_labels=ROW_LABELS,
+    report_name="WS4_SUSTAINABLE_119M.md",
+)
 
 
 class Ws4Sustainable119mError(RuntimeError):
@@ -123,7 +192,9 @@ def _write_csv(
                     field: (
                         f"{row[field]:.17g}"
                         if isinstance(row.get(field), float)
-                        else "" if row.get(field) is None else row[field]
+                        else ""
+                        if row.get(field) is None
+                        else row[field]
                     )
                     for field in fields
                 }
@@ -199,9 +270,7 @@ def load_control_shares(path: Path = CONTROL_CSV) -> dict[str, float]:
         raise Ws4Sustainable119mError("control CSV does not cover all 13 jurisdictions")
     total = math.fsum(shares.values())
     if not math.isclose(total, 1.0, rel_tol=1e-9, abs_tol=1e-6):
-        raise Ws4Sustainable119mError(
-            f"control shares sum to {total!r}, expected 1.0"
-        )
+        raise Ws4Sustainable119mError(f"control shares sum to {total!r}, expected 1.0")
     # The published shares are rounded; normalize so the period targets sum
     # exactly to the national target without changing any share materially.
     return {province: value / total for province, value in shares.items()}
@@ -411,9 +480,7 @@ def load_estate(dataset_dir: Path = DATASET_DIR) -> Estate:
         [curve_row_by_id[int(value)] for value in fragments["fragment_curve_id"]],
         dtype=np.int64,
     )
-    if not np.array_equal(
-        fragment_curve_row, block_track_curve[block_pos_frag]
-    ):
+    if not np.array_equal(fragment_curve_row, block_track_curve[block_pos_frag]):
         raise Ws4Sustainable119mError(
             "fragment yield curve does not match its block track"
         )
@@ -561,9 +628,7 @@ def _volumes_for_positions(
         )
         np.clip(age, 0, CURVE_AGE_MAX, out=age)
         values = frag_area * estate.curve_matrix[frag_curve, age]
-        result[:, column] = np.bincount(
-            local, weights=values, minlength=positions.size
-        )
+        result[:, column] = np.bincount(local, weights=values, minlength=positions.size)
     return result
 
 
@@ -599,8 +664,7 @@ def _period_targets(
     total = math.fsum(targets.values())
     if not math.isclose(total, target_period_m3, rel_tol=1e-12):
         raise Ws4Sustainable119mError(
-            f"province period targets sum to {total!r}, expected "
-            f"{target_period_m3!r}"
+            f"province period targets sum to {total!r}, expected {target_period_m3!r}"
         )
     return targets
 
@@ -640,9 +704,7 @@ def build_schedule(
         if eligibility_mask.dtype != bool:
             raise Ws4Sustainable119mError("eligibility mask must be boolean")
     estate.reset()
-    targets = _period_targets(
-        province_shares, target_period_m3=target_period_m3
-    )
+    targets = _period_targets(province_shares, target_period_m3=target_period_m3)
     schedule_records: list[dict[str, Any]] = []
     selected_records: list[pd.DataFrame] = []
     period_records: list[dict[str, Any]] = []
@@ -798,9 +860,7 @@ def build_schedule(
                         if cursor < order.size:
                             parts.append(order[cursor:])
                     remaining = (
-                        np.concatenate(parts)
-                        if parts
-                        else np.empty(0, dtype=np.int64)
+                        np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
                     )
                 if remaining.size:
                     remaining = remaining[
@@ -845,7 +905,11 @@ def build_schedule(
                         )
                 else:
                     add_shortfall(
-                        period, "CAN", national_target, float(actual_total), actual_total
+                        period,
+                        "CAN",
+                        national_target,
+                        float(actual_total),
+                        actual_total,
                     )
 
         if positions.size == 0:
@@ -917,9 +981,7 @@ def build_schedule(
                 "block_count": int(positions.size),
                 "annual_min_m3": float(annual_volumes.min()),
                 "annual_max_m3": float(annual_volumes.max()),
-                "annual_cv": float(
-                    annual_volumes.std(ddof=0) / annual_volumes.mean()
-                )
+                "annual_cv": float(annual_volumes.std(ddof=0) / annual_volumes.mean())
                 if annual_volumes.mean() > 0
                 else 0.0,
             }
@@ -954,9 +1016,7 @@ def build_schedule(
                     "area_ha": float(estate.area_ha[positions[mask]].sum()),
                     "block_count": int(mask.sum()),
                     "mean_age": float(
-                        np.average(
-                            ages[mask], weights=estate.area_ha[positions[mask]]
-                        )
+                        np.average(ages[mask], weights=estate.area_ha[positions[mask]])
                     ),
                 }
             )
@@ -1041,8 +1101,7 @@ def build_schedule(
         "annual_max_m3": float(annual_rows["harvest_m3"].max()),
         "annual_mean_m3": float(annual_rows["harvest_m3"].mean()),
         "annual_cv": float(
-            annual_rows["harvest_m3"].std(ddof=0)
-            / annual_rows["harvest_m3"].mean()
+            annual_rows["harvest_m3"].std(ddof=0) / annual_rows["harvest_m3"].mean()
         ),
         "period_min_m3": float(period_rows["achieved_m3"].min()),
         "period_max_m3": float(period_rows["achieved_m3"].max()),
@@ -1054,9 +1113,7 @@ def build_schedule(
         "sustained_119m": bool(
             period_rows["achieved_m3"].min() + 1e-6 >= target_period_m3
         ),
-        "sustained": bool(
-            period_rows["achieved_m3"].min() + 1e-6 >= target_period_m3
-        ),
+        "sustained": bool(period_rows["achieved_m3"].min() + 1e-6 >= target_period_m3),
         "blocks_reharvested": int(selected["block_id"].duplicated().sum()),
     }
     return SelectionResult(
@@ -1070,6 +1127,7 @@ def build_schedule(
         diagnostics=diagnostics,
     )
 
+
 def run_ws4_validate(dataset_dir: Path = DATASET_DIR) -> str:
     if not WS4_BIN.is_file():
         raise Ws4Sustainable119mError(f"WS4 executable not found: {WS4_BIN}")
@@ -1081,8 +1139,7 @@ def run_ws4_validate(dataset_dir: Path = DATASET_DIR) -> str:
     )
     if result.returncode != 0:
         raise Ws4Sustainable119mError(
-            "ws4 validate failed: "
-            f"{result.stdout.strip()} {result.stderr.strip()}"
+            f"ws4 validate failed: {result.stdout.strip()} {result.stderr.strip()}"
         )
     return result.stdout.strip()
 
@@ -1133,8 +1190,7 @@ def ensure_ws4_run(
     )
     if result.returncode != 0:
         raise Ws4Sustainable119mError(
-            "ws4 simulate failed: "
-            f"{result.stdout.strip()} {result.stderr.strip()}"
+            f"ws4 simulate failed: {result.stdout.strip()} {result.stderr.strip()}"
         )
     if not (run_dir / "product_values.csv").is_file():
         raise Ws4Sustainable119mError("ws4 simulate did not write product_values.csv")
@@ -1195,12 +1251,9 @@ def harvest_by_province(
         .sum()
         .rename(columns={"value": "run_area_ha"})
     )
-    scheduled = (
-        selected.groupby(["offset", "province"], as_index=False)
-        .agg(
-            scheduled_harvest_m3=("volume_m3", "sum"),
-            scheduled_area_ha=("area_ha", "sum"),
-        )
+    scheduled = selected.groupby(["offset", "province"], as_index=False).agg(
+        scheduled_harvest_m3=("volume_m3", "sum"),
+        scheduled_area_ha=("area_ha", "sum"),
     )
     merged = scheduled.merge(
         run_harvest, on=["offset", "province"], how="outer", validate="one_to_one"
@@ -1209,12 +1262,10 @@ def harvest_by_province(
         run_area, on=["offset", "province"], how="outer", validate="one_to_one"
     ).fillna(0.0)
     volume_gap = np.abs(
-        merged["scheduled_harvest_m3"].to_numpy()
-        - merged["run_harvest_m3"].to_numpy()
+        merged["scheduled_harvest_m3"].to_numpy() - merged["run_harvest_m3"].to_numpy()
     )
     area_gap = np.abs(
-        merged["scheduled_area_ha"].to_numpy()
-        - merged["run_area_ha"].to_numpy()
+        merged["scheduled_area_ha"].to_numpy() - merged["run_area_ha"].to_numpy()
     )
     if float(volume_gap.max()) > 1e-6:
         worst = merged.loc[volume_gap.argmax()]
@@ -1263,6 +1314,7 @@ def build_chain_outputs(
     schedule_result: SelectionResult,
     run_values: pd.DataFrame,
     validate_text: str,
+    case: Case = DEFAULT_CASE,
 ) -> dict[str, Any]:
     """Write the sustainable chain and return its summary."""
     frozen = chain._frozen_province_rows(chain.CHAIN_V51_CSV)
@@ -1273,7 +1325,9 @@ def build_chain_outputs(
     harvest = harvest_province.set_index("province")["harvest_m3"]
     if set(harvest.index) != set(PROVINCES):
         missing = set(PROVINCES) - set(harvest.index)
-        raise Ws4Sustainable119mError(f"WS4 run is missing provinces: {sorted(missing)}")
+        raise Ws4Sustainable119mError(
+            f"WS4 run is missing provinces: {sorted(missing)}"
+        )
     total_100y = float(harvest.sum())
     if total_100y <= 0.0:
         raise Ws4Sustainable119mError("WS4 run harvest is zero")
@@ -1303,7 +1357,7 @@ def build_chain_outputs(
                 "block_count_100y": int(
                     harvest_province.set_index("province").loc[province, "block_count"]
                 ),
-                **ROW_LABELS,
+                **case.row_labels,
             }
         )
     total_row = {
@@ -1318,11 +1372,11 @@ def build_chain_outputs(
         "scale_factor": scale,
         "area_100y_ha": float(harvest_province["area_ha"].sum()),
         "block_count_100y": int(harvest_province["block_count"].sum()),
-        **ROW_LABELS,
+        **case.row_labels,
     }
     harvest_fields = list(harvest_rows[0].keys())
     _write_csv(
-        CHAIN_DIR / "sustainable_harvest_by_province.csv",
+        case.chain_dir / "sustainable_harvest_by_province.csv",
         harvest_fields,
         harvest_rows + [total_row],
     )
@@ -1341,7 +1395,7 @@ def build_chain_outputs(
             scale_factor=factor,
         )
         for row in rows + [national]:
-            row.update(ROW_LABELS)
+            row.update(case.row_labels)
             row["sustainable_schedule"] = "true"
         province_chain_rows.extend(rows)
         national_rows.append(national)
@@ -1353,12 +1407,12 @@ def build_chain_outputs(
         "scale_factor",
         "coefficient_tier",
         "coefficient_source",
-        *[metric for metric, _unit in chain.METRICS],
-        *ROW_LABELS.keys(),
+        *[metric for metric, _unit in chain.METRICS if metric != "harvest_m3"],
+        *case.row_labels.keys(),
     ]
     # Keep one row order and ensure every label key is present.
     _write_csv(
-        CHAIN_DIR / "sustainable_product_chain.csv",
+        case.chain_dir / "sustainable_product_chain.csv",
         product_fields,
         province_chain_rows + national_rows,
     )
@@ -1385,7 +1439,7 @@ def build_chain_outputs(
             row[f"{basis}_value"] = value
             row[f"{basis}_delta"] = delta
             row[f"{basis}_delta_pct"] = delta / reference * 100.0 if reference else 0.0
-        row.update(ROW_LABELS)
+        row.update(case.row_labels)
         comparison_rows.append(row)
     comparison_fields = [
         "metric",
@@ -1396,10 +1450,10 @@ def build_chain_outputs(
             for basis in BASES
             for suffix in ("value", "delta", "delta_pct")
         ],
-        *ROW_LABELS.keys(),
+        *case.row_labels.keys(),
     ]
     _write_csv(
-        CHAIN_DIR / "comparison_vs_v51.csv",
+        case.chain_dir / "comparison_vs_v51.csv",
         comparison_fields,
         comparison_rows,
     )
@@ -1420,12 +1474,12 @@ def build_chain_outputs(
         .to_dict()
     )
     summary: dict[str, Any] = {
-        "artifact": ARTIFACT,
-        "artifact_version": ARTIFACT_VERSION,
+        "artifact": case.artifact,
+        "artifact_version": case.artifact_version,
         "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "status": "pass",
-        "title": ARTIFACT_TITLE,
-        "labels": LABELS,
+        "title": case.artifact_title,
+        "labels": dict(case.labels),
         "target": {
             "annual_m3": TARGET_ANNUAL_M3,
             "period_m3": TARGET_PERIOD_M3,
@@ -1468,49 +1522,16 @@ def build_chain_outputs(
             "comparison": comparison_rows,
         },
         "ws4": {
-            "dataset": _relative(DATASET_DIR),
-            "schedule": _relative(SCHEDULE_PATH),
-            "run_dir": _relative(RUN_DIR),
+            "dataset": _relative(case.dataset_dir),
+            "schedule": _relative(case.schedule_path),
+            "run_dir": _relative(case.run_dir),
             "validate": validate_text,
             "run_offsets": run_values["offset"].nunique(),
         },
         "d_status": assert_no_unexpected_deletions(),
-        "caveats": [
-            (
-                "The schedule is a national even-flow arithmetic model, not an AAC, "
-                "policy result, tenure plan, or investment case."
-            ),
-            (
-                "The full forest estate is used; no operability, tenure, road, slope, "
-                "or mill-capacity screen is applied."
-            ),
-            (
-                "Provincial period targets use the frozen 119 Mm3 control shares so "
-                "the chain and OSeCAN handoff remain comparable with the existing "
-                "WS4 119 Mm3 lane. A national oldest-first free run is reported as "
-                "a sensitivity in the report and is not the chain basis."
-            ),
-            (
-                "Rotation is the integer age of maximum MAI on the RSYC yield curve, "
-                "capped to 40-200 years; the raw peak is below 40 for these curves "
-                "and is flagged."
-            ),
-            (
-                "Whole blocks are selected. Provincial achieved volume can overshoot "
-                "the target by the final block because no block is split or scaled."
-            ),
-            (
-                "Frozen chain v5.1 coefficients are applied to the WS4 harvest by "
-                "origin province. Facility assignment, mill capacity, transport, "
-                "and interprovincial trade are not re-run."
-            ),
-            (
-                "No official OSeCAN file, frozen chain v5.1 artifact, or UI surface "
-                "is changed."
-            ),
-        ],
+        "caveats": list(case.caveats or DEFAULT_CAVEATS),
     }
-    _write_json(CHAIN_DIR / "summary.json", summary)
+    _write_json(case.chain_dir / "summary.json", summary)
     return summary
 
 
@@ -1524,12 +1545,22 @@ def _md_table(header: Sequence[str], rows: Sequence[Sequence[str]]) -> str:
 
 
 def write_chain_report(
-    summary: Mapping[str, Any], schedule_result: SelectionResult
+    summary: Mapping[str, Any],
+    schedule_result: SelectionResult,
+    case: Case = DEFAULT_CASE,
 ) -> None:
     """Write the chain artifact report from the built summary."""
     periods = schedule_result.period_rows
     period_table = _md_table(
-        ["Period", "Offsets", "Target Mm3", "Achieved Mm3", "Overshoot %", "Area Mha", "Blocks"],
+        [
+            "Period",
+            "Offsets",
+            "Target Mm3",
+            "Achieved Mm3",
+            "Overshoot %",
+            "Area Mha",
+            "Blocks",
+        ],
         [
             [
                 str(int(row.period)),
@@ -1568,7 +1599,15 @@ def write_chain_report(
         ],
     )
     comparison_table = _md_table(
-        ["Metric", "Unit", "v5.1", "119 Mm3 basis", "Delta %", "Achieved basis", "Delta %"],
+        [
+            "Metric",
+            "Unit",
+            "v5.1",
+            "119 Mm3 basis",
+            "Delta %",
+            "Achieved basis",
+            "Delta %",
+        ],
         [
             [
                 str(row["metric"]),
@@ -1584,30 +1623,28 @@ def write_chain_report(
     )
     rotation = summary["rotation"]
     free = summary.get("free_run_sensitivity", {})
-    report = f"""# Sustainable 119 Mm3/yr WS4 Schedule and Chain
+    report = f"""# {case.artifact_title}
 
-**Artifact:** `{ARTIFACT}` **Version:** {ARTIFACT_VERSION}
+**Artifact:** `{case.artifact}` **Version:** {case.artifact_version}
 
 **Status:** pass. The 118,977,339.1 m3/yr target is sustained for 100 years
 with no period shortfall. The schedule is a whole-block model estimate, not an
 AAC, policy result, tenure plan, or investment case.
 
-**Labels:** `model_estimate=true`, `observed=false`, `policy_grade=false`,
-`national_claim=false`, `ws4_derived=true`, `sustainable_schedule=true`,
-`official_osecan_changed=false`, `chain_v51_unchanged=true`.
+**Labels:** {", ".join(f"`{key}={str(value).lower()}`" for key, value in summary["labels"].items())}.
 
 ## 1. Input and method
 
-- Dataset: `{summary['ws4']['dataset']}`
-- Schedule: `{summary['ws4']['schedule']}`
-- Run: `{summary['ws4']['run_dir']}`
-- Horizon: {summary['target']['horizon_years']} years, {summary['target']['periods']} periods of {summary['target']['period_length_years']} years.
-- Period target: {summary['target']['period_m3']:,.1f} m3.
-- Block volume: sum of fragment area times the block's natural RSYC yield curve at the exact fragment age.
+- Dataset: `{summary["ws4"]["dataset"]}`
+- Schedule: `{summary["ws4"]["schedule"]}`
+- Run: `{summary["ws4"]["run_dir"]}`
+- Horizon: {summary["target"]["horizon_years"]} years, {summary["target"]["periods"]} periods of {summary["target"]["period_length_years"]} years.
+- Period target: {summary["target"]["period_m3"]:,.1f} m3.
+- Block volume: sum of fragment area times the block's {case.curve_note} at the exact fragment age.
 - Block age: fragment-area-weighted age.
-- Rotation: integer age of maximum MAI on the natural curve, capped to
+- Rotation: integer age of maximum MAI on the {case.curve_note}, capped to
   {ROTATION_MIN}-{ROTATION_MAX} years and flagged outside that band. Raw peaks
-  are {rotation['raw_distribution']}; all blocks use {rotation['used_distribution']}.
+  are {rotation["raw_distribution"]}; all blocks use {rotation["used_distribution"]}.
 - Eligible blocks: natural/unmanaged with age >= rotation, or managed with age
   since last harvest >= rotation.
 - Selection: whole blocks, oldest-first, volume-aware, within provincial
@@ -1621,15 +1658,15 @@ AAC, policy result, tenure plan, or investment case.
 
 {period_table}
 
-- Annual harvest minimum: {summary['schedule']['annual_min_m3']:,.1f} m3/yr.
-- Annual harvest maximum: {summary['schedule']['annual_max_m3']:,.1f} m3/yr.
-- Annual mean: {summary['schedule']['annual_mean_m3']:,.1f} m3/yr.
-- Annual CV: {summary['schedule']['annual_cv']:.6f}.
-- Period shortfall: {summary['schedule']['period_shortfall_m3']:.1f} m3.
-- 119 Mm3/yr sustained for 100 years: `{summary['schedule']['sustained_119m']}`.
-- Selected blocks: {summary['schedule']['selected_blocks']:,}
-  ({summary['schedule']['selected_area_ha']/1e6:,.3f} Mha).
-- Blocks reharvested within 100 years: {summary['schedule']['blocks_reharvested']:,}.
+- Annual harvest minimum: {summary["schedule"]["annual_min_m3"]:,.1f} m3/yr.
+- Annual harvest maximum: {summary["schedule"]["annual_max_m3"]:,.1f} m3/yr.
+- Annual mean: {summary["schedule"]["annual_mean_m3"]:,.1f} m3/yr.
+- Annual CV: {summary["schedule"]["annual_cv"]:.6f}.
+- Period shortfall: {summary["schedule"]["period_shortfall_m3"]:.1f} m3.
+- 119 Mm3/yr sustained for 100 years: `{summary["schedule"]["sustained_119m"]}`.
+- Selected blocks: {summary["schedule"]["selected_blocks"]:,}
+  ({summary["schedule"]["selected_area_ha"] / 1e6:,.3f} Mha).
+- Blocks reharvested within 100 years: {summary["schedule"]["blocks_reharvested"]:,}.
 
 ## 3. Harvest by province
 
@@ -1640,18 +1677,18 @@ AAC, policy result, tenure plan, or investment case.
 {comparison_table}
 
 The `sustainable_119m` basis applies one national factor
-({summary['chain']['basis']['scale_factor']:.15g}) to the 100-year annual
+({summary["chain"]["basis"]["scale_factor"]:.15g}) to the 100-year annual
 average so the total is exactly 118,977,339.1 m3. The
 `sustainable_achieved` basis is the unscaled WS4 average
-({summary['harvest']['annual_mean_m3']:,.1f} m3/yr).
+({summary["harvest"]["annual_mean_m3"]:,.1f} m3/yr).
 
 ## 5. National oldest-first free-run sensitivity
 
 The same scheduler without provincial allocation selects
-{free.get('selected_blocks', 0):,} blocks /
-{free.get('selected_area_ha', 0.0)/1e6:,.3f} Mha and sustains the period
-target (`{free.get('sustained_119m')}`), but the 100-year harvest is
-{free.get('province_share', {}).get('BC', 0.0)*100:.2f}% BC because BC holds
+{free.get("selected_blocks", 0):,} blocks /
+{free.get("selected_area_ha", 0.0) / 1e6:,.3f} Mha and sustains the period
+target (`{free.get("sustained_119m")}`), but the 100-year harvest is
+{free.get("province_share", {}).get("BC", 0.0) * 100:.2f}% BC because BC holds
 the oldest inventory. That concentration would change the frozen v5.1
 province-weighted residue mix and is therefore reported as a diagnostic, not
 used as the chain basis. The province-allocated schedule is the chain basis.
@@ -1667,35 +1704,35 @@ tree. See `osecan/FORESTRY_OSECAN_HANDOFF_WS4_SUSTAINABLE.md`.
 
 """
     report += "\n".join(f"- {caveat}" for caveat in summary["caveats"]) + "\n"
-    (CHAIN_DIR / "WS4_SUSTAINABLE_119M.md").write_text(report, encoding="utf-8")
+    (case.chain_dir / case.report_name).write_text(report, encoding="utf-8")
 
 
-def _write_chain_manifest(summary: Mapping[str, Any]) -> None:
+def _write_chain_manifest(
+    summary: Mapping[str, Any], case: Case = DEFAULT_CASE
+) -> None:
     """Write the chain artifact manifest with input/output hashes."""
     outputs = {
         path.name: {"bytes": path.stat().st_size, "sha256": _sha256(path)}
-        for path in sorted(CHAIN_DIR.iterdir())
+        for path in sorted(case.chain_dir.iterdir())
         if path.is_file() and path.name != "manifest.json"
     }
     inputs = {
-        _relative(DATASET_DIR / "manifest.json"): _sha256(
-            DATASET_DIR / "manifest.json"
+        _relative(case.dataset_dir / "manifest.json"): _sha256(
+            case.dataset_dir / "manifest.json"
         ),
         _relative(CONTROL_CSV): _sha256(CONTROL_CSV),
         _relative(chain.CHAIN_V51_CSV): _sha256(chain.CHAIN_V51_CSV),
-        _relative(chain.CHAIN_V51_COEFFICIENTS): _sha256(
-            chain.CHAIN_V51_COEFFICIENTS
-        ),
-        _relative(SCHEDULE_PATH): _sha256(SCHEDULE_PATH),
-        _relative(RUN_DIR / "product_values.csv"): _sha256(
-            RUN_DIR / "product_values.csv"
+        _relative(chain.CHAIN_V51_COEFFICIENTS): _sha256(chain.CHAIN_V51_COEFFICIENTS),
+        _relative(case.schedule_path): _sha256(case.schedule_path),
+        _relative(case.run_dir / "product_values.csv"): _sha256(
+            case.run_dir / "product_values.csv"
         ),
     }
     manifest = {
-        "artifact": ARTIFACT,
-        "artifact_version": ARTIFACT_VERSION,
+        "artifact": case.artifact,
+        "artifact_version": case.artifact_version,
         "generated_utc": summary["generated_utc"],
-        "title": ARTIFACT_TITLE,
+        "title": case.artifact_title,
         "labels": summary["labels"],
         "target": summary["target"],
         "inputs": inputs,
@@ -1709,30 +1746,40 @@ def _write_chain_manifest(summary: Mapping[str, Any]) -> None:
         },
         "d_status": summary["d_status"],
     }
-    _write_json(CHAIN_DIR / "manifest.json", manifest)
+    _write_json(case.chain_dir / "manifest.json", manifest)
 
 
-def build() -> dict[str, Any]:
+def build(case: Case | None = None) -> dict[str, Any]:
     """Run the full sustainable schedule, WS4 run, and chain build."""
+    case = case or DEFAULT_CASE
     assert_no_unexpected_deletions()
     from workflows.national.facilities import forestry_osecan_handoff_ws4 as handoff
 
     chain_v51_before = handoff._tree_state(chain.CHAIN_V51_DIR)
     osecan_before = handoff._tree_state(handoff.OSECAN_DIR)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    CHAIN_DIR.mkdir(parents=True, exist_ok=True)
+    case.output_dir.mkdir(parents=True, exist_ok=True)
+    case.chain_dir.mkdir(parents=True, exist_ok=True)
 
     shares = load_control_shares()
-    estate = load_estate()
+    estate = load_estate(case.dataset_dir)
     rotation_table = compute_rotation_table(estate.curve_ids, estate.curve_matrix)
 
     province_result = build_schedule(estate, province_shares=shares)
-    free_result = build_schedule(estate, province_shares=None, label="national_free_run")
+    free_result = build_schedule(
+        estate, province_shares=None, label="national_free_run"
+    )
 
-    validate_text = run_ws4_validate()
-    (OUTPUT_DIR / "validate.txt").write_text(validate_text + "\n", encoding="utf-8")
-    run_status = ensure_ws4_run(province_result.schedule)
-    run_values = extract_run_products()
+    validate_text = run_ws4_validate(case.dataset_dir)
+    (case.output_dir / "validate.txt").write_text(
+        validate_text + "\n", encoding="utf-8"
+    )
+    run_status = ensure_ws4_run(
+        province_result.schedule,
+        case.schedule_path,
+        case.run_dir,
+        dataset_dir=case.dataset_dir,
+    )
+    run_values = extract_run_products(case.run_dir)
     harvest_province, annual = harvest_by_province(province_result.selected, run_values)
 
     first_period = (
@@ -1744,7 +1791,7 @@ def build() -> dict[str, Any]:
     first_period["annual_ha"] = first_period["area_ha"] / PERIOD_LENGTH
 
     _write_csv(
-        OUTPUT_DIR / "selected_blocks.csv",
+        case.output_dir / "selected_blocks.csv",
         [
             "block_id",
             "province",
@@ -1761,8 +1808,16 @@ def build() -> dict[str, Any]:
         province_result.selected.to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "annual_harvest.csv",
-        ["offset", "year", "period", "harvest_m3", "area_ha", "block_count", "mean_age"],
+        case.output_dir / "annual_harvest.csv",
+        [
+            "offset",
+            "year",
+            "period",
+            "harvest_m3",
+            "area_ha",
+            "block_count",
+            "mean_age",
+        ],
         annual.merge(
             province_result.annual_rows[["offset", "block_count", "mean_age"]],
             on="offset",
@@ -1771,7 +1826,7 @@ def build() -> dict[str, Any]:
         ).to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "period_harvest.csv",
+        case.output_dir / "period_harvest.csv",
         [
             "period",
             "start_offset",
@@ -1789,7 +1844,7 @@ def build() -> dict[str, Any]:
         province_result.period_rows.to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "province_period_harvest.csv",
+        case.output_dir / "province_period_harvest.csv",
         [
             "period",
             "province",
@@ -1803,17 +1858,17 @@ def build() -> dict[str, Any]:
         province_result.province_period_rows.to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "province_harvest.csv",
+        case.output_dir / "province_harvest.csv",
         ["province", "harvest_m3", "area_ha", "block_count"],
         harvest_province.to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "rotation_distribution.csv",
+        case.output_dir / "rotation_distribution.csv",
         ["rotation_raw_years", "rotation_years", "blocks", "area_ha", "volume_m3"],
         province_result.rotation_distribution.to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "shortfalls.csv",
+        case.output_dir / "shortfalls.csv",
         [
             "period",
             "province",
@@ -1825,7 +1880,7 @@ def build() -> dict[str, Any]:
         province_result.shortfalls.to_dict(orient="records"),
     )
     _write_csv(
-        OUTPUT_DIR / "age_class_harvest.csv",
+        case.output_dir / "age_class_harvest.csv",
         ["period", "province", "age_class", "blocks", "area_ha", "volume_m3"],
         province_result.selected.groupby(
             ["period", "province", "age_class"], as_index=False
@@ -1838,7 +1893,7 @@ def build() -> dict[str, Any]:
         .to_dict(orient="records"),
     )
     _write_json(
-        OUTPUT_DIR / "free_run_sensitivity.json",
+        case.output_dir / "free_run_sensitivity.json",
         {
             "label": free_result.diagnostics["label"],
             "selection_method": free_result.diagnostics["selection_method"],
@@ -1869,13 +1924,14 @@ def build() -> dict[str, Any]:
         schedule_result=province_result,
         run_values=run_values,
         validate_text=validate_text,
+        case=case,
     )
     summary["run_status"] = run_status
     summary["free_run_sensitivity"] = json.loads(
-        (OUTPUT_DIR / "free_run_sensitivity.json").read_text(encoding="utf-8")
+        (case.output_dir / "free_run_sensitivity.json").read_text(encoding="utf-8")
     )
     summary["schedule_files"] = {
-        name: _sha256(OUTPUT_DIR / name)
+        name: _sha256(case.output_dir / name)
         for name in (
             "schedule.csv",
             "selected_blocks.csv",
@@ -1890,7 +1946,7 @@ def build() -> dict[str, Any]:
         )
     }
     summary["chain_files"] = {
-        name: _sha256(CHAIN_DIR / name)
+        name: _sha256(case.chain_dir / name)
         for name in (
             "sustainable_harvest_by_province.csv",
             "sustainable_product_chain.csv",
@@ -1900,13 +1956,9 @@ def build() -> dict[str, Any]:
     chain_v51_after = handoff._tree_state(chain.CHAIN_V51_DIR)
     osecan_after = handoff._tree_state(handoff.OSECAN_DIR)
     if chain_v51_before != chain_v51_after:
-        raise Ws4Sustainable119mError(
-            "frozen chain v5.1 tree changed during the build"
-        )
+        raise Ws4Sustainable119mError("frozen chain v5.1 tree changed during the build")
     if osecan_before != osecan_after:
-        raise Ws4Sustainable119mError(
-            "official OSeCAN tree changed during the build"
-        )
+        raise Ws4Sustainable119mError("official OSeCAN tree changed during the build")
     summary["frozen_integrity"] = {
         "chain_v51_before": chain_v51_before,
         "chain_v51_after": chain_v51_after,
@@ -1915,9 +1967,9 @@ def build() -> dict[str, Any]:
         "official_osecan_after": osecan_after,
         "official_osecan_unchanged": osecan_before == osecan_after,
     }
-    _write_json(CHAIN_DIR / "summary.json", summary)
-    write_chain_report(summary, province_result)
-    _write_chain_manifest(summary)
+    _write_json(case.chain_dir / "summary.json", summary)
+    write_chain_report(summary, province_result, case)
+    _write_chain_manifest(summary, case)
     return summary
 
 
