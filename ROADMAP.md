@@ -21,6 +21,15 @@ official OSeCAN. Official OSeCAN adoption remains with the Taco/energy team.
 The estate release card is
 [`docs/national-forest-estate-ws4-v1.md`](docs/national-forest-estate-ws4-v1.md).
 
+**Transformed-curve sustainable supply candidate:**
+[`docs/national-transformed-supply-ws4-v1.md`](docs/national-transformed-supply-ws4-v1.md)
+consolidates the national RSYC transform v1 library, the transformed national
+990 m WS4 dataset, the sustainable 100/119/150 Mm3/yr cases, and the
+transformed operable screen under annotated tag
+`national-transformed-supply-ws4-v1`. The release is a candidate, not official
+OSeCAN; it does not move frozen `national-facility-chain-v5.1` and changes no
+model, data, UI, chain v5.1, or official OSeCAN artifact.
+
 - [x] v2a source review — no public QC mill-settlement ledger; BMMB/MRNF, BC
   log-market, MRDEM, and THLB limits recorded.
 - [x] v2b cost/revenue ledger — 2,888 rows (200 observed BC + 2,688 QC model
@@ -1474,6 +1483,41 @@ decide what blocks production readiness after the conceptual alpha.
   dataset, mask, and full-forest reference while keeping original defaults.
   No original dataset, original case, chain v5.1, official OSeCAN, or UI
   change; no unexpected `D`. Data commit `4dd708e11`.
+
+- [x] P7.58 Consolidate and tag the transformed-curve sustainable supply
+  release. Completed: added
+  `docs/national-transformed-supply-ws4-v1.md` as the single evidence pointer
+  for the national RSYC transform v1 library, the transformed national 990 m
+  WS4 dataset, the transformed sustainable 100/119/150 Mm3 cases, and the
+  transformed operable screen, and created annotated tag
+  `national-transformed-supply-ws4-v1` at the docs commit. The release records
+  why the curves were rebuilt (raw RSYC vs BC VDYP median 1:1 R2 -0.41, shape
+  1:1 R2 0.42, CMAI age 6 vs 122 years, peak age 131 vs 204 years), the BC
+  65/65 five-parameter donor fits (R2 median 0.998, CMAI within 1-4% of VDYP),
+  the QC 51/51 managed donor fits with post-peak decline/plateau (selected R2
+  0.960-0.999; composite linear 0.9905, power 0.9978, stretched 0.9994), and
+  the national library (3,948 curves, 34 donor classes, 100% usable, pass
+  2,383 / flag 1,565 / fail 0, 2,592 raw 2-/24-year artifacts removed, V100
+  preserved). The transformed dataset maps 718/718 curves, aggregates 3,948
+  cell curves area-weighted, has V100 maximum error 0.000500 m3/ha, and passes
+  `ws4 validate`. Sustainable annual results are 100.2499-103.1923 (mean
+  101.1221), 119.2540-121.7776 (mean 120.0561), and 150.5393-153.8005 (mean
+  151.6402) Mm3/yr with zero period shortfalls and mean rotations
+  53.45/53.97/53.75 years. Chain deltas versus frozen v5.1: 119 solid -0.335%,
+  pulp +0.274%, process -0.030%, harvest gross +0.321%, total +0.135%; 100
+  solid +0.514%/+0.704%, pulp +0.830%/+1.477%, process +0.681%/+1.088%, total
+  +0.793%/+1.283%; 150 solid +1.309%/+0.780%, pulp +3.697%/+1.375%, process
+  +2.493%/+1.074%, total +2.984%/+1.171% (first-period/achieved). OSeCAN:
+  sustainable 21/21 reference and 7/7 per case; operable 21/21, 100 6/7+7/7,
+  119 7/7+6/7, 150 7/7+6/7; official 146-file tree `80caa91c...` unchanged.
+  Operable mask 370,752 blocks / 75,374,046 ha (18.328%); 100/119/150 are not
+  sustained; schedule-only maximum nominal/operable 76.0498/77.1195,
+  76.2780/77.0942, and 68.4448/70.3013 Mm3/yr; period shortfalls are down
+  125.7566/245.5456/129.7174 Mm3 versus the original curves. Recorded commits
+  `ab90784`/`5685f038b`, `cd02ea1`/`a594179` with `1d39f9eb4`/`f6dfd8edb`,
+  and `fd12cd1`/`4dd708e11`. Documentation/tag only; only docs, ROADMAP, and
+  CHANGE_LOG changed; no model, data, UI, chain v5.1, or official OSeCAN
+  change; no unexpected `D`.
 
 ## Phase 8: Conceptual Alpha Release Preparation
 

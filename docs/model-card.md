@@ -95,6 +95,20 @@ schedule-only maximum nominal levels are 68.4570 / 67.8543 / 61.4868 Mm³/yr.
 The operable screen is an area-share proxy with no legal THLB, slope DEM, or
 spatial road overlay; PE and NU have no tenure coverage.
 
+The transformed-curve successor release is
+[`docs/national-transformed-supply-ws4-v1.md`](national-transformed-supply-ws4-v1.md)
+(annotated tag `national-transformed-supply-ws4-v1`). It applies the national
+RSYC transform v1 library (3,948 curves, 34 donor classes, V100 preserved) to
+the national 990 m WS4 dataset and reruns the sustainable 100/119/150 Mm³/yr
+cases and the `screen_core30` operable screen. The full-forest cases are
+sustained with zero period shortfalls (annual means 101.1221 / 120.0561 /
+151.6402 Mm³/yr); the operable cases are not sustained. The release is
+`model_estimate`, `observed=false`, `policy_grade=false`,
+`national_claim=false`; it does not move frozen chain v5.1 and does not change
+official OSeCAN. The curves repair shape with documented BC natural and QC
+managed donors; they are not a calibrated yield model and the schedules are
+not policy supply.
+
 ## 4. Reference results
 
 | Case | Objective (M$) | Cumulative 2021–2070 (Mt CO₂) | 2050 (Mt CO₂) | Labels | Use |

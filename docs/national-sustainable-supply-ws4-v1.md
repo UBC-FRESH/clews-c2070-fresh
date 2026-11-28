@@ -12,6 +12,12 @@ cases and the share-based operable landbase screen into one tagged evidence
 pointer. It is a documentation/tag release only. It changes no model artifact,
 dataset, UI surface, frozen chain v5.1 artifact, or official OSeCAN file.
 
+**Transformed-curve successor:** the national RSYC shape repair and the
+transformed sustainable/operable rerun are consolidated in
+[`docs/national-transformed-supply-ws4-v1.md`](national-transformed-supply-ws4-v1.md)
+(annotated tag `national-transformed-supply-ws4-v1`). That release does not
+move this tag, frozen chain v5.1, or official OSeCAN.
+
 The full-forest cases are sustained at the 10-year period level on the
 national 990 m WS4 estate. The operable screen says the same frozen provincial
 shares are **not** sustained once the landbase is restricted to

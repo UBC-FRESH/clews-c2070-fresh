@@ -59,6 +59,29 @@ cases are volume-arithmetic sustainability diagnostics, not policy supply. The
 operable screen has no legal THLB, slope DEM, or spatial road overlay, and PE
 and NU have no tenure coverage.
 
+## Transformed-curve sustainable supply release (candidate)
+
+| Field | Value |
+|---|---|
+| Release tag | `national-transformed-supply-ws4-v1` (annotated) |
+| Status | Candidate transformed-curve sustainable supply release; not official OSeCAN |
+| Curve library | National RSYC transform v1: 3,948 curves, 34 donor classes, 100% usable (2,383 pass / 1,565 flag / 0 fail), V100 preserved |
+| Donor fits | BC 65/65 five-parameter natural fits (R² median 0.998); QC 51/51 managed fits with post-peak decline/plateau (selected R² 0.960–0.999) |
+| Transformed dataset | 718/718 curves mapped; 3,948 cell curves area-weighted; V100 maximum error 0.000500 m³/ha; `ws4 validate` passes |
+| Sustainable 100/119/150 | Zero period shortfalls; annual means 101.1221 / 120.0561 / 151.6402 Mm³/yr; mean rotations 53.45 / 53.97 / 53.75 years; 7/7 tier matches per case (21/21 frozen reference) |
+| Operable 100/119/150 | Not sustained; period shortfalls 34.6651 / 377.7192 / 1,645.1650 Mm³; schedule-only maximum nominal 76.0498 / 76.2780 / 68.4448 Mm³/yr |
+| Official OSeCAN | Unchanged; 146 files, `80caa91c...` |
+| Frozen chain v5.1 | Unchanged; tag not moved |
+| Change class | Documentation/tag only; no model, data, UI, chain v5.1, or official OSeCAN change |
+
+The release document is
+[`docs/national-transformed-supply-ws4-v1.md`](national-transformed-supply-ws4-v1.md).
+It consolidates the transformed curve library, the transformed national 990 m
+WS4 dataset, the transformed sustainable cases, and the transformed operable
+screen. The curves repair shape with documented BC/QC donors while preserving
+RSYC V100; they are not a calibrated yield model. The release is a candidate,
+not official OSeCAN, and its demo schedules are not policy supply.
+
 ## Transport/siting companion card
 
 Road factors and OSRM evidence, transport cost v1, supply-node construction and
